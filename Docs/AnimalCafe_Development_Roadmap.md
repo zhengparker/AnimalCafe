@@ -83,6 +83,14 @@ AnimalCafe 采用 **Playable Loop 逐层扩展** 的开发方式。
 
 ## Phase 0 — Project Foundation
 
+> 状态：Completed
+>
+> 完成日期：2026-07-25
+>
+> 验证环境：Unity `6000.5.5f1` / Windows
+>
+> 验证结果：16 / 16 Play Mode tests passed；`MainCafe` scene load 与 Console error scan passed；Camera pan、zoom、bounds、isometric baseline、selection feedback、Pause、`1x` 和 `2x` 已完成人工验收。
+
 ### Goal
 
 建立简单、可理解、可测试的 Unity project foundation，让后续系统共享一致的 Camera、input、interaction 和 game time。
@@ -612,4 +620,3 @@ Phase 0 plan 预计覆盖：
 - 每一步的 beginner-friendly Play Mode 验证方式
 
 在 Phase 0 完成并通过 completion gate 前，不开始 Customer AI、Order System 或 Economy implementation。
-

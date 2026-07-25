@@ -811,3 +811,211 @@ Assembly Definition。告诉 Unity 哪些 scripts 一起编译，以及它们可
 6. 最后才打开一个简单 script，例如 `TimeTestMover.cs`。
 
 当你能解释“button 如何让橙色 cube 改变速度”时，就已经理解了 Phase 0 最重要的基础数据流之一。
+
+---
+
+## Appendix A — Phase 0 Complete File List
+
+本附录记录 Phase 0 创建和修改的主要 files。
+
+## A.1 Added Files
+
+### Camera Config
+
+```text
+Assets/Config/DefaultCameraSettings.asset
+```
+
+- 保存 Camera pan speed、zoom speed、position bounds、zoom bounds 和 drag threshold。
+
+### Editor Tools
+
+```text
+Assets/Editor/AnimalCafe.Editor.asmdef
+Assets/Editor/Phase0SceneSetup.cs
+```
+
+- `AnimalCafe.Editor.asmdef`：定义只在 Unity Editor 中使用的 assembly。
+- `Phase0SceneSetup.cs`：自动配置 `MainCafe` 的 Phase 0 objects 和 references。
+
+### Placeholder Materials
+
+```text
+Assets/Materials/Phase0Blue.mat
+Assets/Materials/Phase0Green.mat
+Assets/Materials/Phase0Orange.mat
+```
+
+- 蓝色和绿色 materials 用于 selectable cubes。
+- 橙色 material 用于 Game Time test mover。
+- 这些是 placeholder materials，不是正式美术。
+
+### Runtime Assembly
+
+```text
+Assets/Scripts/AnimalCafe.Runtime.asmdef
+```
+
+- 定义 Phase 0 runtime scripts 所属的 assembly 和 dependencies。
+
+### Camera Scripts
+
+```text
+Assets/Scripts/Camera/CafeCameraController.cs
+Assets/Scripts/Camera/CameraSettings.cs
+```
+
+- `CafeCameraController.cs`：Camera pan、zoom 和 bounds。
+- `CameraSettings.cs`：可在 Inspector 调整的 Camera config definition。
+
+### Event Scripts
+
+```text
+Assets/Scripts/Core/Events/GameEventBus.cs
+Assets/Scripts/Core/Events/GameEvents.cs
+```
+
+- `GameEventBus.cs`：发布跨系统状态变化。
+- `GameEvents.cs`：定义 selection 和 Game Time event data。
+
+### Game Time Scripts
+
+```text
+Assets/Scripts/Core/Time/GameSpeed.cs
+Assets/Scripts/Core/Time/GameTimeService.cs
+Assets/Scripts/Core/Time/IGameTimeService.cs
+```
+
+- `GameSpeed.cs`：定义 Pause、Normal 和 Fast。
+- `GameTimeService.cs`：统一管理 Unity time scale。
+- `IGameTimeService.cs`：定义其他 gameplay systems 使用的 time contract。
+
+### Input Scripts
+
+```text
+Assets/Scripts/Input/CameraInputFrame.cs
+Assets/Scripts/Input/ICameraInputSource.cs
+Assets/Scripts/Input/MouseCameraInput.cs
+```
+
+- `CameraInputFrame.cs`：保存一个 frame 的 pan、zoom 和 tap data。
+- `ICameraInputSource.cs`：定义 input adapter contract。
+- `MouseCameraInput.cs`：读取 Windows mouse input。
+
+### Interaction Scripts
+
+```text
+Assets/Scripts/Interaction/ColorSelectable.cs
+Assets/Scripts/Interaction/ISelectable.cs
+Assets/Scripts/Interaction/SceneInteractionController.cs
+```
+
+- `ColorSelectable.cs`：selected object 的变色 feedback。
+- `ISelectable.cs`：定义 selectable contract。
+- `SceneInteractionController.cs`：raycast 和 selection management。
+
+### Testing Demo Scripts
+
+```text
+Assets/Scripts/Testing/TimeTestMover.cs
+Assets/Scripts/UI/TimeControlPanel.cs
+```
+
+- `TimeTestMover.cs`：显示 Pause、`1x` 和 `2x` 的速度变化。
+- `TimeControlPanel.cs`：连接三个 placeholder buttons 与 Game Time service。
+
+### Automated Tests
+
+```text
+Assets/Tests/PlayMode/AnimalCafe.PlayModeTests.asmdef
+Assets/Tests/PlayMode/Phase0PlayModeTests.cs
+```
+
+- `AnimalCafe.PlayModeTests.asmdef`：定义 Play Mode test assembly。
+- `Phase0PlayModeTests.cs`：Phase 0 automated test suite。
+
+### Phase 0 Documents
+
+```text
+Docs/Phase0_Beginner_Guide.md
+Docs/superpowers/specs/2026-07-24-phase-0-project-foundation-design.md
+Docs/superpowers/plans/2026-07-24-phase-0-project-foundation.md
+```
+
+- `Phase0_Beginner_Guide.md`：Unity 和 Phase 0 零基础查看指南。
+- Design Spec：记录确认过的 Phase 0 architecture 和验收标准。
+- Implementation Plan：记录 Phase 0 的实施步骤和验证方式。
+
+## A.2 Modified Files
+
+```text
+Assets/Scenes/MainCafe.unity
+ProjectSettings/EditorBuildSettings.asset
+AnimalCafe.slnx
+Docs/AnimalCafe_Development_Roadmap.md
+```
+
+### `Assets/Scenes/MainCafe.unity`
+
+增加：
+
+- Classic isometric Camera baseline
+- `Phase0_Runtime`
+- `Phase0_Demo`
+- `Phase0_TimeControls`
+- `EventSystem`
+- Placeholder objects 和必要 component references
+
+### `ProjectSettings/EditorBuildSettings.asset`
+
+- 将 enabled build scene 从 `SampleScene` 改为 `MainCafe`。
+
+### `AnimalCafe.slnx`
+
+- Unity 自动加入 Runtime、Editor 和 Play Mode Test assemblies 的 project references。
+- 这是 Unity / IDE 管理的 solution file。
+
+### `Docs/AnimalCafe_Development_Roadmap.md`
+
+- 将 Phase 0 标记为 `Completed`。
+- 记录 Unity version、automated tests 和人工验收结果。
+
+## A.3 Unity-generated `.meta` Files
+
+Unity 会为 `Assets` 内的每个 folder 和 asset 自动生成对应 `.meta` file，例如：
+
+```text
+Assets/Config.meta
+Assets/Config/DefaultCameraSettings.asset.meta
+Assets/Editor.meta
+Assets/Editor/Phase0SceneSetup.cs.meta
+Assets/Scripts/Camera.meta
+Assets/Scripts/Camera/CafeCameraController.cs.meta
+Assets/Tests.meta
+Assets/Tests/PlayMode.meta
+```
+
+实际数量会比示例更多，因为每个新增 folder、script、material、assembly definition 和 test asset 都有自己的 `.meta`。
+
+`.meta` file 保存 Unity GUID 和 import settings。它们必须与对应 asset 一起：
+
+- 保留
+- commit
+- push
+- 移动
+- 删除
+
+不要只处理 asset 而遗漏它的 `.meta`。
+
+## A.4 Git Ownership
+
+Phase 0 的 coding、scene setup、tests 和 documentation 由 coding assistant 协助完成。
+
+Git 操作由 project owner 使用 GitHub Desktop 完成：
+
+- Review changes
+- Write commit message
+- Commit
+- Push
+
+Coding assistant 不执行 commit 或 push。
