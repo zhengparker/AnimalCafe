@@ -1,0 +1,9 @@
+{
+  "name": "AnimalCafe.Runtime",
+  "rootNamespace": "AnimalCafe",
+  "references": [
+    "Unity.InputSystem",
+    "UnityEngine.UI"
+  ],
+  "autoReferenced": true
+}

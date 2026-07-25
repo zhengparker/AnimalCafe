@@ -1,4 +1,7 @@
 ﻿<Solution>
+  <Project Path="AnimalCafe.Runtime.csproj" />
   <Project Path="Assembly-CSharp-Editor.csproj" />
+  <Project Path="AnimalCafe.PlayModeTests.csproj" />
   <Project Path="Assembly-CSharp.csproj" />
+  <Project Path="AnimalCafe.Editor.csproj" />
 </Solution>

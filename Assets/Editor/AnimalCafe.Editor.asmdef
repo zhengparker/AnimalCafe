@@ -1,0 +1,14 @@
+{
+  "name": "AnimalCafe.Editor",
+  "rootNamespace": "AnimalCafe.EditorTools",
+  "references": [
+    "AnimalCafe.Runtime",
+    "Unity.InputSystem",
+    "Unity.InputSystem.UI",
+    "UnityEngine.UI"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": true
+}

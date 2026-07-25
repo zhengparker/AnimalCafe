@@ -1,0 +1,14 @@
+{
+  "name": "AnimalCafe.PlayModeTests",
+  "rootNamespace": "AnimalCafe.Tests",
+  "references": [
+    "AnimalCafe.Runtime",
+    "UnityEngine.UI"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "autoReferenced": false
+}
