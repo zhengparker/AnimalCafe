@@ -8,7 +8,7 @@
 >
 > 目标兼容平台：iOS
 >
-> 更新日期：2026-07-26
+> 更新日期：2026-07-27
 
 ## 1. 文档用途
 
@@ -250,6 +250,14 @@ Layout Data
 ---
 
 ## Phase 1 — Layout Data Model
+
+> 状态：In Review
+>
+> 验证环境：Unity `6000.5.5f1` / Windows
+>
+> Automated evidence（2026-07-27）：fresh final EditMode `115 / 115` passed；fresh final PlayMode `18 / 18` passed；两轮均为 failed `0`、skipped `0`、inconclusive `0`。Layout Domain source boundary scan、旧 Phase 1 runtime scan、orphan metadata scan 与 `git diff --check` 通过；Unity test drift 已恢复，generated worktree `.slnx` 已删除。
+>
+> 尚未完成：用户执行 spec §18 manual checklist、明确批准、merge 到 `main`、merged `main` regression verification。
 
 ### Goal
 
@@ -2338,21 +2346,15 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 ## 7. Current Next Step
 
-下一步只为 **Phase 1 — Layout Data Model** 制作新的 design spec。
+**Phase 1 — Layout Data Model** 已进入 `In Review`。下一步只完成：
 
-新的 Phase 1 design 必须先解决：
+1. Task 6 final automated verification 与 repository hygiene。
+2. 用户执行 Phase 1 spec §18 manual checklist。
+3. 用户明确批准后，才 merge 到 `main` 并在 merged `main` 再次验证。
 
-- Grid coordinate 和 cell size 如何表达。
-- Furniture Definition 与 Instance 的确切 fields。
-- Rotation 的表示方式。
-- Rectangular 与未来 irregular footprint 的边界。
-- Unlocked region data structure。
-- Stable ID generation。
-- Runtime data 是否使用 plain C# objects、ScriptableObject definitions，或组合方式。
-- Phase 1 的 Edit Mode / Play Mode test boundary。
+在用户 manual acceptance 和 merged `main` verification 完成前：
 
-在 Phase 1 design 获得批准前：
-
-- 不修改 runtime code。
+- Phase 1 不得标记为 `Completed`。
+- 不开始 Phase 2 Grid placement rules。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
-- 不开始 Grid placement、Decoration UI 或 Customer AI。
+- 不开始 Decoration UI 或 Customer AI。

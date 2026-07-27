@@ -11,12 +11,12 @@
 - 在 Unity 中打开 `MainCafe`。
 - 找到 Phase 0 添加的 GameObjects。
 - 在 Inspector 中查看 Camera 和 gameplay components。
-- 分辨正式技术基础与 placeholder 测试内容。
-- 进入 Play Mode 测试 Camera、selection 和 Game Time。
+- 分辨正式技术基础与 test-local fixture。
+- 进入 Play Mode 测试 Camera 和 Game Time controls。
 - 查看 Console 是否有 error。
-- 运行 Play Mode tests。
-- 知道每个 Phase 0 file 的大概用途。
-- 在不懂 C# 的情况下，判断 Phase 0 有没有正常工作。
+- 运行 EditMode Layout tests 和 PlayMode Phase 0 regression tests。
+- 知道 Phase 0 与 Phase 1 Layout files 的大概用途。
+- 在不懂 C# 的情况下，判断当前基础有没有正常工作。
 
 这份文档不要求你现在学会写 C#。第一目标只是让你看懂项目由哪些部分组成，以及如何验证它们。
 
@@ -36,13 +36,13 @@ Hierarchy 是当前 Scene 中所有 GameObjects 的清单。
 MainCafe
 ├─ Main Camera
 ├─ Directional Light
-├─ CafeFloor
 ├─ Global Volume
 ├─ Phase0_Runtime
-├─ Phase0_Demo
 ├─ Phase0_TimeControls
 └─ EventSystem
 ```
+
+Phase 1 是纯 Layout Data Model 阶段，所以正式 `MainCafe` 暂时没有 floor、家具、顾客或员工。
 
 点击 Hierarchy 中的 GameObject，右侧 Inspector 就会显示它的设置。
 
@@ -137,10 +137,6 @@ Position: (-10, 10, -10)
 
 为整个场景提供主要方向光。
 
-### CafeFloor
-
-当前的测试地面，之后会被正式 cafe layout 扩展或替换。
-
 ### Global Volume
 
 保存 URP 的画面效果设置。Phase 0 没有重点修改正式视觉效果。
@@ -198,39 +194,27 @@ Position: (-10, 10, -10)
 - 选择新 object。
 - 点击空白处时清除 selection。
 
-## 4.3 Phase0_Demo
+## 4.3 正式 MainCafe 应包含与不应包含的内容
 
-展开 `Phase0_Demo` 后应看到：
+正式 `MainCafe` 应包含：
 
-```text
-Phase0_Demo
-├─ Selectable_Blue
-├─ Selectable_Green
-└─ Time_Test_Mover
-```
+- `Main Camera`
+- `Directional Light`
+- `Global Volume`
+- `Phase0_Runtime`
+- `Phase0_TimeControls`
+- `EventSystem`
 
-这些是 placeholder 测试对象，不是正式游戏内容。
+正式 `MainCafe` 不应包含：
 
-### Selectable_Blue 和 Selectable_Green
+- `Phase0_Demo`
+- `Selectable_Blue`
+- `Selectable_Green`
+- `Time_Test_Mover`
+- 旧 Customer、Cashier、Barista、Counter、NavMesh 或 Phase 1 status UI
+- 灰色或黄色的旧 Phase 1 floor
 
-用于测试：
-
-- Tap 是否正确识别。
-- Raycast 是否击中对象。
-- Selection 是否正确切换。
-- Selected visual feedback 是否显示。
-
-点击后变黄色，取消选择后恢复原色。
-
-### Time_Test_Mover
-
-橙色移动方块用于测试 Game Time：
-
-- Pause 时停止。
-- `1x` 时正常移动。
-- `2x` 时移动更快。
-
-它以后不会成为正式 cafe 内容。
+Phase 0 demo cubes 和 mover 已从正式 Scene 删除。Selection 与精确 Game Time speed 仍有 automated regression coverage，但测试对象由 test 自己临时创建并在结束后销毁，不再把正式 Scene 当作 fixture。
 
 ## 4.4 Phase0_TimeControls
 
@@ -268,18 +252,11 @@ Unity UI 需要 EventSystem 才能接收 pointer click。
 
 “正式基础”不代表所有参数永远不能改。Camera angle、speed 和 bounds 都可以继续调整。
 
-## 5.2 Placeholder 测试内容
+## 5.2 Placeholder 与 test-local fixture
 
-以下内容之后会替换：
+正式 Scene 当前仍保留 placeholder 的 Pause、`1x`、`2x` button 视觉样式，之后会由正式 UI 取代。
 
-- 蓝色 cube
-- 绿色 cube
-- 橙色移动 cube
-- 当前 CafeFloor
-- Pause、`1x`、`2x` buttons 的视觉样式
-- 当前测试用 materials
-
-placeholder 的作用是让功能容易观察，而不是代表最终游戏画面。
+蓝色 cube、绿色 cube、橙色 mover、demo materials 和临时 floor 已不在正式 Scene。Automated tests 需要 selectable 或 moving object 时，会在测试中创建 test-local fixture；测试结束后会销毁它。这可避免测试内容被误认为正式游戏内容。
 
 ---
 
@@ -319,21 +296,18 @@ Drag Threshold Pixels
 - `Min/Max Orthographic Size`：允许的 zoom 范围。
 - `Drag Threshold Pixels`：mouse 移动多少 pixels 后，操作从 tap 变成 drag。
 
-## 6.3 查看 selectable object
+## 6.3 理解 selection test-local fixture
 
-1. 展开 `Phase0_Demo`。
-2. 点击 `Selectable_Blue`。
-3. 在 Inspector 查看：
+正式 `MainCafe` 里暂时没有可点击的家具，也不再有 `Selectable_Blue` 或 `Selectable_Green`。Selection regression test 会临时创建带有以下 Components 的 fixture：
 
 ```text
 Transform
-Mesh Filter
 Mesh Renderer
-Box Collider
+Collider
 Color Selectable
 ```
 
-重要关系：
+重要关系仍然是：
 
 ```text
 Box Collider
@@ -346,9 +320,7 @@ Mesh Renderer
 → 真正显示 object 和颜色
 ```
 
-如果 Collider 被删除，object 可能看得见但点不到。
-
-如果 Renderer reference 丢失，selection 可能存在但无法正确显示颜色。
+如果 Collider 缺失，object 可能看得见但点不到。如果 Renderer reference 丢失，selection 可能存在但无法正确显示颜色。未来正式家具进入 Scene 后，再对真实家具做人工 selection 验收。
 
 ---
 
@@ -367,19 +339,18 @@ Mesh Renderer
 - Mouse wheel：zoom。
 - 持续拖拽：Camera 最终会停在 bounds。
 
-### Selection
-
-- 短按蓝色 cube：变黄色。
-- 短按绿色 cube：蓝色恢复，绿色变黄色。
-- 点击地面：取消选择。
-- 拖拽后松开：不应误选 object。
-
 ### Game Time
 
-- Pause：橙色 cube 停止。
-- Pause 状态下：Camera、selection 和 UI 仍可使用。
-- `1x`：橙色 cube 正常移动。
-- `2x`：橙色 cube 明显加速。
+- 点击 `Pause`、`1x`、`2x`，确认三个 buttons 都能接收点击。
+- 点击后确认 Console 没有红色 error。
+- 正式 Scene 没有 mover，因此不能再通过橙色 cube 人工比较速度。
+- Pause、`1x`、`2x` 的精确 time scale 由 PlayMode automated regression tests 验证。
+
+### Scene 清洁
+
+- Game View 中不应出现蓝色、绿色或橙色 demo cubes。
+- 不应出现旧咖啡厅柜台、员工、顾客或临时 floor。
+- 当前空 Scene 仍应允许 Camera pan 和 zoom。
 
 完成后再次点击 Play 按钮退出 Play Mode。
 
@@ -401,11 +372,11 @@ Console 常见三种信息：
 - 黄色 Warning：程序还能继续，但有值得注意的问题。
 - 红色 Error：通常代表功能失败或代码异常。
 
-Phase 0 正常运行时：
+当前基础正常运行时：
 
 - 不应出现红色 error。
 - 不应出现 `A Renderer is required` warning。
-- 测试无效 Game Time speed 时产生的 expected warning 只会出现在自动 test 场景，并由 test 明确处理。
+- 测试无效 Game Time speed 时产生的 expected warning 只会出现在 automated test context，并由 test 明确处理。
 
 如果发现 error：
 
@@ -417,9 +388,9 @@ Phase 0 正常运行时：
 
 ---
 
-## 9. 如何运行 Play Mode tests
+## 9. 如何运行 EditMode 与 PlayMode tests
 
-Play Mode tests 会让 Unity 自动检查 Phase 0 行为。
+EditMode tests 检查不依赖 Scene 的 Layout Data Model 和 Scene setup migration；PlayMode tests 检查 Phase 0 runtime regression 与正式 `MainCafe` smoke behavior。
 
 ### 9.1 打开 Test Runner
 
@@ -431,7 +402,24 @@ Window → General → Test Runner
 
 如果 Unity 将它显示在其他位置，可以使用顶部菜单的 Search 查找 `Test Runner`。
 
-### 9.2 运行 tests
+### 9.2 先运行 EditMode Layout tests
+
+1. 打开 Test Runner。
+2. 选择 `EditMode`。
+3. 展开 `AnimalCafe.EditModeTests`。
+4. 确认以下 test groups 都存在：
+   - `GridValueTests`
+   - `FurnitureDefinitionTests`
+   - `FurnitureInstanceTests`
+   - `FurnitureDefinitionCatalogTests`
+   - `CafeLayoutTests`
+   - `Phase0SceneCleanupTests`
+5. 点击 `Run All`。
+6. 确认全部绿色，没有 Failed、Skipped 或 Inconclusive。
+
+这些 tests 验证 Grid values、rotation、Definition、stable Instance ID、Catalog、Region、`CafeLayout`、invalid data、read-only collections、domain/Scene boundary，以及旧 `Phase0_Demo` cleanup migration。
+
+### 9.3 再运行 PlayMode Phase 0 regression
 
 1. 打开 Test Runner。
 2. 选择 `PlayMode`。
@@ -441,7 +429,7 @@ Window → General → Test Runner
 
 运行时 Unity 会自动进入和退出 Play Mode，不要同时操作 Scene。
 
-### 9.3 如何看结果
+### 9.4 如何看结果
 
 - 绿色：test passed。
 - 红色：test failed。
@@ -457,17 +445,18 @@ Window → General → Test Runner
 - 不同 mouse wheel 数值产生一致 zoom step。
 - Selection、切换 selection 和清除 selection。
 - Renderer 初始化顺序。
-- Pause 停止 moving object。
-- `2x` 比 `1x` 移动更快。
+- Pause 停止 test-local moving fixture。
+- `2x` 让 test-local fixture 比 `1x` 移动更快。
 - UI buttons 改变 Game Time。
 - `MainCafe` 可以加载必要 Phase 0 objects。
+- `MainCafe` 不包含 demo cubes、mover 或旧 Phase 1 objects。
 - Camera 使用目标 isometric rotation。
 
 自动 tests 通过不代表视觉方向一定符合你的喜好。Camera angle 和操作手感仍需要人工 Play Mode 检查。
 
 ---
 
-## 10. Phase 0 files 是做什么的
+## 10. 当前基础 files 是做什么的
 
 你不需要现在读懂每一行代码。先理解每个 file 的责任。
 
@@ -534,15 +523,15 @@ Assets/Scripts/Core/Events/
 - `GameEvents.cs`：定义跨系统通知中的数据。
 - `GameEventBus.cs`：发布 selection 和 speed 变化通知。
 
-## 10.6 UI 与 Testing
+## 10.6 UI
 
 ```text
 Assets/Scripts/UI/TimeControlPanel.cs
-Assets/Scripts/Testing/TimeTestMover.cs
 ```
 
 - `TimeControlPanel.cs`：连接三个 buttons 与 Game Time service。
-- `TimeTestMover.cs`：测试不同 Game Time speed。
+
+旧 `Assets/Scripts/Testing/TimeTestMover.cs` 已删除。测试需要 moving object 时，由 PlayMode test 自己创建 fixture。
 
 ## 10.7 Editor setup
 
@@ -556,8 +545,9 @@ Assets/Editor/Phase0SceneSetup.cs
 
 - 配置 Main Camera。
 - 创建 Phase 0 runtime root。
-- 创建 placeholder demo objects。
 - 创建 time buttons。
+- 确保 EventSystem。
+- 清除旧 `Phase0_Demo`。
 - 连接 Inspector references。
 - 将 `MainCafe` 设为 build scene。
 
@@ -567,18 +557,47 @@ Assets/Editor/Phase0SceneSetup.cs
 AnimalCafe → Phase 0 → Configure Scene
 ```
 
-不要在已经手动调整正式 Scene 后随意运行它，因为它会重新应用 Phase 0 默认 Camera 和 demo settings。
+不要在已经手动调整正式 Scene 后随意运行它，因为它会重新应用 Phase 0 默认 Camera settings。
 
 ## 10.8 Tests
 
 ```text
+Assets/Tests/EditMode/
+├─ AnimalCafe.EditModeTests.asmdef
+├─ GridValueTests.cs
+├─ FurnitureDefinitionTests.cs
+├─ FurnitureInstanceTests.cs
+├─ FurnitureDefinitionCatalogTests.cs
+├─ CafeLayoutTests.cs
+└─ Phase0SceneCleanupTests.cs
+
 Assets/Tests/PlayMode/
 ├─ AnimalCafe.PlayModeTests.asmdef
 └─ Phase0PlayModeTests.cs
 ```
 
-- `.asmdef`：告诉 Unity 这些 files 属于 test assembly。
-- `Phase0PlayModeTests.cs`：包含 Phase 0 automated tests。
+- EditMode files：验证纯 Layout Domain 和 Scene setup cleanup migration，不需要加载 `MainCafe`。
+- PlayMode files：验证 Phase 0 runtime regression 和正式 `MainCafe` smoke behavior。
+
+## 10.9 Phase 1 Layout Domain
+
+```text
+Assets/Scripts/Layout/
+├─ CafeLayout.cs
+├─ FurnitureDefinition.cs
+├─ FurnitureDefinitionCatalog.cs
+├─ FurnitureInstance.cs
+├─ FurnitureRotation.cs
+├─ GridPosition.cs
+├─ GridSettings.cs
+├─ GridSize.cs
+├─ LayoutRegion.cs
+├─ LayoutZoneType.cs
+├─ PlacementSurfaceType.cs
+└─ StableId.cs
+```
+
+这些是纯 C# data 与 validation classes，不是 Scene Components。它们不继承 `MonoBehaviour` 或 `ScriptableObject`，也不保存 `GameObject`、`Transform` 或 Scene references。
 
 ---
 
@@ -609,7 +628,7 @@ Mouse wheel
 ### 11.3 Selection
 
 ```text
-Short tap
+Short tap future selectable object
 → MouseCameraInput
 → SceneInteractionController
 → Physics raycast
@@ -618,6 +637,8 @@ Short tap
 → Object changes color
 ```
 
+当前正式 Scene 没有 selectable demo object；上述流程由 test-local fixture 自动验证。
+
 ### 11.4 Game Time
 
 ```text
@@ -625,7 +646,7 @@ Pause / 1x / 2x button
 → TimeControlPanel
 → GameTimeService
 → Unity time scale
-→ TimeTestMover speed changes
+→ Future gameplay systems use the selected speed
 ```
 
 ---
@@ -639,7 +660,6 @@ Pause / 1x / 2x button
 - `Min Orthographic Size`
 - `Max Orthographic Size`
 - `Drag Threshold Pixels`
-- selected color
 - placeholder button layout
 
 以下内容要一起设计，不建议单独随意修改：
@@ -687,27 +707,57 @@ Components 之间可能通过 reference 连接。删除一个 component 可能�
 
 ---
 
-## 14. 如何判断 Phase 0 是否正常
+## 14. Phase 1 Manual Test Checklist
 
-使用这张 checklist：
+这张 checklist 与 Phase 1 spec 第 18 节一致。Phase 1 是纯 data model，没有 furniture placement UI；人工验收主要确认正式 Scene 清洁、Phase 0 基础未回归，以及 automated results 可重复。
 
-- [ ] `MainCafe` 可以打开。
+### 14.1 开始前
+
+- [ ] 打开的是 `codex/phase1-layout-data-model` worktree。
+- [ ] Unity version 是 `6000.5.5f1`。
+- [ ] 打开 `Assets/Scenes/MainCafe.unity`。
+- [ ] 在 Console 点击 Clear。
+
+### 14.2 EditMode Test Runner
+
+- [ ] 打开 `Window → General → Test Runner`。
+- [ ] 选择 EditMode 并运行全部 tests。
+- [ ] 全部绿色，没有 Failed、Skipped 或 Inconclusive。
+- [ ] Grid、Definition、Instance、Catalog、Layout 和 Scene Cleanup groups 都存在。
+
+### 14.3 Scene 清洁检查
+
+- [ ] Hierarchy 有 `Main Camera`、`Phase0_Runtime`、`Phase0_TimeControls` 和 `EventSystem`。
+- [ ] 没有 `Phase0_Demo`、`Selectable_Blue`、`Selectable_Green` 或 `Time_Test_Mover`。
+- [ ] 没有旧 Customer、Cashier、Barista、Counter、NavMesh 或 Phase 1 status UI。
+- [ ] 没有灰色或黄色的旧 Phase 1 floor。
+
+### 14.4 Play Mode 基础检查
+
+- [ ] 进入 Play Mode 后，Game View 中没有 demo cubes。
+- [ ] 没有旧咖啡厅柜台、员工或顾客。
+- [ ] 点击 `Pause`、`1x` 和 `2x`，三个 buttons 都可接收点击且 Console 不报错。
+- [ ] Mouse wheel 仍能控制 Camera zoom。
+- [ ] Left-button drag 仍能控制 Camera pan；空 Scene 中可同时观察 Main Camera Inspector transform。
+- [ ] 退出 Play Mode 后，Console 没有红色 error。
+
+正式 Scene 不再包含 time mover，所以 `1x` 与 `2x` 的精确 time scale 由 automated regression tests 验证。正式 Scene 也不再包含 selection demo；selection capability 由 test-local fixture regression tests 验证。
+
+### 14.5 PlayMode Test Runner
+
+- [ ] 在 Test Runner 选择 PlayMode 并运行全部 tests。
+- [ ] 所有 Phase 0 regression 与 `MainCafe` smoke tests 都是绿色。
 - [ ] Console 没有红色 error。
-- [ ] Camera 是 Orthographic。
-- [ ] Camera 使用确认中的 isometric angle。
-- [ ] Left drag 可以 pan。
-- [ ] Mouse wheel 可以 zoom。
-- [ ] Camera 不会无限移出 bounds。
-- [ ] Drag 松开时不会误选 object。
-- [ ] 蓝绿 cubes 可以 selected 并变色。
-- [ ] 可以切换 selection。
-- [ ] 点击地面可以取消 selection。
-- [ ] Pause 停止橙色 cube。
-- [ ] Pause 时 Camera 和 UI 仍可操作。
-- [ ] `1x` 与 `2x` 有明显速度差异。
-- [ ] Play Mode tests 全部通过。
 
-如果以上都通过，说明 Phase 0 的技术基础处于可继续开发状态。
+### 14.6 用户最终确认
+
+- [ ] 正式 Scene 已清除所有 Phase 0 demo objects。
+- [ ] 旧 Phase 1 咖啡循环和临时 floor 没有进入新 branch。
+- [ ] Camera 与 Pause/`1x`/`2x` controls 仍正常。
+- [ ] EditMode 与 PlayMode tests 全部通过。
+- [ ] Console clean。
+
+只有这份人工 checklist 获得用户明确确认，并完成 merge 后验证，Roadmap 才能从 `In Review` 改为 `Completed`。
 
 ---
 
@@ -785,6 +835,14 @@ Unity Editor 中模拟游戏运行的模式。
 
 让 Unity 自动进入运行环境并验证 gameplay behavior 的测试。
 
+### Edit Mode Test
+
+不进入完整 gameplay runtime 就验证纯数据、validation 和 Editor behavior 的测试。
+
+### Test-local fixture
+
+只在 automated test 期间临时创建的测试对象；测试结束后销毁，不保存在正式 Scene。
+
 ### Regression
 
 原本正常的功能因为后续修改再次损坏。
@@ -804,19 +862,20 @@ Assembly Definition。告诉 Unity 哪些 scripts 一起编译，以及它们可
 第一次不要尝试一次看懂所有 scripts。建议：
 
 1. 先熟悉 Hierarchy、Scene、Game、Inspector、Project 和 Console。
-2. 在 Play Mode 中完整测试一次 Phase 0。
+2. 在 Play Mode 中完成第 14 节基础检查。
 3. 对照本文件查看 `Phase0_Runtime` 的 Components。
 4. 查看 `DefaultCameraSettings` 的参数。
-5. 运行一次 Play Mode tests。
-6. 最后才打开一个简单 script，例如 `TimeTestMover.cs`。
+5. 运行一次 EditMode tests。
+6. 运行一次 PlayMode tests。
+7. 最后才打开一个简单 script，例如 `GridPosition.cs` 或 `GameSpeed.cs`。
 
-当你能解释“button 如何让橙色 cube 改变速度”时，就已经理解了 Phase 0 最重要的基础数据流之一。
+当你能解释“button 如何改变 Game Time”以及“为什么正式 Scene 不需要保存测试 cube”时，就已经理解了当前基础最重要的两个边界。
 
 ---
 
-## Appendix A — Phase 0 Complete File List
+## Appendix A — Current Foundation File List
 
-本附录记录 Phase 0 创建和修改的主要 files。
+本附录记录 Phase 0 正式基础与 Phase 1 Layout Data Model 的主要 files。已删除的 demo-only files 不属于当前清单。
 
 ## A.1 Added Files
 
@@ -837,18 +896,6 @@ Assets/Editor/Phase0SceneSetup.cs
 
 - `AnimalCafe.Editor.asmdef`：定义只在 Unity Editor 中使用的 assembly。
 - `Phase0SceneSetup.cs`：自动配置 `MainCafe` 的 Phase 0 objects 和 references。
-
-### Placeholder Materials
-
-```text
-Assets/Materials/Phase0Blue.mat
-Assets/Materials/Phase0Green.mat
-Assets/Materials/Phase0Orange.mat
-```
-
-- 蓝色和绿色 materials 用于 selectable cubes。
-- 橙色 material 用于 Game Time test mover。
-- 这些是 placeholder materials，不是正式美术。
 
 ### Runtime Assembly
 
@@ -914,25 +961,52 @@ Assets/Scripts/Interaction/SceneInteractionController.cs
 - `ISelectable.cs`：定义 selectable contract。
 - `SceneInteractionController.cs`：raycast 和 selection management。
 
-### Testing Demo Scripts
+### UI Script
 
 ```text
-Assets/Scripts/Testing/TimeTestMover.cs
 Assets/Scripts/UI/TimeControlPanel.cs
 ```
 
-- `TimeTestMover.cs`：显示 Pause、`1x` 和 `2x` 的速度变化。
 - `TimeControlPanel.cs`：连接三个 placeholder buttons 与 Game Time service。
+
+### Layout Domain
+
+```text
+Assets/Scripts/Layout/
+├─ CafeLayout.cs
+├─ FurnitureDefinition.cs
+├─ FurnitureDefinitionCatalog.cs
+├─ FurnitureInstance.cs
+├─ FurnitureRotation.cs
+├─ GridPosition.cs
+├─ GridSettings.cs
+├─ GridSize.cs
+├─ LayoutRegion.cs
+├─ LayoutZoneType.cs
+├─ PlacementSurfaceType.cs
+└─ StableId.cs
+```
+
+- 保存 Phase 1 的 Grid、Region、Furniture Definition、Furniture Instance、Catalog 与 stable ID contracts。
+- 不保存 Unity Scene references。
 
 ### Automated Tests
 
 ```text
+Assets/Tests/EditMode/AnimalCafe.EditModeTests.asmdef
+Assets/Tests/EditMode/GridValueTests.cs
+Assets/Tests/EditMode/FurnitureDefinitionTests.cs
+Assets/Tests/EditMode/FurnitureInstanceTests.cs
+Assets/Tests/EditMode/FurnitureDefinitionCatalogTests.cs
+Assets/Tests/EditMode/CafeLayoutTests.cs
+Assets/Tests/EditMode/Phase0SceneCleanupTests.cs
 Assets/Tests/PlayMode/AnimalCafe.PlayModeTests.asmdef
 Assets/Tests/PlayMode/Phase0PlayModeTests.cs
 ```
 
+- EditMode test assembly：Layout Domain 与 Scene cleanup migration。
 - `AnimalCafe.PlayModeTests.asmdef`：定义 Play Mode test assembly。
-- `Phase0PlayModeTests.cs`：Phase 0 automated test suite。
+- `Phase0PlayModeTests.cs`：Phase 0 regression 与 `MainCafe` smoke suite；selection 和 mover 使用 test-local fixtures。
 
 ### Phase 0 Documents
 
@@ -951,34 +1025,31 @@ Docs/superpowers/plans/2026-07-24-phase-0-project-foundation.md
 ```text
 Assets/Scenes/MainCafe.unity
 ProjectSettings/EditorBuildSettings.asset
-AnimalCafe.slnx
 Docs/AnimalCafe_Development_Roadmap.md
 ```
 
 ### `Assets/Scenes/MainCafe.unity`
 
-增加：
+当前保留：
 
 - Classic isometric Camera baseline
 - `Phase0_Runtime`
-- `Phase0_Demo`
 - `Phase0_TimeControls`
 - `EventSystem`
-- Placeholder objects 和必要 component references
+
+已删除 `Phase0_Demo`、demo cubes、mover 和旧 Phase 1 Scene 内容。Phase 1 不新增 floor。
 
 ### `ProjectSettings/EditorBuildSettings.asset`
 
 - 将 enabled build scene 从 `SampleScene` 改为 `MainCafe`。
 
-### `AnimalCafe.slnx`
-
-- Unity 自动加入 Runtime、Editor 和 Play Mode Test assemblies 的 project references。
-- 这是 Unity / IDE 管理的 solution file。
-
 ### `Docs/AnimalCafe_Development_Roadmap.md`
 
 - 将 Phase 0 标记为 `Completed`。
 - 记录 Unity version、automated tests 和人工验收结果。
+- Phase 1 在 automated verification 完成、但用户 manual acceptance 和 merge 尚未完成时只能标记为 `In Review`。
+
+Unity 可能生成 `AnimalCafe.slnx`、`.csproj`、Temp、Logs 和 test result files；这些是本地 generated artifacts，不应 stage 或 commit。
 
 ## A.3 Unity-generated `.meta` Files
 
@@ -1009,13 +1080,11 @@ Assets/Tests/PlayMode.meta
 
 ## A.4 Git Ownership
 
-Phase 0 的 coding、scene setup、tests 和 documentation 由 coding assistant 协助完成。
-
-Git 操作由 project owner 使用 GitHub Desktop 完成：
+项目的 coding、scene setup、tests 和 documentation 由 coding assistant 协助完成。通常 Git review、commit 与 push 由 project owner 使用 GitHub Desktop 完成：
 
 - Review changes
 - Write commit message
 - Commit
 - Push
 
-Coding assistant 不执行 commit 或 push。
+本 Phase 1 Task 6 已单独批准 coding assistant 创建一个本地 documentation checkpoint commit；仍不会 push 或 merge。
