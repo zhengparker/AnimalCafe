@@ -27,6 +27,14 @@ namespace AnimalCafe.Layout
                     nameof(id));
             }
 
+            if (size.Width < 1 || size.Height < 1)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(size),
+                    size,
+                    "Region size must have a width and height of at least one.");
+            }
+
             switch (zoneType)
             {
                 case LayoutZoneType.Interior:

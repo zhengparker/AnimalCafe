@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using AnimalCafe.Layout;
 using NUnit.Framework;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 namespace AnimalCafe.Tests
@@ -65,6 +68,16 @@ namespace AnimalCafe.Tests
         public void LayoutRegion_InvalidSizeIsRejectedByGridSize()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => new GridSize(0, 1));
+        }
+
+        [Test]
+        public void LayoutRegion_DefaultGridSizeThrows()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => new LayoutRegion(
+                "region.invalid",
+                new GridPosition(0, 0),
+                default,
+                LayoutZoneType.Interior));
         }
 
         [Test]
@@ -310,6 +323,26 @@ namespace AnimalCafe.Tests
             Assert.That(SceneManager.GetActiveScene().path, Does.Not.EndWith("MainCafe.unity"));
         }
 
+        [Test]
+        public void Task4LayoutDomainTypes_HaveNoUnityObjectOrSceneFields()
+        {
+            var domainTypes = new[]
+            {
+                typeof(FurnitureDefinitionCatalog),
+                typeof(LayoutRegion),
+                typeof(CafeLayout)
+            };
+
+            var forbiddenFields = domainTypes
+                .SelectMany(type => type.GetFields(
+                    BindingFlags.Instance |
+                    BindingFlags.NonPublic |
+                    BindingFlags.Public))
+                .Where(field => ContainsForbiddenReference(field.FieldType));
+
+            Assert.That(forbiddenFields, Is.Empty);
+        }
+
         private static CafeLayout CreateLayout()
         {
             return new CafeLayout(new GridSettings(1f), CreateCatalog());
@@ -351,6 +384,18 @@ namespace AnimalCafe.Tests
                 new GridPosition(x, y),
                 new GridSize(width, height),
                 zoneType);
+        }
+
+        private static bool ContainsForbiddenReference(Type type)
+        {
+            if (typeof(UnityEngine.Object).IsAssignableFrom(type) ||
+                type == typeof(Scene))
+            {
+                return true;
+            }
+
+            return type.IsGenericType &&
+                   type.GetGenericArguments().Any(ContainsForbiddenReference);
         }
     }
 }
