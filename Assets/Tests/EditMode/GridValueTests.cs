@@ -60,6 +60,18 @@ namespace AnimalCafe.Tests
             Assert.That(first.GetHashCode(), Is.EqualTo(second.GetHashCode()));
         }
 
+        [Test]
+        public void GridSize_DifferentValuesCompareUnequal()
+        {
+            var first = new GridSize(2, 3);
+            var second = new GridSize(3, 2);
+
+            Assert.That(first, Is.Not.EqualTo(second));
+            Assert.That(first.Equals(second), Is.False);
+            Assert.That(first == second, Is.False);
+            Assert.That(first != second, Is.True);
+        }
+
         [TestCase(0, 1)]
         [TestCase(1, 0)]
         [TestCase(-1, 1)]
@@ -119,6 +131,21 @@ namespace AnimalCafe.Tests
             }
 
             Assert.That(size, Is.EqualTo(new GridSize(2, 3)));
+        }
+
+        [Test]
+        public void LayoutEnums_UseRequiredBackingValues()
+        {
+            Assert.That((int)FurnitureRotation.Degrees0, Is.EqualTo(0));
+            Assert.That((int)FurnitureRotation.Degrees90, Is.EqualTo(90));
+            Assert.That((int)FurnitureRotation.Degrees180, Is.EqualTo(180));
+            Assert.That((int)FurnitureRotation.Degrees270, Is.EqualTo(270));
+            Assert.That((int)LayoutZoneType.Interior, Is.EqualTo(0));
+            Assert.That((int)LayoutZoneType.Exterior, Is.EqualTo(1));
+            Assert.That((int)PlacementSurfaceType.None, Is.EqualTo(0));
+            Assert.That((int)PlacementSurfaceType.Floor, Is.EqualTo(1));
+            Assert.That((int)PlacementSurfaceType.Wall, Is.EqualTo(2));
+            Assert.That((int)PlacementSurfaceType.FurnitureSurface, Is.EqualTo(4));
         }
     }
 }
