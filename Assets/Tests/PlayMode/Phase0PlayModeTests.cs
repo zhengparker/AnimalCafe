@@ -4,7 +4,6 @@ using AnimalCafe.Input;
 using CafeCameraController = AnimalCafe.Camera.CafeCameraController;
 using CameraSettings = AnimalCafe.Camera.CameraSettings;
 using AnimalCafe.Interaction;
-using AnimalCafe.Testing;
 using AnimalCafe.UI;
 using NUnit.Framework;
 using UnityEngine;
@@ -14,6 +13,37 @@ using UnityEngine.SceneManagement;
 
 namespace AnimalCafe.Tests.PlayMode
 {
+    public sealed class ScaledTimeTestFixture : MonoBehaviour
+    {
+        private Vector3 startPoint;
+        private Vector3 endPoint;
+        private float unitsPerSecond;
+
+        private void Update()
+        {
+            transform.position = Vector3.MoveTowards(
+                transform.position,
+                endPoint,
+                unitsPerSecond * Time.deltaTime);
+        }
+
+        public void Configure(
+            Vector3 start,
+            Vector3 end,
+            float movementSpeed)
+        {
+            startPoint = start;
+            endPoint = end;
+            unitsPerSecond = movementSpeed;
+            ResetToStart();
+        }
+
+        public void ResetToStart()
+        {
+            transform.position = startPoint;
+        }
+    }
+
     public sealed class Phase0PlayModeTests
     {
         [TearDown]
@@ -184,8 +214,8 @@ namespace AnimalCafe.Tests.PlayMode
         {
             var serviceObject = new GameObject("GameTimeService");
             var service = serviceObject.AddComponent<GameTimeService>();
-            var moverObject = new GameObject("TimeTestMover");
-            var mover = moverObject.AddComponent<TimeTestMover>();
+            var moverObject = new GameObject("ScaledTimeFixture");
+            var mover = moverObject.AddComponent<ScaledTimeTestFixture>();
             mover.Configure(Vector3.zero, Vector3.right * 10f, 1f);
 
             service.SetNormal();
@@ -208,8 +238,8 @@ namespace AnimalCafe.Tests.PlayMode
         {
             var serviceObject = new GameObject("GameTimeService");
             var service = serviceObject.AddComponent<GameTimeService>();
-            var moverObject = new GameObject("TimeTestMover");
-            var mover = moverObject.AddComponent<TimeTestMover>();
+            var moverObject = new GameObject("ScaledTimeFixture");
+            var mover = moverObject.AddComponent<ScaledTimeTestFixture>();
             mover.Configure(Vector3.zero, Vector3.right * 10f, 1f);
 
             service.SetPaused();
@@ -256,9 +286,9 @@ namespace AnimalCafe.Tests.PlayMode
             yield return null;
 
             var runtimeRoot = GameObject.Find("Phase0_Runtime");
-            var demoRoot = GameObject.Find("Phase0_Demo");
             var canvas = GameObject.Find("Phase0_TimeControls");
 
+            Assert.That(CountLoadedSceneObjects("Phase0_Runtime"), Is.EqualTo(1));
             Assert.That(runtimeRoot, Is.Not.Null);
             Assert.That(runtimeRoot.GetComponent<GameTimeService>(), Is.Not.Null);
             Assert.That(runtimeRoot.GetComponent<MouseCameraInput>(), Is.Not.Null);
@@ -266,14 +296,17 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(
                 runtimeRoot.GetComponent<SceneInteractionController>(),
                 Is.Not.Null);
-            Assert.That(demoRoot, Is.Not.Null);
-            Assert.That(demoRoot.transform.Find("Selectable_Blue"), Is.Not.Null);
-            Assert.That(demoRoot.transform.Find("Selectable_Green"), Is.Not.Null);
-            Assert.That(demoRoot.transform.Find("Time_Test_Mover"), Is.Not.Null);
+            Assert.That(GameObject.Find("Phase0_Demo"), Is.Null);
+            Assert.That(GameObject.Find("Selectable_Blue"), Is.Null);
+            Assert.That(GameObject.Find("Selectable_Green"), Is.Null);
+            Assert.That(GameObject.Find("Time_Test_Mover"), Is.Null);
+            Assert.That(GameObject.Find("CafeFloor"), Is.Null);
+            Assert.That(CountLoadedSceneObjects("Phase0_TimeControls"), Is.EqualTo(1));
             Assert.That(canvas, Is.Not.Null);
             Assert.That(
                 canvas.GetComponentInChildren<TimeControlPanel>(true),
                 Is.Not.Null);
+            Assert.That(CountLoadedSceneObjects("EventSystem"), Is.EqualTo(1));
 
             var mainCamera = GameObject.Find("Main Camera").GetComponent<UnityEngine.Camera>();
             var cameraController = runtimeRoot.GetComponent<CafeCameraController>();
@@ -287,12 +320,35 @@ namespace AnimalCafe.Tests.PlayMode
             cameraController.ApplyPan(new Vector2(0f, -10000f));
             Assert.That(mainCamera.transform.position.z, Is.EqualTo(-8f).Within(0.001f));
 
-            var sceneSelectable = demoRoot
-                .transform.Find("Selectable_Blue")
-                .GetComponent<ColorSelectable>();
-            sceneSelectable.Select();
-            Assert.That(sceneSelectable.IsSelected, Is.True);
-            Assert.That(sceneSelectable.enabled, Is.True);
+            var selectableObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            try
+            {
+                var selectable = selectableObject.AddComponent<ColorSelectable>();
+                selectable.Select();
+
+                Assert.That(selectable.IsSelected, Is.True);
+                Assert.That(selectable.enabled, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(selectableObject);
+            }
+        }
+
+        private static int CountLoadedSceneObjects(string objectName)
+        {
+            var count = 0;
+            foreach (var gameObject in Resources.FindObjectsOfTypeAll<GameObject>())
+            {
+                if (gameObject.scene.IsValid()
+                    && gameObject.scene.isLoaded
+                    && gameObject.name == objectName)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
     }
 }

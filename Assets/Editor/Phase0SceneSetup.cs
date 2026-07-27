@@ -3,7 +3,6 @@ using AnimalCafe.Camera;
 using AnimalCafe.Core.Time;
 using AnimalCafe.Input;
 using AnimalCafe.Interaction;
-using AnimalCafe.Testing;
 using AnimalCafe.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -24,7 +23,6 @@ namespace AnimalCafe.EditorTools
         private const string ScenePath = "Assets/Scenes/MainCafe.unity";
         private const string SettingsPath = "Assets/Config/DefaultCameraSettings.asset";
         private const string RuntimeRootName = "Phase0_Runtime";
-        private const string DemoRootName = "Phase0_Demo";
         private const string CanvasName = "Phase0_TimeControls";
 
         [MenuItem("AnimalCafe/Phase 0/Configure Scene")]
@@ -45,10 +43,10 @@ namespace AnimalCafe.EditorTools
                     "'Main Camera' must contain a Camera component.");
             }
 
+            RemoveLegacyDemoObjects();
             var settings = GetOrCreateCameraSettings();
             ConfigureCamera(mainCamera);
             ConfigureRuntime(mainCamera, settings);
-            ConfigureDemoObjects();
             ConfigureTimeControls();
             EnsureEventSystem();
 
@@ -115,55 +113,13 @@ namespace AnimalCafe.EditorTools
             SetObjectReference(interaction, "inputSourceBehaviour", mouseInput);
         }
 
-        private static void ConfigureDemoObjects()
+        private static void RemoveLegacyDemoObjects()
         {
-            var root = FindOrCreateRoot(DemoRootName);
-            var blueMaterial = GetOrCreateMaterial(
-                "Assets/Materials/Phase0Blue.mat",
-                new Color(0.25f, 0.55f, 0.95f));
-            var greenMaterial = GetOrCreateMaterial(
-                "Assets/Materials/Phase0Green.mat",
-                new Color(0.25f, 0.8f, 0.45f));
-            var orangeMaterial = GetOrCreateMaterial(
-                "Assets/Materials/Phase0Orange.mat",
-                new Color(1f, 0.45f, 0.15f));
-
-            ConfigureSelectableCube(
-                root.transform,
-                "Selectable_Blue",
-                new Vector3(-2.5f, 0.75f, 0f),
-                blueMaterial);
-            ConfigureSelectableCube(
-                root.transform,
-                "Selectable_Green",
-                new Vector3(2.5f, 0.75f, 0f),
-                greenMaterial);
-
-            var mover = FindOrCreatePrimitive(
-                root.transform,
-                "Time_Test_Mover",
-                PrimitiveType.Cube);
-            mover.transform.localScale = new Vector3(1f, 1.5f, 1f);
-            mover.GetComponent<Renderer>().sharedMaterial = orangeMaterial;
-            var movement = GetOrAdd<TimeTestMover>(mover);
-            movement.Configure(
-                new Vector3(-3f, 0.75f, 3f),
-                new Vector3(3f, 0.75f, 3f),
-                1.5f);
-        }
-
-        private static void ConfigureSelectableCube(
-            Transform parent,
-            string name,
-            Vector3 position,
-            Material material)
-        {
-            var cube = FindOrCreatePrimitive(parent, name, PrimitiveType.Cube);
-            cube.transform.position = position;
-            cube.transform.localScale = Vector3.one * 1.5f;
-            cube.GetComponent<Renderer>().sharedMaterial = material;
-            var selectable = GetOrAdd<ColorSelectable>(cube);
-            SetObjectReference(selectable, "targetRenderer", cube.GetComponent<Renderer>());
+            var demoRoot = GameObject.Find("Phase0_Demo");
+            if (demoRoot != null)
+            {
+                UnityEngine.Object.DestroyImmediate(demoRoot);
+            }
         }
 
         private static void ConfigureTimeControls()
@@ -259,23 +215,6 @@ namespace AnimalCafe.EditorTools
             return GameObject.Find(name) ?? new GameObject(name);
         }
 
-        private static GameObject FindOrCreatePrimitive(
-            Transform parent,
-            string name,
-            PrimitiveType primitiveType)
-        {
-            var child = parent.Find(name);
-            if (child != null)
-            {
-                return child.gameObject;
-            }
-
-            var created = GameObject.CreatePrimitive(primitiveType);
-            created.name = name;
-            created.transform.SetParent(parent);
-            return created;
-        }
-
         private static GameObject FindOrCreateUiObject(Transform parent, string name)
         {
             var child = parent.Find(name);
@@ -310,23 +249,6 @@ namespace AnimalCafe.EditorTools
             property.objectReferenceValue = value;
             serializedObject.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(target);
-        }
-
-        private static Material GetOrCreateMaterial(string path, Color color)
-        {
-            EnsureFolder("Assets", "Materials");
-            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (material == null)
-            {
-                var shader = Shader.Find("Universal Render Pipeline/Lit")
-                    ?? Shader.Find("Standard");
-                material = new Material(shader);
-                AssetDatabase.CreateAsset(material, path);
-            }
-
-            material.color = color;
-            EditorUtility.SetDirty(material);
-            return material;
         }
 
         private static void EnsureFolder(string parent, string name)
