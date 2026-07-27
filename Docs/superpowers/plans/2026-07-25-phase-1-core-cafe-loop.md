@@ -1,5 +1,11 @@
 # AnimalCafe Phase 1 — 核心咖啡厅循环 MVP Implementation Plan
 
+> **状态：Superseded（2026-07-26）**
+>
+> 不要执行本文档中的 tasks。旧版大型 Phase 1 已拆分为多个 dependency-driven phases。
+> 当前执行顺序以 `Docs/AnimalCafe_Development_Roadmap.md` 为准，并从
+> **Phase 1 — Layout Data Model** 重新开始设计与 planning。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: 使用 `superpowers:subagent-driven-development`（推荐）或 `superpowers:executing-plans`，按照 task 顺序逐项实施。所有 steps 使用 checkbox 追踪。
 
 **Goal:** 在 `MainCafe` 中建立“Customer 排队 → Cashier 收银 → Barista 按 FIFO 制作 → Pick-up 取餐 → Customer 离开”的自动外带服务循环。

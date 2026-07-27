@@ -1,6 +1,12 @@
 # AnimalCafe Phase 1 — 核心咖啡厅循环 MVP 设计
 
-**状态：** Design 已批准，等待编写 implementation plan
+> **状态：Superseded（2026-07-26）**
+>
+> 本文档描述旧版大型 Phase 1，保留作为历史参考，不再作为当前 implementation 依据。
+> 当前 roadmap 已将 Phase 1 之后重新拆分；新的执行入口是
+> `Docs/AnimalCafe_Development_Roadmap.md` 中的 **Phase 1 — Layout Data Model**。
+
+**旧版状态：** 曾获批准，但现已由新版 dependency-driven roadmap 取代
 **日期：** 2026-07-25
 **基线：** Phase 0 已完成；Unity `6000.5.5f1` 下 16 / 16 Play Mode tests 通过
 
