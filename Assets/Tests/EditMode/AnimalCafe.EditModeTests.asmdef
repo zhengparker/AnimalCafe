@@ -1,0 +1,15 @@
+{
+  "name": "AnimalCafe.EditModeTests",
+  "rootNamespace": "AnimalCafe.Tests",
+  "references": [
+    "AnimalCafe.Runtime",
+    "AnimalCafe.Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "autoReferenced": false
+}
