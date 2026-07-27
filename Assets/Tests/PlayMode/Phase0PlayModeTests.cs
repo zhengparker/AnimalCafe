@@ -7,6 +7,7 @@ using AnimalCafe.Interaction;
 using AnimalCafe.UI;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -46,6 +47,37 @@ namespace AnimalCafe.Tests.PlayMode
 
     public sealed class Phase0PlayModeTests
     {
+        private static readonly string[] LegacyPhase1ObjectNames =
+        {
+            "Phase1_Runtime",
+            "Phase1_Cafe",
+            "Phase1_Characters",
+            "Phase1_UI",
+            "__Phase1SetupOwned",
+            "Floor_Main",
+            "Floor_LowerWing",
+            "Floor_UpperWing",
+            "Counter_Main",
+            "Counter_Pickup",
+            "Counter_Main_Visual",
+            "Counter_Pickup_Visual",
+            "Counter_Horizontal",
+            "Counter_Vertical",
+            "CoffeeMachine",
+            "CafeStations",
+            "CounterQueue_0",
+            "CounterQueue_1",
+            "CounterQueue_2",
+            "PickupSlot_0",
+            "PickupSlot_1",
+            "Cashier_Cat",
+            "Barista_Fox",
+            "Customer_Bunny_PrefabSource",
+            "CustomerSpawner",
+            "Phase1StatusCanvas",
+            "CafeStatusPanel"
+        };
+
         [TearDown]
         public void TearDown()
         {
@@ -209,6 +241,55 @@ namespace AnimalCafe.Tests.PlayMode
             Object.DestroyImmediate(cameraObject);
         }
 
+        [Test]
+        public void LegacyPhase1Predicate_DetectsInactiveExactNameFixture()
+        {
+            var legacyRoot = new GameObject("Phase1_Runtime");
+            legacyRoot.SetActive(false);
+
+            try
+            {
+                Assert.That(
+                    SceneContainsExactNamedObject(
+                        legacyRoot.scene,
+                        "Phase1_Runtime"),
+                    Is.True);
+                Assert.That(
+                    SceneContainsExactNamedObject(
+                        legacyRoot.scene,
+                        "Phase1_Runtime_Copy"),
+                    Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(legacyRoot);
+            }
+        }
+
+        [Test]
+        public void NavMeshPredicate_DistinguishesEmptySettingsFromBakedData()
+        {
+            Assert.That(
+                HasBakedOrRuntimeNavMesh(default),
+                Is.False);
+
+            var bakedData = new NavMeshTriangulation
+            {
+                vertices = new[]
+                {
+                    Vector3.zero,
+                    Vector3.right,
+                    Vector3.forward
+                },
+                indices = new[] { 0, 1, 2 },
+                areas = new[] { 0 }
+            };
+
+            Assert.That(
+                HasBakedOrRuntimeNavMesh(bakedData),
+                Is.True);
+        }
+
         [UnityTest]
         public IEnumerator TimeMover_FastMovesFartherThanNormal()
         {
@@ -308,6 +389,22 @@ namespace AnimalCafe.Tests.PlayMode
                 Is.Not.Null);
             Assert.That(CountLoadedSceneObjects("EventSystem"), Is.EqualTo(1));
 
+            var mainCafeScene = SceneManager.GetSceneByName("MainCafe");
+            foreach (var legacyObjectName in LegacyPhase1ObjectNames)
+            {
+                Assert.That(
+                    SceneContainsExactNamedObject(
+                        mainCafeScene,
+                        legacyObjectName),
+                    Is.False,
+                    $"MainCafe contains legacy Phase 1 object '{legacyObjectName}'.");
+            }
+
+            Assert.That(
+                HasBakedOrRuntimeNavMesh(NavMesh.CalculateTriangulation()),
+                Is.False,
+                "MainCafe contains baked or runtime NavMesh data.");
+
             var mainCamera = GameObject.Find("Main Camera").GetComponent<UnityEngine.Camera>();
             var cameraController = runtimeRoot.GetComponent<CafeCameraController>();
             Assert.That(
@@ -349,6 +446,41 @@ namespace AnimalCafe.Tests.PlayMode
             }
 
             return count;
+        }
+
+        private static bool SceneContainsExactNamedObject(
+            Scene scene,
+            string objectName)
+        {
+            if (!scene.IsValid() || !scene.isLoaded)
+            {
+                return false;
+            }
+
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                foreach (var transform in root.GetComponentsInChildren<Transform>(true))
+                {
+                    if (string.Equals(
+                        transform.name,
+                        objectName,
+                        System.StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasBakedOrRuntimeNavMesh(
+            NavMeshTriangulation triangulation)
+        {
+            return (triangulation.vertices != null
+                    && triangulation.vertices.Length > 0)
+                || (triangulation.indices != null
+                    && triangulation.indices.Length > 0);
         }
     }
 }

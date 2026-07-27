@@ -43,7 +43,7 @@ namespace AnimalCafe.EditorTools
                     "'Main Camera' must contain a Camera component.");
             }
 
-            RemoveLegacyDemoObjects();
+            RemoveLegacyDemoObjects(scene);
             var settings = GetOrCreateCameraSettings();
             ConfigureCamera(mainCamera);
             ConfigureRuntime(mainCamera, settings);
@@ -113,12 +113,17 @@ namespace AnimalCafe.EditorTools
             SetObjectReference(interaction, "inputSourceBehaviour", mouseInput);
         }
 
-        private static void RemoveLegacyDemoObjects()
+        private static void RemoveLegacyDemoObjects(Scene scene)
         {
-            var demoRoot = GameObject.Find("Phase0_Demo");
-            if (demoRoot != null)
+            foreach (var root in scene.GetRootGameObjects())
             {
-                UnityEngine.Object.DestroyImmediate(demoRoot);
+                if (string.Equals(
+                    root.name,
+                    "Phase0_Demo",
+                    StringComparison.Ordinal))
+                {
+                    UnityEngine.Object.DestroyImmediate(root);
+                }
             }
         }
 

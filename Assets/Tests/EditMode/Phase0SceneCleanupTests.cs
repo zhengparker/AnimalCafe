@@ -22,15 +22,26 @@ namespace AnimalCafe.Tests
                     scenePath,
                     OpenSceneMode.Single);
                 new GameObject("Phase0_Demo");
+                var inactiveDemoRoot = new GameObject("Phase0_Demo");
+                inactiveDemoRoot.SetActive(false);
                 EditorSceneManager.SaveScene(scene);
 
                 Phase0SceneSetup.ConfigurePhase0Scene();
                 Phase0SceneSetup.ConfigurePhase0Scene();
 
-                Assert.That(GameObject.Find("Phase0_Demo"), Is.Null);
-                Assert.That(CountNamedObjects("Phase0_Runtime"), Is.EqualTo(1));
-                Assert.That(CountNamedObjects("Phase0_TimeControls"), Is.EqualTo(1));
-                Assert.That(CountNamedObjects("EventSystem"), Is.EqualTo(1));
+                var configuredScene = SceneManager.GetSceneByPath(scenePath);
+                Assert.That(
+                    CountNamedRootObjects(configuredScene, "Phase0_Demo"),
+                    Is.Zero);
+                Assert.That(
+                    CountNamedRootObjects(configuredScene, "Phase0_Runtime"),
+                    Is.EqualTo(1));
+                Assert.That(
+                    CountNamedRootObjects(configuredScene, "Phase0_TimeControls"),
+                    Is.EqualTo(1));
+                Assert.That(
+                    CountNamedRootObjects(configuredScene, "EventSystem"),
+                    Is.EqualTo(1));
             }
             finally
             {
@@ -39,14 +50,14 @@ namespace AnimalCafe.Tests
             }
         }
 
-        private static int CountNamedObjects(string objectName)
+        private static int CountNamedRootObjects(
+            Scene scene,
+            string objectName)
         {
             var count = 0;
-            foreach (var gameObject in Resources.FindObjectsOfTypeAll<GameObject>())
+            foreach (var gameObject in scene.GetRootGameObjects())
             {
-                if (gameObject.scene.IsValid()
-                    && gameObject.scene.isLoaded
-                    && gameObject.name == objectName)
+                if (gameObject.name == objectName)
                 {
                     count++;
                 }
