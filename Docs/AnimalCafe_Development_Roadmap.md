@@ -18,6 +18,7 @@
 - 本文档定义 implementation 顺序、system dependencies、risks 和 phase gates。
 - Phase 0 保持已完成状态；Phase 1–50 采用 dependency-driven 小阶段。
 - 每个 Phase 只承担一个主要技术风险，并拥有独立 design、implementation plan 和 tests。
+- 每个 Phase 使用独立的 `Docs/PhaseN_Beginner_Guide.md` 作为 beginner educational note；不能把多个 Phase 的教学内容混入同一个 guide。
 - 每个 Phase 开始前需要用户批准 design 和 implementation plan。
 - 未通过当前 Phase gate 时，不开始下一个 Phase。
 - 每完成一个 Major Milestone，重新 review 后续 roadmap，允许根据实际 playtest 调整远期 Phase。
@@ -257,7 +258,9 @@ Layout Data
 >
 > Automated evidence（2026-07-27）：review fix 后 fresh final EditMode `116 / 116` passed；fresh final PlayMode `18 / 18` passed；两轮均为 failed `0`、skipped `0`、inconclusive `0`。Layout Domain source boundary scan、旧 Phase 1 runtime scan、orphan metadata scan 与 `git diff --check` 通过；Unity test drift 已恢复，generated worktree `.slnx` 已删除。
 >
-> 尚未完成：用户执行 spec §18 manual checklist、明确批准、merge 到 `main`、merged `main` regression verification。
+> Manual evidence（2026-07-27）：用户完成 spec §18 Scene、PlayMode 和 Test Runner checks；Scene 无 demo cubes、旧模型或临时 floor，controls 与 mouse input 无 Console error，Console clean。用户已明确批准 merge。
+>
+> 尚未完成：merge 到 `main`、merged `main` regression verification。
 
 ### Goal
 
@@ -2346,12 +2349,13 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 ## 7. Current Next Step
 
-**Phase 1 — Layout Data Model** 已进入 `In Review`。下一步只完成：
+**Phase 1 — Layout Data Model** 已通过 manual acceptance 并获用户批准 merge，当前仍保持 `In Review`。下一步只完成：
 
-1. 用户执行 Phase 1 spec §18 manual checklist。
-2. 用户明确批准后，才 merge 到 `main` 并在 merged `main` 再次验证。
+1. merge `codex/phase1-layout-data-model` 到 `main`。
+2. 在 merged `main` 再次运行 regression verification。
+3. verification 通过后，把 Phase 1 标记为 `Completed`，再开始 Phase 2 planning。
 
-在用户 manual acceptance 和 merged `main` verification 完成前：
+在 merged `main` verification 完成前：
 
 - Phase 1 不得标记为 `Completed`。
 - 不开始 Phase 2 Grid placement rules。

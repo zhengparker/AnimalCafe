@@ -61,7 +61,7 @@ Unity 生成的对应 `.meta` files 与 assets 一起保留。
 Assets/Editor/Phase0SceneSetup.cs
 Assets/Scenes/MainCafe.unity
 Assets/Tests/PlayMode/Phase0PlayModeTests.cs
-Docs/Phase0_Beginner_Guide.md
+Docs/Phase1_Beginner_Guide.md
 Docs/AnimalCafe_Development_Roadmap.md
 ```
 
@@ -941,7 +941,7 @@ git commit -m "refactor: remove phase 0 demo scene content"
 ### Task 6: 完整验证、文档和 manual test handoff
 
 **Files:**
-- Modify: `Docs/Phase0_Beginner_Guide.md`
+- Create: `Docs/Phase1_Beginner_Guide.md`
 - Modify: `Docs/AnimalCafe_Development_Roadmap.md`
 - Verify: all Phase 1 and Phase 0 files
 

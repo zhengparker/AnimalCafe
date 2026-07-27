@@ -451,7 +451,7 @@ Assets/Tests/EditMode/
 Assets/Editor/Phase0SceneSetup.cs
 Assets/Scenes/MainCafe.unity
 Assets/Tests/PlayMode/Phase0PlayModeTests.cs
-Docs/Phase0_Beginner_Guide.md
+Docs/Phase1_Beginner_Guide.md
 Docs/AnimalCafe_Development_Roadmap.md
 ```
 
