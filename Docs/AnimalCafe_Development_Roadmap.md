@@ -252,7 +252,7 @@ Layout Data
 
 ## Phase 1 — Layout Data Model
 
-> 状态：In Review
+> 状态：Completed
 >
 > 验证环境：Unity `6000.5.5f1` / Windows
 >
@@ -260,7 +260,7 @@ Layout Data
 >
 > Manual evidence（2026-07-27）：用户完成 spec §18 Scene、PlayMode 和 Test Runner checks；Scene 无 demo cubes、旧模型或临时 floor，controls 与 mouse input 无 Console error，Console clean。用户已明确批准 merge。
 >
-> 尚未完成：merge 到 `main`、merged `main` regression verification。
+> Merge evidence（2026-07-27）：`codex/phase1-layout-data-model` 已 fast-forward merge 到本地 `main`。merged `main` fresh EditMode `116 / 116` passed；fresh PlayMode `18 / 18` passed；failed、skipped、inconclusive 均为 `0`。
 
 ### Goal
 
@@ -2349,15 +2349,10 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 ## 7. Current Next Step
 
-**Phase 1 — Layout Data Model** 已通过 manual acceptance 并获用户批准 merge，当前仍保持 `In Review`。下一步只完成：
+**Phase 1 — Layout Data Model** 已完成 implementation、automated verification、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
 
-1. merge `codex/phase1-layout-data-model` 到 `main`。
-2. 在 merged `main` 再次运行 regression verification。
-3. verification 通过后，把 Phase 1 标记为 `Completed`，再开始 Phase 2 planning。
+下一步是 **Phase 2 — Grid Occupancy & Placement Rules** 的 design 与 implementation planning。
 
-在 merged `main` verification 完成前：
-
-- Phase 1 不得标记为 `Completed`。
-- 不开始 Phase 2 Grid placement rules。
+- 不开始 Phase 2 Grid placement implementation，直到 Phase 2 design 和 implementation plan 获用户批准。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。
