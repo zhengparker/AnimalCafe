@@ -255,7 +255,7 @@ Layout Data
 >
 > 验证环境：Unity `6000.5.5f1` / Windows
 >
-> Automated evidence（2026-07-27）：fresh final EditMode `115 / 115` passed；fresh final PlayMode `18 / 18` passed；两轮均为 failed `0`、skipped `0`、inconclusive `0`。Layout Domain source boundary scan、旧 Phase 1 runtime scan、orphan metadata scan 与 `git diff --check` 通过；Unity test drift 已恢复，generated worktree `.slnx` 已删除。
+> Automated evidence（2026-07-27）：review fix 后 fresh final EditMode `116 / 116` passed；fresh final PlayMode `18 / 18` passed；两轮均为 failed `0`、skipped `0`、inconclusive `0`。Layout Domain source boundary scan、旧 Phase 1 runtime scan、orphan metadata scan 与 `git diff --check` 通过；Unity test drift 已恢复，generated worktree `.slnx` 已删除。
 >
 > 尚未完成：用户执行 spec §18 manual checklist、明确批准、merge 到 `main`、merged `main` regression verification。
 
@@ -2348,9 +2348,8 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 **Phase 1 — Layout Data Model** 已进入 `In Review`。下一步只完成：
 
-1. Task 6 final automated verification 与 repository hygiene。
-2. 用户执行 Phase 1 spec §18 manual checklist。
-3. 用户明确批准后，才 merge 到 `main` 并在 merged `main` 再次验证。
+1. 用户执行 Phase 1 spec §18 manual checklist。
+2. 用户明确批准后，才 merge 到 `main` 并在 merged `main` 再次验证。
 
 在用户 manual acceptance 和 merged `main` verification 完成前：
 

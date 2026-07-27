@@ -69,6 +69,17 @@ namespace AnimalCafe.Tests
         }
 
         [Test]
+        public void FurnitureDefinition_DefaultFootprintThrows()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                new FurnitureDefinition(
+                    "furniture.counter.basic",
+                    "Basic Counter",
+                    default(GridSize),
+                    PlacementSurfaceType.Floor));
+        }
+
+        [Test]
         public void FurnitureDefinition_NoneSurfaceThrows()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() =>

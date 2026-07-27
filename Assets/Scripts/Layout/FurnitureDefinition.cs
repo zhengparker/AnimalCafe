@@ -37,6 +37,14 @@ namespace AnimalCafe.Layout
                 throw new ArgumentException("Display name must not be empty or whitespace.", nameof(displayName));
             }
 
+            if (footprint.Width < 1 || footprint.Height < 1)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(footprint),
+                    footprint,
+                    "Footprint width and height must each be at least one.");
+            }
+
             if (allowedPlacementSurfaces == PlacementSurfaceType.None ||
                 (allowedPlacementSurfaces & ~KnownPlacementSurfaces) != PlacementSurfaceType.None)
             {
