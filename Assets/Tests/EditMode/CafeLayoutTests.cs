@@ -159,6 +159,52 @@ namespace AnimalCafe.Tests
         }
 
         [Test]
+        public void CafeLayout_IdDictionariesUseOrdinalComparers()
+        {
+            var layout = CreateLayout();
+            var regionField = typeof(CafeLayout).GetField(
+                "regionsById",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            var furnitureField = typeof(CafeLayout).GetField(
+                "furnitureInstancesById",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.That(regionField, Is.Not.Null, "regionsById field is required.");
+            Assert.That(
+                regionField.FieldType,
+                Is.EqualTo(typeof(Dictionary<string, LayoutRegion>)),
+                "regionsById must be Dictionary<string, LayoutRegion>.");
+            Assert.That(
+                furnitureField,
+                Is.Not.Null,
+                "furnitureInstancesById field is required.");
+            Assert.That(
+                furnitureField.FieldType,
+                Is.EqualTo(typeof(Dictionary<string, FurnitureInstance>)),
+                "furnitureInstancesById must be Dictionary<string, FurnitureInstance>.");
+
+            var regions = regionField.GetValue(layout) as Dictionary<string, LayoutRegion>;
+            var furniture = furnitureField.GetValue(layout) as Dictionary<string, FurnitureInstance>;
+
+            Assert.That(
+                regions,
+                Is.Not.Null,
+                "regionsById must contain Dictionary<string, LayoutRegion>.");
+            Assert.That(
+                furniture,
+                Is.Not.Null,
+                "furnitureInstancesById must contain Dictionary<string, FurnitureInstance>.");
+            Assert.That(
+                regions.Comparer == StringComparer.Ordinal,
+                Is.True,
+                "regionsById must use StringComparer.Ordinal.");
+            Assert.That(
+                furniture.Comparer == StringComparer.Ordinal,
+                Is.True,
+                "furnitureInstancesById must use StringComparer.Ordinal.");
+        }
+
+        [Test]
         public void CafeLayout_AllowsAdjacentRegions()
         {
             var layout = CreateLayout();
@@ -181,29 +227,33 @@ namespace AnimalCafe.Tests
         }
 
         [Test]
-        public void CafeLayout_AddsInstanceWithKnownDefinition()
+        public void CafeLayout_PlacesInstanceWithKnownDefinitionInsideUnlockedRegion()
         {
             var layout = CreateLayout();
             var instance = CreateInstance(FirstInstanceId);
+            layout.AddRegion(CreateRegion("region.main", 0, 0, 4, 4));
 
-            layout.AddFurnitureInstance(instance);
+            var result = layout.PlaceFurniture(instance);
 
+            Assert.That(result.Succeeded, Is.True);
             Assert.That(layout.FurnitureInstances, Is.EqualTo(new[] { instance }));
         }
 
         [Test]
-        public void CafeLayout_AddFurnitureInstanceNullThrowsWithoutMutation()
+        public void CafeLayout_PlaceFurnitureNullThrowsWithoutMutation()
         {
             var layout = CreateLayout();
 
-            Assert.Throws<ArgumentNullException>(() => layout.AddFurnitureInstance(null));
+            Assert.Throws<ArgumentNullException>(() => layout.PlaceFurniture(null));
             Assert.That(layout.FurnitureInstances, Is.Empty);
+            Assert.That(layout.OccupiedCellCount, Is.Zero);
         }
 
         [Test]
-        public void CafeLayout_RejectsInstanceWithUnknownDefinitionWithoutMutation()
+        public void CafeLayout_PlaceUnknownDefinitionThrowsWithoutMutation()
         {
             var layout = CreateLayout();
+            layout.AddRegion(CreateRegion("region.main", 0, 0, 4, 4));
             var unknown = FurnitureInstance.Restore(
                 FirstInstanceId,
                 "furniture.unknown",
@@ -211,26 +261,35 @@ namespace AnimalCafe.Tests
                 FurnitureRotation.Degrees0);
 
             var exception = Assert.Throws<ArgumentException>(
-                () => layout.AddFurnitureInstance(unknown));
+                () => layout.PlaceFurniture(unknown));
 
             StringAssert.Contains("furniture.unknown", exception.Message);
             Assert.That(layout.FurnitureInstances, Is.Empty);
+            Assert.That(layout.OccupiedCellCount, Is.Zero);
             Assert.That(layout.TryGetFurnitureInstance(FirstInstanceId, out _), Is.False);
         }
 
         [Test]
-        public void CafeLayout_RejectsDuplicateInstanceWithoutMutation()
+        public void CafeLayout_RepeatedPlaceReturnsAlreadyPlacedWithoutMutation()
         {
             var layout = CreateLayout();
+            layout.AddRegion(CreateRegion("region.main", 0, 0, 12, 12));
             var original = CreateInstance(FirstInstanceId);
-            layout.AddFurnitureInstance(original);
+            Assert.That(layout.PlaceFurniture(original).Succeeded, Is.True);
 
             var duplicate = CreateInstance(FirstInstanceId, new GridPosition(8, 9));
-            var exception = Assert.Throws<ArgumentException>(
-                () => layout.AddFurnitureInstance(duplicate));
+            var result = layout.PlaceFurniture(duplicate);
 
-            StringAssert.Contains(FirstInstanceId, exception.Message);
+            Assert.That(result.Succeeded, Is.False);
+            Assert.That(
+                result.FailureReason,
+                Is.EqualTo(PlacementFailureReason.InstanceAlreadyPlaced));
             Assert.That(layout.FurnitureInstances, Is.EqualTo(new[] { original }));
+            Assert.That(layout.OccupiedCellCount, Is.EqualTo(2));
+            Assert.That(
+                layout.TryGetOccupant(new GridPosition(0, 0), out var owner),
+                Is.True);
+            Assert.That(owner, Is.EqualTo(FirstInstanceId));
         }
 
         [Test]
@@ -238,7 +297,8 @@ namespace AnimalCafe.Tests
         {
             var layout = CreateLayout();
             var instance = CreateInstance(FirstInstanceId);
-            layout.AddFurnitureInstance(instance);
+            layout.AddRegion(CreateRegion("region.main", 0, 0, 4, 4));
+            Assert.That(layout.PlaceFurniture(instance).Succeeded, Is.True);
 
             var found = layout.TryGetFurnitureInstance(FirstInstanceId, out var result);
 
@@ -274,7 +334,7 @@ namespace AnimalCafe.Tests
             var region = CreateRegion("region.main", 0, 0, 2, 2);
             var instance = CreateInstance(FirstInstanceId);
             layout.AddRegion(region);
-            layout.AddFurnitureInstance(instance);
+            Assert.That(layout.PlaceFurniture(instance).Succeeded, Is.True);
             var regions = layout.UnlockedRegions as IList<LayoutRegion>;
             var instances = layout.FurnitureInstances as IList<FurnitureInstance>;
 
@@ -289,45 +349,27 @@ namespace AnimalCafe.Tests
         }
 
         [Test]
-        public void CafeLayout_AllowsSamePositionBecauseOccupancyIsPhase2()
-        {
-            var layout = CreateLayout();
-
-            layout.AddFurnitureInstance(CreateInstance(FirstInstanceId, new GridPosition(3, 4)));
-            layout.AddFurnitureInstance(CreateInstance(SecondInstanceId, new GridPosition(3, 4)));
-
-            Assert.That(layout.FurnitureInstances.Count, Is.EqualTo(2));
-        }
-
-        [Test]
-        public void CafeLayout_AllowsInstanceOutsideRegionsBecausePlacementIsPhase2()
-        {
-            var layout = CreateLayout();
-            layout.AddRegion(CreateRegion("region.main", 0, 0, 2, 2));
-
-            layout.AddFurnitureInstance(CreateInstance(FirstInstanceId, new GridPosition(100, -100)));
-
-            Assert.That(layout.FurnitureInstances.Count, Is.EqualTo(1));
-        }
-
-        [Test]
         public void LayoutDomainTests_DoNotLoadMainCafeScene()
         {
             var scenePathBefore = SceneManager.GetActiveScene().path;
             var layout = CreateLayout();
 
             layout.AddRegion(CreateRegion("region.main", 0, 0, 2, 2));
-            layout.AddFurnitureInstance(CreateInstance(FirstInstanceId));
+            Assert.That(
+                layout.PlaceFurniture(CreateInstance(FirstInstanceId)).Succeeded,
+                Is.True);
 
             Assert.That(SceneManager.GetActiveScene().path, Is.EqualTo(scenePathBefore));
             Assert.That(SceneManager.GetActiveScene().path, Does.Not.EndWith("MainCafe.unity"));
         }
 
         [Test]
-        public void Task4LayoutDomainTypes_HaveNoUnityObjectOrSceneFields()
+        public void Consistency_LayoutDomainFieldsContainNoUnityOrSceneReferences()
         {
             var domainTypes = new[]
             {
+                typeof(PlacementResult),
+                typeof(FurnitureInstance),
                 typeof(FurnitureDefinitionCatalog),
                 typeof(LayoutRegion),
                 typeof(CafeLayout)
@@ -338,9 +380,21 @@ namespace AnimalCafe.Tests
                     BindingFlags.Instance |
                     BindingFlags.NonPublic |
                     BindingFlags.Public))
-                .Where(field => ContainsForbiddenReference(field.FieldType));
+                .Where(field => ContainsForbiddenReference(
+                    field.FieldType,
+                    new HashSet<Type>()));
 
             Assert.That(forbiddenFields, Is.Empty);
+        }
+
+        [Test]
+        public void ReflectionGuard_DetectsExternalWrapperWithUnityObjectField()
+        {
+            Assert.That(
+                ContainsForbiddenReference(
+                    typeof(AnimalCafe.ReflectionProbe.ExternalUnityReferenceWrapper),
+                    new HashSet<Type>()),
+                Is.True);
         }
 
         private static CafeLayout CreateLayout()
@@ -386,16 +440,111 @@ namespace AnimalCafe.Tests
                 zoneType);
         }
 
-        private static bool ContainsForbiddenReference(Type type)
+        private static bool ContainsForbiddenReference(
+            Type type,
+            ISet<Type> visitedTypes)
         {
+            if (type == null)
+            {
+                return false;
+            }
+
             if (typeof(UnityEngine.Object).IsAssignableFrom(type) ||
                 type == typeof(Scene))
             {
                 return true;
             }
 
-            return type.IsGenericType &&
-                   type.GetGenericArguments().Any(ContainsForbiddenReference);
+            if (IsReflectionLeafType(type))
+            {
+                return false;
+            }
+
+            if (type.HasElementType)
+            {
+                return ContainsForbiddenReference(
+                    type.GetElementType(),
+                    visitedTypes);
+            }
+
+            if (!visitedTypes.Add(type))
+            {
+                return false;
+            }
+
+            if (type.IsGenericType &&
+                type.GetGenericArguments().Any(
+                    argument => ContainsForbiddenReference(
+                        argument,
+                        visitedTypes)))
+            {
+                return true;
+            }
+
+            if (IsFrameworkTraversalBoundary(type))
+            {
+                return false;
+            }
+
+            if (type.GetFields(
+                    BindingFlags.Instance |
+                    BindingFlags.NonPublic |
+                    BindingFlags.Public)
+                .Any(field => ContainsForbiddenReference(
+                    field.FieldType,
+                    visitedTypes)))
+            {
+                return true;
+            }
+
+            return type.BaseType != null &&
+                   type.BaseType != typeof(object) &&
+                   ContainsForbiddenReference(
+                       type.BaseType,
+                       visitedTypes);
         }
+
+        private static bool IsReflectionLeafType(Type type)
+        {
+            return type.IsPrimitive ||
+                   type.IsEnum ||
+                   type == typeof(string) ||
+                   type == typeof(decimal) ||
+                   type == typeof(DateTime) ||
+                   type == typeof(DateTimeOffset) ||
+                   type == typeof(TimeSpan) ||
+                   type == typeof(Guid);
+        }
+
+        private static bool IsFrameworkTraversalBoundary(Type type)
+        {
+            var typeNamespace = type.Namespace ?? string.Empty;
+
+            return typeNamespace == "System" ||
+                   typeNamespace.StartsWith(
+                       "System.",
+                       StringComparison.Ordinal) ||
+                   typeNamespace.StartsWith(
+                       "Microsoft.",
+                       StringComparison.Ordinal) ||
+                   typeNamespace == "UnityEngine" ||
+                   typeNamespace.StartsWith(
+                       "UnityEngine.",
+                       StringComparison.Ordinal) ||
+                   typeNamespace == "NUnit" ||
+                   typeNamespace.StartsWith(
+                       "NUnit.",
+                       StringComparison.Ordinal);
+        }
+    }
+}
+
+namespace AnimalCafe.ReflectionProbe
+{
+    internal sealed class ExternalUnityReferenceWrapper
+    {
+#pragma warning disable CS0169
+        private UnityEngine.Object unityObject;
+#pragma warning restore CS0169
     }
 }

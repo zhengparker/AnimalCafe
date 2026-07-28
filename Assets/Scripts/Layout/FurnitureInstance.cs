@@ -49,6 +49,18 @@ namespace AnimalCafe.Layout
             return new FurnitureInstance(instanceId, definitionId, position, rotation);
         }
 
+        internal FurnitureInstance WithPlacement(
+            GridPosition position,
+            FurnitureRotation rotation)
+        {
+            ValidateRotation(rotation);
+            return new FurnitureInstance(
+                InstanceId,
+                DefinitionId,
+                position,
+                rotation);
+        }
+
         private static void ValidateInstanceId(string instanceId)
         {
             if (instanceId == null)
@@ -62,7 +74,7 @@ namespace AnimalCafe.Layout
             }
         }
 
-        private static void ValidateRotation(FurnitureRotation rotation)
+        internal static void ValidateRotation(FurnitureRotation rotation)
         {
             switch (rotation)
             {

@@ -19,6 +19,7 @@
 - Phase 0 保持已完成状态；Phase 1–50 采用 dependency-driven 小阶段。
 - 每个 Phase 只承担一个主要技术风险，并拥有独立 design、implementation plan 和 tests。
 - 每个 Phase 使用独立的 `Docs/PhaseN_Beginner_Guide.md` 作为 beginner educational note；不能把多个 Phase 的教学内容混入同一个 guide。
+- 每份 Phase spec 和 Beginner Guide 的开头必须先用通俗、适合中学生理解的语言说明“这个 Phase 是做什么的”，并至少提供一个具体例子，再进入 architecture、technical rules 或 test details。
 - 每个 Phase 开始前需要用户批准 design 和 implementation plan。
 - 未通过当前 Phase gate 时，不开始下一个 Phase。
 - 每完成一个 Major Milestone，重新 review 后续 roadmap，允许根据实际 playtest 调整远期 Phase。
@@ -316,6 +317,14 @@ Grid occupancy、UI、Scene placement、functional anchors、Save file，以及�
 
 ## Phase 2 — Grid Occupancy & Placement Rules
 
+状态：In Review
+
+验证环境：Unity 6000.5.5f1 / Windows
+
+Automated evidence（2026-07-27）：fresh final EditMode 184 / 184 passed；fresh final PlayMode 18 / 18 passed；failed、skipped、inconclusive 均为 0。Placement/transaction/consistency、source boundary、旧 Phase regression 与 git diff check 已通过。
+
+Manual evidence：等待用户按 Docs/Phase2_Beginner_Guide.md 完成验收。
+
 ### Goal
 
 用纯规则判断家具能否放置、移动、旋转或移除。
@@ -328,7 +337,7 @@ Grid occupancy、UI、Scene placement、functional anchors、Save file，以及�
 - Occupy / release
 - Overlap detection
 - Placement transaction
-- Move / remove validation
+- Move / rotate / remove validation
 
 ### Why After Phase 1
 

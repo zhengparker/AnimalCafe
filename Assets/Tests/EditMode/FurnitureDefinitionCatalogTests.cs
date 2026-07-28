@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Reflection;
 using AnimalCafe.Layout;
 using NUnit.Framework;
 
@@ -141,6 +142,35 @@ namespace AnimalCafe.Tests
             {
                 CultureInfo.CurrentCulture = originalCulture;
             }
+        }
+
+        [Test]
+        public void Catalog_DefinitionDictionaryUsesOrdinalComparer()
+        {
+            var catalog = new FurnitureDefinitionCatalog(new[]
+            {
+                CreateDefinition("furniture.counter.basic")
+            });
+            var field = typeof(FurnitureDefinitionCatalog).GetField(
+                "definitionsById",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.That(field, Is.Not.Null, "definitionsById field is required.");
+            Assert.That(
+                field.FieldType,
+                Is.EqualTo(typeof(Dictionary<string, FurnitureDefinition>)),
+                "definitionsById must be Dictionary<string, FurnitureDefinition>.");
+
+            var dictionary = field.GetValue(catalog) as Dictionary<string, FurnitureDefinition>;
+
+            Assert.That(
+                dictionary,
+                Is.Not.Null,
+                "definitionsById must contain Dictionary<string, FurnitureDefinition>.");
+            Assert.That(
+                dictionary.Comparer == StringComparer.Ordinal,
+                Is.True,
+                "definitionsById must use StringComparer.Ordinal.");
         }
 
         [TestCase(null, typeof(ArgumentNullException))]
