@@ -35,6 +35,13 @@ namespace AnimalCafe.Core.Time
 
         public bool TrySetSpeed(GameSpeed speed)
         {
+            if (activeOwner != this)
+            {
+                Debug.LogWarning(
+                    "[GameTimeService] Ignored speed change from duplicate instance.");
+                return false;
+            }
+
             if (!IsSupported(speed))
             {
                 Debug.LogWarning($"[GameTimeService] Unsupported game speed: {(int)speed}.");

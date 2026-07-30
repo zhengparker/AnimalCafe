@@ -1,4 +1,5 @@
 using System.Collections;
+using AnimalCafe.Core.Events;
 using AnimalCafe.Core.Time;
 using AnimalCafe.Input;
 using CafeCameraController = AnimalCafe.Camera.CafeCameraController;
@@ -81,6 +82,14 @@ namespace AnimalCafe.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            foreach (var service in Resources.FindObjectsOfTypeAll<GameTimeService>())
+            {
+                if (service != null && service.gameObject.scene.IsValid())
+                {
+                    Object.DestroyImmediate(service.gameObject);
+                }
+            }
+
             Time.timeScale = 1f;
         }
 
@@ -111,6 +120,93 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
             Assert.That(Time.timeScale, Is.Zero);
             Object.DestroyImmediate(gameObject);
+        }
+
+        [Test]
+        public void GameTime_DuplicateCannotChangeTimeOrPublishEvent()
+        {
+            var ownerObject = new GameObject("GameTimeServiceOwner");
+            var duplicateObject = new GameObject("GameTimeServiceDuplicate");
+            var owner = ownerObject.AddComponent<GameTimeService>();
+            var duplicate = duplicateObject.AddComponent<GameTimeService>();
+            var eventCount = 0;
+
+            try
+            {
+                GameEventBus.GameSpeedChanged += _ => eventCount++;
+
+                Assert.That(owner.TrySetSpeed(GameSpeed.Fast), Is.True);
+                Assert.That(eventCount, Is.EqualTo(1));
+
+                LogAssert.Expect(
+                    LogType.Warning,
+                    "[GameTimeService] Ignored speed change from duplicate instance.");
+                Assert.That(duplicate.TrySetSpeed(GameSpeed.Paused), Is.False);
+                Assert.That(duplicate.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+                Assert.That(Time.timeScale, Is.EqualTo(2f));
+                Assert.That(eventCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                GameEventBus.ResetForTests();
+                Object.DestroyImmediate(duplicateObject);
+                Object.DestroyImmediate(ownerObject);
+            }
+        }
+
+        [Test]
+        public void GameTime_DestroyingDuplicateDoesNotAffectOwner()
+        {
+            var ownerObject = new GameObject("GameTimeServiceOwner");
+            var duplicateObject = new GameObject("GameTimeServiceDuplicate");
+            var owner = ownerObject.AddComponent<GameTimeService>();
+            duplicateObject.AddComponent<GameTimeService>();
+
+            try
+            {
+                Assert.That(owner.TrySetSpeed(GameSpeed.Fast), Is.True);
+
+                Object.DestroyImmediate(duplicateObject);
+
+                Assert.That(owner.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
+                Assert.That(Time.timeScale, Is.EqualTo(2f));
+            }
+            finally
+            {
+                GameEventBus.ResetForTests();
+                Object.DestroyImmediate(duplicateObject);
+                Object.DestroyImmediate(ownerObject);
+            }
+        }
+
+        [Test]
+        public void GameTime_DuplicateDoesNotAutoPromoteAfterOwnerIsDestroyed()
+        {
+            var ownerObject = new GameObject("GameTimeServiceOwner");
+            var duplicateObject = new GameObject("GameTimeServiceDuplicate");
+            var owner = ownerObject.AddComponent<GameTimeService>();
+            var duplicate = duplicateObject.AddComponent<GameTimeService>();
+
+            try
+            {
+                Assert.That(owner.TrySetSpeed(GameSpeed.Fast), Is.True);
+
+                Object.DestroyImmediate(ownerObject);
+
+                Assert.That(Time.timeScale, Is.EqualTo(1f));
+                LogAssert.Expect(
+                    LogType.Warning,
+                    "[GameTimeService] Ignored speed change from duplicate instance.");
+                Assert.That(duplicate.TrySetSpeed(GameSpeed.Paused), Is.False);
+                Assert.That(duplicate.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+                Assert.That(Time.timeScale, Is.EqualTo(1f));
+            }
+            finally
+            {
+                GameEventBus.ResetForTests();
+                Object.DestroyImmediate(duplicateObject);
+                Object.DestroyImmediate(ownerObject);
+            }
         }
 
         [TestCase(3f, 6f, true)]
