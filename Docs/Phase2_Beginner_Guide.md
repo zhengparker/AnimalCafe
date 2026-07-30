@@ -155,7 +155,7 @@ Docs/Phase2_Beginner_Guide.md
 
 1. 用 Unity `6000.5.5f1` 打开 `E:\Unity\Project\AnimalCafe\.worktrees\phase-2`。
 2. 打开 `Test Runner → EditMode → Run All`；确认全部绿色，Failed、Skipped、Inconclusive 都是 `0`。
-3. 展开 `GridPlacement` groups，确认包含 bounds、rotation、overlap、rollback、remove、consistency。
+3. 展开 `AnimalCafe.Tests → GridPlacementTests`，确认包含 bounds、rotation、overlap、rollback、remove、consistency。
 4. 打开 `Assets/Scenes/MainCafe.unity`；确认没有出现可见的 Phase 2 Grid、furniture、preview 或 UI。
 5. 清空 Console，然后进入 Play Mode。
 6. 检查 mouse pan、wheel zoom、`Pause`、`1x`、`2x`。
@@ -198,6 +198,6 @@ Phase 2 没有制作：
 
 Phase 2 当前状态是 `In Review`，不是 `Completed`。
 
-Automated verification 已取得上述 fresh evidence。下一步由用户按第 9 节完成 manual acceptance，并确认 Scene regression、Phase 0 controls、Console 和本 guide。之后还需要由用户处理 commit/merge，并在 merged `main` 上重新运行 full EditMode 与 PlayMode regression。
+Automated verification 已取得上述 fresh evidence，Phase 2 branch 也已经 commit 和 push。下一步由用户按第 9 节完成 manual acceptance，并确认 Scene regression、Phase 0 controls、Console 和本 guide；验收后再批准 merge，并在 merged `main` 上重新运行 full EditMode 与 PlayMode regression。
 
 在用户明确验收、merge 和 merged-main regression 完成前，Roadmap 不能把 Phase 2 标记为 `Completed`。

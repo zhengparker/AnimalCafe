@@ -2360,8 +2360,10 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 **Phase 1 — Layout Data Model** 已完成 implementation、automated verification、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
 
-下一步是 **Phase 2 — Grid Occupancy & Placement Rules** 的 design 与 implementation planning。
+**Phase 2 — Grid Occupancy & Placement Rules** 已完成 approved design、implementation、automated verification、review、commit 和 branch push，当前状态为 `In Review`。
 
-- 不开始 Phase 2 Grid placement implementation，直到 Phase 2 design 和 implementation plan 获用户批准。
+- 当前 gate：用户 manual acceptance。
+- 用户验收后，由用户批准 merge 到 `main`。
+- Merge 后在 `main` 重新运行 full EditMode 与 PlayMode regression；全部通过后才能把 Phase 2 标记为 `Completed`。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。
