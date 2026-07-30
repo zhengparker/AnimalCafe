@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using AnimalCafe.Core.Events;
 using AnimalCafe.Core.Time;
 using AnimalCafe.Input;
@@ -9,6 +10,7 @@ using AnimalCafe.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -43,6 +45,16 @@ namespace AnimalCafe.Tests.PlayMode
         public void ResetToStart()
         {
             transform.position = startPoint;
+        }
+    }
+
+    public sealed class CameraInputTestFixture :
+        MonoBehaviour,
+        ICameraInputSource
+    {
+        public CameraInputFrame ReadFrame()
+        {
+            return default;
         }
     }
 
@@ -286,18 +298,38 @@ namespace AnimalCafe.Tests.PlayMode
             Object.DestroyImmediate(cube);
         }
 
-        [Test]
-        public void ColorSelectable_RecoversWhenRendererBecomesAvailableAfterAwake()
+        [UnityTest]
+        public IEnumerator ColorSelectable_MissingMaterialWarnsOnceAndRecovers()
         {
-            var gameObject = new GameObject("LateRenderer");
+            var gameObject = new GameObject("MissingMaterial");
+            var renderer = gameObject.AddComponent<MeshRenderer>();
             var selectable = gameObject.AddComponent<ColorSelectable>();
-            gameObject.AddComponent<MeshRenderer>();
+            Material workingMaterial = null;
 
-            selectable.Select();
+            try
+            {
+                LogAssert.Expect(
+                    LogType.Warning,
+                    "[ColorSelectable] Renderer material must expose _BaseColor or _Color.");
+                selectable.Select();
+                yield return null;
 
-            Assert.That(selectable.IsSelected, Is.True);
-            Assert.That(selectable.enabled, Is.True);
-            Object.DestroyImmediate(gameObject);
+                Assert.That(selectable.IsSelected, Is.False);
+                Assert.That(selectable.enabled, Is.True);
+
+                selectable.Select();
+                workingMaterial = new Material(
+                    Shader.Find("Universal Render Pipeline/Lit"));
+                renderer.sharedMaterial = workingMaterial;
+                selectable.Select();
+
+                Assert.That(selectable.IsSelected, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(workingMaterial);
+                Object.DestroyImmediate(gameObject);
+            }
         }
 
         [Test]
@@ -335,6 +367,130 @@ namespace AnimalCafe.Tests.PlayMode
             Object.DestroyImmediate(cubeB);
             Object.DestroyImmediate(interactionObject);
             Object.DestroyImmediate(cameraObject);
+        }
+
+        [UnityTest]
+        public IEnumerator Interaction_DisabledSelectionClearsOnce()
+        {
+            var fixture = CreateInteractionFixture();
+            var events = new List<SelectionChangedEvent>();
+            GameEventBus.SelectionChanged += events.Add;
+
+            try
+            {
+                fixture.Interaction.TrySelectAt(
+                    fixture.Camera.WorldToScreenPoint(
+                        fixture.Selectable.transform.position));
+                events.Clear();
+
+                fixture.Selectable.enabled = false;
+                yield return null;
+                yield return null;
+
+                Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
+                Assert.That(events, Has.Count.EqualTo(1));
+                Assert.That(events[0].Previous, Is.SameAs(fixture.Selectable));
+                Assert.That(events[0].Current, Is.Null);
+            }
+            finally
+            {
+                GameEventBus.ResetForTests();
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Interaction_InactiveGameObjectClearsSelectionOnce()
+        {
+            var fixture = CreateInteractionFixture();
+            var events = new List<SelectionChangedEvent>();
+            GameEventBus.SelectionChanged += events.Add;
+
+            try
+            {
+                fixture.Interaction.TrySelectAt(
+                    fixture.Camera.WorldToScreenPoint(
+                        fixture.Selectable.transform.position));
+                events.Clear();
+
+                fixture.Selectable.gameObject.SetActive(false);
+                yield return null;
+                yield return null;
+
+                Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
+                Assert.That(events, Has.Count.EqualTo(1));
+                Assert.That(events[0].Previous, Is.SameAs(fixture.Selectable));
+                Assert.That(events[0].Current, Is.Null);
+            }
+            finally
+            {
+                GameEventBus.ResetForTests();
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Interaction_DestroyedSelectionClearsWithoutException()
+        {
+            var fixture = CreateInteractionFixture();
+            var events = new List<SelectionChangedEvent>();
+            GameEventBus.SelectionChanged += events.Add;
+
+            try
+            {
+                fixture.Interaction.TrySelectAt(
+                    fixture.Camera.WorldToScreenPoint(
+                        fixture.Selectable.transform.position));
+                var destroyedSelection = fixture.Selectable;
+                events.Clear();
+
+                Object.Destroy(fixture.Selectable.gameObject);
+                yield return null;
+                yield return null;
+
+                Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
+                Assert.That(events, Has.Count.EqualTo(1));
+                Assert.That(
+                    events[0].Previous,
+                    Is.SameAs(destroyedSelection));
+                Assert.That(events[0].Current, Is.Null);
+            }
+            finally
+            {
+                GameEventBus.ResetForTests();
+                fixture.Dispose();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Interaction_ReenabledSelectableCanBeSelectedAgain()
+        {
+            var fixture = CreateInteractionFixture();
+
+            try
+            {
+                var screenPosition = fixture.Camera.WorldToScreenPoint(
+                    fixture.Selectable.transform.position);
+                fixture.Interaction.TrySelectAt(screenPosition);
+
+                fixture.Selectable.enabled = false;
+                yield return null;
+                Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
+
+                fixture.Selectable.enabled = true;
+                Physics.SyncTransforms();
+                fixture.Interaction.TrySelectAt(screenPosition);
+
+                Assert.That(
+                    fixture.Interaction.CurrentSelection,
+                    Is.SameAs(fixture.Selectable));
+                Assert.That(fixture.Selectable.IsSelected, Is.True);
+            }
+            finally
+            {
+                GameEventBus.ResetForTests();
+                fixture.Dispose();
+            }
         }
 
         [Test]
@@ -544,6 +700,35 @@ namespace AnimalCafe.Tests.PlayMode
             return count;
         }
 
+        private static InteractionFixture CreateInteractionFixture()
+        {
+            var cameraObject = new GameObject("InteractionFixtureCamera");
+            var unityCamera = cameraObject.AddComponent<UnityEngine.Camera>();
+            cameraObject.transform.position = new Vector3(0f, 0f, -10f);
+
+            var interactionObject = new GameObject("InteractionFixtureController");
+            var interaction =
+                interactionObject.AddComponent<SceneInteractionController>();
+            var inputSource =
+                interactionObject.AddComponent<CameraInputTestFixture>();
+            interaction.Configure(unityCamera, inputSource);
+
+            var selectableObject =
+                GameObject.CreatePrimitive(PrimitiveType.Cube);
+            selectableObject.name = "InteractionFixtureSelectable";
+            var selectable =
+                selectableObject.AddComponent<ColorSelectable>();
+            Physics.SyncTransforms();
+
+            return new InteractionFixture(
+                cameraObject,
+                unityCamera,
+                interactionObject,
+                interaction,
+                selectableObject,
+                selectable);
+        }
+
         private static bool SceneContainsExactNamedObject(
             Scene scene,
             string objectName)
@@ -577,6 +762,188 @@ namespace AnimalCafe.Tests.PlayMode
                     && triangulation.vertices.Length > 0)
                 || (triangulation.indices != null
                     && triangulation.indices.Length > 0);
+        }
+
+        private sealed class InteractionFixture : System.IDisposable
+        {
+            private readonly GameObject cameraObject;
+            private readonly GameObject interactionObject;
+            private readonly GameObject selectableObject;
+
+            public InteractionFixture(
+                GameObject cameraObject,
+                UnityEngine.Camera camera,
+                GameObject interactionObject,
+                SceneInteractionController interaction,
+                GameObject selectableObject,
+                ColorSelectable selectable)
+            {
+                this.cameraObject = cameraObject;
+                Camera = camera;
+                this.interactionObject = interactionObject;
+                Interaction = interaction;
+                this.selectableObject = selectableObject;
+                Selectable = selectable;
+            }
+
+            public UnityEngine.Camera Camera { get; }
+
+            public SceneInteractionController Interaction { get; }
+
+            public ColorSelectable Selectable { get; }
+
+            public void Dispose()
+            {
+                Object.DestroyImmediate(selectableObject);
+                Object.DestroyImmediate(interactionObject);
+                Object.DestroyImmediate(cameraObject);
+            }
+        }
+    }
+
+    public sealed class MouseCameraInputIntegrationTests : InputTestFixture
+    {
+        private Mouse mouse;
+        private GameObject inputObject;
+        private MouseCameraInput input;
+
+        public override void Setup()
+        {
+            base.Setup();
+            mouse = InputSystem.AddDevice<Mouse>();
+            inputObject = new GameObject("MouseCameraInputFixture");
+            input = inputObject.AddComponent<MouseCameraInput>();
+            input.DragThresholdPixels = 6f;
+        }
+
+        public override void TearDown()
+        {
+            Time.timeScale = 1f;
+            Object.DestroyImmediate(inputObject);
+            base.TearDown();
+        }
+
+        [UnityTest]
+        public IEnumerator MouseInput_ClickReleaseProducesTap()
+        {
+            Set(mouse.position, new Vector2(10f, 20f));
+            yield return null;
+            Press(mouse.leftButton);
+            yield return null;
+            input.ReadFrame();
+
+            Release(mouse.leftButton);
+            yield return null;
+            var released = input.ReadFrame();
+
+            Assert.That(released.TapReleased, Is.True);
+            Assert.That(released.PanDelta, Is.EqualTo(Vector2.zero));
+            Assert.That(
+                released.PointerPosition,
+                Is.EqualTo(new Vector2(10f, 20f)));
+        }
+
+        [UnityTest]
+        public IEnumerator MouseInput_DragReleaseNeverProducesTap()
+        {
+            Set(mouse.position, Vector2.zero);
+            yield return null;
+            Press(mouse.leftButton);
+            yield return null;
+            input.ReadFrame();
+
+            Set(mouse.position, new Vector2(20f, 0f));
+            Set(mouse.delta, new Vector2(20f, 0f));
+            yield return null;
+            var dragged = input.ReadFrame();
+
+            Release(mouse.leftButton);
+            yield return null;
+            var released = input.ReadFrame();
+
+            Assert.That(dragged.PanDelta, Is.EqualTo(new Vector2(20f, 0f)));
+            Assert.That(released.TapReleased, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator MouseInput_ReturningAfterDragStillDoesNotTap()
+        {
+            Set(mouse.position, Vector2.zero);
+            yield return null;
+            Press(mouse.leftButton);
+            yield return null;
+            input.ReadFrame();
+
+            Set(mouse.position, new Vector2(20f, 0f));
+            Set(mouse.delta, new Vector2(20f, 0f));
+            yield return null;
+            input.ReadFrame();
+
+            Set(mouse.position, Vector2.zero);
+            Set(mouse.delta, new Vector2(-20f, 0f));
+            yield return null;
+            input.ReadFrame();
+
+            Release(mouse.leftButton);
+            yield return null;
+            var released = input.ReadFrame();
+
+            Assert.That(released.TapReleased, Is.False);
+            Assert.That(released.PointerPosition, Is.EqualTo(Vector2.zero));
+        }
+
+        [UnityTest]
+        public IEnumerator MouseInput_TwoConsumersReceiveSameFrameValues()
+        {
+            Set(mouse.position, new Vector2(12f, 24f));
+            yield return null;
+            Press(mouse.leftButton);
+            yield return null;
+            input.ReadFrame();
+
+            Release(mouse.leftButton);
+            yield return null;
+            var first = input.ReadFrame();
+            var second = input.ReadFrame();
+
+            Assert.That(second.PanDelta, Is.EqualTo(first.PanDelta));
+            Assert.That(second.ZoomDelta, Is.EqualTo(first.ZoomDelta));
+            Assert.That(second.TapReleased, Is.EqualTo(first.TapReleased));
+            Assert.That(
+                second.PointerPosition,
+                Is.EqualTo(first.PointerPosition));
+            Assert.That(first.TapReleased, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator MouseInput_PauseStillReadsPointerAndTap()
+        {
+            Time.timeScale = 0f;
+            Set(mouse.position, new Vector2(30f, 40f));
+            yield return null;
+            Press(mouse.leftButton);
+            yield return null;
+            input.ReadFrame();
+
+            Release(mouse.leftButton);
+            yield return null;
+            var released = input.ReadFrame();
+
+            Assert.That(released.TapReleased, Is.True);
+            Assert.That(
+                released.PointerPosition,
+                Is.EqualTo(new Vector2(30f, 40f)));
+        }
+
+        [UnityTest]
+        public IEnumerator MouseInput_ScrollFlowsToZoomDelta()
+        {
+            Set(mouse.scroll, new Vector2(0f, 120f));
+            yield return null;
+
+            var frame = input.ReadFrame();
+
+            Assert.That(frame.ZoomDelta, Is.EqualTo(120f));
         }
     }
 }

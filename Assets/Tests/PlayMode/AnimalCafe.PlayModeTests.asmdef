@@ -3,7 +3,9 @@
   "rootNamespace": "AnimalCafe.Tests",
   "references": [
     "AnimalCafe.Runtime",
-    "UnityEngine.UI"
+    "UnityEngine.UI",
+    "Unity.InputSystem",
+    "Unity.InputSystem.TestFramework"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

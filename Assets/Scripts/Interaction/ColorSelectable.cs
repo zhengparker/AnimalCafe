@@ -21,6 +21,8 @@ namespace AnimalCafe.Interaction
         private Color originalColor = Color.white;
         private int activeColorProperty = BaseColorId;
         private bool isInitialized;
+        private bool hasLoggedMissingRendererWarning;
+        private bool hasLoggedUnsupportedMaterialWarning;
 
         public bool IsSelected { get; private set; }
 
@@ -37,8 +39,11 @@ namespace AnimalCafe.Interaction
                 return;
             }
 
-            Debug.LogWarning("[ColorSelectable] A Renderer is required.", this);
-            enabled = false;
+            if (targetRenderer == null)
+            {
+                LogMissingRendererWarningOnce();
+                enabled = false;
+            }
         }
 
         private bool TryInitializeRenderer()
@@ -56,20 +61,55 @@ namespace AnimalCafe.Interaction
 
             propertyBlock = new MaterialPropertyBlock();
             var material = targetRenderer.sharedMaterial;
-            if (material != null && material.HasProperty(BaseColorId))
+            if (material == null)
+            {
+                LogUnsupportedMaterialWarningOnce();
+                return false;
+            }
+
+            if (material.HasProperty(BaseColorId))
             {
                 activeColorProperty = BaseColorId;
                 originalColor = material.GetColor(BaseColorId);
             }
-            else if (material != null && material.HasProperty(ColorId))
+            else if (material.HasProperty(ColorId))
             {
                 activeColorProperty = ColorId;
                 originalColor = material.GetColor(ColorId);
+            }
+            else
+            {
+                LogUnsupportedMaterialWarningOnce();
+                return false;
             }
 
             isInitialized = true;
             enabled = true;
             return true;
+        }
+
+        private void LogMissingRendererWarningOnce()
+        {
+            if (hasLoggedMissingRendererWarning)
+            {
+                return;
+            }
+
+            hasLoggedMissingRendererWarning = true;
+            Debug.LogWarning("[ColorSelectable] A Renderer is required.", this);
+        }
+
+        private void LogUnsupportedMaterialWarningOnce()
+        {
+            if (hasLoggedUnsupportedMaterialWarning)
+            {
+                return;
+            }
+
+            hasLoggedUnsupportedMaterialWarning = true;
+            Debug.LogWarning(
+                "[ColorSelectable] Renderer material must expose _BaseColor or _Color.",
+                this);
         }
 
         private void OnDisable()

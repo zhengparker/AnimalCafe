@@ -46,9 +46,9 @@ namespace AnimalCafe.EditorTools
             RemoveLegacyDemoObjects(scene);
             var settings = GetOrCreateCameraSettings();
             ConfigureCamera(mainCamera);
-            ConfigureRuntime(mainCamera, settings);
-            ConfigureTimeControls();
-            EnsureEventSystem();
+            ConfigureRuntime(scene, mainCamera, settings);
+            ConfigureTimeControls(scene);
+            EnsureEventSystem(scene);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -93,10 +93,11 @@ namespace AnimalCafe.EditorTools
         }
 
         private static void ConfigureRuntime(
+            Scene scene,
             UnityEngine.Camera mainCamera,
             CameraSettings settings)
         {
-            var root = FindOrCreateRoot(RuntimeRootName);
+            var root = FindOrCreateOwnedRoot(scene, RuntimeRootName);
             var mouseInput = GetOrAdd<MouseCameraInput>(root);
             mouseInput.DragThresholdPixels = settings.DragThresholdPixels;
             SetObjectReference(mouseInput, "settings", settings);
@@ -127,18 +128,13 @@ namespace AnimalCafe.EditorTools
             }
         }
 
-        private static void ConfigureTimeControls()
+        private static void ConfigureTimeControls(Scene scene)
         {
-            var canvasObject = GameObject.Find(CanvasName);
-            if (canvasObject == null)
-            {
-                canvasObject = new GameObject(
-                    CanvasName,
-                    typeof(RectTransform),
-                    typeof(Canvas),
-                    typeof(CanvasScaler),
-                    typeof(GraphicRaycaster));
-            }
+            var canvasObject = FindOrCreateOwnedRoot(scene, CanvasName);
+            GetOrAdd<RectTransform>(canvasObject);
+            GetOrAdd<Canvas>(canvasObject);
+            GetOrAdd<CanvasScaler>(canvasObject);
+            GetOrAdd<GraphicRaycaster>(canvasObject);
 
             var canvas = canvasObject.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -158,7 +154,8 @@ namespace AnimalCafe.EditorTools
             var normal = CreateButton(panelObject.transform, "NormalButton", "1x", 0f);
             var fast = CreateButton(panelObject.transform, "FastButton", "2x", 110f);
             var panel = GetOrAdd<TimeControlPanel>(panelObject);
-            var service = GameObject.Find(RuntimeRootName).GetComponent<GameTimeService>();
+            var runtimeRoot = FindOrCreateOwnedRoot(scene, RuntimeRootName);
+            var service = runtimeRoot.GetComponent<GameTimeService>();
             SetObjectReference(panel, "gameTimeService", service);
             SetObjectReference(panel, "pauseButton", pause);
             SetObjectReference(panel, "normalButton", normal);
@@ -197,13 +194,9 @@ namespace AnimalCafe.EditorTools
             return button;
         }
 
-        private static void EnsureEventSystem()
+        private static void EnsureEventSystem(Scene scene)
         {
-            var eventSystem = GameObject.Find("EventSystem");
-            if (eventSystem == null)
-            {
-                eventSystem = new GameObject("EventSystem");
-            }
+            var eventSystem = FindOrCreateOwnedRoot(scene, "EventSystem");
 
             GetOrAdd<EventSystem>(eventSystem);
             var oldModule = eventSystem.GetComponent<StandaloneInputModule>();
@@ -215,9 +208,38 @@ namespace AnimalCafe.EditorTools
             GetOrAdd<InputSystemUIInputModule>(eventSystem);
         }
 
-        private static GameObject FindOrCreateRoot(string name)
+        private static GameObject FindOrCreateOwnedRoot(
+            Scene scene,
+            string name)
         {
-            return GameObject.Find(name) ?? new GameObject(name);
+            GameObject canonical = null;
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                if (!string.Equals(
+                        root.name,
+                        name,
+                        StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (canonical == null)
+                {
+                    canonical = root;
+                    continue;
+                }
+
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+
+            canonical ??= new GameObject(name);
+            if (canonical.scene != scene)
+            {
+                SceneManager.MoveGameObjectToScene(canonical, scene);
+            }
+
+            canonical.SetActive(true);
+            return canonical;
         }
 
         private static GameObject FindOrCreateUiObject(Transform parent, string name)
@@ -235,7 +257,19 @@ namespace AnimalCafe.EditorTools
 
         private static T GetOrAdd<T>(GameObject gameObject) where T : Component
         {
-            return gameObject.GetComponent<T>() ?? gameObject.AddComponent<T>();
+            var components = gameObject.GetComponents<T>();
+            if (components.Length == 0)
+            {
+                return gameObject.AddComponent<T>();
+            }
+
+            var canonical = components[0];
+            for (var index = 1; index < components.Length; index++)
+            {
+                UnityEngine.Object.DestroyImmediate(components[index]);
+            }
+
+            return canonical;
         }
 
         private static void SetObjectReference(

@@ -230,7 +230,11 @@ Layout Data
 >
 > 验证环境：Unity `6000.5.5f1` / Windows
 >
-> 验证结果：16 / 16 Play Mode tests passed；`MainCafe` Scene load 与 Console error scan passed；Camera pan、zoom、bounds、isometric baseline、selection feedback、Pause、`1x` 和 `2x` 已完成人工验收。
+> 原始验收结果（2026-07-25）：16 / 16 Play Mode tests passed；`MainCafe` Scene load 与 Console error scan passed；Camera pan、zoom、bounds、isometric baseline、selection feedback、Pause、`1x` 和 `2x` 已完成人工验收。
+>
+> Completed-phase hardening evidence（2026-07-30）：Game Time owner hardening 后 baseline 为 21 / 21 PlayMode；merge 前 review hardening fresh full EditMode `116 / 116`、fresh full PlayMode `31 / 31` passed，failed、skipped、inconclusive 均为 `0`。新增 Scene-owned root canonicalization、disabled / inactive / destroyed selection cleanup、真实 Input System mouse integration coverage，以及 single-warning、可恢复的 missing-material handling。
+>
+> Completed-phase hardening manual evidence（2026-07-30）：用户确认 `MainCafe` Hierarchy 中 `Phase0_Runtime`、`Phase0_TimeControls`、`EventSystem` 各一个；Camera pan / zoom、Pause / `1x` / `2x` 正常；Console clean；Test Runner EditMode `116 / 116`、PlayMode `31 / 31` 全部通过。
 
 ### Goal
 
@@ -243,10 +247,13 @@ Layout Data
 - Scene selection 与 visual feedback。
 - Pause、`1x` 和 `2x` Game Time。
 - Event Bus、runtime assembly 和基础 Play Mode tests。
+- `Phase0_Runtime`、`Phase0_TimeControls` 与 `EventSystem` inactive / duplicate root repair。
+- Disabled、inactive 或 destroyed selectable 的安全 selection cleanup。
+- 真实 mouse press / drag / release、same-frame cache 与 Pause input regression。
 
 ### Regression Requirement
 
-从 Phase 1 开始，现有 16 个 Phase 0 tests 必须持续通过。
+原始 16-test acceptance evidence 保留为历史记录；当前 regression baseline 是 full EditMode `116` tests 与 full PlayMode `31` tests。后续 Phase 必须保持所有现有 tests 通过，并在 test count 改变时记录 fresh totals。
 
 ---
 
@@ -315,6 +322,8 @@ Grid occupancy、UI、Scene placement、functional anchors、Save file，以及�
 ---
 
 ## Phase 2 — Grid Occupancy & Placement Rules
+
+状态：In Review
 
 ### Goal
 
@@ -2351,8 +2360,11 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 **Phase 1 — Layout Data Model** 已完成 implementation、automated verification、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
 
-下一步是 **Phase 2 — Grid Occupancy & Placement Rules** 的 design 与 implementation planning。
+**Phase 2 — Grid Occupancy & Placement Rules** 已完成 approved design、implementation、automated verification、review、commit 和 branch push，当前状态为 `In Review`。
 
-- 不开始 Phase 2 Grid placement implementation，直到 Phase 2 design 和 implementation plan 获用户批准。
+- 当前 gate：Phase 0 review hardening automated 与 manual acceptance 已通过，等待用户通过 GitHub Desktop 把 approved changes commit 到 `main`。
+- 随后将最新 `main` 整合到 `codex/phase-2`，保留 Phase 2 Roadmap 与 Beginner Guide edits，并运行 fresh full regression。
+- Phase 2 用户验收后，由用户批准 merge 到 `main`。
+- Merge 后在 `main` 重新运行 full EditMode 与 PlayMode regression；全部通过后才能把 Phase 2 标记为 `Completed`。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。
