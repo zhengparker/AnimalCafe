@@ -107,13 +107,26 @@ Skipped: 0
 Inconclusive: 0
 ```
 
+Latest-main integrated evidence（2026-07-30）：
+
+```text
+Phase 0 Scene cleanup: 1 / 1 passed
+Phase 0 PlayMode: 25 / 25 passed
+GridPlacementTests: 67 / 67 passed
+Full EditMode: 184 / 184 passed
+Full PlayMode: 31 / 31 passed
+Failed: 0
+Skipped: 0
+Inconclusive: 0
+```
+
 这些是 cumulative regression tests：
 
 ```text
 Phase 0 tests + Phase 1 tests + Phase 2 tests
 ```
 
-Phase 2 加入的是 pure C# layout rules，所以新增 coverage 主要在 EditMode，EditMode 数量增加到 184。PlayMode 仍是 18，因为 Phase 2 没有新增 Scene object 或运行时操作；这 18 个 PlayMode tests 用来确认 Phase 0 的 Camera、Input、Selection 和 Time behavior 没有 regression。
+Phase 2 加入的是 pure C# layout rules，所以新增 coverage 主要在 EditMode，EditMode 数量增加到 184。Phase 2 本身没有新增 Scene object 或运行时操作；最新 main 的 Phase 0 hardening 增加了 PlayMode coverage，因此 integrated PlayMode baseline 从原来的 18 增加到 31，用来进一步保护 Camera、Input、Selection 和 Time behavior。
 
 ## 7. Bug / Edge Tests
 
@@ -196,8 +209,8 @@ Phase 2 没有制作：
 
 ## 12. 完成状态和下一步
 
-Phase 2 当前状态是 `In Review`，不是 `Completed`。
+Phase 2 当前状态是 `In Review`，不是 `Completed`。用户已于 2026-07-30 完成 manual acceptance：EditMode `184 / 184`、PlayMode `31 / 31` 全部通过，`GridPlacementTests` categories、Scene regression、Phase 0 controls、Console 和本 guide 均已确认。
 
-Automated verification 已取得上述 fresh evidence，Phase 2 branch 也已经 commit 和 push。下一步由用户按第 9 节完成 manual acceptance，并确认 Scene regression、Phase 0 controls、Console 和本 guide；验收后再批准 merge，并在 merged `main` 上重新运行 full EditMode 与 PlayMode regression。
+最新 `main` 已整合到 Phase 2，fresh integrated automated verification 与 manual acceptance 均已通过。下一步由用户完成当前 P2 merge commit 和 branch push，再批准 merge，并在 merged `main` 上重新运行 full EditMode 与 PlayMode regression。
 
 在用户明确验收、merge 和 merged-main regression 完成前，Roadmap 不能把 Phase 2 标记为 `Completed`。

@@ -231,7 +231,11 @@ Layout Data
 >
 > 验证环境：Unity `6000.5.5f1` / Windows
 >
-> 验证结果：16 / 16 Play Mode tests passed；`MainCafe` Scene load 与 Console error scan passed；Camera pan、zoom、bounds、isometric baseline、selection feedback、Pause、`1x` 和 `2x` 已完成人工验收。
+> 原始验收结果（2026-07-25）：16 / 16 Play Mode tests passed；`MainCafe` Scene load 与 Console error scan passed；Camera pan、zoom、bounds、isometric baseline、selection feedback、Pause、`1x` 和 `2x` 已完成人工验收。
+>
+> Completed-phase hardening evidence（2026-07-30）：Game Time owner hardening 后 baseline 为 21 / 21 PlayMode；merge 前 review hardening fresh full EditMode `116 / 116`、fresh full PlayMode `31 / 31` passed，failed、skipped、inconclusive 均为 `0`。新增 Scene-owned root canonicalization、disabled / inactive / destroyed selection cleanup、真实 Input System mouse integration coverage，以及 single-warning、可恢复的 missing-material handling。
+>
+> Completed-phase hardening manual evidence（2026-07-30）：用户确认 `MainCafe` Hierarchy 中 `Phase0_Runtime`、`Phase0_TimeControls`、`EventSystem` 各一个；Camera pan / zoom、Pause / `1x` / `2x` 正常；Console clean；Test Runner EditMode `116 / 116`、PlayMode `31 / 31` 全部通过。
 
 ### Goal
 
@@ -244,10 +248,13 @@ Layout Data
 - Scene selection 与 visual feedback。
 - Pause、`1x` 和 `2x` Game Time。
 - Event Bus、runtime assembly 和基础 Play Mode tests。
+- `Phase0_Runtime`、`Phase0_TimeControls` 与 `EventSystem` inactive / duplicate root repair。
+- Disabled、inactive 或 destroyed selectable 的安全 selection cleanup。
+- 真实 mouse press / drag / release、same-frame cache 与 Pause input regression。
 
 ### Regression Requirement
 
-从 Phase 1 开始，现有 16 个 Phase 0 tests 必须持续通过。
+原始 16-test acceptance evidence 保留为历史记录；当前 regression baseline 是 full EditMode `116` tests 与 full PlayMode `31` tests。后续 Phase 必须保持所有现有 tests 通过，并在 test count 改变时记录 fresh totals。
 
 ---
 
@@ -323,7 +330,9 @@ Grid occupancy、UI、Scene placement、functional anchors、Save file，以及�
 
 Automated evidence（2026-07-27）：fresh final EditMode 184 / 184 passed；fresh final PlayMode 18 / 18 passed；failed、skipped、inconclusive 均为 0。Placement/transaction/consistency、source boundary、旧 Phase regression 与 git diff check 已通过。
 
-Manual evidence：等待用户按 Docs/Phase2_Beginner_Guide.md 完成验收。
+Latest-main integrated evidence（2026-07-30）：Phase 0 Scene cleanup 1 / 1、Phase 0 PlayMode 25 / 25、GridPlacementTests 67 / 67、full EditMode 184 / 184、full PlayMode 31 / 31 passed；failed、skipped、inconclusive 均为 0。Layout production source 没有 UnityEngine reference，Assets 中没有遗留 AddFurnitureInstance call，conflict marker 与 git diff check 均通过。
+
+Manual evidence（2026-07-30）：用户确认 EditMode `184 / 184`、PlayMode `31 / 31` 全部通过；`GridPlacementTests` categories 完整；`MainCafe` 没有提前出现 Phase 2 可见 Grid、furniture、preview 或 UI；mouse pan、wheel zoom、Pause、`1x`、`2x` 正常；Console clean；Beginner Guide 可理解。
 
 ### Goal
 
@@ -2362,8 +2371,9 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 **Phase 2 — Grid Occupancy & Placement Rules** 已完成 approved design、implementation、automated verification、review、commit 和 branch push，当前状态为 `In Review`。
 
-- 当前 gate：用户 manual acceptance。
-- 用户验收后，由用户批准 merge 到 `main`。
+- Phase 0 review hardening 已完成 automated verification、manual acceptance、commit 和 push。
+- 最新 `main` 已整合到 `codex/phase-2`，fresh integrated regression 与 Phase 2 manual acceptance 已通过。
+- 当前 gate：由用户完成 P2 merge commit 和 branch push，然后批准 merge 到 `main`。
 - Merge 后在 `main` 重新运行 full EditMode 与 PlayMode regression；全部通过后才能把 Phase 2 标记为 `Completed`。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。

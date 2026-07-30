@@ -86,6 +86,8 @@ Camera 参数保存在 `DefaultCameraSettings.asset`，运行逻辑由 `CafeCame
 
 它可以重复执行，而不会持续创建重复的正式 objects。
 
+Setup 会从当前 loaded `MainCafe` Scene 的 roots 中寻找这些 objects，包括 inactive objects。如果出现同名 duplicates，它会只保留一个 canonical root，并清理重复的 setup-owned components。因此重复运行 repair 后，Hierarchy 仍应只有一个 `Phase0_Runtime`、一个 `Phase0_TimeControls` 和一个 `EventSystem`。
+
 ## 4. 重要概念解释
 
 ### GameObject
@@ -169,25 +171,30 @@ Phase 0 automated tests 验证：
 - Camera position 和 zoom 不会超出 bounds。
 - 不同 scroll-wheel 数值都按一个 zoom step 处理。
 - click 与 drag 使用 threshold 正确区分。
+- 真实 virtual mouse press / drag / release 在 Pause 时仍可读取。
+- Camera 与 interaction 在同一 frame 读取相同 cached input。
 - selection 能选择、切换和清除。
-- renderer 在 `Awake` 后出现时，selection 仍能恢复。
+- selected object 被 disabled、设为 inactive 或 destroyed 后，selection reference 会安全清理。
+- Renderer 缺少可用 material color property 时输出明确 warning，并保持 Scene 可运行。
 - time-control buttons 调用正确速度。
 - `MainCafe` 包含正式 runtime objects。
 
-这些 tests 是 Phase 0 的 regression baseline。后续 Phase 不应让这些基础失效。
+原始 Phase 0 acceptance 是 `16 / 16` PlayMode；Game Time owner hardening 后 baseline 增加到 `21 / 21`。2026-07-30 review hardening 的 fresh automated evidence 是 EditMode `116 / 116` 与 PlayMode `31 / 31`，failed、skipped、inconclusive 都是 `0`。后续 Phase 不应让这些基础失效。
 
 ## 7. Unity Manual Test
 
 1. 使用 Unity `6000.5.5f1` 打开项目。
 2. 打开 `Assets/Scenes/MainCafe.unity`。
-3. 清空 Console。
-4. 进入 Play Mode。
-5. 用 mouse wheel 测试 Camera zoom。
-6. 用 mouse drag 测试 Camera pan。
-7. 点击 `Pause`、`1x`、`2x`，确认 buttons 可以响应。
-8. 退出 Play Mode。
-9. 确认 Console 没有红色 error。
-10. 在 Test Runner 运行 PlayMode tests，确认全部绿色。
+3. 在 Hierarchy 确认只有一个 `Phase0_Runtime`、一个 `Phase0_TimeControls` 和一个 `EventSystem`。
+4. 清空 Console。
+5. 进入 Play Mode。
+6. 用 mouse wheel 测试 Camera zoom。
+7. 用 mouse drag 测试 Camera pan。
+8. 点击 `Pause`、`1x`、`2x`，确认 buttons 可以响应。
+9. 退出 Play Mode。
+10. 确认 Console 没有 unexpected error 或 warning。
+11. 在 Test Runner 运行 EditMode tests，确认 `116 / 116` 全部绿色。
+12. 运行 PlayMode tests，确认 `31 / 31` 全部绿色。
 
 ## 8. Phase 0 没有做什么
 
@@ -223,6 +230,8 @@ Phase 0 曾经使用 demo cubes 和一个 time mover 来观察功能。它们是
 ## 10. 完成状态和下一步
 
 Phase 0 已完成并成为 regression baseline。
+
+2026-07-30 的 completed-phase hardening 已通过 automated verification 和用户 manual acceptance：Hierarchy 三个 setup-owned roots 各一个，Camera pan / zoom、Pause / `1x` / `2x` 正常，Console clean，EditMode `116 / 116` 与 PlayMode `31 / 31` 全部通过。当前等待用户通过 GitHub Desktop commit；之后才把最新 `main` 整合到 Phase 2 branch。
 
 Phase 1 在这个基础上建立 Layout Data Model，并清理 Phase 0 的 demo-only Scene 内容。Phase 1 的解释请阅读：
 

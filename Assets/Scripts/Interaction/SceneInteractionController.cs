@@ -37,7 +37,7 @@ namespace AnimalCafe.Interaction
 
         private void Update()
         {
-            ClearDestroyedSelection();
+            ClearInvalidSelection();
             if (inputSource == null)
             {
                 return;
@@ -90,7 +90,7 @@ namespace AnimalCafe.Interaction
 
         private void SetSelection(ISelectable next)
         {
-            ClearDestroyedSelection();
+            ClearInvalidSelection();
             if (ReferenceEquals(CurrentSelection, next))
             {
                 return;
@@ -105,12 +105,30 @@ namespace AnimalCafe.Interaction
                 CurrentSelection as UnityEngine.Object);
         }
 
-        private void ClearDestroyedSelection()
+        private void ClearInvalidSelection()
         {
-            if (CurrentSelection is UnityEngine.Object unityObject && unityObject == null)
+            if (CurrentSelection is UnityEngine.Object unityObject
+                && unityObject == null)
             {
+                var previous = unityObject;
                 CurrentSelection = null;
+                GameEventBus.PublishSelectionChanged(previous, null);
+                return;
             }
+
+            if (CurrentSelection is not Behaviour behaviour
+                || (behaviour.isActiveAndEnabled
+                    && behaviour.gameObject.activeInHierarchy))
+            {
+                return;
+            }
+
+            var disabledSelection = CurrentSelection;
+            disabledSelection.Deselect();
+            CurrentSelection = null;
+            GameEventBus.PublishSelectionChanged(
+                disabledSelection as UnityEngine.Object,
+                null);
         }
 
         private static ISelectable FindSelectable(Collider hitCollider)
