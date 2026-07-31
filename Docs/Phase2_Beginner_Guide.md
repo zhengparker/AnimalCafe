@@ -12,6 +12,8 @@
 
 Phase 2 建立的就是这名“摆放管理员”。它只负责判断规则，不负责显示家具或让鼠标拖动家具。
 
+每个 `FurnitureDefinition` 最多只能占用 `1024` 个 cells。如果错误数据把家具写得特别巨大，程序会在尝试摆放、创建很长的 cell list 之前拒绝它。这个边界可以保护游戏，避免很长的 loop 或 memory exhaustion。
+
 ## 2. Phase 1 和 Phase 2 的区别
 
 - Phase 1 stores data：它建立 `CafeLayout`、`FurnitureInstance`、`FurnitureDefinition` 等资料结构，回答“有哪些家具、它们的 ID 和位置是什么”。
@@ -97,7 +99,7 @@ Phase 2 的 API 专门处理 floor-grid placement，因此会拒绝只允许 `Wa
 - 合法 `Place`、`Move`、`Rotate`、`Remove` 会同步更新家具资料和 Occupancy。
 - Move 到当前位置、Rotate 到当前角度等 idempotent operation 不会重复占格。
 
-Fresh automated evidence（2026-07-27）：
+早期 automated evidence（2026-07-27）：
 
 ```text
 EditMode: 184 / 184 passed
@@ -119,6 +121,18 @@ Failed: 0
 Skipped: 0
 Inconclusive: 0
 ```
+
+PR hardening fresh full regression（2026-07-30，状态仍为 `In Review`）：
+
+```text
+EditMode: 191 / 191 passed
+PlayMode: 35 / 35 passed
+Failed: 0
+Skipped: 0
+Inconclusive: 0
+```
+
+这轮 tests 也覆盖 Phase 0 和 Phase 1 regression，并确认 footprint 超过 `1024` cells 的 `FurnitureDefinition` 会被拒绝。
 
 这些是 cumulative regression tests：
 
@@ -142,6 +156,7 @@ Bug / Edge tests 专门检查容易出错的边界：
 - Occupancy 中每个 owner 都存在，每件家具的完整 footprint 都能在 Occupancy 找到。
 - caller 不能通过 read-only collection 绕过 rules 修改内部资料。
 - 极端 coordinate 不会发生整数溢出后错误占格。
+- `FurnitureDefinition` footprint 超过 `1024` cells 时会在 placement 前被拒绝，避免创建过长的 cell list、长时间 loop 或 memory exhaustion。
 - Layout source 保持 pure C#，不加入 Unity Scene reference。
 
 ## 8. Phase 2 Files
@@ -209,8 +224,10 @@ Phase 2 没有制作：
 
 ## 12. 完成状态和下一步
 
-Phase 2 当前状态是 `In Review`，不是 `Completed`。用户已于 2026-07-30 完成 manual acceptance：EditMode `184 / 184`、PlayMode `31 / 31` 全部通过，`GridPlacementTests` categories、Scene regression、Phase 0 controls、Console 和本 guide 均已确认。
+Phase 2 当前状态是 `In Review`，不是 `Completed`。PR hardening Option A 的 fresh full regression 为 EditMode `191 / 191`、PlayMode `35 / 35`，Failed、Skipped、Inconclusive 都是 `0`；它覆盖真实 UGUI/Input System pointer boundary、`GridPlacementTests`、Phase 0 和 Phase 1 regression，并确认超出 `1024` cells 的错误 `FurnitureDefinition` 会被拒绝。
 
-最新 `main` 已整合到 Phase 2，fresh integrated automated verification 与 manual acceptance 均已通过。下一步由用户完成当前 P2 merge commit 和 branch push，再批准 merge，并在 merged `main` 上重新运行 full EditMode 与 PlayMode regression。
+最新 `main` 已整合到 Phase 2，fresh integrated automated verification 与 manual acceptance 均已通过。PR hardening Option A 的 manual acceptance 也已通过：temporary Cube selection 在点击 `Pause`、`1x`、`2x` 后一直保持，Camera pan / zoom 正常，Console clean。
+
+下一步由用户完成当前 P2 hardening commit 和 branch push，再批准 merge，并在 merged `main` 上重新运行 full EditMode 与 PlayMode regression。
 
 在用户明确验收、merge 和 merged-main regression 完成前，Roadmap 不能把 Phase 2 标记为 `Completed`。

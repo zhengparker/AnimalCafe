@@ -233,7 +233,7 @@ Layout Data
 >
 > 原始验收结果（2026-07-25）：16 / 16 Play Mode tests passed；`MainCafe` Scene load 与 Console error scan passed；Camera pan、zoom、bounds、isometric baseline、selection feedback、Pause、`1x` 和 `2x` 已完成人工验收。
 >
-> Completed-phase hardening evidence（2026-07-30）：Game Time owner hardening 后 baseline 为 21 / 21 PlayMode；merge 前 review hardening fresh full EditMode `116 / 116`、fresh full PlayMode `31 / 31` passed，failed、skipped、inconclusive 均为 `0`。新增 Scene-owned root canonicalization、disabled / inactive / destroyed selection cleanup、真实 Input System mouse integration coverage，以及 single-warning、可恢复的 missing-material handling。
+> Completed-phase hardening evidence（2026-07-30）：Game Time owner hardening 后 baseline 为 21 / 21 PlayMode；merge 前 review hardening fresh full EditMode `116 / 116`、fresh full PlayMode `31 / 31` passed，failed、skipped、inconclusive 均为 `0`。新增 Scene-owned root canonicalization、disabled / inactive / destroyed selection cleanup、真实 Input System mouse integration coverage，以及 single-warning、可恢复的 missing-material handling。鼠标在 UGUI 控件上按下并松开时，pointer release 不会再穿透到世界中的 selection。
 >
 > Completed-phase hardening manual evidence（2026-07-30）：用户确认 `MainCafe` Hierarchy 中 `Phase0_Runtime`、`Phase0_TimeControls`、`EventSystem` 各一个；Camera pan / zoom、Pause / `1x` / `2x` 正常；Console clean；Test Runner EditMode `116 / 116`、PlayMode `31 / 31` 全部通过。
 
@@ -331,6 +331,10 @@ Grid occupancy、UI、Scene placement、functional anchors、Save file，以及�
 Automated evidence（2026-07-27）：fresh final EditMode 184 / 184 passed；fresh final PlayMode 18 / 18 passed；failed、skipped、inconclusive 均为 0。Placement/transaction/consistency、source boundary、旧 Phase regression 与 git diff check 已通过。
 
 Latest-main integrated evidence（2026-07-30）：Phase 0 Scene cleanup 1 / 1、Phase 0 PlayMode 25 / 25、GridPlacementTests 67 / 67、full EditMode 184 / 184、full PlayMode 31 / 31 passed；failed、skipped、inconclusive 均为 0。Layout production source 没有 UnityEngine reference，Assets 中没有遗留 AddFurnitureInstance call，conflict marker 与 git diff check 均通过。
+
+PR hardening Option A fresh full regression evidence（2026-07-30，状态仍为 In Review）：`Logs/Phase2PrHardeningOptionAFullEditMode.xml` 为 EditMode `191 / 191` passed；`Logs/Phase2PrHardeningOptionAFullPlayMode.xml` 为 PlayMode `35 / 35` passed；failed、skipped、inconclusive 均为 `0`。覆盖 Phase 0 与 Phase 1 regression。真实 `InputSystemUIInputModule`、Canvas、`GraphicRaycaster` 与 virtual Mouse tests 保护 UI 不穿透到 world selection；`FurnitureDefinition` footprint 超过 `1024` cells 会在 placement 前被拒绝，避免错误的巨大数据创建很长的 cell list。
+
+PR hardening Option A manual evidence（2026-07-30）：用户在 `MainCafe` Play Mode 中创建 temporary `ColorSelectable` Cube，确认点击 `Pause`、`1x`、`2x` 后 Cube selection 一直保持；Camera pan / zoom 正常；Console clean。退出 Play Mode 后 temporary Cube 自动移除。Phase 2 仍为 `In Review`，等待当前 branch commit / push 和 merge approval。
 
 Manual evidence（2026-07-30）：用户确认 EditMode `184 / 184`、PlayMode `31 / 31` 全部通过；`GridPlacementTests` categories 完整；`MainCafe` 没有提前出现 Phase 2 可见 Grid、furniture、preview 或 UI；mouse pan、wheel zoom、Pause、`1x`、`2x` 正常；Console clean；Beginner Guide 可理解。
 

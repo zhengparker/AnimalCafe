@@ -185,12 +185,55 @@ namespace AnimalCafe.Tests
             Assert.Throws(expectedExceptionType, () => catalog.GetRequired(id));
         }
 
+        [TestCase(32, 32)]
+        [TestCase(1, 1024)]
+        [TestCase(1024, 1)]
+        public void Definition_FootprintAtMaximumCellCountSucceeds(
+            int width,
+            int height)
+        {
+            var definition = CreateDefinition(
+                $"furniture.max.{width}x{height}",
+                width,
+                height);
+
+            Assert.That(
+                (long)definition.Footprint.Width * definition.Footprint.Height,
+                Is.EqualTo(FurnitureDefinition.MaxFootprintCellCount));
+        }
+
+        [TestCase(1, 1025)]
+        [TestCase(1025, 1)]
+        [TestCase(int.MaxValue, 1)]
+        [TestCase(int.MaxValue, int.MaxValue)]
+        public void Definition_FootprintAboveMaximumCellCountThrows(
+            int width,
+            int height)
+        {
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(
+                () => CreateDefinition(
+                    $"furniture.oversized.{width}x{height}",
+                    width,
+                    height));
+
+            Assert.That(exception.ParamName, Is.EqualTo("footprint"));
+            StringAssert.Contains("1024", exception.Message);
+        }
+
         private static FurnitureDefinition CreateDefinition(string id)
+        {
+            return CreateDefinition(id, 1, 1);
+        }
+
+        private static FurnitureDefinition CreateDefinition(
+            string id,
+            int width,
+            int height)
         {
             return new FurnitureDefinition(
                 id,
                 "Test Furniture",
-                new GridSize(1, 1),
+                new GridSize(width, height),
                 PlacementSurfaceType.Floor);
         }
     }

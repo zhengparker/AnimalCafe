@@ -10,7 +10,9 @@ using AnimalCafe.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
@@ -52,9 +54,13 @@ namespace AnimalCafe.Tests.PlayMode
         MonoBehaviour,
         ICameraInputSource
     {
+        public CameraInputFrame NextFrame { get; set; }
+
         public CameraInputFrame ReadFrame()
         {
-            return default;
+            var frame = NextFrame;
+            NextFrame = default;
+            return frame;
         }
     }
 
@@ -725,6 +731,7 @@ namespace AnimalCafe.Tests.PlayMode
                 unityCamera,
                 interactionObject,
                 interaction,
+                inputSource,
                 selectableObject,
                 selectable);
         }
@@ -775,6 +782,7 @@ namespace AnimalCafe.Tests.PlayMode
                 UnityEngine.Camera camera,
                 GameObject interactionObject,
                 SceneInteractionController interaction,
+                CameraInputTestFixture input,
                 GameObject selectableObject,
                 ColorSelectable selectable)
             {
@@ -782,6 +790,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Camera = camera;
                 this.interactionObject = interactionObject;
                 Interaction = interaction;
+                Input = input;
                 this.selectableObject = selectableObject;
                 Selectable = selectable;
             }
@@ -790,6 +799,8 @@ namespace AnimalCafe.Tests.PlayMode
 
             public SceneInteractionController Interaction { get; }
 
+            public CameraInputTestFixture Input { get; }
+
             public ColorSelectable Selectable { get; }
 
             public void Dispose()
@@ -797,6 +808,411 @@ namespace AnimalCafe.Tests.PlayMode
                 Object.DestroyImmediate(selectableObject);
                 Object.DestroyImmediate(interactionObject);
                 Object.DestroyImmediate(cameraObject);
+            }
+        }
+
+    }
+
+    public sealed class RealUiSceneInteractionTests : InputTestFixture
+    {
+        [UnityTest]
+        public IEnumerator RealUiTapAtEmptyWorldPreservesSelection()
+        {
+            var fixture = CreateInteractionFixture();
+            var mouse = InputSystem.AddDevice<Mouse>();
+            RealUiPointerTestScope uiScope = null;
+            var events = new List<SelectionChangedEvent>();
+            GameEventBus.SelectionChanged += events.Add;
+
+            try
+            {
+                uiScope = new RealUiPointerTestScope(mouse);
+                fixture.Interaction.TrySelectAt(
+                    fixture.Camera.WorldToScreenPoint(
+                        fixture.Selectable.transform.position));
+                events.Clear();
+
+                fixture.Selectable.transform.position =
+                    new Vector3(1000f, 1000f, 0f);
+                Physics.SyncTransforms();
+
+                var uiPosition = new Vector2(
+                    Screen.width * 0.5f,
+                    Screen.height * 0.5f);
+                uiScope.PlaceUiAt(uiPosition);
+                Set(mouse.position, uiPosition);
+                yield return null;
+                yield return null;
+
+                uiScope.AssertPointerState(uiPosition, true);
+                fixture.Input.NextFrame = new CameraInputFrame(
+                    Vector2.zero,
+                    0f,
+                    true,
+                    uiPosition);
+                yield return null;
+
+                Assert.That(
+                    fixture.Interaction.CurrentSelection,
+                    Is.SameAs(fixture.Selectable));
+                Assert.That(fixture.Selectable.IsSelected, Is.True);
+                Assert.That(events, Is.Empty);
+            }
+            finally
+            {
+                GameEventBus.SelectionChanged -= events.Add;
+                GameEventBus.ResetForTests();
+                uiScope?.Dispose();
+                fixture.Dispose();
+                if (mouse.added)
+                {
+                    InputSystem.RemoveDevice(mouse);
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator RealUiTapDoesNotSelectWorldObjectBehindUi()
+        {
+            var fixture = CreateInteractionFixture();
+            var mouse = InputSystem.AddDevice<Mouse>();
+            RealUiPointerTestScope uiScope = null;
+
+            try
+            {
+                uiScope = new RealUiPointerTestScope(mouse);
+                var selectablePosition = fixture.Camera.WorldToScreenPoint(
+                    fixture.Selectable.transform.position);
+                uiScope.PlaceUiAt(selectablePosition);
+                Set(mouse.position, selectablePosition);
+                yield return null;
+                yield return null;
+
+                uiScope.AssertPointerState(selectablePosition, true);
+                fixture.Input.NextFrame = new CameraInputFrame(
+                    Vector2.zero,
+                    0f,
+                    true,
+                    selectablePosition);
+                yield return null;
+
+                Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
+                Assert.That(fixture.Selectable.IsSelected, Is.False);
+            }
+            finally
+            {
+                GameEventBus.ResetForTests();
+                uiScope?.Dispose();
+                fixture.Dispose();
+                if (mouse.added)
+                {
+                    InputSystem.RemoveDevice(mouse);
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator EventSystemTapOutsideUiStillSelectsWorldObject()
+        {
+            var fixture = CreateInteractionFixture();
+            var mouse = InputSystem.AddDevice<Mouse>();
+            RealUiPointerTestScope uiScope = null;
+
+            try
+            {
+                uiScope = new RealUiPointerTestScope(mouse);
+                var selectablePosition = fixture.Camera.WorldToScreenPoint(
+                    fixture.Selectable.transform.position);
+                uiScope.PlaceUiAt(new Vector2(40f, 40f));
+                Set(mouse.position, selectablePosition);
+                yield return null;
+                yield return null;
+
+                uiScope.AssertPointerState(selectablePosition, false);
+                fixture.Input.NextFrame = new CameraInputFrame(
+                    Vector2.zero,
+                    0f,
+                    true,
+                    selectablePosition);
+                yield return null;
+
+                Assert.That(
+                    fixture.Interaction.CurrentSelection,
+                    Is.SameAs(fixture.Selectable));
+                Assert.That(fixture.Selectable.IsSelected, Is.True);
+            }
+            finally
+            {
+                GameEventBus.ResetForTests();
+                uiScope?.Dispose();
+                fixture.Dispose();
+                if (mouse.added)
+                {
+                    InputSystem.RemoveDevice(mouse);
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator NoEventSystemTapStillSelectsWorldObject()
+        {
+            var fixture = CreateInteractionFixture();
+            ExistingEventSystemIsolationScope eventSystemIsolation = null;
+
+            try
+            {
+                eventSystemIsolation = new ExistingEventSystemIsolationScope();
+                Assert.That(EventSystem.current, Is.Null);
+                fixture.Input.NextFrame = new CameraInputFrame(
+                    Vector2.zero,
+                    0f,
+                    true,
+                    fixture.Camera.WorldToScreenPoint(
+                        fixture.Selectable.transform.position));
+                yield return null;
+
+                Assert.That(
+                    fixture.Interaction.CurrentSelection,
+                    Is.SameAs(fixture.Selectable));
+                Assert.That(fixture.Selectable.IsSelected, Is.True);
+            }
+            finally
+            {
+                GameEventBus.ResetForTests();
+                eventSystemIsolation?.Dispose();
+                fixture.Dispose();
+            }
+        }
+
+        private static InteractionFixture CreateInteractionFixture()
+        {
+            var cameraObject = new GameObject("RealUiInteractionFixtureCamera");
+            var unityCamera = cameraObject.AddComponent<UnityEngine.Camera>();
+            cameraObject.transform.position = new Vector3(0f, 0f, -10f);
+
+            var interactionObject =
+                new GameObject("RealUiInteractionFixtureController");
+            var interaction =
+                interactionObject.AddComponent<SceneInteractionController>();
+            var inputSource =
+                interactionObject.AddComponent<CameraInputTestFixture>();
+            interaction.Configure(unityCamera, inputSource);
+
+            var selectableObject =
+                GameObject.CreatePrimitive(PrimitiveType.Cube);
+            selectableObject.name = "RealUiInteractionFixtureSelectable";
+            var selectable =
+                selectableObject.AddComponent<ColorSelectable>();
+            Physics.SyncTransforms();
+
+            return new InteractionFixture(
+                cameraObject,
+                unityCamera,
+                interactionObject,
+                interaction,
+                inputSource,
+                selectableObject,
+                selectable);
+        }
+
+        private sealed class InteractionFixture : System.IDisposable
+        {
+            private readonly GameObject cameraObject;
+            private readonly GameObject interactionObject;
+            private readonly GameObject selectableObject;
+
+            public InteractionFixture(
+                GameObject cameraObject,
+                UnityEngine.Camera camera,
+                GameObject interactionObject,
+                SceneInteractionController interaction,
+                CameraInputTestFixture input,
+                GameObject selectableObject,
+                ColorSelectable selectable)
+            {
+                this.cameraObject = cameraObject;
+                Camera = camera;
+                this.interactionObject = interactionObject;
+                Interaction = interaction;
+                Input = input;
+                this.selectableObject = selectableObject;
+                Selectable = selectable;
+            }
+
+            public UnityEngine.Camera Camera { get; }
+
+            public SceneInteractionController Interaction { get; }
+
+            public CameraInputTestFixture Input { get; }
+
+            public ColorSelectable Selectable { get; }
+
+            public void Dispose()
+            {
+                Object.DestroyImmediate(selectableObject);
+                Object.DestroyImmediate(interactionObject);
+                Object.DestroyImmediate(cameraObject);
+            }
+        }
+
+        private sealed class RealUiPointerTestScope : System.IDisposable
+        {
+            private readonly GameObject canvasObject;
+            private readonly GameObject eventSystemObject;
+            private readonly ExistingEventSystemIsolationScope
+                eventSystemIsolation;
+            private readonly Mouse mouse;
+            private readonly RectTransform uiRect;
+
+            public RealUiPointerTestScope(Mouse virtualMouse)
+            {
+                mouse = virtualMouse;
+                eventSystemIsolation =
+                    new ExistingEventSystemIsolationScope();
+
+                canvasObject = new GameObject(
+                    "RealUiPointerCanvasFixture",
+                    typeof(RectTransform),
+                    typeof(Canvas),
+                    typeof(GraphicRaycaster));
+                var canvas = canvasObject.GetComponent<Canvas>();
+                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+                var uiObject = new GameObject(
+                    "RealUiPointerImageFixture",
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image));
+                uiRect = uiObject.GetComponent<RectTransform>();
+                uiRect.SetParent(canvasObject.transform, false);
+                uiRect.anchorMin = Vector2.zero;
+                uiRect.anchorMax = Vector2.zero;
+                uiRect.pivot = new Vector2(0.5f, 0.5f);
+                uiRect.sizeDelta = new Vector2(80f, 80f);
+                uiObject.GetComponent<Image>().color =
+                    new Color(0.2f, 0.6f, 0.9f, 1f);
+
+                eventSystemObject =
+                    new GameObject("RealUiPointerEventSystemFixture");
+                eventSystemObject.SetActive(false);
+                EventSystem =
+                    eventSystemObject.AddComponent<EventSystem>();
+                InputModule =
+                    eventSystemObject.AddComponent<InputSystemUIInputModule>();
+                InputModule.UnassignActions();
+                InputModule.AssignDefaultActions();
+                eventSystemObject.SetActive(true);
+            }
+
+            public EventSystem EventSystem { get; }
+
+            public InputSystemUIInputModule InputModule { get; }
+
+            public void PlaceUiAt(Vector2 screenPosition)
+            {
+                uiRect.anchoredPosition = screenPosition;
+                Canvas.ForceUpdateCanvases();
+            }
+
+            public void AssertPointerState(
+                Vector2 expectedPosition,
+                bool expectedOverUi)
+            {
+                Assert.That(
+                    EventSystem.current,
+                    Is.SameAs(EventSystem));
+                Assert.That(
+                    EventSystem.currentInputModule,
+                    Is.SameAs(InputModule));
+                Assert.That(InputModule.actionsAsset, Is.Not.Null);
+                Assert.That(InputModule.point, Is.Not.Null);
+                Assert.That(InputModule.point.action, Is.Not.Null);
+                Assert.That(InputModule.point.action.enabled, Is.True);
+
+                var pointUsesVirtualMouse = false;
+                foreach (var control in InputModule.point.action.controls)
+                {
+                    if (control.device == mouse)
+                    {
+                        pointUsesVirtualMouse = true;
+                        break;
+                    }
+                }
+
+                Assert.That(pointUsesVirtualMouse, Is.True);
+                Assert.That(
+                    Vector2.Distance(
+                        mouse.position.ReadValue(),
+                        expectedPosition),
+                    Is.LessThan(0.01f));
+                Assert.That(
+                    Vector2.Distance(
+                        InputModule.point.action.ReadValue<Vector2>(),
+                        expectedPosition),
+                    Is.LessThan(0.01f));
+
+                var pointerEventData = new PointerEventData(EventSystem)
+                {
+                    position = expectedPosition
+                };
+                var raycastResults = new List<RaycastResult>();
+                EventSystem.RaycastAll(pointerEventData, raycastResults);
+                Assert.That(
+                    raycastResults.Exists(
+                        result => result.gameObject == uiRect.gameObject),
+                    Is.EqualTo(expectedOverUi));
+                Assert.That(
+                    EventSystem.IsPointerOverGameObject(),
+                    Is.EqualTo(expectedOverUi));
+            }
+
+            public void Dispose()
+            {
+                if (InputModule != null)
+                {
+                    InputModule.UnassignActions();
+                }
+
+                Object.DestroyImmediate(eventSystemObject);
+                Object.DestroyImmediate(canvasObject);
+                eventSystemIsolation.Dispose();
+            }
+        }
+
+        private sealed class ExistingEventSystemIsolationScope :
+            System.IDisposable
+        {
+            private readonly List<GameObject> activeEventSystemObjects = new();
+
+            public ExistingEventSystemIsolationScope()
+            {
+                foreach (var eventSystem in
+                    Resources.FindObjectsOfTypeAll<EventSystem>())
+                {
+                    if (eventSystem == null
+                        || !eventSystem.gameObject.scene.IsValid()
+                        || !eventSystem.gameObject.scene.isLoaded
+                        || !eventSystem.gameObject.activeSelf)
+                    {
+                        continue;
+                    }
+
+                    activeEventSystemObjects.Add(eventSystem.gameObject);
+                    eventSystem.gameObject.SetActive(false);
+                }
+
+                Assert.That(EventSystem.current, Is.Null);
+            }
+
+            public void Dispose()
+            {
+                foreach (var eventSystemObject in activeEventSystemObjects)
+                {
+                    if (eventSystemObject != null)
+                    {
+                        eventSystemObject.SetActive(true);
+                    }
+                }
             }
         }
     }
