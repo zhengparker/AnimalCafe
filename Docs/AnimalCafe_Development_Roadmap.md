@@ -400,9 +400,11 @@ Mouse placement、preview、Scene rendering、pathfinding。
 ### Status
 
 `In Review` — Task 1–6 implementation and fresh automated evidence are
-available, but Studio Owner manual Camera/readability acceptance and explicit
-source license/use-right confirmation remain pending. Phase 3 must not be
-recorded as `Completed` before both gates are resolved.
+available. Studio Owner has confirmed the required development and commercial
+release rights for all three user-provided / Tripo-generated benchmark assets;
+the source license/use-right gate is passed. Studio Owner manual
+Camera/readability acceptance remains pending, so Phase 3 must not yet be
+recorded as `Completed`.
 
 Fresh readability layout review-fix automated evidence (2026-08-01):
 
@@ -427,6 +429,23 @@ Fresh readability layout review-fix automated evidence (2026-08-01):
 Known limitation: this is a benchmark pipeline and readability baseline only.
 It is not the Phase 4 formal asset set, gameplay, placement, or runtime
 integration.
+
+### Deferred Formal Camera Contract
+
+- Formal gameplay framing is **Portrait-first**.
+- Gameplay zoom is one continuous factor from `1.0x` through `3.0x`, not three
+  preset Camera sizes. Windows uses smooth mouse-wheel zoom; a future iPhone
+  build uses pinch zoom over the same logical range.
+- Exact base orthographic size, Portrait framing and adaptive aspect behavior
+  remain deliberately open until formal Portrait/mobile Camera work. The P3
+  size `4` / `7` / `12` readability checks are visual proxies, not final zoom
+  stops and not approval of an exact gameplay base.
+- Phase 49 owns Portrait/mobile presentation, Safe Area and UI-versus-Camera
+  gesture priority, including selection of the exact base framing. Phase 50
+  owns iPhone pinch/device integration and platform validation; it must reuse
+  the same `1.0x`–`3.0x` logical envelope rather than fork gameplay Camera rules.
+- Any formal Camera change must preserve Phase 0 pan, smooth mouse-wheel zoom,
+  Camera bounds and existing input/UI regressions through fresh Phase 0 tests.
 
 ### Scope
 
@@ -2300,6 +2319,8 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 - Touch target sizes
 - Safe Area
 - Mobile aspect ratios
+- Portrait-first base Camera framing and adaptive aspect presentation
+- Continuous `1.0x`–`3.0x` zoom presentation and UI / Camera gesture priority
 - Small-screen panel variants
 - Gesture / UI conflict handling
 - Mobile text scale
@@ -2338,6 +2359,7 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 ### Scope
 
 - Touch pan / pinch zoom / tap
+- Map iPhone pinch to the shared continuous `1.0x`–`3.0x` zoom envelope
 - Mobile-safe UI
 - Safe Area
 - Background / foreground lifecycle
@@ -2411,7 +2433,7 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 **Phase 3 — Visual Style & Asset Pipeline Foundation** 状态为 `In Review`。
 
 - 已完成 readability Size 4 trial fresh automated evidence：EditMode `305 / 305`、PlayMode `53 / 53` passed，failed、skipped、inconclusive 均为 `0`；focused EditMode `18 / 18`、focused PlayMode `12 / 12` passed；Camera-projected viewport containment 与 non-overlap checks 均通过；production validator 为 `3 / 3` valid、`0 issues`。
-- Studio Owner Camera/readability manual acceptance 以及 source license/use-right confirmation 仍为 `Pending`。
+- Studio Owner 已确认全部三件 user-provided / Tripo-generated benchmark assets 具备用于开发与商业发布所需的使用权，license/use-right gate 为 `Passed`；Camera/readability manual acceptance 仍为 `Pending`。
 - 当前只是 benchmark pipeline 和 readability baseline；未开始 Phase 4 formal asset set、gameplay、placement 或 runtime integration。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。

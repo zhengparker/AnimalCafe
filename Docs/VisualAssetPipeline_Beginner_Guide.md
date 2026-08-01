@@ -2,7 +2,7 @@
 
 > 这是一份面向 Unity 和 coding 初学者的 educational note。
 > 它只解释 Phase 3 的 Visual Asset Pipeline，不负责解释 Phase 4 的正式家具制作、gameplay 或 placement integration。
-> 当前状态是 `In Review`：automated verification 已通过，Camera/readability manual review 和 source license/use-right confirmation 仍为 `Pending`。
+> 当前状态是 `In Review`：automated verification 已通过，三件 benchmark assets 的 source license/use-right 已由 Studio Owner 确认通过；Camera/readability manual review 仍为 `Pending`。
 
 ## 1. 用一个简单例子说明本阶段
 
@@ -297,14 +297,15 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
    - size `4`：默认主要验收距离；配合固定 `1920 × 1080` 和 `1x`/`Fit` 检查功能细节、Material 差异与物体正面；
    - size `7`：能立即区分 Work Table、Coffee Machine 与 Ceramic Cup；
    - size `12`：Work Table 与 Coffee Machine 仍可辨认，Cup silhouette 保持稳定。
+   这三个数只是 P3 对未来连续 `1.0x`–`3.0x` zoom envelope 的近/中/远 proxy samples，不是正式 gameplay zoom presets，也不批准最终 base Camera size。
 9. 比较 `CharacterScaleReference_1_30m`：PASS 条件是它确实提供 `1.30 m` 角色比例参考，桌子、咖啡机和杯子的相对大小容易理解，没有明显“杯子像家具”或“机器像玩具”的比例错误。
 10. 观察两张桌子：PASS 条件是左桌只放 Coffee Machine，右桌只放 Ceramic Cup；两件物品都位于各自桌面中央，彼此没有前后遮挡。Coffee Machine 完整位于桌面范围内，四周仍能看到明显桌面余量。
-11. 选中 Coffee Machine，确认有一个 two-level `LODGroup`。通过 Camera zoom 或 LOD preview 观察 LOD0/LOD1 切换：PASS 条件是没有明显 size、position、pivot、silhouette、Material 或 Texture jump。
+11. 在 Hierarchy 展开 `PF_Benchmark_CoffeeMachine_01`，选中它下面的 `Visual` child；在 Inspector 确认这个 `Visual` 上有一个 two-level `LODGroup`。通过 Camera zoom 或 LOD preview 观察 LOD0/LOD1 切换：PASS 条件是没有明显 size、position、pivot、silhouette、Material 或 Texture jump。
 
 ### 9.4 检查 Game view resolution 与 batch display
 
 1. 在 Game view resolution 下拉菜单选择或添加 `1920 × 1080`。PASS 条件：三个 single-display objects 与 `1.30 m` reference 可读，没有被画面边缘遮住。
-2. 再选择或添加 portrait `1170 × 2532`。PASS 条件：物体仍在可观察范围内，没有因为窄屏完全消失或互相遮住。
+2. 再选择或添加 portrait `1170 × 2532`。当前 P3 proxy Scene 中，进入 Play Mode 后可把 Camera `Orthographic Size` 临时改为 `7`，让角色参考也保持可见；PASS 条件是物体没有因为窄屏完全消失或互相遮住。退出 Play Mode 会恢复 Scene 保存的值，不要保存这个临时修改。这只是 P3 readability proxy，不是最终 adaptive Portrait Camera、正式 base framing 或 zoom preset。
 3. 展开 `BatchDisplay`，确认 `WorkTables_20`、`Machines_20`、`Cups_20` 每组各有 `20` 个 benchmark Prefab，总数正好 `60`。
 4. 观察 batch：PASS 条件是物体之间没有 overlap，没有粉红 Material、missing Mesh、异常大小或明显跳位。
 5. 在 Scene view 打开 `Gizmos`，逐组选中一些 Prefab 查看 Collider：PASS 条件是每个物体只有一个大致包住可见 Model 的 `BoxCollider`，没有异常巨大、落到地面下方或变成 `MeshCollider`。
@@ -314,13 +315,13 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 1. 返回 Console。PASS 条件：没有 unexpected red error、missing reference、missing script 或 repeated exception。
 2. 点击蓝色 Play button 退出 Play Mode。
 3. 不要保存 Play Mode 中实验性的 Camera size、Transform、LOD preview 或其他临时变化。如果 Unity 询问是否保存实验性 Scene 修改，选择不保存，并在不确定时停止记录问题。
-4. Studio Owner 单独确认 source license/use-right。可以使用这句话记录：
+4. Source license/use-right gate 已由 Studio Owner 明确确认：三份 user-provided / Tripo-generated benchmark assets 全部具备用于 AnimalCafe 开发与商业发布所需的使用权。记录为：
 
    ```text
-   我确认对三份 user-provided benchmark source 拥有用于 AnimalCafe 开发与发布所需的使用权：是 / 否 / 需要进一步确认
+   我确认对三份 user-provided / Tripo-generated benchmark assets 拥有用于 AnimalCafe 开发与商业发布所需的使用权：是（Studio Owner 已确认）
    ```
 
-这不是法律判断模板；如果选择“否”或“需要进一步确认”，license gate 继续保持 `Pending`。
+这项记录是项目 gate evidence，不替代法律意见；当前 license/use-right gate 状态为 `Passed`。
 
 ### 9.6 Manual checklist
 
@@ -338,13 +339,13 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 | 10 | Camera size 12 | 设置 size `12` | Table/Machine 可辨认；Cup silhouette 稳定 | |
 | 11 | Character scale | 比较 `1.30 m` reference | 三件 assets 的相对比例合理 | |
 | 12 | Two tabletop stations | 观察两张桌子 | 左桌 Machine、右桌 Cup；各自居中、互不遮挡，Machine 四周仍有桌面余量 | |
-| 13 | Coffee LOD | 检查 two-level LODGroup 与切换 | 无 size/position/pivot/Material/Texture jump | |
+| 13 | Coffee LOD | 展开 Coffee Machine 并选中 `Visual` child，检查 two-level LODGroup 与切换 | 无 size/position/pivot/Material/Texture jump | |
 | 14 | Landscape | Game view `1920 × 1080` | 物件可读且未被遮住 | |
-| 15 | Portrait | Game view `1170 × 2532` | 物件仍可观察且未互相遮住 | |
+| 15 | Portrait proxy | Game view `1170 × 2532`，Play Mode 临时 size `7` | Reference 可见；物件未互相遮住；退出 Play 后恢复 | |
 | 16 | Batch 60 | 检查三组各 20 | 正好 60、无 overlap/pink/missing/异常 Collider | |
 | 17 | Console | 检查完整 manual run | 无 unexpected error 或 missing reference | |
 | 18 | Play Mode cleanup | 退出且不保存实验性改动 | 没有把临时 Transform 写入 Scene | |
-| 19 | License | 记录 license/use-right statement | 明确填写“是”，否则保持 Pending | |
+| 19 | License | 复核 license/use-right statement | Studio Owner 已确认三件 assets 的开发与商业发布使用权：`是 / Passed` | Passed |
 
 提示：不要把 Game view 的 `6x` 结果加入 checklist；它只是 pixel magnification，不是 Camera 或 SMAA quality setting。
 
@@ -403,7 +404,7 @@ Phase 3 没有开始或交付：
 当前 manual 状态：
 
 - Camera/readability manual review：`Pending Studio Owner`；
-- source license/use-right confirmation：`Pending Studio Owner`；
+- source license/use-right confirmation：`Passed — Studio Owner confirmed Yes for all 3 user-provided / Tripo-generated assets, including development and commercial release`；
 - Roadmap Phase 3：`In Review`；
 - Phase 4：未开始。
 
@@ -431,9 +432,9 @@ Game view 1170 × 2532:
 Batch exactly 60, no overlap/pink/missing/abnormal Collider:
 Console clean:
 Experimental Play Mode transforms not saved:
-License/use-right statement:
+License/use-right statement: Yes — Studio Owner confirmed all 3 user-provided / Tripo-generated assets for development and commercial release.
 Overall result: Approved / Needs Revision
 Notes:
 ```
 
-下一道 gate 是 Studio Owner 提交上述 manual result 和 license statement。只有这两项通过后，才能决定是否把 Roadmap Phase 3 从 `In Review` 改为 `Completed`。本 Guide 不授权开始 Phase 4、push 或 merge。
+License/use-right gate 已通过。下一道 gate 只剩 Studio Owner 提交 Camera/readability manual result；该项通过后，才能决定是否把 Roadmap Phase 3 从 `In Review` 改为 `Completed`。本 Guide 不授权开始 Phase 4、push 或 merge。

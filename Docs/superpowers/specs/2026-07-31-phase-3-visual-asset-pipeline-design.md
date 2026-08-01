@@ -383,7 +383,8 @@ Cup 的 Collider 只用于验证小物件 Prefab contract。未来如果正式 C
 - Camera Clear Flags 使用 `SolidColor`，background 固定为浅黄色 `#F2E6B8`；
 - validation Scene 的 Main Camera 单独使用 `UniversalAdditionalCameraData`，antialiasing 为 `SMAA High`，并开启该 Camera 的 `Post Processing`，确保 SMAA 真正执行；不得修改 global URP 或 Quality settings；
 - `SingleAssetDisplay` 使用两张相同 Work Table：Coffee Machine 单独居中放在左桌，Ceramic Cup 单独居中放在右桌；Character Scale Reference 放在 local `X = 2.50`，并须通过真实 Camera-projected bounds non-overlap 检查，与右桌/Cup 保持至少 `0.01` viewport margin；
-- validation Scene 默认 orthographic size 为 `4`；在固定 `1920 × 1080` 的 `1x` 或 `Fit` Game view 下作为主要 clarity/Material 检查，并要求全部 `SingleAssetDisplay` renderer bounds 保持在真实 Camera viewport `0.01` safe margin 内；size `7`、`12` 继续用于距离/readability 检查；Game view `6x` 只放大 rendered pixels，不是验收标准；
+- validation Scene 当前以 orthographic size `4` 作为 P3 近距离 proxy；在固定 `1920 × 1080` 的 `1x` 或 `Fit` Game view 下检查 clarity/Material，并要求全部 `SingleAssetDisplay` renderer bounds 保持在真实 Camera viewport `0.01` safe margin 内；size `7`、`12` 是中/远距离 proxy samples，不能解释为正式 zoom presets 或锁定最终 base framing；Game view `6x` 只放大 rendered pixels，不是验收标准；
+- asset silhouette、Material、Texture 与 aliasing 必须预留正式连续 `1.0x`–`3.0x` zoom envelope 的可读性；P3 不实现正式 zoom input/controller，也不批准 exact gameplay base orthographic size。正式 Portrait-first framing、smooth mouse-wheel zoom 与 future iPhone pinch 分别由后续 Camera/mobile phases 完成；
 - Windows reference resolution：`1920 × 1080`；
 - mobile portrait framing reference：`1170 × 2532`；
 - mobile reference 只验证 no-hover visual framing 和 readability，不代表 Phase 3 已完成 iOS adaptation。
