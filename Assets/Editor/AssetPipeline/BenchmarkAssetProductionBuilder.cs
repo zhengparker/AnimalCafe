@@ -17,6 +17,14 @@ namespace AnimalCafe.EditorTools.AssetPipeline
         private const string ModelPath = RootPath + "/Models";
         private const string MaterialPath = RootPath + "/Materials";
         private const string PrefabPath = RootPath + "/Prefabs";
+        // Owner-approved Raw LOD0 geometry is never rescaled in Blender. These
+        // child-only scales map Raw X/Y/Z to the approved Unity X/Z/Y bounds.
+        private static readonly Vector3 WorkTableVisualScale = new Vector3(
+            0.90f / 0.781529f, 0.90f / 0.781529f, 1f);
+        private static readonly Vector3 CoffeeMachineLodRendererScale = new Vector3(
+            0.65f / 0.528258f, 0.50f / 0.756134f, 1f);
+        private static readonly Vector3 CeramicCupVisualScale = new Vector3(
+            0.14f / 0.248511f, 0.14f / 0.193070f, 1f);
 
         [MenuItem("AnimalCafe/Asset Pipeline/Build Benchmark Production Assets")]
         public static void Build()
@@ -36,14 +44,16 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 "SM_Benchmark_WorkTable_01",
                 "SM_Benchmark_WorkTable_01",
                 new[] { warmWood },
-                new Vector3(0.90f, 0.65f, 0.90f));
+                new Vector3(0.90f, 0.65f, 0.90f),
+                WorkTableVisualScale);
             CreateCoffeeMachinePrefab(creamCeramic, sageMetal);
             CreateSimplePrefab(
                 "PF_Benchmark_CeramicCup_01",
                 "SM_Benchmark_CeramicCup_01",
                 "SM_Benchmark_CeramicCup_01",
                 new[] { creamCeramic },
-                new Vector3(0.14f, 0.16f, 0.14f));
+                new Vector3(0.14f, 0.16f, 0.14f),
+                CeramicCupVisualScale);
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -71,6 +81,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                     var renderers = root.GetComponentsInChildren<MeshRenderer>(true);
                     var colliders = root.GetComponentsInChildren<Collider>(true);
                     var lodGroups = root.GetComponentsInChildren<LODGroup>(true);
+                    var visual = root.transform.Find("Visual");
                     var colliderDetails = string.Join(",", colliders.Select(collider =>
                         collider is BoxCollider box
                             ? $"Box(center={box.center},size={box.size})"
@@ -80,6 +91,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                         $"renderers={renderers.Length} colliders={colliders.Length} " +
                         $"lodGroups={lodGroups.Length} lodCount=" +
                         $"{string.Join(",", lodGroups.Select(group => group.GetLODs().Length))} " +
+                        $"visualScale={visual.localScale} " +
                         $"colliderDetails={colliderDetails}");
 
                     foreach (var renderer in renderers)
@@ -96,6 +108,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                             $"TASK5_DIAGNOSTIC prefab={prefabName} renderer={renderer.name} " +
                             $"localPosition={renderer.transform.localPosition} " +
                             $"localRotation={renderer.transform.localRotation.eulerAngles} " +
+                            $"localScale={renderer.transform.localScale} " +
                             $"meshBounds={mesh.bounds} triangles={mesh.triangles.Length / 3} " +
                             $"materialSlots={renderer.sharedMaterials.Length} " +
                             $"uniqueMaterials={renderer.sharedMaterials.Where(material => material != null).Distinct().Count()} " +
@@ -114,12 +127,14 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             string fbxStem,
             string meshName,
             Material[] materials,
-            Vector3 colliderSize)
+            Vector3 colliderSize,
+            Vector3 visualScale)
         {
             var root = new GameObject(prefabName);
             try
             {
                 CreateVisual(root.transform, "Visual", fbxStem, meshName, materials);
+                root.transform.Find("Visual").localScale = visualScale;
                 AddForwardMarker(root.transform, colliderSize.z * 0.5f + 0.05f);
                 AddBoxCollider(root, colliderSize);
                 SavePrefab(root, prefabName);
@@ -140,6 +155,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 var renderers = visual.GetComponentsInChildren<MeshRenderer>(true);
                 var lod0 = FindRenderer(renderers, "SM_Benchmark_CoffeeMachine_01_LOD0");
                 var lod1 = FindRenderer(renderers, "SM_Benchmark_CoffeeMachine_01_LOD1");
+                lod0.transform.localScale = CoffeeMachineLodRendererScale;
+                lod1.transform.localScale = CoffeeMachineLodRendererScale;
                 lod0.enabled = true;
                 lod1.enabled = true;
                 lod0.sharedMaterials = new[] { creamCeramic, sageMetal };

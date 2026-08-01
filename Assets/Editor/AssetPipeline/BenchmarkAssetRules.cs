@@ -49,7 +49,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                     return new BenchmarkAssetRules(
                         new Vector3(0.90f, 0.65f, 0.90f),
                         0.05f,
-                        1500,
+                        6000,
                         0,
                         0f,
                         2,
@@ -59,7 +59,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                     return new BenchmarkAssetRules(
                         new Vector3(0.65f, 0.62f, 0.50f),
                         0.10f,
-                        5000,
+                        6000,
                         2500,
                         0.60f,
                         3,
@@ -69,7 +69,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                     return new BenchmarkAssetRules(
                         new Vector3(0.14f, 0.16f, 0.14f),
                         0.10f,
-                        800,
+                        6000,
                         0,
                         0f,
                         1,

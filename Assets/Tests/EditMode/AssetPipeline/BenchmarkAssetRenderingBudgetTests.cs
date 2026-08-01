@@ -26,9 +26,17 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         [Test]
         public void Rendering_ApprovedOpaqueUrpLitSharedMaterialPasses()
         {
-            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1500);
+            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 6000);
 
             Assert.That(Validate(path, BenchmarkAssetKind.WorkTable), Is.Empty);
+        }
+
+        [Test]
+        public void Rendering_CeramicCupAt6000TrianglesPasses()
+        {
+            var path = CreatePrefab(BenchmarkAssetKind.CeramicCup, 6000);
+
+            Assert.That(Validate(path, BenchmarkAssetKind.CeramicCup), Is.Empty);
         }
 
         [Test]
@@ -74,25 +82,25 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
-        public void Rendering_TableAbove1500TrianglesReportsTriangleBudgetExceeded()
+        public void Rendering_TableAbove6000TrianglesReportsTriangleBudgetExceeded()
         {
-            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1501);
+            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 6001);
 
             AssertHasCode(path, BenchmarkAssetKind.WorkTable, BenchmarkAssetIssueCode.TriangleBudgetExceeded);
         }
 
         [Test]
-        public void Rendering_MachineAbove5000TrianglesReportsTriangleBudgetExceeded()
+        public void Rendering_MachineAbove6000TrianglesReportsTriangleBudgetExceeded()
         {
-            var path = CreatePrefab(BenchmarkAssetKind.CoffeeMachine, 5001);
+            var path = CreatePrefab(BenchmarkAssetKind.CoffeeMachine, 6001);
 
             AssertHasCode(path, BenchmarkAssetKind.CoffeeMachine, BenchmarkAssetIssueCode.TriangleBudgetExceeded);
         }
 
         [Test]
-        public void Rendering_CupAbove800TrianglesReportsTriangleBudgetExceeded()
+        public void Rendering_CupAbove6000TrianglesReportsTriangleBudgetExceeded()
         {
-            var path = CreatePrefab(BenchmarkAssetKind.CeramicCup, 801);
+            var path = CreatePrefab(BenchmarkAssetKind.CeramicCup, 6001);
 
             AssertHasCode(path, BenchmarkAssetKind.CeramicCup, BenchmarkAssetIssueCode.TriangleBudgetExceeded);
         }
@@ -210,6 +218,14 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void Lod_MachineAt6000Lod0TrianglesPasses()
+        {
+            var path = CreateMachineWithLods(6000, 2400);
+
+            Assert.That(Validate(path, BenchmarkAssetKind.CoffeeMachine), Is.Empty);
+        }
+
+        [Test]
         public void Lod_MachineWithoutLodGroupReportsMissingLodGroup()
         {
             var path = CreatePrefab(BenchmarkAssetKind.CoffeeMachine, 1);
@@ -277,7 +293,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         [Test]
         public void Lod_MachineEnabledRendererOutsideLodGroupCountsAgainstLod0Budget()
         {
-            var path = CreateMachineWithLods(4000, 2000, false, 1001);
+            var path = CreateMachineWithLods(4000, 2000, false, 2001);
 
             AssertHasCode(path, BenchmarkAssetKind.CoffeeMachine, BenchmarkAssetIssueCode.TriangleBudgetExceeded);
         }
