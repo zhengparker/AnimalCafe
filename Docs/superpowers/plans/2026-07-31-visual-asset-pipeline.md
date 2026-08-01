@@ -29,7 +29,7 @@
 - Triangle budget：Table ≤ `6,000`；Machine LOD0 ≤ `6,000`、LOD1 ≤ `2,500` 且 ≤ LOD0 的 `60%`；Cup ≤ `6,000`。
 - Material slots：Table ≤ `2`；Machine ≤ `3`；Cup ≤ `1`。
 - Collider count：Table ≤ `3`；Machine ≤ `2`；Cup ≤ `1`；只允许 primitive Collider，且 `isTrigger = false`。
-- Camera validation：SolidColor background `#F2E6B8`；scene-only `UniversalAdditionalCameraData` with `SMAA High`；orthographic size `4`、`7`、`12`；Windows `1920 × 1080`；mobile portrait reference `1170 × 2532`。不得修改 global URP/Quality settings。
+- Camera validation：SolidColor background `#F2E6B8`；scene-only `UniversalAdditionalCameraData` with `SMAA High` and Camera `Post Processing` enabled；orthographic size `4`、`7`、`12`；Windows `1920 × 1080`；mobile portrait reference `1170 × 2532`。不得修改 global URP/Quality settings。
 - Batch baseline：同时显示 Table、Machine、Cup 各 `20` 个，共 `60` 个实例。
 - 不制作大量正式 Models，不加入 gameplay、Decoration Mode、Interaction Anchors、Save、UI 或 pathfinding。
 - 不修改 `MainCafe.unity`。
@@ -709,6 +709,7 @@ Record actual dimensions, triangles, Materials, Texture sizes, Collider counts a
 Setup_CreatesDedicatedValidationScene
 Setup_CreatesOneOrthographicIsometricCamera
 Setup_CreatesOneSingleAssetDisplayRoot
+Setup_SingleDisplayUsesTwoSeparateCenteredTabletopStations
 Setup_CreatesOneCharacterScaleReferenceAtOnePointThreeMeters
 Setup_CreatesTwentyInstancesOfEachBenchmarkInBatchRoot
 Setup_RepeatedRunDoesNotDuplicateObjects
@@ -737,16 +738,17 @@ AssetReadabilityRoot
 │  └─ Main Camera
 ├─ SingleAssetDisplay
 │  ├─ PF_Benchmark_WorkTable_01
-│  └─ CharacterScaleReference_1_30m
 │  ├─ PF_Benchmark_CoffeeMachine_01
-│  └─ PF_Benchmark_CeramicCup_01
+│  ├─ PF_Benchmark_WorkTable_01
+│  ├─ PF_Benchmark_CeramicCup_01
+│  └─ CharacterScaleReference_1_30m
 └─ BatchDisplay
    ├─ WorkTables_20
    ├─ Machines_20
    └─ Cups_20
 ```
 
-Camera uses the accepted fixed rotation from the project foundation, is orthographic, starts at size `7`, clears to SolidColor `#F2E6B8`, and has scene-specific `UniversalAdditionalCameraData` with `SMAA High`. Do not modify global URP or Quality settings. Arrange batch instances with literal spacing large enough to prevent overlap; no runtime placement system is introduced.
+Camera uses the accepted fixed rotation from the project foundation, is orthographic, starts at size `7`, clears to SolidColor `#F2E6B8`, and has scene-specific `UniversalAdditionalCameraData` with `SMAA High` plus Camera `Post Processing` enabled so SMAA executes. Do not modify global URP or Quality settings. `SingleAssetDisplay` uses two instances of the same Work Table Prefab: Coffee Machine is centered on the left tabletop and Ceramic Cup is centered on the right tabletop. Arrange batch instances with literal spacing large enough to prevent overlap; no runtime placement system is introduced.
 
 `CharacterScaleReference_1_30m` is a simple Editor-generated silhouette/reference object with visible bounds exactly `1.30 m` high, bottom at `Y = 0`, and no Collider、Rig、Animation or gameplay script. It uses the dedicated teal `#157A78` URP Lit Material, must contrast clearly against the pale-yellow background, and is not counted among the `60` benchmark batch instances.
 
@@ -761,6 +763,7 @@ ReadabilityScene_LoadsWithoutMissingBenchmarkReferences
 ReadabilityScene_ContainsExactlySixtyBatchInstances
 ReadabilityScene_CharacterScaleReferenceIsOnePointThreeMetersHigh
 ReadabilityScene_CameraIsOrthographicAndUsesSizeSeven
+ReadabilityScene_UsesTwoSeparateCenteredTabletopStations
 ReadabilityScene_AllRenderersUseUrpLitMaterials
 ReadabilityScene_CoffeeMachineHasTwoValidLodLevels
 ReadabilityScene_ProducesNoUnexpectedErrorLogs
@@ -783,17 +786,18 @@ Run fresh full EditMode and PlayMode suites. Record exact counts; failed/skipped
 The user checks:
 
 1. pale-yellow `#F2E6B8` background is present; the color itself is expected, and only clipping、washout or lost readability is a failure;
-2. scene-only antialiasing is `SMAA High`, and the dedicated teal Character Scale Reference clearly contrasts with the background;
-3. Work Table reads as orange wood/black, Coffee Machine as pale blue/white/black, and Ceramic Cup as muted green, matching Blender originals;
-4. orthographic size `4`: main details, Material differences and visible front;
-5. size `7`: immediate distinction among Table, Machine and Cup;
-6. size `12`: Table and Machine remain recognizable; Cup retains stable silhouette;
-7. `1.30 m` Character Scale Reference makes Work Table、Machine and Cup proportions readable together;
-8. Coffee Machine visibly fits on Work Table with remaining surface space;
-9. Coffee Machine LOD switch has no obvious size/position/Material/Texture jump;
-10. Game view `1920 × 1080` is readable;
-11. portrait `1170 × 2532` reference framing does not hide the objects;
-12. batch display has no pink Material, missing Mesh, abnormal Collider or Console error.
+2. scene-only antialiasing is `SMAA High`, Camera `Post Processing` is enabled, and the dedicated teal Character Scale Reference clearly contrasts with the background;
+3. the left table contains only the centered Coffee Machine, the right table contains only the centered Ceramic Cup, and neither furniture item is hidden by the other;
+4. Work Table reads as orange wood/black, Coffee Machine as pale blue/white/black, and Ceramic Cup as muted green, matching Blender originals;
+5. orthographic size `4`: main details, Material differences and visible front;
+6. size `7`: immediate distinction among Table, Machine and Cup;
+7. size `12`: Table and Machine remain recognizable; Cup retains stable silhouette;
+8. `1.30 m` Character Scale Reference makes Work Table、Machine and Cup proportions readable together;
+9. Coffee Machine visibly fits on Work Table with remaining surface space;
+10. Coffee Machine LOD switch has no obvious size/position/Material/Texture jump;
+11. Game view `1920 × 1080` is readable;
+12. portrait `1170 × 2532` reference framing does not hide the objects;
+13. batch display has no pink Material, missing Mesh, abnormal Collider or Console error.
 
 Manual aesthetic/readability acceptance cannot be replaced by automated bounds tests.
 

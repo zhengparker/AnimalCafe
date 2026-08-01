@@ -273,6 +273,7 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
    ├─ SingleAssetDisplay
    │  ├─ PF_Benchmark_WorkTable_01
    │  ├─ PF_Benchmark_CoffeeMachine_01
+   │  ├─ PF_Benchmark_WorkTable_01
    │  ├─ PF_Benchmark_CeramicCup_01
    │  └─ CharacterScaleReference_1_30m
    └─ BatchDisplay
@@ -287,7 +288,7 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 
 1. 点击 Unity 顶部 Play button。确认按钮变蓝后再改临时测试值。
 2. 先观察 Game view background。它应是浅黄色 `#F2E6B8`；这个颜色本身是设计结果，不算 failure。只有它让物体被裁切、颜色 washed out 或难以分辨时才记录 failure。
-3. 选中 `Main Camera`，确认 Camera 使用 `Solid Color`，并在附加的 Universal camera data 中确认 antialiasing 是 `SMAA`、Quality 是 `High`。这是本 Scene 的设置，不应要求修改 global URP/Quality settings。
+3. 选中 `Main Camera`，确认 Camera 使用 `Solid Color`；在附加的 Universal camera data 中确认 antialiasing 是 `SMAA`、Quality 是 `High`，并确认 Camera 的 `Post Processing` 已勾选。少了这个勾选，虽然 Inspector 写着 SMAA，锯齿处理也不会真正执行。这些都只是本 Scene 的设置，不应要求修改 global URP/Quality settings。
 4. 确认 `CharacterScaleReference_1_30m` 使用明显的青绿色，能快速从浅黄色背景和三件家具中分辨出来。
 5. 检查 original colors：Work Table 应是橙色木纹/黑色细节，Coffee Machine 应有浅蓝/白/黑分区，Ceramic Cup 应是柔和绿色。若仍是旧的统一纯色 palette，应记录 failure。
 6. 在 Inspector 找到 Camera component 的 `Orthographic Size`，依次输入 `4`、`7`、`12`：
@@ -295,7 +296,7 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
    - size `7`：能立即区分 Work Table、Coffee Machine 与 Ceramic Cup；
    - size `12`：Work Table 与 Coffee Machine 仍可辨认，Cup silhouette 保持稳定。
 7. 比较 `CharacterScaleReference_1_30m`：PASS 条件是它确实提供 `1.30 m` 角色比例参考，桌子、咖啡机和杯子的相对大小容易理解，没有明显“杯子像家具”或“机器像玩具”的比例错误。
-8. 观察 Coffee Machine 与 Work Table：PASS 条件是 Coffee Machine 完整位于桌面范围内，四周仍能看到明显桌面余量。
+8. 观察两张桌子：PASS 条件是左桌只放 Coffee Machine，右桌只放 Ceramic Cup；两件物品都位于各自桌面中央，彼此没有前后遮挡。Coffee Machine 完整位于桌面范围内，四周仍能看到明显桌面余量。
 9. 选中 Coffee Machine，确认有一个 two-level `LODGroup`。通过 Camera zoom 或 LOD preview 观察 LOD0/LOD1 切换：PASS 条件是没有明显 size、position、pivot、silhouette、Material 或 Texture jump。
 
 ### 9.4 检查 Game view resolution 与 batch display
@@ -327,14 +328,14 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 | 2 | Validator | 运行 menu validator | `3 / 3` valid、`0 issues`、无红色 error | |
 | 3 | Scene/Hierarchy | 打开 exact readability Scene 并展开 roots | hierarchy 与上方结构完全一致 | |
 | 4 | Background | 检查 SolidColor `#F2E6B8` | 浅黄色存在；无 clipping、washout 或 readability loss | |
-| 5 | SMAA | 检查 Main Camera additional data | scene-only `SMAA High`，未要求改 global settings | |
+| 5 | SMAA | 检查 Main Camera additional data | scene-only `SMAA High` 且 `Post Processing` 已勾选；未要求改 global settings | |
 | 6 | Reference contrast | 观察青绿色 `1.30 m` reference | 与背景和家具明显区分 | |
 | 7 | Original colors | 对照三件家具 | Table 橙木/黑、Machine 浅蓝/白/黑、Cup 柔和绿 | |
 | 8 | Camera size 4 | Play Mode 设置 size `4` | 细节、Material、正面可读 | |
 | 9 | Camera size 7 | 设置 size `7` | 三个 assets 可立即区分 | |
 | 10 | Camera size 12 | 设置 size `12` | Table/Machine 可辨认；Cup silhouette 稳定 | |
 | 11 | Character scale | 比较 `1.30 m` reference | 三件 assets 的相对比例合理 | |
-| 12 | Machine on Table | 观察 Coffee 与桌面 | Machine 完整放下且仍有桌面余量 | |
+| 12 | Two tabletop stations | 观察两张桌子 | 左桌 Machine、右桌 Cup；各自居中、互不遮挡，Machine 四周仍有桌面余量 | |
 | 13 | Coffee LOD | 检查 two-level LODGroup 与切换 | 无 size/position/pivot/Material/Texture jump | |
 | 14 | Landscape | Game view `1920 × 1080` | 物件可读且未被遮住 | |
 | 15 | Portrait | Game view `1170 × 2532` | 物件仍可观察且未互相遮住 | |

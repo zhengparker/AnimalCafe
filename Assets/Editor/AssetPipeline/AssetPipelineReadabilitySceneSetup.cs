@@ -88,6 +88,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             cameraData.antialiasing =
                 AntialiasingMode.SubpixelMorphologicalAntiAliasing;
             cameraData.antialiasingQuality = AntialiasingQuality.High;
+            cameraData.renderPostProcessing = true;
         }
 
         private static void CreateSingleAssetDisplay(Transform parent)
@@ -95,14 +96,19 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             var display = new GameObject("SingleAssetDisplay");
             display.transform.SetParent(parent, false);
 
+            const float coffeeStationX = -0.75f;
+            const float cupStationX = 0.75f;
+
             InstantiateBenchmarkPrefab("WorkTable", display.transform,
-                new Vector3(0f, 0f, 0f));
+                new Vector3(coffeeStationX, 0f, 0f));
             InstantiateBenchmarkPrefab("CoffeeMachine", display.transform,
-                new Vector3(-0.12f, 0.65f, 0f));
+                new Vector3(coffeeStationX, 0.65f, 0f));
+            InstantiateBenchmarkPrefab("WorkTable", display.transform,
+                new Vector3(cupStationX, 0f, 0f));
             InstantiateBenchmarkPrefab("CeramicCup", display.transform,
-                new Vector3(0.25f, 0.65f, 0.16f));
+                new Vector3(cupStationX, 0.65f, 0f));
             CreateCharacterScaleReference(display.transform,
-                new Vector3(1.25f, 0f, 0f));
+                new Vector3(1.75f, 0f, 0f));
         }
 
         private static void CreateBatchDisplay(Transform parent)

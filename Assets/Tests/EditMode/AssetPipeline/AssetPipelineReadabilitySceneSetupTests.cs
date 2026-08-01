@@ -70,6 +70,33 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 Is.EqualTo(AntialiasingMode.SubpixelMorphologicalAntiAliasing));
             Assert.That(cameraData.antialiasingQuality,
                 Is.EqualTo(AntialiasingQuality.High));
+            Assert.That(cameraData.renderPostProcessing, Is.True,
+                "SMAA requires this validation Camera's post-processing path.");
+        }
+
+        [Test]
+        public void Setup_SingleDisplayUsesTwoSeparateCenteredTabletopStations()
+        {
+            var scene = BuildAndOpenScene();
+            var display = FindNamedObjects(scene, "SingleAssetDisplay").Single();
+            var tables = display.transform.Cast<Transform>()
+                .Where(child => child.name == "PF_Benchmark_WorkTable_01")
+                .ToArray();
+            var machine = display.transform.Cast<Transform>()
+                .Single(child => child.name == "PF_Benchmark_CoffeeMachine_01");
+            var cup = display.transform.Cast<Transform>()
+                .Single(child => child.name == "PF_Benchmark_CeramicCup_01");
+
+            Assert.That(tables, Has.Length.EqualTo(2));
+            Assert.That(tables[0].localPosition.x, Is.Not.EqualTo(tables[1].localPosition.x));
+            Assert.That(machine.localPosition.x,
+                Is.EqualTo(tables[0].localPosition.x).Within(0.001f));
+            Assert.That(machine.localPosition.z,
+                Is.EqualTo(tables[0].localPosition.z).Within(0.001f));
+            Assert.That(cup.localPosition.x,
+                Is.EqualTo(tables[1].localPosition.x).Within(0.001f));
+            Assert.That(cup.localPosition.z,
+                Is.EqualTo(tables[1].localPosition.z).Within(0.001f));
         }
 
         [Test]
@@ -186,6 +213,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 "CameraRoot", "SingleAssetDisplay", "BatchDisplay");
             AssertDirectChildren(cameraRoot.transform, "Main Camera");
             AssertDirectChildren(singleDisplay.transform,
+                "PF_Benchmark_WorkTable_01",
                 "PF_Benchmark_WorkTable_01",
                 "PF_Benchmark_CoffeeMachine_01",
                 "PF_Benchmark_CeramicCup_01",
@@ -307,7 +335,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             Assert.That(FindNamedObjects(scene, "Main Camera"), Has.Length.EqualTo(1));
             Assert.That(FindNamedObjects(scene, "SingleAssetDisplay"), Has.Length.EqualTo(1));
             Assert.That(FindNamedObjects(scene, "BatchDisplay"), Has.Length.EqualTo(1));
-            Assert.That(CountPrefabInstances(scene, "PF_Benchmark_WorkTable_01"), Is.EqualTo(21));
+            Assert.That(CountPrefabInstances(scene, "PF_Benchmark_WorkTable_01"), Is.EqualTo(22));
             Assert.That(CountPrefabInstances(scene, "PF_Benchmark_CoffeeMachine_01"), Is.EqualTo(21));
             Assert.That(CountPrefabInstances(scene, "PF_Benchmark_CeramicCup_01"), Is.EqualTo(21));
         }

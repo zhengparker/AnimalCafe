@@ -32,8 +32,8 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
                 FindObjectsInactive.Include)
                 .Where(candidate => candidate.name.StartsWith("PF_Benchmark_"))
                 .ToArray();
-            Assert.That(prefabRoots, Has.Length.EqualTo(63));
-            Assert.That(prefabRoots.Count(root => root.name == "PF_Benchmark_WorkTable_01"), Is.EqualTo(21));
+            Assert.That(prefabRoots, Has.Length.EqualTo(64));
+            Assert.That(prefabRoots.Count(root => root.name == "PF_Benchmark_WorkTable_01"), Is.EqualTo(22));
             Assert.That(prefabRoots.Count(root => root.name == "PF_Benchmark_CoffeeMachine_01"), Is.EqualTo(21));
             Assert.That(prefabRoots.Count(root => root.name == "PF_Benchmark_CeramicCup_01"), Is.EqualTo(21));
 
@@ -127,6 +127,33 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
                 Is.EqualTo(AntialiasingMode.SubpixelMorphologicalAntiAliasing));
             Assert.That(cameraData.antialiasingQuality,
                 Is.EqualTo(AntialiasingQuality.High));
+            Assert.That(cameraData.renderPostProcessing, Is.True,
+                "SMAA requires this validation Camera's post-processing path.");
+        }
+
+        [UnityTest]
+        public IEnumerator ReadabilityScene_UsesTwoSeparateCenteredTabletopStations()
+        {
+            yield return LoadScene();
+
+            var display = GameObject.Find("SingleAssetDisplay");
+            var tables = display.transform.Cast<Transform>()
+                .Where(child => child.name == "PF_Benchmark_WorkTable_01")
+                .ToArray();
+            var machine = display.transform.Cast<Transform>()
+                .Single(child => child.name == "PF_Benchmark_CoffeeMachine_01");
+            var cup = display.transform.Cast<Transform>()
+                .Single(child => child.name == "PF_Benchmark_CeramicCup_01");
+
+            Assert.That(tables, Has.Length.EqualTo(2));
+            Assert.That(machine.localPosition.x,
+                Is.EqualTo(tables[0].localPosition.x).Within(0.001f));
+            Assert.That(machine.localPosition.z,
+                Is.EqualTo(tables[0].localPosition.z).Within(0.001f));
+            Assert.That(cup.localPosition.x,
+                Is.EqualTo(tables[1].localPosition.x).Within(0.001f));
+            Assert.That(cup.localPosition.z,
+                Is.EqualTo(tables[1].localPosition.z).Within(0.001f));
         }
 
         [UnityTest]

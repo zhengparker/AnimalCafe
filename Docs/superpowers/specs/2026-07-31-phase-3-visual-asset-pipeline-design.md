@@ -381,7 +381,8 @@ Cup 的 Collider 只用于验证小物件 Prefab contract。未来如果正式 C
 
 - 使用项目已确认的 fixed `3/4 isometric-like Camera`；
 - Camera Clear Flags 使用 `SolidColor`，background 固定为浅黄色 `#F2E6B8`；
-- validation Scene 的 Main Camera 单独使用 `UniversalAdditionalCameraData`，antialiasing 为 `SMAA High`；不得修改 global URP 或 Quality settings；
+- validation Scene 的 Main Camera 单独使用 `UniversalAdditionalCameraData`，antialiasing 为 `SMAA High`，并开启该 Camera 的 `Post Processing`，确保 SMAA 真正执行；不得修改 global URP 或 Quality settings；
+- `SingleAssetDisplay` 使用两张相同 Work Table：Coffee Machine 单独居中放在左桌，Ceramic Cup 单独居中放在右桌；Character Scale Reference 独立摆放且不得遮挡家具；
 - orthographic size 检查 `4`、`7`、`12`；
 - Windows reference resolution：`1920 × 1080`；
 - mobile portrait framing reference：`1170 × 2532`；
@@ -500,14 +501,14 @@ Bug/edge cases：
 Studio Owner 在 Unity 中完成：
 
 1. 打开独立 Phase 3 validation Scene；
-2. 确认浅黄色 `#F2E6B8` background、scene-only `SMAA High` 和明显对比的青绿色 Character Scale Reference；
+2. 确认浅黄色 `#F2E6B8` background、scene-only `SMAA High`、Camera `Post Processing` 已开启，以及明显对比的青绿色 Character Scale Reference；
 3. 确认 Table 的橙木/黑、Machine 的浅蓝/白/黑、Cup 的柔和绿与 Blender original colors 一致；
 4. 在 orthographic size `4` 查看细节、Material 与 forward；
 5. 在 size `7` 查看三件资产的默认 gameplay readability；
 6. 在 size `12` 确认 Table 与 Coffee Machine 仍可辨认；
 7. 切换 Coffee Machine LOD，观察是否出现明显跳动或 Texture/Material change；
 8. 检查 `1.30 m` Character Scale Reference、Work Table、Coffee Machine 与 Cup 的整体比例；
-9. 检查 Coffee Machine 在 Work Table 上仍有桌面余量；
+9. 检查左桌只放 Coffee Machine、右桌只放 Ceramic Cup，两件物品都位于各自桌面中央且互不遮挡；Coffee Machine 四周仍有桌面余量；
 10. 检查 Windows `1920 × 1080` framing；
 11. 检查 mobile portrait reference framing；
 12. 运行 `60`-instance batch Scene，确认无 pink Material、missing reference、异常 Collider 或明显 Console error；
