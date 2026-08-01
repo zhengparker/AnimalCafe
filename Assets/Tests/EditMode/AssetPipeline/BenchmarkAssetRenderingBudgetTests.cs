@@ -40,7 +40,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 AddRenderer(root, "SharedMaterialVisual", sourceRenderer.GetComponent<MeshFilter>().sharedMesh, sourceRenderer.sharedMaterial);
             });
 
-            var report = BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
+            var report = fixture.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
 
             Assert.That(report.IsValid, Is.True);
             Assert.That(report.MaterialSlotCount, Is.EqualTo(2));
@@ -57,7 +57,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 AddRenderer(root, "DistinctMaterialVisual", sourceRenderer.GetComponent<MeshFilter>().sharedMesh, distinctMaterial);
             });
 
-            var report = BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
+            var report = fixture.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
 
             Assert.That(report.IsValid, Is.True);
             Assert.That(report.MaterialSlotCount, Is.EqualTo(2));
@@ -414,12 +414,12 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
         }
 
-        private static BenchmarkAssetIssueCode[] Validate(string path, BenchmarkAssetKind kind)
+        private BenchmarkAssetIssueCode[] Validate(string path, BenchmarkAssetKind kind)
         {
-            return BenchmarkAssetValidator.ValidatePrefab(path, kind).Issues.Select(issue => issue.Code).ToArray();
+            return fixture.ValidatePrefab(path, kind).Issues.Select(issue => issue.Code).ToArray();
         }
 
-        private static void AssertHasCode(string path, BenchmarkAssetKind kind, BenchmarkAssetIssueCode expectedCode)
+        private void AssertHasCode(string path, BenchmarkAssetKind kind, BenchmarkAssetIssueCode expectedCode)
         {
             Assert.That(Validate(path, kind), Does.Contain(expectedCode));
         }

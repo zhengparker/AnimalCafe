@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using AnimalCafe.EditorTools.AssetPipeline;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,7 +13,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         public const string GeneratedFolderPath = "Assets/Tests/Generated/AssetPipeline";
 
         public const string BenchmarkPrefabFolderPath =
-            "Assets/Art/VisualPipeline/Benchmarks/Prefabs";
+            GeneratedFolderPath + "/BenchmarkPrefabs";
 
         private readonly List<string> ownedAssetPaths = new List<string>();
         private readonly List<string> ownedFolderPaths = new List<string>();
@@ -21,6 +22,42 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         private bool disposed;
 
         public string FixtureFolderPath => fixtureFolderPath;
+
+        internal BenchmarkAssetValidationTarget[] CreateExpectedDescriptors()
+        {
+            return new[]
+            {
+                new BenchmarkAssetValidationTarget(
+                    BenchmarkAssetKind.WorkTable,
+                    ExpectedBenchmarkPrefabPath(BenchmarkAssetKind.WorkTable)),
+                new BenchmarkAssetValidationTarget(
+                    BenchmarkAssetKind.CoffeeMachine,
+                    ExpectedBenchmarkPrefabPath(BenchmarkAssetKind.CoffeeMachine)),
+                new BenchmarkAssetValidationTarget(
+                    BenchmarkAssetKind.CeramicCup,
+                    ExpectedBenchmarkPrefabPath(BenchmarkAssetKind.CeramicCup))
+            };
+        }
+
+        public BenchmarkAssetValidationReport ValidatePrefab(
+            string assetPath,
+            BenchmarkAssetKind kind)
+        {
+            return BenchmarkAssetValidator.ValidatePrefab(
+                assetPath,
+                kind,
+                ExpectedBenchmarkPrefabPath(kind));
+        }
+
+        public BenchmarkAssetValidationReport ValidateAllBenchmarks()
+        {
+            return BenchmarkAssetValidator.ValidateAllBenchmarks(CreateExpectedDescriptors());
+        }
+
+        public BenchmarkAssetValidationReport ExecuteValidationMenu()
+        {
+            return BenchmarkAssetValidationMenu.ExecuteValidation(CreateExpectedDescriptors());
+        }
 
         public GameObject CreatePrefab(
             string prefabName,
@@ -224,6 +261,11 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                     "Prefab name must be a plain filename without path separators, traversal, or an extension.",
                     nameof(prefabName));
             }
+        }
+
+        private static string ExpectedBenchmarkPrefabPath(BenchmarkAssetKind kind)
+        {
+            return $"{BenchmarkPrefabFolderPath}/PF_Benchmark_{kind}_01.prefab";
         }
 
         private void EnsureAssetFolders(string assetFolderPath)

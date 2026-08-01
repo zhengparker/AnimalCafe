@@ -75,8 +75,8 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 AssetDatabase.IsValidFolder(BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath),
                 Is.False);
             Assert.That(AssetDatabase.IsValidFolder(fixture.FixtureFolderPath), Is.False);
-            Assert.That(AssetDatabase.IsValidFolder("Assets/Art/VisualPipeline/Benchmarks"), Is.False);
-            Assert.That(AssetDatabase.IsValidFolder("Assets/Art/VisualPipeline"), Is.False);
+            Assert.That(AssetDatabase.IsValidFolder("Assets/Tests/Generated/AssetPipeline"), Is.False);
+            Assert.That(AssetDatabase.IsValidFolder("Assets/Tests/Generated"), Is.False);
         }
 
         [Test]
@@ -155,8 +155,8 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         [Test]
         public void DeleteGeneratedAssets_PreExistingEmptyBenchmarkParentRemainsUntouched()
         {
-            const string userFolderPath = "Assets/Art/VisualPipeline";
-            AssetDatabase.CreateFolder("Assets/Art", "VisualPipeline");
+            const string userFolderPath = "Assets/Tests/Generated";
+            AssetDatabase.CreateFolder("Assets/Tests", "Generated");
             var originalGuid = AssetDatabase.AssetPathToGUID(userFolderPath);
             try
             {
@@ -182,7 +182,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             var path = CreateWorkTablePrefab();
 
             Assert.That(
-                BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
+                fixture.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
                 Is.Empty);
         }
 
@@ -259,7 +259,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 bounds: new Vector3(0.944f, 0.682f, 0.856f));
 
             Assert.That(
-                BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
+                fixture.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
                 Is.Empty);
         }
 
@@ -281,7 +281,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                     visual.SetParent(container.transform, false);
                 });
 
-            var report = BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.CoffeeMachine);
+            var report = fixture.ValidatePrefab(path, BenchmarkAssetKind.CoffeeMachine);
             Assert.That(report.Issues.Select(issue => issue.Code), Does.Contain(BenchmarkAssetIssueCode.RootTransformNotIdentity));
             Assert.That(report.Issues.Select(issue => issue.Code), Has.None.EqualTo(BenchmarkAssetIssueCode.BoundsOutsideTolerance));
         }
@@ -310,7 +310,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             });
 
             Assert.That(
-                BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
+                fixture.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
                 Is.Empty);
         }
 
@@ -327,7 +327,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             });
 
             Assert.That(
-                BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
+                fixture.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
                 Is.Empty);
         }
 
@@ -455,7 +455,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             });
 
             Assert.That(
-                BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
+                fixture.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
                 Is.Empty);
         }
 
@@ -522,7 +522,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 new Vector3(0.14f, 0.16f, 0.14f),
                 root => root.AddComponent<MeshCollider>());
 
-            var report = BenchmarkAssetValidator.ValidateAllBenchmarks();
+            var report = fixture.ValidateAllBenchmarks();
 
             Assert.That(
                 report.Issues.Where(issue => issue.Code == BenchmarkAssetIssueCode.InvalidColliderType)
@@ -533,7 +533,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         [Test]
         public void BatchValidation_MissingExpectedPrefabReportsMissingReference()
         {
-            var report = BenchmarkAssetValidator.ValidateAllBenchmarks();
+            var report = fixture.ValidateAllBenchmarks();
 
             Assert.That(
                 report.Issues.Select(issue => new { issue.Code, issue.AssetPath }),
@@ -555,6 +555,16 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                         AssetPath = $"{BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath}/PF_Benchmark_CeramicCup_01.prefab"
                     }
                 }));
+        }
+
+        [Test]
+        public void BatchValidation_InjectedTestDescriptorsDoNotReadProductionPaths()
+        {
+            var report = BenchmarkAssetValidator.ValidateAllBenchmarks(
+                fixture.CreateExpectedDescriptors());
+
+            Assert.That(report.Issues, Has.None.Matches<BenchmarkAssetValidationIssue>(issue =>
+                issue.AssetPath.StartsWith("Assets/Art/VisualPipeline/Benchmarks/", StringComparison.Ordinal)));
         }
 
         private string CreateWorkTablePrefab(
@@ -707,9 +717,9 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             public string MaterialGuid { get; }
         }
 
-        private static void AssertCodes(string path, params BenchmarkAssetIssueCode[] expectedCodes)
+        private void AssertCodes(string path, params BenchmarkAssetIssueCode[] expectedCodes)
         {
-            var report = BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
+            var report = fixture.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
             Assert.That(report.Issues.Select(issue => issue.Code), Is.EquivalentTo(expectedCodes));
         }
 
@@ -720,13 +730,13 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             collider.size = new Vector3(0.1f, 0.1f, 0.1f);
         }
 
-        private static void AssertHasCode(
+        private void AssertHasCode(
             string path,
             BenchmarkAssetKind kind,
             BenchmarkAssetIssueCode expectedCode)
         {
             Assert.That(
-                BenchmarkAssetValidator.ValidatePrefab(path, kind).Issues.Select(issue => issue.Code),
+                fixture.ValidatePrefab(path, kind).Issues.Select(issue => issue.Code),
                 Does.Contain(expectedCode));
         }
     }

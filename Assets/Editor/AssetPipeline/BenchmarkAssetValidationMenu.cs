@@ -15,6 +15,18 @@ namespace AnimalCafe.EditorTools.AssetPipeline
         public static BenchmarkAssetValidationReport ExecuteValidation()
         {
             var report = BenchmarkAssetValidator.ValidateAllBenchmarks();
+            return ReportValidation(report);
+        }
+
+        internal static BenchmarkAssetValidationReport ExecuteValidation(
+            System.Collections.Generic.IEnumerable<BenchmarkAssetValidationTarget> targets)
+        {
+            var report = BenchmarkAssetValidator.ValidateAllBenchmarks(targets);
+            return ReportValidation(report);
+        }
+
+        private static BenchmarkAssetValidationReport ReportValidation(BenchmarkAssetValidationReport report)
+        {
             if (report.IsValid)
             {
                 Debug.Log("<color=green>Benchmark asset validation passed: 0 issues.</color>");

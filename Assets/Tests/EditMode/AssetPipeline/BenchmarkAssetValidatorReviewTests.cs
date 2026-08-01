@@ -13,7 +13,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
     public sealed class BenchmarkAssetValidatorReviewTests
     {
         private const string BenchmarkPrefabFolderPath =
-            "Assets/Art/VisualPipeline/Benchmarks/Prefabs";
+            BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath;
         private static readonly Vector3 WorkTableSize = new Vector3(0.90f, 0.65f, 0.90f);
         private static readonly Vector3 CoffeeMachineSize = new Vector3(0.65f, 0.62f, 0.50f);
         private static readonly Vector3 CeramicCupSize = new Vector3(0.14f, 0.16f, 0.14f);
@@ -81,7 +81,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             var visibleMaximum = visibleBounds.max.x;
             SetRootBoxColliderMaximumX(path, visibleMaximum + 0.05f);
             var colliderBounds = GetRootBoxColliderBounds(path);
-            var report = BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
+            var report = fixture.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
             Assert.That(colliderBounds.max.x, Is.EqualTo(visibleMaximum + 0.05f));
             Assert.That(report.Issues, Is.Empty);
         }
@@ -182,7 +182,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         {
             CreateValidBatchPrefabs();
 
-            var report = BenchmarkAssetValidator.ValidateAllBenchmarks();
+            var report = fixture.ValidateAllBenchmarks();
 
             Assert.That(report.IsValid, Is.True);
             Assert.That(report.MaterialSlotCount, Is.EqualTo(4));
@@ -193,7 +193,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         [Test]
         public void BatchValidation_MissingPrefabsKeepsZeroMaterialTotals()
         {
-            var report = BenchmarkAssetValidator.ValidateAllBenchmarks();
+            var report = fixture.ValidateAllBenchmarks();
 
             Assert.That(report.MaterialSlotCount, Is.EqualTo(0));
             Assert.That(report.UniqueSharedMaterialCount, Is.EqualTo(0));
@@ -216,7 +216,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             LogAssert.Expect(LogType.Error, new Regex($"^{Regex.Escape($"{paths.CeramicCupPath}: ColliderBudgetExceeded")}$"));
             LogAssert.Expect(LogType.Error, new Regex($"^{Regex.Escape($"{paths.CeramicCupPath}: InvalidColliderType")}$"));
 
-            var report = BenchmarkAssetValidationMenu.ExecuteValidation();
+            var report = fixture.ExecuteValidationMenu();
 
             LogAssert.NoUnexpectedReceived();
             Assert.That(report.IsValid, Is.False);
@@ -234,7 +234,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 LogType.Log,
                 new Regex("^<color=green>Benchmark asset validation passed: 0 issues.</color>$"));
 
-            var report = BenchmarkAssetValidationMenu.ExecuteValidation();
+            var report = fixture.ExecuteValidationMenu();
 
             LogAssert.NoUnexpectedReceived();
             Assert.That(report.IsValid, Is.True);
@@ -287,9 +287,9 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             });
         }
 
-        private static BenchmarkAssetIssueCode[] Validate(string path, BenchmarkAssetKind kind)
+        private BenchmarkAssetIssueCode[] Validate(string path, BenchmarkAssetKind kind)
         {
-            return BenchmarkAssetValidator.ValidatePrefab(path, kind).Issues
+            return fixture.ValidatePrefab(path, kind).Issues
                 .Select(issue => issue.Code)
                 .ToArray();
         }

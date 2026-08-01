@@ -29,16 +29,25 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             string assetPath,
             BenchmarkAssetKind kind)
         {
-            return ValidatePrefabInternal(assetPath, kind).Report;
+            return ValidatePrefabInternal(assetPath, kind, ExpectedAssetPath(kind)).Report;
+        }
+
+        internal static BenchmarkAssetValidationReport ValidatePrefab(
+            string assetPath,
+            BenchmarkAssetKind kind,
+            string expectedAssetPath)
+        {
+            return ValidatePrefabInternal(assetPath, kind, expectedAssetPath).Report;
         }
 
         private static ValidatedPrefab ValidatePrefabInternal(
             string assetPath,
-            BenchmarkAssetKind kind)
+            BenchmarkAssetKind kind,
+            string expectedAssetPath)
         {
             var issues = new List<BenchmarkAssetValidationIssue>();
             var materialUsage = MaterialUsage.Empty;
-            ValidatePathAndName(assetPath, kind, issues);
+            ValidatePathAndName(assetPath, kind, expectedAssetPath, issues);
 
             GameObject root = null;
             try
@@ -77,10 +86,22 @@ namespace AnimalCafe.EditorTools.AssetPipeline
 
         public static BenchmarkAssetValidationReport ValidateAllBenchmarks()
         {
+            return ValidateAllBenchmarks(BenchmarkPrefabs.Select(prefab =>
+                new BenchmarkAssetValidationTarget(prefab.Kind, prefab.AssetPath)));
+        }
+
+        internal static BenchmarkAssetValidationReport ValidateAllBenchmarks(
+            IEnumerable<BenchmarkAssetValidationTarget> benchmarkPrefabs)
+        {
+            if (benchmarkPrefabs == null)
+            {
+                throw new ArgumentNullException(nameof(benchmarkPrefabs));
+            }
+
             var issues = new List<BenchmarkAssetValidationIssue>();
             var materialSlotCount = 0;
             var uniqueMaterials = new HashSet<Material>();
-            foreach (var benchmarkPrefab in BenchmarkPrefabs)
+            foreach (var benchmarkPrefab in benchmarkPrefabs)
             {
                 if (AssetDatabase.LoadAssetAtPath<GameObject>(benchmarkPrefab.AssetPath) == null)
                 {
@@ -91,7 +112,10 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                     continue;
                 }
 
-                var validatedPrefab = ValidatePrefabInternal(benchmarkPrefab.AssetPath, benchmarkPrefab.Kind);
+                var validatedPrefab = ValidatePrefabInternal(
+                    benchmarkPrefab.AssetPath,
+                    benchmarkPrefab.Kind,
+                    benchmarkPrefab.AssetPath);
                 issues.AddRange(validatedPrefab.Report.Issues);
                 materialSlotCount += validatedPrefab.Report.MaterialSlotCount;
                 uniqueMaterials.UnionWith(validatedPrefab.UniqueMaterials);
@@ -106,10 +130,10 @@ namespace AnimalCafe.EditorTools.AssetPipeline
         private static void ValidatePathAndName(
             string assetPath,
             BenchmarkAssetKind kind,
+            string expectedPath,
             ICollection<BenchmarkAssetValidationIssue> issues)
         {
             var expectedFileName = $"PF_Benchmark_{kind}_01.prefab";
-            var expectedPath = $"{BenchmarkPrefabFolderPath}/{expectedFileName}";
             var fileName = string.IsNullOrEmpty(assetPath)
                 ? string.Empty
                 : Path.GetFileName(assetPath);
@@ -133,6 +157,11 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                         $"Prefab filename must be exactly {expectedFileName}.");
                 }
             }
+        }
+
+        private static string ExpectedAssetPath(BenchmarkAssetKind kind)
+        {
+            return $"{BenchmarkPrefabFolderPath}/PF_Benchmark_{kind}_01.prefab";
         }
 
         private static void ValidateRootTransform(
