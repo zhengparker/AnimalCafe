@@ -36,8 +36,6 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             CreateBatchDisplay(root.transform);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
         }
 
         private static void CreateCamera(Transform parent)
@@ -57,14 +55,6 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             camera.farClipPlane = 100f;
             camera.clearFlags = CameraClearFlags.SolidColor;
             camera.backgroundColor = new Color(0.12f, 0.15f, 0.18f, 1f);
-
-            var lightObject = new GameObject("Readability Directional Light");
-            lightObject.transform.SetParent(cameraRoot.transform, false);
-            lightObject.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-            var light = lightObject.AddComponent<Light>();
-            light.type = LightType.Directional;
-            light.intensity = 1.2f;
-            light.color = new Color(1f, 0.96f, 0.88f, 1f);
         }
 
         private static void CreateSingleAssetDisplay(Transform parent)
@@ -89,8 +79,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             batch.transform.localPosition = new Vector3(-5f, 0f, 8f);
 
             CreateBatchGroup(batch.transform, "WorkTables_20", "WorkTable", 0f);
-            CreateBatchGroup(batch.transform, "Machines_20", "CoffeeMachine", 6f);
-            CreateBatchGroup(batch.transform, "Cups_20", "CeramicCup", 12f);
+            CreateBatchGroup(batch.transform, "Machines_20", "CoffeeMachine", 10f);
+            CreateBatchGroup(batch.transform, "Cups_20", "CeramicCup", 20f);
         }
 
         private static void CreateBatchGroup(

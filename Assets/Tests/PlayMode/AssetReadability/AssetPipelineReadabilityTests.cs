@@ -1,7 +1,6 @@
 using System.Collections;
 using System.Linq;
 using NUnit.Framework;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -15,21 +14,12 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
 
         public void Setup()
         {
-            if (EditorBuildSettings.scenes.Any(scene => scene.path == ScenePath))
-            {
-                return;
-            }
-
-            EditorBuildSettings.scenes = EditorBuildSettings.scenes
-                .Concat(new[] { new EditorBuildSettingsScene(ScenePath, true) })
-                .ToArray();
+            AssetPipelineReadabilityBuildSettingsScope.Setup();
         }
 
         public void Cleanup()
         {
-            EditorBuildSettings.scenes = EditorBuildSettings.scenes
-                .Where(scene => scene.path != ScenePath)
-                .ToArray();
+            AssetPipelineReadabilityBuildSettingsScope.Cleanup();
         }
 
         [UnityTest]
@@ -42,8 +32,38 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
                 .Where(candidate => candidate.name.StartsWith("PF_Benchmark_"))
                 .ToArray();
             Assert.That(prefabRoots, Has.Length.EqualTo(63));
-            Assert.That(prefabRoots.SelectMany(root => root.GetComponentsInChildren<Renderer>(true)),
+            Assert.That(prefabRoots.Count(root => root.name == "PF_Benchmark_WorkTable_01"), Is.EqualTo(21));
+            Assert.That(prefabRoots.Count(root => root.name == "PF_Benchmark_CoffeeMachine_01"), Is.EqualTo(21));
+            Assert.That(prefabRoots.Count(root => root.name == "PF_Benchmark_CeramicCup_01"), Is.EqualTo(21));
+
+            var meshRenderers = prefabRoots
+                .SelectMany(root => root.GetComponentsInChildren<MeshRenderer>(true))
+                .ToArray();
+            var skinnedRenderers = prefabRoots
+                .SelectMany(root => root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                .ToArray();
+            var renderers = meshRenderers.Cast<Renderer>()
+                .Concat(skinnedRenderers)
+                .ToArray();
+            Assert.That(renderers, Is.Not.Empty);
+            Assert.That(meshRenderers.Select(renderer =>
+                    renderer.GetComponent<MeshFilter>()?.sharedMesh),
                 Has.None.Null);
+            Assert.That(skinnedRenderers.Select(renderer => renderer.sharedMesh),
+                Has.None.Null);
+            Assert.That(renderers, Has.All.Matches<Renderer>(renderer =>
+                renderer.sharedMaterials.Length > 0 &&
+                renderer.sharedMaterials.All(material => material != null)));
+
+            var lods = prefabRoots
+                .SelectMany(root => root.GetComponentsInChildren<LODGroup>(true))
+                .SelectMany(group => group.GetLODs())
+                .ToArray();
+            Assert.That(lods, Is.Not.Empty);
+            Assert.That(lods, Has.All.Matches<LOD>(lod =>
+                lod.renderers.Length > 0 && lod.renderers.All(renderer => renderer != null)));
+            Assert.That(Object.FindObjectsByType<Transform>(FindObjectsInactive.Include)
+                .SelectMany(transform => transform.gameObject.GetComponents<MonoBehaviour>()), Has.None.Null);
         }
 
         [UnityTest]
@@ -91,7 +111,6 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
             var materials = Object.FindObjectsByType<Renderer>(
                     FindObjectsInactive.Include)
                 .SelectMany(renderer => renderer.sharedMaterials)
-                .Where(material => material != null)
                 .ToArray();
             Assert.That(materials, Is.Not.Empty);
             Assert.That(materials,

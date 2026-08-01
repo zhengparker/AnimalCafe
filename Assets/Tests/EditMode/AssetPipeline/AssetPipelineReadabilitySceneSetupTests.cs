@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Linq;
 using AnimalCafe.EditorTools.AssetPipeline;
 using NUnit.Framework;
@@ -27,7 +29,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         public void Setup_CreatesOneOrthographicIsometricCamera()
         {
             var scene = BuildAndOpenScene();
-            var cameras = Object.FindObjectsByType<UnityEngine.Camera>(
+            var cameras = UnityEngine.Object.FindObjectsByType<UnityEngine.Camera>(
                 FindObjectsInactive.Include);
 
             Assert.That(cameras, Has.Length.EqualTo(1));
@@ -74,6 +76,99 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             Assert.That(CountPrefabInstances(batchRoot[0].transform, "PF_Benchmark_WorkTable_01"), Is.EqualTo(20));
             Assert.That(CountPrefabInstances(batchRoot[0].transform, "PF_Benchmark_CoffeeMachine_01"), Is.EqualTo(20));
             Assert.That(CountPrefabInstances(batchRoot[0].transform, "PF_Benchmark_CeramicCup_01"), Is.EqualTo(20));
+        }
+
+        [Test]
+        public void Setup_BatchPrefabRendererBoundsDoNotOverlap()
+        {
+            var scene = BuildAndOpenScene();
+            var batchRoot = FindNamedObjects(scene, "BatchDisplay").Single();
+            var instances = batchRoot.GetComponentsInChildren<Transform>(true)
+                .Where(candidate => candidate.parent != null &&
+                    candidate.name.StartsWith("PF_Benchmark_"))
+                .Select(candidate => new
+                {
+                    candidate.name,
+                    Bounds = CalculateBounds(
+                        candidate.GetComponentsInChildren<Renderer>(true))
+                })
+                .ToArray();
+
+            Assert.That(instances, Has.Length.EqualTo(60));
+            for (var first = 0; first < instances.Length; first++)
+            {
+                for (var second = first + 1; second < instances.Length; second++)
+                {
+                    var expanded = instances[first].Bounds;
+                    expanded.Expand(0.5f);
+                    Assert.That(expanded.Intersects(instances[second].Bounds), Is.False,
+                        $"{instances[first].name} overlaps or is closer than 0.25m to {instances[second].name}.");
+                }
+            }
+        }
+
+        [Test]
+        public void Setup_CreatesExactApprovedHierarchy()
+        {
+            var scene = BuildAndOpenScene();
+            Assert.That(scene.GetRootGameObjects().Select(root => root.name),
+                Is.EquivalentTo(new[] { "AssetReadabilityRoot" }));
+
+            var root = FindNamedObjects(scene, "AssetReadabilityRoot").Single();
+            var cameraRoot = FindNamedObjects(scene, "CameraRoot").Single();
+            var singleDisplay = FindNamedObjects(scene, "SingleAssetDisplay").Single();
+            var batchDisplay = FindNamedObjects(scene, "BatchDisplay").Single();
+
+            AssertDirectChildren(root.transform,
+                "CameraRoot", "SingleAssetDisplay", "BatchDisplay");
+            AssertDirectChildren(cameraRoot.transform, "Main Camera");
+            AssertDirectChildren(singleDisplay.transform,
+                "PF_Benchmark_WorkTable_01",
+                "PF_Benchmark_CoffeeMachine_01",
+                "PF_Benchmark_CeramicCup_01",
+                "CharacterScaleReference_1_30m");
+            AssertDirectChildren(batchDisplay.transform,
+                "WorkTables_20", "Machines_20", "Cups_20");
+
+            AssertBatchGroup(batchDisplay.transform, "WorkTables_20",
+                "PF_Benchmark_WorkTable_01");
+            AssertBatchGroup(batchDisplay.transform, "Machines_20",
+                "PF_Benchmark_CoffeeMachine_01");
+            AssertBatchGroup(batchDisplay.transform, "Cups_20",
+                "PF_Benchmark_CeramicCup_01");
+        }
+
+        [Test]
+        public void Setup_DoesNotSaveUnrelatedDirtyAsset()
+        {
+            const string folder = "Assets/Tests/ReadabilityDirtyAsset";
+            const string assetPath = folder + "/Unrelated.png";
+            EnsureFolder(folder);
+            var texture = new Texture2D(1, 1);
+            texture.SetPixel(0, 0, Color.white);
+            File.WriteAllBytes(assetPath, texture.EncodeToPNG());
+            UnityEngine.Object.DestroyImmediate(texture);
+            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+            var metaPath = assetPath + ".meta";
+            var before = File.ReadAllText(metaPath);
+            try
+            {
+                var unrelated = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+                unrelated.isReadable = !unrelated.isReadable;
+                EditorUtility.SetDirty(unrelated);
+                var afterDirty = File.ReadAllText(metaPath);
+                Assert.That(afterDirty, Is.EqualTo(before),
+                    "A: Unsaved TextureImporter edit must not change the raw .meta file.");
+                Assert.That(EditorUtility.IsDirty(unrelated), Is.True);
+
+                AssetPipelineReadabilitySceneSetup.BuildScene();
+
+                Assert.That(File.ReadAllText(metaPath), Is.EqualTo(before));
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(folder);
+            }
         }
 
         [Test]
@@ -132,6 +227,8 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
 
         private static Bounds CalculateBounds(Renderer[] renderers)
         {
+            Assert.That(renderers, Is.Not.Empty,
+                "Every benchmark instance must have visible Renderer bounds.");
             var bounds = renderers[0].bounds;
             for (var index = 1; index < renderers.Length; index++)
             {
@@ -139,6 +236,33 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
 
             return bounds;
+        }
+
+        private static void AssertDirectChildren(Transform parent, params string[] expected)
+        {
+            Assert.That(parent.Cast<Transform>().Select(child => child.name),
+                Is.EquivalentTo(expected),
+                $"{parent.name} direct children do not match the approved hierarchy.");
+        }
+
+        private static void AssertBatchGroup(
+            Transform batchDisplay,
+            string groupName,
+            string expectedPrefabName)
+        {
+            var group = batchDisplay.Cast<Transform>()
+                .Single(child => child.name == groupName);
+            Assert.That(group.Cast<Transform>().Select(child => child.name),
+                Is.All.EqualTo(expectedPrefabName));
+            Assert.That(group.childCount, Is.EqualTo(20));
+        }
+
+        private static void EnsureFolder(string path)
+        {
+            if (AssetDatabase.IsValidFolder(path)) return;
+            var parent = Path.GetDirectoryName(path)?.Replace('\\', '/');
+            EnsureFolder(parent);
+            AssetDatabase.CreateFolder(parent, Path.GetFileName(path));
         }
     }
 }
