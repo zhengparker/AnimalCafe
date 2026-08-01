@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using AnimalCafe.EditorTools.AssetPipeline;
 using NUnit.Framework;
 using UnityEditor;
@@ -567,6 +568,22 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 issue.AssetPath.StartsWith("Assets/Art/VisualPipeline/Benchmarks/", StringComparison.Ordinal)));
         }
 
+        [Test]
+        public void PublicValidatePrefab_GeneratedPathReportsExactInvalidAssetPathWithoutMutatingProductionPrefabs()
+        {
+            var productionBefore = CaptureProductionPrefabFingerprints();
+            var generatedPath = CreateWorkTablePrefab();
+
+            var report = BenchmarkAssetValidator.ValidatePrefab(
+                generatedPath,
+                BenchmarkAssetKind.WorkTable);
+
+            Assert.That(
+                report.Issues.Select(issue => issue.Code),
+                Is.EqualTo(new[] { BenchmarkAssetIssueCode.InvalidAssetPath }));
+            AssertProductionPrefabFingerprintsUnchanged(productionBefore);
+        }
+
         private string CreateWorkTablePrefab(
             Action<GameObject> configure = null,
             Vector3? bounds = null)
@@ -639,6 +656,45 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             Assert.That(current.MeshGuid, Is.EqualTo(identity.MeshGuid));
             Assert.That(current.MaterialPath, Is.EqualTo(identity.MaterialPath));
             Assert.That(current.MaterialGuid, Is.EqualTo(identity.MaterialGuid));
+        }
+
+        private static ProductionPrefabFingerprint[] CaptureProductionPrefabFingerprints()
+        {
+            return new[]
+            {
+                "Assets/Art/VisualPipeline/Benchmarks/Prefabs/PF_Benchmark_WorkTable_01.prefab",
+                "Assets/Art/VisualPipeline/Benchmarks/Prefabs/PF_Benchmark_CoffeeMachine_01.prefab",
+                "Assets/Art/VisualPipeline/Benchmarks/Prefabs/PF_Benchmark_CeramicCup_01.prefab"
+            }
+            .Select(CaptureProductionPrefabFingerprint)
+            .ToArray();
+        }
+
+        private static ProductionPrefabFingerprint CaptureProductionPrefabFingerprint(string assetPath)
+        {
+            var projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            var absolutePath = Path.Combine(projectRoot, assetPath);
+            Assert.That(File.Exists(absolutePath), Is.True, $"Expected production Prefab at {assetPath}.");
+            using (var sha256 = SHA256.Create())
+            using (var stream = File.OpenRead(absolutePath))
+            {
+                var hash = BitConverter.ToString(sha256.ComputeHash(stream)).Replace("-", string.Empty);
+                return new ProductionPrefabFingerprint(
+                    assetPath,
+                    AssetDatabase.AssetPathToGUID(assetPath),
+                    hash);
+            }
+        }
+
+        private static void AssertProductionPrefabFingerprintsUnchanged(
+            IEnumerable<ProductionPrefabFingerprint> expectedFingerprints)
+        {
+            foreach (var expected in expectedFingerprints)
+            {
+                var current = CaptureProductionPrefabFingerprint(expected.AssetPath);
+                Assert.That(current.Guid, Is.EqualTo(expected.Guid), $"GUID changed for {expected.AssetPath}.");
+                Assert.That(current.Sha256, Is.EqualTo(expected.Sha256), $"SHA-256 changed for {expected.AssetPath}.");
+            }
         }
 
         private static List<string> EnsureTestAssetFolders(string assetFolderPath)
@@ -715,6 +771,20 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             public string MeshGuid { get; }
             public string MaterialPath { get; }
             public string MaterialGuid { get; }
+        }
+
+        private sealed class ProductionPrefabFingerprint
+        {
+            public ProductionPrefabFingerprint(string assetPath, string guid, string sha256)
+            {
+                AssetPath = assetPath;
+                Guid = guid;
+                Sha256 = sha256;
+            }
+
+            public string AssetPath { get; }
+            public string Guid { get; }
+            public string Sha256 { get; }
         }
 
         private void AssertCodes(string path, params BenchmarkAssetIssueCode[] expectedCodes)

@@ -22,7 +22,8 @@ release or broader production use.
 ## Work Table
 
 - Asset name: `SM_Benchmark_WorkTable_01`
-- Generation date: 2026-07-31 (supplied Blender input timestamp)
+- Generation date: Not provided
+- Supplied file timestamp: 2026-07-31
 - Tool: Tripo (indicated by the supplied mesh and material identifiers)
 - Prompt or user-owned reference description: no prompt/reference was supplied
 - Raw original Blender input: `Raw/WorkTable/SM_Benchmark_WorkTable_01_user_resupplied_original.blend`
@@ -35,7 +36,8 @@ release or broader production use.
 ## Coffee Machine
 
 - Asset name: `SM_Benchmark_CoffeeMachine_01`
-- Generation date: 2026-07-31 (supplied Blender input timestamp)
+- Generation date: Not provided
+- Supplied file timestamp: 2026-07-31
 - Tool: Tripo (indicated by the supplied mesh and material identifiers)
 - Prompt or user-owned reference description: no prompt/reference was supplied
 - Raw original Blender input: `Raw/CoffeeMachine/SM_Benchmark_CoffeeMachine_01_user_resupplied_original.blend`
@@ -48,7 +50,8 @@ release or broader production use.
 ## Ceramic Cup
 
 - Asset name: `SM_Benchmark_CeramicCup_01`
-- Generation date: 2026-07-31 (supplied Blender input timestamp)
+- Generation date: Not provided
+- Supplied file timestamp: 2026-07-31
 - Tool: Tripo (indicated by the supplied mesh and material identifiers)
 - Prompt or user-owned reference description: no prompt/reference was supplied
 - Raw original Blender input: `Raw/CeramicCup/SM_Benchmark_CeramicCup_01_user_resupplied_original.blend`

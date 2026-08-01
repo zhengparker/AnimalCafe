@@ -68,14 +68,38 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 var root = PrefabUtility.LoadPrefabContents(assetPath);
                 try
                 {
-                    foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+                    var renderers = root.GetComponentsInChildren<MeshRenderer>(true);
+                    var colliders = root.GetComponentsInChildren<Collider>(true);
+                    var lodGroups = root.GetComponentsInChildren<LODGroup>(true);
+                    var colliderDetails = string.Join(",", colliders.Select(collider =>
+                        collider is BoxCollider box
+                            ? $"Box(center={box.center},size={box.size})"
+                            : collider.GetType().Name));
+                    Debug.Log(
+                        $"TASK5_DIAGNOSTIC prefab={prefabName} " +
+                        $"renderers={renderers.Length} colliders={colliders.Length} " +
+                        $"lodGroups={lodGroups.Length} lodCount=" +
+                        $"{string.Join(",", lodGroups.Select(group => group.GetLODs().Length))} " +
+                        $"colliderDetails={colliderDetails}");
+
+                    foreach (var renderer in renderers)
                     {
+                        var mesh = renderer.GetComponent<MeshFilter>().sharedMesh;
+                        var texturePaths = renderer.sharedMaterials
+                            .Where(material => material != null)
+                            .SelectMany(material => material.GetTexturePropertyNames()
+                                .Select(propertyName => AssetDatabase.GetAssetPath(material.GetTexture(propertyName))))
+                            .Where(path => !string.IsNullOrEmpty(path))
+                            .Distinct()
+                            .ToArray();
                         Debug.Log(
                             $"TASK5_DIAGNOSTIC prefab={prefabName} renderer={renderer.name} " +
                             $"localPosition={renderer.transform.localPosition} " +
                             $"localRotation={renderer.transform.localRotation.eulerAngles} " +
-                            $"meshBounds={renderer.GetComponent<MeshFilter>().sharedMesh.bounds} " +
-                            $"worldBounds={renderer.bounds}");
+                            $"meshBounds={mesh.bounds} triangles={mesh.triangles.Length / 3} " +
+                            $"materialSlots={renderer.sharedMaterials.Length} " +
+                            $"uniqueMaterials={renderer.sharedMaterials.Where(material => material != null).Distinct().Count()} " +
+                            $"textureReferences={texturePaths.Length} worldBounds={renderer.bounds}");
                     }
                 }
                 finally
