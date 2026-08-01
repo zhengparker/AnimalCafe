@@ -344,9 +344,9 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 | 16 | Batch 60 | 检查三组各 20 | 正好 60、无 overlap/pink/missing/异常 Collider | |
 | 17 | Console | 检查完整 manual run | 无 unexpected error 或 missing reference | |
 | 18 | Play Mode cleanup | 退出且不保存实验性改动 | 没有把临时 Transform 写入 Scene | |
+| 19 | License | 记录 license/use-right statement | 明确填写“是”，否则保持 Pending | |
 
 提示：不要把 Game view 的 `6x` 结果加入 checklist；它只是 pixel magnification，不是 Camera 或 SMAA quality setting。
-| 19 | License | 记录 license/use-right statement | 明确填写“是”，否则保持 Pending | |
 
 ## 10. Phase 3 没有做什么
 
