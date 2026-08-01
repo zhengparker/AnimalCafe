@@ -103,6 +103,40 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
         }
 
+        public Mesh CreateMeshAsset(Vector3 bounds, int triangleCount)
+        {
+            if (triangleCount <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(triangleCount));
+            }
+
+            var mesh = CreateMesh(bounds, triangleCount);
+            CreateOwnedAsset(mesh, "Mesh.asset");
+            return mesh;
+        }
+
+        public Material CreateMaterialAsset(Shader shader)
+        {
+            if (shader == null)
+            {
+                throw new ArgumentNullException(nameof(shader));
+            }
+
+            var material = new Material(shader);
+            CreateOwnedAsset(material, "Material.mat");
+            return material;
+        }
+
+        public Texture2D CreateTextureAsset(int width, int height)
+        {
+            var texture = new Texture2D(width, height)
+            {
+                name = "GeneratedBenchmarkTexture"
+            };
+            CreateOwnedAsset(texture, "Texture.asset");
+            return texture;
+        }
+
         public void DeleteGeneratedAssets()
         {
             if (disposed)
@@ -167,6 +201,15 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
 
             return new Material(shader);
+        }
+
+        private void CreateOwnedAsset(UnityEngine.Object asset, string fileName)
+        {
+            var callFolderPath = CreateUniqueCallFolderPath();
+            EnsureAssetFolders(callFolderPath);
+            var assetPath = $"{callFolderPath}/{fileName}";
+            TrackOwnedAsset(assetPath);
+            AssetDatabase.CreateAsset(asset, assetPath);
         }
 
         private static void ValidatePrefabName(string prefabName)

@@ -31,6 +31,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 ValidateRootTransform(root, assetPath, issues);
                 ValidateVisibleBounds(root, assetPath, kind, issues);
                 ValidateForwardMarker(root, assetPath, issues);
+                ValidateRendering(root, assetPath, kind, issues);
+                ValidateLods(root, assetPath, kind, issues);
             }
             catch (Exception exception)
             {
@@ -168,6 +170,266 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                     assetPath,
                     "ForwardMarker must point along root-local +Z, sit in front of the origin, and remain non-visible.");
             }
+        }
+
+        private static void ValidateRendering(
+            GameObject root,
+            string assetPath,
+            BenchmarkAssetKind kind,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            var rules = BenchmarkAssetRules.For(kind);
+            var renderers = GetEnabledRenderers(root).ToArray();
+            var triangleRenderers = GetTriangleBudgetRenderers(root, kind, renderers);
+            if (CountUniqueMeshTriangles(triangleRenderers, assetPath, issues) > rules.MaxLod0Triangles)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.TriangleBudgetExceeded,
+                    assetPath,
+                    $"LOD0 triangle count exceeds the {rules.MaxLod0Triangles} triangle budget.");
+            }
+
+            var materialSlots = 0;
+            var uniqueMaterials = new HashSet<Material>();
+            foreach (var renderer in renderers)
+            {
+                foreach (var material in renderer.sharedMaterials)
+                {
+                    if (material == null)
+                    {
+                        AddIssue(
+                            issues,
+                            BenchmarkAssetIssueCode.MissingMaterial,
+                            assetPath,
+                            "Enabled Renderer contains a null shared Material slot.");
+                        continue;
+                    }
+
+                    materialSlots++;
+                    uniqueMaterials.Add(material);
+                    ValidateMaterial(material, assetPath, issues);
+                }
+            }
+
+            if (materialSlots > rules.MaxMaterialSlots)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.MaterialSlotBudgetExceeded,
+                    assetPath,
+                    $"Prefab uses {materialSlots} shared Material slots and {uniqueMaterials.Count} unique shared Materials; the budget is {rules.MaxMaterialSlots} slots.");
+            }
+        }
+
+        private static void ValidateMaterial(
+            Material material,
+            string assetPath,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            if (material.shader == null || material.shader.name != "Universal Render Pipeline/Lit")
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.InvalidShader,
+                    assetPath,
+                    "Materials must use the Universal Render Pipeline/Lit shader.");
+                return;
+            }
+
+            if (!material.HasProperty("_Surface") || material.GetFloat("_Surface") != 0f)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.TransparentMaterial,
+                    assetPath,
+                    "URP Lit Materials must use the opaque _Surface value of 0.");
+            }
+
+            for (var propertyIndex = 0; propertyIndex < ShaderUtil.GetPropertyCount(material.shader); propertyIndex++)
+            {
+                if (ShaderUtil.GetPropertyType(material.shader, propertyIndex) != ShaderUtil.ShaderPropertyType.TexEnv)
+                {
+                    continue;
+                }
+
+                var texture = material.GetTexture(ShaderUtil.GetPropertyName(material.shader, propertyIndex));
+                if (texture == null || string.IsNullOrEmpty(AssetDatabase.GetAssetPath(texture)))
+                {
+                    continue;
+                }
+
+                if (texture.width > 512 || texture.height > 512)
+                {
+                    AddIssue(
+                        issues,
+                        BenchmarkAssetIssueCode.TextureBudgetExceeded,
+                        assetPath,
+                        "Project Texture references must not exceed 512 by 512 pixels.");
+                }
+            }
+        }
+
+        private static void ValidateLods(
+            GameObject root,
+            string assetPath,
+            BenchmarkAssetKind kind,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            if (!BenchmarkAssetRules.For(kind).RequiresLodGroup)
+            {
+                return;
+            }
+
+            var lodGroups = root.GetComponentsInChildren<LODGroup>(true);
+            if (lodGroups.Length != 1)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.MissingLodGroup,
+                    assetPath,
+                    "Coffee Machine requires exactly one LODGroup.");
+                return;
+            }
+
+            var lods = lodGroups[0].GetLODs();
+            if (lods.Length < 2 || !HasOnlyNonNullRenderers(lods[0]) || !HasOnlyNonNullRenderers(lods[1]))
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.MissingLod1,
+                    assetPath,
+                    "Coffee Machine requires non-empty LOD0 and LOD1 renderer levels without null Renderers.");
+                return;
+            }
+
+            if (lods[0].renderers.Intersect(lods[1].renderers).Any())
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.LodReductionInsufficient,
+                    assetPath,
+                    "LOD0 and LOD1 must not reuse the same Renderer.");
+                return;
+            }
+
+            var rules = BenchmarkAssetRules.For(kind);
+            var lod0Triangles = CountUniqueMeshTriangles(lods[0].renderers, assetPath, issues);
+            var lod1Triangles = CountUniqueMeshTriangles(lods[1].renderers, assetPath, issues);
+            if (lod1Triangles > rules.MaxLod1Triangles)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.LodTriangleBudgetExceeded,
+                    assetPath,
+                    $"LOD1 triangle count exceeds the {rules.MaxLod1Triangles} triangle budget.");
+            }
+
+            if (lod0Triangles == 0 || (float)lod1Triangles / lod0Triangles > rules.MaxLod1TriangleRatio)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.LodReductionInsufficient,
+                    assetPath,
+                    $"LOD1 must use no more than {rules.MaxLod1TriangleRatio:P0} of LOD0 triangles.");
+            }
+        }
+
+        private static IEnumerable<Renderer> GetEnabledRenderers(GameObject root)
+        {
+            return root.GetComponentsInChildren<Renderer>(true)
+                .Where(renderer =>
+                    renderer.enabled &&
+                    renderer.gameObject.activeInHierarchy &&
+                    !IsForwardMarkerDescendant(renderer.transform));
+        }
+
+        private static bool IsForwardMarkerDescendant(Transform transform)
+        {
+            while (transform != null)
+            {
+                if (transform.name == "ForwardMarker")
+                {
+                    return true;
+                }
+
+                transform = transform.parent;
+            }
+
+            return false;
+        }
+
+        private static IEnumerable<Renderer> GetTriangleBudgetRenderers(
+            GameObject root,
+            BenchmarkAssetKind kind,
+            IEnumerable<Renderer> enabledRenderers)
+        {
+            if (!BenchmarkAssetRules.For(kind).RequiresLodGroup)
+            {
+                return enabledRenderers;
+            }
+
+            var lodGroups = root.GetComponentsInChildren<LODGroup>(true);
+            if (lodGroups.Length != 1)
+            {
+                return enabledRenderers;
+            }
+
+            var lods = lodGroups[0].GetLODs();
+            if (lods.Length == 0)
+            {
+                return enabledRenderers;
+            }
+
+            var lodRenderers = new HashSet<Renderer>(lods
+                .Where(lod => lod.renderers != null)
+                .SelectMany(lod => lod.renderers)
+                .Where(renderer => renderer != null));
+            return lods[0].renderers
+                .Where(renderer => renderer != null)
+                .Concat(enabledRenderers.Where(renderer => !lodRenderers.Contains(renderer)));
+        }
+
+        private static bool HasOnlyNonNullRenderers(LOD lod)
+        {
+            return lod.renderers != null && lod.renderers.Length > 0 && lod.renderers.All(renderer => renderer != null);
+        }
+
+        private static int CountUniqueMeshTriangles(
+            IEnumerable<Renderer> renderers,
+            string assetPath,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            var meshes = new HashSet<Mesh>();
+            foreach (var renderer in renderers)
+            {
+                var mesh = GetMesh(renderer);
+                if (mesh == null)
+                {
+                    AddIssue(
+                        issues,
+                        BenchmarkAssetIssueCode.MissingMesh,
+                        assetPath,
+                        "Renderer must reference a Mesh.");
+                    continue;
+                }
+
+                meshes.Add(mesh);
+            }
+
+            return meshes.Sum(mesh => mesh.triangles.Length / 3);
+        }
+
+        private static Mesh GetMesh(Renderer renderer)
+        {
+            var meshFilter = renderer.GetComponent<MeshFilter>();
+            if (meshFilter != null)
+            {
+                return meshFilter.sharedMesh;
+            }
+
+            var skinnedMeshRenderer = renderer as SkinnedMeshRenderer;
+            return skinnedMeshRenderer == null ? null : skinnedMeshRenderer.sharedMesh;
         }
 
         private static bool TryGetRootLocalRendererBounds(GameObject root, out Bounds combinedBounds)
