@@ -8,7 +8,7 @@
 >
 > 目标兼容平台：iOS
 >
-> 更新日期：2026-07-27
+> 更新日期：2026-08-01
 
 ## 1. 文档用途
 
@@ -396,6 +396,25 @@ Mouse placement、preview、Scene rendering、pathfinding。
 ### Goal
 
 建立所有正式 Models、Materials、Textures 和 Unity Prefabs 共用的视觉方向与技术标准。
+
+### Status
+
+`In Review` — Task 1–6 implementation and fresh automated evidence are
+available, but Studio Owner manual Camera/readability acceptance and explicit
+source license/use-right confirmation remain pending. Phase 3 must not be
+recorded as `Completed` before both gates are resolved.
+
+Fresh Task 7 automated evidence (2026-08-01):
+
+- full EditMode: `285 / 285` passed; failed/skipped/inconclusive all `0`;
+- full PlayMode: `48 / 48` passed; failed/skipped/inconclusive all `0`;
+- production benchmark validator: `3 / 3` Prefabs valid, `0 issues`;
+- `MainCafe.unity` remains unchanged; PlayMode cleanup restored Build Settings
+  to its single enabled `Assets/Scenes/MainCafe.unity` entry.
+
+Known limitation: this is a benchmark pipeline and readability baseline only.
+It is not the Phase 4 formal asset set, gameplay, placement, or runtime
+integration.
 
 ### Scope
 
@@ -2377,7 +2396,10 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 **Phase 2 — Grid Occupancy & Placement Rules** 已完成 approved design、implementation、automated verification、review、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
 
-- GitHub PR #1 已 merge；merged-main regression 为 EditMode `191 / 191`、PlayMode `35 / 35` passed，failed、skipped、inconclusive 均为 `0`。
-- 当前只进行 Phase 2 branch/worktree cleanup 和文档收尾；未经用户批准不开始 Phase 3。
+**Phase 3 — Visual Style & Asset Pipeline Foundation** 状态为 `In Review`。
+
+- 已完成 fresh automated evidence：EditMode `285 / 285`、PlayMode `48 / 48` passed，failed、skipped、inconclusive 均为 `0`；production validator 为 `3 / 3` valid、`0 issues`。
+- Studio Owner Camera/readability manual acceptance 以及 source license/use-right confirmation 仍为 `Pending`。
+- 当前只是 benchmark pipeline 和 readability baseline；未开始 Phase 4 formal asset set、gameplay、placement 或 runtime integration。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。
