@@ -7,6 +7,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 namespace AnimalCafe.Tests.EditMode.AssetPipeline
@@ -44,6 +45,34 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void Setup_CameraUsesApprovedPaleYellowSolidColorBackground()
+        {
+            BuildAndOpenScene();
+            var camera = UnityEngine.Object.FindObjectsByType<UnityEngine.Camera>(
+                FindObjectsInactive.Include).Single();
+
+            Assert.That(camera.clearFlags, Is.EqualTo(CameraClearFlags.SolidColor));
+            Assert.That(camera.backgroundColor,
+                Is.EqualTo((Color)new Color32(0xF2, 0xE6, 0xB8, 0xFF)));
+        }
+
+        [Test]
+        public void Setup_CameraUsesSceneSpecificSmaaHigh()
+        {
+            BuildAndOpenScene();
+            var camera = UnityEngine.Object.FindObjectsByType<UnityEngine.Camera>(
+                FindObjectsInactive.Include).Single();
+
+            var cameraData = camera.GetComponent<UniversalAdditionalCameraData>();
+            Assert.That(cameraData, Is.Not.Null,
+                "The readability Camera needs scene-specific URP data.");
+            Assert.That(cameraData.antialiasing,
+                Is.EqualTo(AntialiasingMode.SubpixelMorphologicalAntiAliasing));
+            Assert.That(cameraData.antialiasingQuality,
+                Is.EqualTo(AntialiasingQuality.High));
+        }
+
+        [Test]
         public void Setup_CreatesOneSingleAssetDisplayRoot()
         {
             var scene = BuildAndOpenScene();
@@ -65,6 +94,39 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             Assert.That(bounds.size.y, Is.EqualTo(1.30f).Within(0.001f));
             Assert.That(references[0].GetComponentsInChildren<Collider>(true), Is.Empty);
             Assert.That(references[0].GetComponentsInChildren<Animator>(true), Is.Empty);
+        }
+
+        [Test]
+        public void Setup_CharacterReferenceUsesDedicatedContrastingUrpLitMaterial()
+        {
+            var scene = BuildAndOpenScene();
+            var reference = FindNamedObjects(scene, "CharacterScaleReference_1_30m").Single();
+            var material = reference.GetComponentsInChildren<Renderer>(true)
+                .Single().sharedMaterial;
+
+            Assert.That(material, Is.Not.Null);
+            Assert.That(AssetDatabase.GetAssetPath(material), Is.EqualTo(
+                "Assets/Art/VisualPipeline/Benchmarks/Materials/" +
+                "M_Benchmark_CharacterReferenceAccent_01.mat"));
+            Assert.That(material.shader.name, Is.EqualTo("Universal Render Pipeline/Lit"));
+        }
+
+        [Test]
+        public void Setup_CharacterReferenceAccentContrastsAgainstPaleYellowBackground()
+        {
+            var scene = BuildAndOpenScene();
+            var reference = FindNamedObjects(scene, "CharacterScaleReference_1_30m").Single();
+            var material = reference.GetComponentsInChildren<Renderer>(true)
+                .Single().sharedMaterial;
+
+            Assert.That(Vector4.Distance(
+                    material.GetColor("_BaseColor"),
+                    (Color)new Color32(0x15, 0x7A, 0x78, 0xFF)),
+                Is.LessThan(0.0001f));
+            Assert.That(ContrastRatio(
+                    material.GetColor("_BaseColor"),
+                    new Color32(0xF2, 0xE6, 0xB8, 0xFF)),
+                Is.GreaterThanOrEqualTo(4f));
         }
 
         [Test]
@@ -299,6 +361,29 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
 
             return bounds;
+        }
+
+        private static float ContrastRatio(Color first, Color second)
+        {
+            var firstLuminance = RelativeLuminance(first);
+            var secondLuminance = RelativeLuminance(second);
+            var lighter = Mathf.Max(firstLuminance, secondLuminance);
+            var darker = Mathf.Min(firstLuminance, secondLuminance);
+            return (lighter + 0.05f) / (darker + 0.05f);
+        }
+
+        private static float RelativeLuminance(Color color)
+        {
+            return 0.2126f * SrgbToLinear(color.r) +
+                0.7152f * SrgbToLinear(color.g) +
+                0.0722f * SrgbToLinear(color.b);
+        }
+
+        private static float SrgbToLinear(float channel)
+        {
+            return channel <= 0.04045f
+                ? channel / 12.92f
+                : Mathf.Pow((channel + 0.055f) / 1.055f, 2.4f);
         }
 
         private static string[] CaptureSceneSetup()

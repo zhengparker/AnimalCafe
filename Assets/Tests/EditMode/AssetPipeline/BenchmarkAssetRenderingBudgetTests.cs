@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using AnimalCafe.EditorTools.AssetPipeline;
@@ -269,33 +270,59 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [TestCase(
-            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_WarmWood_01.mat",
-            0f,
-            0.18f)]
+            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_WorkTableOriginal_01.mat",
+            "Assets/Art/VisualPipeline/Benchmarks/Textures/T_Benchmark_WorkTable_BaseColor_01.png",
+            "CD5A860F5F0FB2555A86154792B56C4BD0463B1D55472074BFF648C23B85AF48")]
         [TestCase(
-            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_SageMetal_01.mat",
-            0.55f,
-            0.42f)]
+            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_CoffeeMachineOriginal_01.mat",
+            "Assets/Art/VisualPipeline/Benchmarks/Textures/T_Benchmark_CoffeeMachine_BaseColor_01.png",
+            "A2C217E9738A621B382CF92B20D8FBC90583514D399973FC92B2B37E57E0CDF2")]
         [TestCase(
-            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_CreamCeramic_01.mat",
-            0f,
-            0.30f)]
-        [TestCase(
-            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_HoneyAccent_01.mat",
-            0f,
-            0.24f)]
-        public void ProductionMaterials_UseApprovedOpaqueUrpLitSurfaceProperties(
+            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_CeramicCupOriginal_01.mat",
+            "Assets/Art/VisualPipeline/Benchmarks/Textures/T_Benchmark_CeramicCup_BaseColor_01.png",
+            "3929353AA07E3C6775E6B33F97AED82BEF0A5D1DA134A13BD04FCC9E8196EF22")]
+        public void ProductionFurnitureMaterials_MatchAuditedBlenderBaseColorTextures(
             string materialPath,
-            float expectedMetallic,
-            float expectedSmoothness)
+            string texturePath,
+            string expectedTextureSha256)
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
 
             Assert.That(material, Is.Not.Null, materialPath);
             Assert.That(material.shader.name, Is.EqualTo("Universal Render Pipeline/Lit"));
             Assert.That(material.GetFloat("_Surface"), Is.EqualTo(0f));
-            Assert.That(material.GetFloat("_Metallic"), Is.EqualTo(expectedMetallic).Within(0.0001f));
-            Assert.That(material.GetFloat("_Smoothness"), Is.EqualTo(expectedSmoothness).Within(0.0001f));
+            Assert.That(material.GetFloat("_Metallic"), Is.EqualTo(0f));
+            Assert.That(material.GetFloat("_Smoothness"), Is.EqualTo(0.5f).Within(0.0001f));
+            Assert.That(material.GetColor("_BaseColor"), Is.EqualTo(Color.white));
+
+            var texture = material.GetTexture("_BaseMap") as Texture2D;
+            Assert.That(texture, Is.Not.Null);
+            Assert.That(AssetDatabase.GetAssetPath(texture), Is.EqualTo(texturePath));
+            Assert.That(texture.width, Is.EqualTo(512));
+            Assert.That(texture.height, Is.EqualTo(512));
+            var importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
+            Assert.That(importer, Is.Not.Null);
+            Assert.That(importer.sRGBTexture, Is.True);
+            Assert.That(importer.maxTextureSize, Is.LessThanOrEqualTo(512));
+            Assert.That(ComputeSha256(texturePath), Is.EqualTo(expectedTextureSha256));
+        }
+
+        [Test]
+        public void ProductionMaterials_ContainOnlyThreeOriginalSurfacesAndDedicatedReferenceAccent()
+        {
+            const string folder = "Assets/Art/VisualPipeline/Benchmarks/Materials";
+            var paths = AssetDatabase.FindAssets("t:Material", new[] { folder })
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .OrderBy(path => path, StringComparer.Ordinal)
+                .ToArray();
+
+            Assert.That(paths, Is.EqualTo(new[]
+            {
+                folder + "/M_Benchmark_CeramicCupOriginal_01.mat",
+                folder + "/M_Benchmark_CharacterReferenceAccent_01.mat",
+                folder + "/M_Benchmark_CoffeeMachineOriginal_01.mat",
+                folder + "/M_Benchmark_WorkTableOriginal_01.mat"
+            }));
         }
 
         [Test]
@@ -319,6 +346,37 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                     Assert.That(renderer.sharedMaterials.Count(material => material != null),
                         Is.EqualTo(mesh.subMeshCount), renderer.name);
                 }
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        [Test]
+        public void ProductionCoffeeMachine_LodLevelsUseSameOriginalMaterialAndTexture()
+        {
+            const string prefabPath =
+                "Assets/Art/VisualPipeline/Benchmarks/Prefabs/PF_Benchmark_CoffeeMachine_01.prefab";
+            const string expectedMaterialPath =
+                "Assets/Art/VisualPipeline/Benchmarks/Materials/" +
+                "M_Benchmark_CoffeeMachineOriginal_01.mat";
+            const string expectedTexturePath =
+                "Assets/Art/VisualPipeline/Benchmarks/Textures/" +
+                "T_Benchmark_CoffeeMachine_BaseColor_01.png";
+            var root = PrefabUtility.LoadPrefabContents(prefabPath);
+            try
+            {
+                var lods = root.GetComponentInChildren<LODGroup>(true).GetLODs();
+                Assert.That(lods, Has.Length.EqualTo(2));
+                var lod0Material = lods[0].renderers.Single().sharedMaterial;
+                var lod1Material = lods[1].renderers.Single().sharedMaterial;
+
+                Assert.That(lod1Material, Is.SameAs(lod0Material));
+                Assert.That(AssetDatabase.GetAssetPath(lod0Material),
+                    Is.EqualTo(expectedMaterialPath));
+                Assert.That(AssetDatabase.GetAssetPath(lod0Material.GetTexture("_BaseMap")),
+                    Is.EqualTo(expectedTexturePath));
             }
             finally
             {
@@ -608,6 +666,16 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             return Path.Combine(
                 projectRoot,
                 assetPath.Replace('/', Path.DirectorySeparatorChar));
+        }
+
+        private static string ComputeSha256(string assetPath)
+        {
+            using (var stream = File.OpenRead(ToAbsoluteProjectPath(assetPath)))
+            using (var sha256 = SHA256.Create())
+            {
+                return BitConverter.ToString(sha256.ComputeHash(stream))
+                    .Replace("-", string.Empty);
+            }
         }
     }
 }

@@ -14,7 +14,7 @@
 
 - Table 在 Blender 里很大，进入 Unity 后只能缩小到 `0.01`；
 - Coffee Machine 的正面朝向错误；
-- Cup 使用独立的高分辨率 Texture；
+- Cup source 内有独立的 2K packed Texture，但 production budget 只允许 `512 × 512`；
 - 三件物品的 pivot 高低不同；
 - Prefab 用不同 Material，导致批量摆放时成本不断增加。
 
@@ -23,11 +23,12 @@
 Phase 3 的任务是先建立一条可重复的生产流水线：
 
 ```text
-Tripo 初稿
-→ Blender 清理和标准化
+approved source contract
+→ Blender audit / allowed cleanup
+→ packed Texture repeatable export
 → FBX export
 → Unity import
-→ 共享 Material
+→ original-color Material
 → Prefab assembly
 → automated validation
 → Camera readability manual review
@@ -45,9 +46,9 @@ Tripo 初稿
 
 Phase 3 完成后，玩家可以在验证 Scene 中看到：
 
-- 一张温暖木色的 Work Table；
-- 一台体积醒目、正面清晰的 Coffee Machine；
-- 一个在固定 isometric Camera 下仍有稳定轮廓的 Ceramic Cup；
+- 一张保留原始橙木与黑色细节的 Work Table；
+- 一台保留原始浅蓝、白色与黑色分区，且正面清晰的 Coffee Machine；
+- 一个保留原始柔和绿色、在固定 isometric Camera 下仍有稳定轮廓的 Ceramic Cup；
 - 三件资产在近、中、远 Camera zoom 下保持统一比例与视觉风格。
 
 Phase 3 不加入 Decoration Mode、鼠标摆放、功能设备逻辑或正式 gameplay。
@@ -253,6 +254,8 @@ ArtSource/VisualPipeline/Benchmarks/
 │  ├─ SM_Benchmark_WorkTable_01.blend
 │  ├─ SM_Benchmark_CoffeeMachine_01.blend
 │  └─ SM_Benchmark_CeramicCup_01.blend
+├─ Tools/
+│  └─ ExportBenchmarkTextures.py
 └─ AssetProvenance.md
 
 Assets/Art/VisualPipeline/Benchmarks/
@@ -261,15 +264,18 @@ Assets/Art/VisualPipeline/Benchmarks/
 │  ├─ SM_Benchmark_CoffeeMachine_01.fbx
 │  └─ SM_Benchmark_CeramicCup_01.fbx
 ├─ Materials/
-│  ├─ M_Benchmark_WarmWood_01.mat
-│  ├─ M_Benchmark_SageMetal_01.mat
-│  ├─ M_Benchmark_CreamCeramic_01.mat
-│  └─ M_Benchmark_HoneyAccent_01.mat
+│  ├─ M_Benchmark_WorkTableOriginal_01.mat
+│  ├─ M_Benchmark_CoffeeMachineOriginal_01.mat
+│  ├─ M_Benchmark_CeramicCupOriginal_01.mat
+│  └─ M_Benchmark_CharacterReferenceAccent_01.mat
 ├─ Prefabs/
 │  ├─ PF_Benchmark_WorkTable_01.prefab
 │  ├─ PF_Benchmark_CoffeeMachine_01.prefab
 │  └─ PF_Benchmark_CeramicCup_01.prefab
 └─ Textures/
+   ├─ T_Benchmark_WorkTable_BaseColor_01.png
+   ├─ T_Benchmark_CoffeeMachine_BaseColor_01.png
+   └─ T_Benchmark_CeramicCup_BaseColor_01.png
 ```
 
 `Raw` 和 `Blender` source 放在 Unity `Assets/` 外，避免 Unity 自动导入 `.blend` 或非 production raw files。只有 production FBX、Material、Prefab 与需要的 Texture 进入 `Assets/`。
@@ -284,7 +290,7 @@ Assets/Art/VisualPipeline/Benchmarks/
 - benchmark 不使用 transparent Material、实时反射或昂贵的特殊效果；
 - Material 必须与当前 Windows URP pipeline 兼容。
 
-### 9.2 Shared Materials
+### 9.2 Original-color Materials
 
 | Asset | Maximum Material slots |
 |---|---:|
@@ -292,18 +298,22 @@ Assets/Art/VisualPipeline/Benchmarks/
 | Coffee Machine | `3` |
 | Ceramic Cup | `1` |
 
-- 相同表面复用同一个 `.mat`；
-- 不允许每个 Prefab 自动复制一套相同 Material；
-- Coffee Machine 的 panel 使用深鼠尾草绿，少量蜂蜜黄可作为按钮强调；
+- 每个 benchmark 只有一个与单一 submesh 对齐的 original-color `.mat`；
+- Work Table、Coffee Machine 与 Ceramic Cup 分别使用独立 Material，不能互换或自动复制；
+- Character Scale Reference 使用独立的青绿色 accent Material，不复用任何 furniture Material；
+- Studio Owner original-color override（2026-08-01）要求这三个 benchmark 恢复 Blender source 中 packed Base Color，取代它们原本的纯色 P1 palette override；P1 仍是后续正式资产的视觉方向；
+- Coffee Machine 的 LOD0 与 LOD1 必须引用同一个 original-color Material 和 Base Color Texture；
 - benchmark 不实现 gameplay state color；
 - 未来 gameplay 状态不能只靠红色/绿色区分，还需要 shape、icon 或其他反馈。
 
 ### 9.3 Textures
 
-- benchmark 优先使用纯色和 Material properties；
-- 只有无法通过简单 Material 表达的表面才创建 Texture；
+- Blender read-only audit 必须确认每个 source 的 Base Color 是否由 packed image 驱动；如果是，不能用猜测的纯色代替；
+- `ExportBenchmarkTextures.py` 从 authoritative `.blend` 的 packed image repeatably 输出 production PNG，不保存或改写 source `.blend`；
+- packed source image 为 `2048 × 2048` 时，production output 等比例缩小到 `512 × 512`；
 - 单张 Texture 最大 `512 × 512`；
 - 禁止 2K/4K benchmark Texture；
+- production Texture 使用 sRGB、project-relative asset reference，并由白色 Material tint 直接显示原始 Base Color；
 - Texture references 必须完整且使用 project-relative asset references；
 - 不允许 machine-specific absolute path。
 
@@ -370,6 +380,8 @@ Cup 的 Collider 只用于验证小物件 Prefab contract。未来如果正式 C
 ### 13.1 Camera Conditions
 
 - 使用项目已确认的 fixed `3/4 isometric-like Camera`；
+- Camera Clear Flags 使用 `SolidColor`，background 固定为浅黄色 `#F2E6B8`；
+- validation Scene 的 Main Camera 单独使用 `UniversalAdditionalCameraData`，antialiasing 为 `SMAA High`；不得修改 global URP 或 Quality settings；
 - orthographic size 检查 `4`、`7`、`12`；
 - Windows reference resolution：`1920 × 1080`；
 - mobile portrait framing reference：`1170 × 2532`；
@@ -382,7 +394,9 @@ Cup 的 Collider 只用于验证小物件 Prefab contract。未来如果正式 C
 - zoom `12`：必须认出 Table 与 Coffee Machine；Cup 只要求稳定轮廓，不要求看清小细节；
 - Coffee Machine 的操作面不能被主体轮廓隐藏；
 - LOD 切换无明显 popping、scale jump 或 Material change；
-- 色板在 Scene lighting 下保持温暖且不过暗；
+- 浅黄色背景本身不是 failure；只有它造成 clipping、washout 或可读性下降时才失败；
+- 青绿色 Character Scale Reference 必须明显区别于背景与三件家具；
+- furniture original colors 应分别可辨认为橙木/黑、浅蓝/白/黑、柔和绿，不能再显示成统一的旧 palette；
 - 不能只凭 Scene view 近距离观察宣布 readability 通过。
 
 ## 14. Validation Architecture
@@ -486,16 +500,18 @@ Bug/edge cases：
 Studio Owner 在 Unity 中完成：
 
 1. 打开独立 Phase 3 validation Scene；
-2. 在 orthographic size `4` 查看细节、Material 与 forward；
-3. 在 size `7` 查看三件资产的默认 gameplay readability；
-4. 在 size `12` 确认 Table 与 Coffee Machine 仍可辨认；
-5. 切换 Coffee Machine LOD，观察是否出现明显跳动；
-6. 检查 `1.30 m` Character Scale Reference、Work Table、Coffee Machine 与 Cup 的整体比例；
-7. 检查 Coffee Machine 在 Work Table 上仍有桌面余量；
-8. 检查 Windows `1920 × 1080` framing；
-9. 检查 mobile portrait reference framing；
-10. 运行 `60`-instance batch Scene，确认无 pink Material、missing reference、异常 Collider 或明显 Console error；
-11. 在 Project view 中确认 raw/Blender files 没有进入 Unity `Assets/`。
+2. 确认浅黄色 `#F2E6B8` background、scene-only `SMAA High` 和明显对比的青绿色 Character Scale Reference；
+3. 确认 Table 的橙木/黑、Machine 的浅蓝/白/黑、Cup 的柔和绿与 Blender original colors 一致；
+4. 在 orthographic size `4` 查看细节、Material 与 forward；
+5. 在 size `7` 查看三件资产的默认 gameplay readability；
+6. 在 size `12` 确认 Table 与 Coffee Machine 仍可辨认；
+7. 切换 Coffee Machine LOD，观察是否出现明显跳动或 Texture/Material change；
+8. 检查 `1.30 m` Character Scale Reference、Work Table、Coffee Machine 与 Cup 的整体比例；
+9. 检查 Coffee Machine 在 Work Table 上仍有桌面余量；
+10. 检查 Windows `1920 × 1080` framing；
+11. 检查 mobile portrait reference framing；
+12. 运行 `60`-instance batch Scene，确认无 pink Material、missing reference、异常 Collider 或明显 Console error；
+13. 在 Project view 中确认 raw/Blender files 没有进入 Unity `Assets/`。
 
 ## 17. Expected Files for Implementation
 

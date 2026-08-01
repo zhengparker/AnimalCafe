@@ -18,6 +18,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
         private const string ModelPath = RootPath + "/Models";
         private const string MaterialPath = RootPath + "/Materials";
         private const string PrefabPath = RootPath + "/Prefabs";
+        private const string TexturePath = RootPath + "/Textures";
         // Owner-approved Raw LOD0 geometry is never rescaled in Blender. These
         // child-only scales map Raw X/Y/Z to the approved Unity X/Z/Y bounds.
         private static readonly Vector3 WorkTableVisualScale = new Vector3(
@@ -33,42 +34,63 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             EnsureFolder(ModelPath);
             EnsureFolder(MaterialPath);
             EnsureFolder(PrefabPath);
+            EnsureFolder(TexturePath);
             AssetDatabase.Refresh();
 
-            var warmWood = EnsureMaterial(
+            MigrateMaterialAsset(
                 "M_Benchmark_WarmWood_01",
-                new Color(0.42f, 0.20f, 0.08f),
-                0f,
-                0.18f);
-            var sageMetal = EnsureMaterial(
+                "M_Benchmark_WorkTableOriginal_01");
+            MigrateMaterialAsset(
                 "M_Benchmark_SageMetal_01",
-                new Color(0.14f, 0.25f, 0.18f),
-                0.55f,
-                0.42f);
-            var creamCeramic = EnsureMaterial(
+                "M_Benchmark_CoffeeMachineOriginal_01");
+            MigrateMaterialAsset(
                 "M_Benchmark_CreamCeramic_01",
-                new Color(0.87f, 0.80f, 0.65f),
-                0f,
-                0.30f);
-            EnsureMaterial(
+                "M_Benchmark_CeramicCupOriginal_01");
+            MigrateMaterialAsset(
                 "M_Benchmark_HoneyAccent_01",
-                new Color(0.92f, 0.55f, 0.08f),
+                "M_Benchmark_CharacterReferenceAccent_01");
+
+            var tableTexture = RequireTexture("T_Benchmark_WorkTable_BaseColor_01.png");
+            var coffeeTexture = RequireTexture("T_Benchmark_CoffeeMachine_BaseColor_01.png");
+            var cupTexture = RequireTexture("T_Benchmark_CeramicCup_BaseColor_01.png");
+            var tableOriginal = EnsureMaterial(
+                "M_Benchmark_WorkTableOriginal_01",
+                Color.white,
                 0f,
-                0.24f);
+                0.5f,
+                tableTexture);
+            var coffeeOriginal = EnsureMaterial(
+                "M_Benchmark_CoffeeMachineOriginal_01",
+                Color.white,
+                0f,
+                0.5f,
+                coffeeTexture);
+            var cupOriginal = EnsureMaterial(
+                "M_Benchmark_CeramicCupOriginal_01",
+                Color.white,
+                0f,
+                0.5f,
+                cupTexture);
+            EnsureMaterial(
+                "M_Benchmark_CharacterReferenceAccent_01",
+                new Color32(0x15, 0x7A, 0x78, 0xFF),
+                0f,
+                0.25f,
+                null);
 
             CreateSimplePrefab(
                 "PF_Benchmark_WorkTable_01",
                 "SM_Benchmark_WorkTable_01",
                 "SM_Benchmark_WorkTable_01",
-                new[] { warmWood },
+                new[] { tableOriginal },
                 new Vector3(0.90f, 0.65f, 0.90f),
                 WorkTableVisualScale);
-            CreateCoffeeMachinePrefab(sageMetal);
+            CreateCoffeeMachinePrefab(coffeeOriginal);
             CreateSimplePrefab(
                 "PF_Benchmark_CeramicCup_01",
                 "SM_Benchmark_CeramicCup_01",
                 "SM_Benchmark_CeramicCup_01",
-                new[] { creamCeramic },
+                new[] { cupOriginal },
                 new Vector3(0.14f, 0.16f, 0.14f),
                 CeramicCupVisualScale);
 
@@ -162,7 +184,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             }
         }
 
-        private static void CreateCoffeeMachinePrefab(Material sageMetal)
+        private static void CreateCoffeeMachinePrefab(Material originalMaterial)
         {
             const string prefabName = "PF_Benchmark_CoffeeMachine_01";
             var root = new GameObject(prefabName);
@@ -176,8 +198,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 lod1.transform.localScale = CoffeeMachineLodRendererScale;
                 lod0.enabled = true;
                 lod1.enabled = true;
-                lod0.sharedMaterials = new[] { sageMetal };
-                lod1.sharedMaterials = new[] { sageMetal };
+                lod0.sharedMaterials = new[] { originalMaterial };
+                lod1.sharedMaterials = new[] { originalMaterial };
                 if (visual.GetComponentsInChildren<LODGroup>(true).Length != 1)
                 {
                     throw new InvalidOperationException("Coffee Machine FBX must import exactly one LODGroup.");
@@ -277,7 +299,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             string name,
             Color baseColor,
             float metallic,
-            float smoothness)
+            float smoothness,
+            Texture2D baseMap)
         {
             var assetPath = $"{MaterialPath}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(assetPath);
@@ -296,11 +319,69 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             material.name = name;
             material.shader = Shader.Find("Universal Render Pipeline/Lit");
             material.SetColor("_BaseColor", baseColor);
+            material.SetTexture("_BaseMap", baseMap);
             material.SetFloat("_Surface", 0f);
             material.SetFloat("_Metallic", metallic);
             material.SetFloat("_Smoothness", smoothness);
             EditorUtility.SetDirty(material);
             return material;
+        }
+
+        private static Texture2D RequireTexture(string filename)
+        {
+            var assetPath = $"{TexturePath}/{filename}";
+            var importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+            if (importer == null)
+            {
+                throw new InvalidOperationException(
+                    $"Expected exported benchmark Texture at {assetPath}.");
+            }
+
+            var changed = !importer.sRGBTexture || importer.maxTextureSize != 512 ||
+                importer.wrapMode != TextureWrapMode.Repeat ||
+                importer.filterMode != FilterMode.Bilinear;
+            if (changed)
+            {
+                importer.sRGBTexture = true;
+                importer.maxTextureSize = 512;
+                importer.wrapMode = TextureWrapMode.Repeat;
+                importer.filterMode = FilterMode.Bilinear;
+                importer.SaveAndReimport();
+            }
+
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
+            if (texture == null || texture.width > 512 || texture.height > 512)
+            {
+                throw new InvalidOperationException(
+                    $"Benchmark Texture must import at no more than 512px: {assetPath}.");
+            }
+
+            return texture;
+        }
+
+        private static void MigrateMaterialAsset(string oldName, string newName)
+        {
+            var oldPath = $"{MaterialPath}/{oldName}.mat";
+            var newPath = $"{MaterialPath}/{newName}.mat";
+            var oldMaterial = AssetDatabase.LoadAssetAtPath<Material>(oldPath);
+            var newMaterial = AssetDatabase.LoadAssetAtPath<Material>(newPath);
+            if (oldMaterial == null)
+            {
+                return;
+            }
+
+            if (newMaterial != null)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot migrate {oldPath}; {newPath} already exists.");
+            }
+
+            var error = AssetDatabase.MoveAsset(oldPath, newPath);
+            if (!string.IsNullOrEmpty(error))
+            {
+                throw new InvalidOperationException(
+                    $"Could not migrate generated Material {oldPath}: {error}");
+            }
         }
 
         private static Mesh LoadMesh(string fbxStem, string meshName)

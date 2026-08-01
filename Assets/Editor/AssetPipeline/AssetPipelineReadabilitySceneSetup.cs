@@ -3,6 +3,7 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 namespace AnimalCafe.EditorTools.AssetPipeline
@@ -17,8 +18,9 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             "Assets/Scenes/Validation/AssetPipelineReadability.unity";
         private const string PrefabFolderPath =
             "Assets/Art/VisualPipeline/Benchmarks/Prefabs";
-        private const string NeutralMaterialPath =
-            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_CreamCeramic_01.mat";
+        private const string CharacterReferenceMaterialPath =
+            "Assets/Art/VisualPipeline/Benchmarks/Materials/" +
+            "M_Benchmark_CharacterReferenceAccent_01.mat";
 
         [MenuItem("AnimalCafe/Validation/Build Asset Readability Scene")]
         public static void BuildSceneFromMenu()
@@ -78,7 +80,14 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = 100f;
             camera.clearFlags = CameraClearFlags.SolidColor;
-            camera.backgroundColor = new Color(0.12f, 0.15f, 0.18f, 1f);
+            // Approved sRGB #F2E6B8. Unity Color values are 242/255,
+            // 230/255 and 184/255 (linear equivalents are approximately
+            // 0.887923, 0.791298 and 0.479320 in this Linear-color project).
+            camera.backgroundColor = new Color32(0xF2, 0xE6, 0xB8, 0xFF);
+            var cameraData = cameraObject.AddComponent<UniversalAdditionalCameraData>();
+            cameraData.antialiasing =
+                AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            cameraData.antialiasingQuality = AntialiasingQuality.High;
         }
 
         private static void CreateSingleAssetDisplay(Transform parent)
@@ -131,12 +140,13 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             Transform parent,
             Vector3 localPosition)
         {
-            var material = AssetDatabase.LoadAssetAtPath<Material>(NeutralMaterialPath);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(
+                CharacterReferenceMaterialPath);
             if (material == null || material.shader == null ||
                 material.shader.name != "Universal Render Pipeline/Lit")
             {
                 throw new InvalidOperationException(
-                    "The neutral character reference requires the shared URP Lit material.");
+                    "The character reference requires its dedicated URP Lit accent material.");
             }
 
             var reference = new GameObject("CharacterScaleReference_1_30m");

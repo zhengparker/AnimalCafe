@@ -102,14 +102,15 @@ Prefab root 必须保持 identity Transform。需要调整 benchmark 尺寸或�
 
 ### Material、Texture 与 Shader
 
-三个 benchmark 使用 shared、Opaque 的 URP `Lit` Material。实际 production assets 有 0 个 Texture references；如果未来使用 Texture，单张上限是 `512 × 512`。
+三个 benchmark 使用 Opaque 的 URP `Lit` Material。Studio Owner 要求保留 Blender original colors，因此每件家具都使用自己的 original-color Material，以及从 authoritative `.blend` packed image repeatably 导出的 `512 × 512` sRGB Base Color Texture。
 
-Material 不只靠颜色区分。当前 shared Materials 使用不同的 `_Metallic` 与 `_Smoothness`：
+生产 Material 都使用白色 tint、`Metallic = 0`、`Smoothness = 0.5`，让 Texture 原色直接显示：
 
-- Warm Wood：`0 / 0.18`
-- Sage Metal：`0.55 / 0.42`
-- Cream Ceramic：`0 / 0.30`
-- Honey Accent：`0 / 0.24`
+- Work Table：橙色木纹与黑色细节；
+- Coffee Machine：浅蓝、白色与黑色分区；
+- Ceramic Cup：柔和绿色。
+
+`CharacterScaleReference_1_30m` 不复用家具 Material。它使用专用青绿色 `#157A78` Material，方便在浅黄色背景上快速识别。Coffee Machine 的 LOD0 和 LOD1 使用同一份 Material 与 Texture，避免 LOD 切换时突然换色。
 
 ### Triangle 与 LOD
 
@@ -127,9 +128,9 @@ Triangle 是 Mesh 几何复杂度的基本计数。Owner-approved LOD0 上限统
 
 | Asset | Unity W/H/D | Triangles | Material slots | Texture references | Collider | LOD |
 |---|---|---:|---:|---:|---|---|
-| Work Table | `0.90 / 0.65 / 0.90 m` | LOD0 `4,790` | `1` | `0` | `1` enabled non-trigger `BoxCollider` | 不要求 |
-| Coffee Machine | `0.65 / 0.62 / 0.50 m` | LOD0 `4,607`; LOD1 `2,073` (`45.0%`) | LOD0 `1`; LOD1 `1` | `0` | `1` enabled non-trigger `BoxCollider` | one two-level `LODGroup` |
-| Ceramic Cup | `0.14 / 0.16 / 0.14 m` | LOD0 `4,768` | `1` | `0` | `1` enabled non-trigger `BoxCollider` | 不要求 |
+| Work Table | `0.90 / 0.65 / 0.90 m` | LOD0 `4,790` | `1` | `1` (`512 × 512`, sRGB) | `1` enabled non-trigger `BoxCollider` | 不要求 |
+| Coffee Machine | `0.65 / 0.62 / 0.50 m` | LOD0 `4,607`; LOD1 `2,073` (`45.0%`) | LOD0 `1`; LOD1 `1` | `1` (`512 × 512`, sRGB; LOD0/1 shared) | `1` enabled non-trigger `BoxCollider` | one two-level `LODGroup` |
+| Ceramic Cup | `0.14 / 0.16 / 0.14 m` | LOD0 `4,768` | `1` | `1` (`512 × 512`, sRGB) | `1` enabled non-trigger `BoxCollider` | 不要求 |
 
 每个 Renderer 的 Material slot 数与 imported Mesh 的 submesh 数一致。Coffee LOD1 是独立 derivative；三个 LOD0 仍是 Studio Owner 指定的 byte-identical original sources。
 
@@ -141,8 +142,9 @@ Automated tests 不只检查临时假物件，也检查真实 production Prefab 
 
 | Verification | Result |
 |---|---|
-| Full EditMode | `297 / 297` passed |
-| Full PlayMode | `48 / 48` passed |
+| Full EditMode | `302 / 302` passed |
+| Full PlayMode | `50 / 50` passed |
+| Focused AssetPipeline EditMode | `111 / 111` passed |
 | Failed / Skipped / Inconclusive | 全部 `0` |
 | Production Validator | `3 / 3` benchmark Prefabs valid；`0 issues` |
 
@@ -197,6 +199,7 @@ ArtSource/VisualPipeline/Benchmarks/Blender/SM_Benchmark_CoffeeMachine_01.blend
 ArtSource/VisualPipeline/Benchmarks/Blender/SM_Benchmark_CeramicCup_01.blend
 ArtSource/VisualPipeline/Benchmarks/Tools/CreateBenchmarkSources.py
 ArtSource/VisualPipeline/Benchmarks/Tools/AuditBenchmarkAssets.py
+ArtSource/VisualPipeline/Benchmarks/Tools/ExportBenchmarkTextures.py
 ```
 
 ### Unity Models、Materials 与 Prefabs
@@ -205,10 +208,13 @@ ArtSource/VisualPipeline/Benchmarks/Tools/AuditBenchmarkAssets.py
 Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_WorkTable_01.fbx
 Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_CoffeeMachine_01.fbx
 Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_CeramicCup_01.fbx
-Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_WarmWood_01.mat
-Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_SageMetal_01.mat
-Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_CreamCeramic_01.mat
-Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_HoneyAccent_01.mat
+Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_WorkTableOriginal_01.mat
+Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_CoffeeMachineOriginal_01.mat
+Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_CeramicCupOriginal_01.mat
+Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_CharacterReferenceAccent_01.mat
+Assets/Art/VisualPipeline/Benchmarks/Textures/T_Benchmark_WorkTable_BaseColor_01.png
+Assets/Art/VisualPipeline/Benchmarks/Textures/T_Benchmark_CoffeeMachine_BaseColor_01.png
+Assets/Art/VisualPipeline/Benchmarks/Textures/T_Benchmark_CeramicCup_BaseColor_01.png
 Assets/Art/VisualPipeline/Benchmarks/Prefabs/PF_Benchmark_WorkTable_01.prefab
 Assets/Art/VisualPipeline/Benchmarks/Prefabs/PF_Benchmark_CoffeeMachine_01.prefab
 Assets/Art/VisualPipeline/Benchmarks/Prefabs/PF_Benchmark_CeramicCup_01.prefab
@@ -280,14 +286,17 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 ### 9.3 在 Play Mode 检查 Camera、比例与 LOD
 
 1. 点击 Unity 顶部 Play button。确认按钮变蓝后再改临时测试值。
-2. 选中 `Main Camera`，在 Inspector 找到 Camera component 的 `Orthographic Size`。
-3. 依次输入 `4`、`7`、`12`：
+2. 先观察 Game view background。它应是浅黄色 `#F2E6B8`；这个颜色本身是设计结果，不算 failure。只有它让物体被裁切、颜色 washed out 或难以分辨时才记录 failure。
+3. 选中 `Main Camera`，确认 Camera 使用 `Solid Color`，并在附加的 Universal camera data 中确认 antialiasing 是 `SMAA`、Quality 是 `High`。这是本 Scene 的设置，不应要求修改 global URP/Quality settings。
+4. 确认 `CharacterScaleReference_1_30m` 使用明显的青绿色，能快速从浅黄色背景和三件家具中分辨出来。
+5. 检查 original colors：Work Table 应是橙色木纹/黑色细节，Coffee Machine 应有浅蓝/白/黑分区，Ceramic Cup 应是柔和绿色。若仍是旧的统一纯色 palette，应记录 failure。
+6. 在 Inspector 找到 Camera component 的 `Orthographic Size`，依次输入 `4`、`7`、`12`：
    - size `4`：能看清主要功能细节、Material 差异与物体正面；
    - size `7`：能立即区分 Work Table、Coffee Machine 与 Ceramic Cup；
    - size `12`：Work Table 与 Coffee Machine 仍可辨认，Cup silhouette 保持稳定。
-4. 比较 `CharacterScaleReference_1_30m`：PASS 条件是它确实提供 `1.30 m` 角色比例参考，桌子、咖啡机和杯子的相对大小容易理解，没有明显“杯子像家具”或“机器像玩具”的比例错误。
-5. 观察 Coffee Machine 与 Work Table：PASS 条件是 Coffee Machine 完整位于桌面范围内，四周仍能看到明显桌面余量。
-6. 选中 Coffee Machine，确认有一个 two-level `LODGroup`。通过 Camera zoom 或 LOD preview 观察 LOD0/LOD1 切换：PASS 条件是没有明显 size、position、pivot、silhouette 或 Material jump。
+7. 比较 `CharacterScaleReference_1_30m`：PASS 条件是它确实提供 `1.30 m` 角色比例参考，桌子、咖啡机和杯子的相对大小容易理解，没有明显“杯子像家具”或“机器像玩具”的比例错误。
+8. 观察 Coffee Machine 与 Work Table：PASS 条件是 Coffee Machine 完整位于桌面范围内，四周仍能看到明显桌面余量。
+9. 选中 Coffee Machine，确认有一个 two-level `LODGroup`。通过 Camera zoom 或 LOD preview 观察 LOD0/LOD1 切换：PASS 条件是没有明显 size、position、pivot、silhouette、Material 或 Texture jump。
 
 ### 9.4 检查 Game view resolution 与 batch display
 
@@ -317,18 +326,22 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 | 1 | Project | 用 Unity `6000.5.5f1` 打开精确 phase-3 worktree | 没有升级或打开错误 checkout | |
 | 2 | Validator | 运行 menu validator | `3 / 3` valid、`0 issues`、无红色 error | |
 | 3 | Scene/Hierarchy | 打开 exact readability Scene 并展开 roots | hierarchy 与上方结构完全一致 | |
-| 4 | Camera size 4 | Play Mode 设置 size `4` | 细节、Material、正面可读 | |
-| 5 | Camera size 7 | 设置 size `7` | 三个 assets 可立即区分 | |
-| 6 | Camera size 12 | 设置 size `12` | Table/Machine 可辨认；Cup silhouette 稳定 | |
-| 7 | Character scale | 比较 `1.30 m` reference | 三件 assets 的相对比例合理 | |
-| 8 | Machine on Table | 观察 Coffee 与桌面 | Machine 完整放下且仍有桌面余量 | |
-| 9 | Coffee LOD | 检查 two-level LODGroup 与切换 | 无 size/position/pivot/Material jump | |
-| 10 | Landscape | Game view `1920 × 1080` | 物件可读且未被遮住 | |
-| 11 | Portrait | Game view `1170 × 2532` | 物件仍可观察且未互相遮住 | |
-| 12 | Batch 60 | 检查三组各 20 | 正好 60、无 overlap/pink/missing/异常 Collider | |
-| 13 | Console | 检查完整 manual run | 无 unexpected error 或 missing reference | |
-| 14 | Play Mode cleanup | 退出且不保存实验性改动 | 没有把临时 Transform 写入 Scene | |
-| 15 | License | 记录 license/use-right statement | 明确填写“是”，否则保持 Pending | |
+| 4 | Background | 检查 SolidColor `#F2E6B8` | 浅黄色存在；无 clipping、washout 或 readability loss | |
+| 5 | SMAA | 检查 Main Camera additional data | scene-only `SMAA High`，未要求改 global settings | |
+| 6 | Reference contrast | 观察青绿色 `1.30 m` reference | 与背景和家具明显区分 | |
+| 7 | Original colors | 对照三件家具 | Table 橙木/黑、Machine 浅蓝/白/黑、Cup 柔和绿 | |
+| 8 | Camera size 4 | Play Mode 设置 size `4` | 细节、Material、正面可读 | |
+| 9 | Camera size 7 | 设置 size `7` | 三个 assets 可立即区分 | |
+| 10 | Camera size 12 | 设置 size `12` | Table/Machine 可辨认；Cup silhouette 稳定 | |
+| 11 | Character scale | 比较 `1.30 m` reference | 三件 assets 的相对比例合理 | |
+| 12 | Machine on Table | 观察 Coffee 与桌面 | Machine 完整放下且仍有桌面余量 | |
+| 13 | Coffee LOD | 检查 two-level LODGroup 与切换 | 无 size/position/pivot/Material/Texture jump | |
+| 14 | Landscape | Game view `1920 × 1080` | 物件可读且未被遮住 | |
+| 15 | Portrait | Game view `1170 × 2532` | 物件仍可观察且未互相遮住 | |
+| 16 | Batch 60 | 检查三组各 20 | 正好 60、无 overlap/pink/missing/异常 Collider | |
+| 17 | Console | 检查完整 manual run | 无 unexpected error 或 missing reference | |
+| 18 | Play Mode cleanup | 退出且不保存实验性改动 | 没有把临时 Transform 写入 Scene | |
+| 19 | License | 记录 license/use-right statement | 明确填写“是”，否则保持 Pending | |
 
 ## 10. Phase 3 没有做什么
 
@@ -373,8 +386,9 @@ Phase 3 没有开始或交付：
 
 当前 verified automated evidence：
 
-- EditMode `297 / 297` passed；
-- PlayMode `48 / 48` passed；
+- EditMode `302 / 302` passed；
+- PlayMode `50 / 50` passed；
+- focused AssetPipeline EditMode `111 / 111` passed；
 - failed、skipped、inconclusive 全部为 `0`；
 - production validator `3 / 3` valid、`0 issues`；
 - authored Guide 的 placeholder/static scan 与 `git diff --check` 是文档 closeout gate；Unity-generated YAML 不在本次 Guide rewrite scope 内机械格式化。
@@ -395,12 +409,16 @@ Unity version: 6000.5.5f1
 Project folder: E:\Unity\Project\AnimalCafe\.worktrees\phase-3
 Validator 3/3 valid, 0 issues:
 Hierarchy exact:
+Background #F2E6B8 has no clipping/washout/readability issue:
+Main Camera scene-only SMAA High:
+Teal Character Scale Reference has clear contrast:
+Original colors match Blender sources:
 Camera size 4:
 Camera size 7:
 Camera size 12:
 Character 1.30 m proportions:
 Coffee Machine fits on Work Table with remaining space:
-Coffee LOD two-level switch has no visible jump:
+Coffee LOD two-level switch has no visible Material/Texture jump:
 Game view 1920 × 1080:
 Game view 1170 × 2532:
 Batch exactly 60, no overlap/pink/missing/abnormal Collider:

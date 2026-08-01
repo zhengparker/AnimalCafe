@@ -5,7 +5,8 @@
     "AnimalCafe.Runtime",
     "UnityEngine.UI",
     "Unity.InputSystem",
-    "Unity.InputSystem.TestFramework"
+    "Unity.InputSystem.TestFramework",
+    "Unity.RenderPipelines.Universal.Runtime"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

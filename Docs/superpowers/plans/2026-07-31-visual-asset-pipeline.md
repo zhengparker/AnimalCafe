@@ -24,16 +24,17 @@
 - Tripo Raw export 不能直接成为 production Prefab。一般 pipeline 的 editable source 必须由单独批准的 source contract 定义；本 Phase 3 的三个 benchmark 必须服从下面的 Studio Owner original-LOD0 contract。
 - Studio Owner original-LOD0 contract (2026-08-01)：the three user-re-supplied original Blender inputs are the authoritative byte-identical LOD0 sources. Copy Raw bytes to `Blender/`, verify matching SHA-256 before export, and preserve that byte equality after export. Original topology and normals are accepted benchmark facts. Coffee LOD1 alone may be an independently edited simplified derivative. Required axis/dimension adaptation belongs only on the Prefab Visual child/import metadata; root stays identity. A protected LOD0 shape/topology/pivot/forward issue stops for Studio Owner direction; Blender editing is limited to Coffee LOD1 or a future separately approved editable source.
 - Owner-approved validator/test boundary：Work Table、Coffee Machine LOD0 和 Ceramic Cup 均为 `6,000` triangles pass、`6,001` triangles fail；Coffee LOD1 仍须 `<= 2,500` 且 `<= 60%` of LOD0。这个 budget change 不改变 original LOD0 的 byte-identical contract。
+- Studio Owner original-color override (2026-08-01)：read-only audit confirmed each authoritative Blender Material drives Principled Base Color from one packed sRGB image. Repeatably extract and downscale those images to project-relative `512 × 512` production Textures; use one original-color Material per furniture asset. Coffee LOD0/LOD1 share the same Material and Texture. This overrides the earlier pure-color P1 treatment for these three benchmarks only.
 - Shader 只使用 Opaque URP `Lit`；Texture 最大 `512 × 512`；禁止 custom Shader、透明 benchmark Material 与 `MeshCollider`。
 - Triangle budget：Table ≤ `6,000`；Machine LOD0 ≤ `6,000`、LOD1 ≤ `2,500` 且 ≤ LOD0 的 `60%`；Cup ≤ `6,000`。
 - Material slots：Table ≤ `2`；Machine ≤ `3`；Cup ≤ `1`。
 - Collider count：Table ≤ `3`；Machine ≤ `2`；Cup ≤ `1`；只允许 primitive Collider，且 `isTrigger = false`。
-- Camera validation：orthographic size `4`、`7`、`12`；Windows `1920 × 1080`；mobile portrait reference `1170 × 2532`。
+- Camera validation：SolidColor background `#F2E6B8`；scene-only `UniversalAdditionalCameraData` with `SMAA High`；orthographic size `4`、`7`、`12`；Windows `1920 × 1080`；mobile portrait reference `1170 × 2532`。不得修改 global URP/Quality settings。
 - Batch baseline：同时显示 Table、Machine、Cup 各 `20` 个，共 `60` 个实例。
 - 不制作大量正式 Models，不加入 gameplay、Decoration Mode、Interaction Anchors、Save、UI 或 pathfinding。
 - 不修改 `MainCafe.unity`。
 - Whitespace gate 必须区分 authored source/text 与 Unity-generated YAML：前者使用 scoped `git diff --check` 并必须 clean；后者单独运行、记录和人工检查，不为了消除 Unity serializer 产生的 warning 而机械格式化。
-- Codex 不 commit、push、merge 或删除 branch/worktree；每个任务只留下清楚的 checkpoint，用户自行使用 GitHub Desktop。
+- Codex 默认不 commit、push、merge 或删除 branch/worktree；只有 Studio Owner 对当前 rollout 明确授权时，才执行授权范围内的 local commit。Push/merge 仍需单独授权。
 
 ---
 
@@ -51,13 +52,22 @@ ArtSource/VisualPipeline/Benchmarks/
 │  ├─ SM_Benchmark_WorkTable_01.blend
 │  ├─ SM_Benchmark_CoffeeMachine_01.blend
 │  └─ SM_Benchmark_CeramicCup_01.blend
+├─ Tools/
+│  └─ ExportBenchmarkTextures.py
 └─ AssetProvenance.md
 
 Assets/Art/VisualPipeline/Benchmarks/
 ├─ Models/
 ├─ Materials/
+│  ├─ M_Benchmark_WorkTableOriginal_01.mat
+│  ├─ M_Benchmark_CoffeeMachineOriginal_01.mat
+│  ├─ M_Benchmark_CeramicCupOriginal_01.mat
+│  └─ M_Benchmark_CharacterReferenceAccent_01.mat
 ├─ Prefabs/
 └─ Textures/
+   ├─ T_Benchmark_WorkTable_BaseColor_01.png
+   ├─ T_Benchmark_CoffeeMachine_BaseColor_01.png
+   └─ T_Benchmark_CeramicCup_BaseColor_01.png
 ```
 
 ### Validator and tests
@@ -552,7 +562,8 @@ Do not commit.
 - Create: `ArtSource/VisualPipeline/Benchmarks/AssetProvenance.md`
 - Create: `Assets/Art/VisualPipeline/Benchmarks/Models/*.fbx`
 - Create: `Assets/Art/VisualPipeline/Benchmarks/Materials/*.mat`
-- Create only if needed: `Assets/Art/VisualPipeline/Benchmarks/Textures/*`
+- Create repeatably from packed source images: `Assets/Art/VisualPipeline/Benchmarks/Textures/*`
+- Create: `ArtSource/VisualPipeline/Benchmarks/Tools/ExportBenchmarkTextures.py`
 - Create: `Assets/Art/VisualPipeline/Benchmarks/Prefabs/*.prefab`
 
 **Interfaces:**
@@ -626,18 +637,20 @@ For each FBX:
 - Read/Write remains disabled unless a named later feature proves it is required;
 - inspect imported bounds and triangle counts in Unity.
 
-- [ ] **Step 7: Create shared URP Lit Materials**
+- [ ] **Step 7: Extract original Base Color Textures and create URP Lit Materials**
 
 Create only:
 
 ```text
-M_Benchmark_WarmWood_01.mat
-M_Benchmark_SageMetal_01.mat
-M_Benchmark_CreamCeramic_01.mat
-M_Benchmark_HoneyAccent_01.mat
+M_Benchmark_WorkTableOriginal_01.mat
+M_Benchmark_CoffeeMachineOriginal_01.mat
+M_Benchmark_CeramicCupOriginal_01.mat
+M_Benchmark_CharacterReferenceAccent_01.mat
 ```
 
-Use Opaque URP Lit and matte-first Smoothness. Reuse these assets across Prefabs; do not create per-Prefab copies.
+First run a read-only Blender audit. It must prove each authoritative source has one Material slot and one packed sRGB Base Color image linked to Principled BSDF. Use `ExportBenchmarkTextures.py` to extract each image without saving the `.blend`, downscale to `512 × 512`, and verify source hashes are unchanged before/after.
+
+Furniture Materials use Opaque URP Lit、white Base Color tint、`Metallic = 0`、`Smoothness = 0.5` and their exact project-relative Texture. Character Scale Reference uses the dedicated teal `#157A78` accent Material with no Texture. Do not create per-Prefab copies.
 
 - [ ] **Step 8: Assemble Prefabs**
 
@@ -648,6 +661,7 @@ Each Prefab:
 - `ForwardMarker` exists at positive local Z and matches the visible front;
 - primitive Colliders approximately enclose the object;
 - Coffee Machine has valid `LODGroup` with LOD0 and LOD1;
+- Coffee Machine LOD0 and LOD1 reference the same Coffee original-color Material and Texture;
 - no gameplay scripts or Interaction Anchors are added.
 
 - [ ] **Step 9: Run validator and treat every failure as RED evidence**
@@ -732,9 +746,9 @@ AssetReadabilityRoot
    └─ Cups_20
 ```
 
-Camera uses the accepted fixed rotation from the project foundation, is orthographic, and starts at size `7`. Arrange batch instances with literal spacing large enough to prevent overlap; no runtime placement system is introduced.
+Camera uses the accepted fixed rotation from the project foundation, is orthographic, starts at size `7`, clears to SolidColor `#F2E6B8`, and has scene-specific `UniversalAdditionalCameraData` with `SMAA High`. Do not modify global URP or Quality settings. Arrange batch instances with literal spacing large enough to prevent overlap; no runtime placement system is introduced.
 
-`CharacterScaleReference_1_30m` is a simple Editor-generated silhouette/reference object with visible bounds exactly `1.30 m` high, bottom at `Y = 0`, and no Collider、Rig、Animation or gameplay script. It must use a neutral shared URP Lit Material and must not be counted among the `60` benchmark batch instances.
+`CharacterScaleReference_1_30m` is a simple Editor-generated silhouette/reference object with visible bounds exactly `1.30 m` high, bottom at `Y = 0`, and no Collider、Rig、Animation or gameplay script. It uses the dedicated teal `#157A78` URP Lit Material, must contrast clearly against the pale-yellow background, and is not counted among the `60` benchmark batch instances.
 
 - [ ] **Step 4: Run setup GREEN**
 
@@ -768,15 +782,18 @@ Run fresh full EditMode and PlayMode suites. Record exact counts; failed/skipped
 
 The user checks:
 
-1. orthographic size `4`: main details, Material differences and visible front;
-2. size `7`: immediate distinction among Table, Machine and Cup;
-3. size `12`: Table and Machine remain recognizable; Cup retains stable silhouette;
-4. `1.30 m` Character Scale Reference makes Work Table、Machine and Cup proportions readable together;
-5. Coffee Machine visibly fits on Work Table with remaining surface space;
-6. Coffee Machine LOD switch has no obvious size/position/Material jump;
-7. Game view `1920 × 1080` is readable;
-8. portrait `1170 × 2532` reference framing does not hide the objects;
-9. batch display has no pink Material, missing Mesh, abnormal Collider or Console error.
+1. pale-yellow `#F2E6B8` background is present; the color itself is expected, and only clipping、washout or lost readability is a failure;
+2. scene-only antialiasing is `SMAA High`, and the dedicated teal Character Scale Reference clearly contrasts with the background;
+3. Work Table reads as orange wood/black, Coffee Machine as pale blue/white/black, and Ceramic Cup as muted green, matching Blender originals;
+4. orthographic size `4`: main details, Material differences and visible front;
+5. size `7`: immediate distinction among Table, Machine and Cup;
+6. size `12`: Table and Machine remain recognizable; Cup retains stable silhouette;
+7. `1.30 m` Character Scale Reference makes Work Table、Machine and Cup proportions readable together;
+8. Coffee Machine visibly fits on Work Table with remaining surface space;
+9. Coffee Machine LOD switch has no obvious size/position/Material/Texture jump;
+10. Game view `1920 × 1080` is readable;
+11. portrait `1170 × 2532` reference framing does not hide the objects;
+12. batch display has no pink Material, missing Mesh, abnormal Collider or Console error.
 
 Manual aesthetic/readability acceptance cannot be replaced by automated bounds tests.
 
@@ -828,7 +845,9 @@ The guide records actual, not target-only, metrics for each asset:
 actual bounds
 LOD0/LOD1 triangles
 Material slots
-Texture maximum
+Texture paths, sRGB import and `512 × 512` maximum
+original-color visual expectations
+readability background、reference contrast and scene-only SMAA
 Collider types/count
 validator result
 Camera manual result

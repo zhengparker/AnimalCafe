@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -101,6 +102,31 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
             Assert.That(cameras, Has.Length.EqualTo(1));
             Assert.That(cameras[0].orthographic, Is.True);
             Assert.That(cameras[0].orthographicSize, Is.EqualTo(7f));
+        }
+
+        [UnityTest]
+        public IEnumerator ReadabilityScene_CameraUsesPaleYellowSolidColorBackground()
+        {
+            yield return LoadScene();
+
+            var camera = Object.FindAnyObjectByType<UnityEngine.Camera>();
+            Assert.That(camera.clearFlags, Is.EqualTo(CameraClearFlags.SolidColor));
+            Assert.That(camera.backgroundColor,
+                Is.EqualTo((Color)new Color32(0xF2, 0xE6, 0xB8, 0xFF)));
+        }
+
+        [UnityTest]
+        public IEnumerator ReadabilityScene_CameraUsesSceneSpecificSmaaHigh()
+        {
+            yield return LoadScene();
+
+            var camera = Object.FindAnyObjectByType<UnityEngine.Camera>();
+            var cameraData = camera.GetComponent<UniversalAdditionalCameraData>();
+            Assert.That(cameraData, Is.Not.Null);
+            Assert.That(cameraData.antialiasing,
+                Is.EqualTo(AntialiasingMode.SubpixelMorphologicalAntiAliasing));
+            Assert.That(cameraData.antialiasingQuality,
+                Is.EqualTo(AntialiasingQuality.High));
         }
 
         [UnityTest]
