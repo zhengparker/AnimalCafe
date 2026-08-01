@@ -16,7 +16,7 @@
 
 - **Tripo / Raw source**：本次用户重新提供的原始 `.blend` 是三件 benchmark 的 authoritative LOD0 source。
 - **Blender**：保留与 Raw byte-identical 的 `Blender/SM_Benchmark_*.blend`，导出 LOD0；只允许 Coffee Machine 的 LOD1 使用独立简化副本。
-- **FBX**：把 Model 带进 Unity 的交换格式。
+- **FBX**：把 Model 带进 Unity 的交换格式。本次从未保存的 in-memory Blender Scene 导出，并清除 source Texture/media 数据，所以 production FBX 不包含某台电脑的 absolute path。
 - **Unity**：读取 FBX、引用共享 Material，并配置 Prefab、Collider、ForwardMarker 与 Coffee 的 LODGroup。
 - **Prefab**：可重复放进 Scene 的已配置物件模板。
 
@@ -48,7 +48,9 @@ Validator 依赖固定命名和路径来找到三个 Prefab：`PF_Benchmark_Work
 
 ## 6. Material、Texture 和 Shader
 
-这三个 Prefab 使用共享、Opaque 的 URP `Lit` Material，不使用 custom Shader 或透明 Material。实际结果：Work Table 有 1 个 unique Material/slot，Coffee Machine 的 LOD0 有 2 个 unique slots、LOD1 有 1 个，Ceramic Cup 有 1 个；三个 benchmark 都有 0 个 Texture references。
+这三个 Prefab 使用共享、Opaque 的 URP `Lit` Material，不使用 custom Shader 或透明 Material。实际结果：Work Table、Coffee Machine LOD0、Coffee Machine LOD1 和 Ceramic Cup 都各有 1 个 Material slot，并且每个 Renderer 的 slot 数都与 imported Mesh 的 submesh 数一致；三个 benchmark 都有 0 个 Texture references。
+
+Material 不只靠颜色区分。Warm Wood 使用 `_Metallic = 0`、`_Smoothness = 0.18`；Sage Metal 使用 `0.55 / 0.42`；Cream Ceramic 使用 `0 / 0.30`；Honey Accent 使用 `0 / 0.24`。这些小而明确的 surface 参数差异让 wood、metal、ceramic 不会只剩同一种哑光表面。
 
 规则仍允许单张 Texture 最大 `512 × 512`，但“允许”不等于“本次一定使用”。如果将来加 Texture，必须检查它没有超过这个上限，也没有出现 missing reference 或粉红色 Material。
 
@@ -68,7 +70,7 @@ Triangle 越多，GPU 需要处理的几何越多。Phase 3 的 Owner-approved L
 
 **RED** 不是坏事：故意让规则失败，证明 test 确实能发现问题。例如把 triangle 从 `6,000` 改成 `6,001`，应收到 `TriangleBudgetExceeded`。
 
-**GREEN** 表示真实 Prefab 通过同一套规则。本次 production batch validator 的结果是 `3 / 3` 个 benchmark Prefab valid、`0 issues`。Validator 会检查路径、root Transform、可见 bounds、ForwardMarker、Material/Texture、Collider、Coffee LOD 和 missing references；它不会替你自动修复资产。
+**GREEN** 表示真实 Prefab 通过同一套规则。本次 production batch validator 的结果是 `3 / 3` 个 benchmark Prefab valid、`0 issues`。Validator 会检查路径、root Transform、可见 bounds、ForwardMarker、Material/Texture、material-slot/submesh 对齐、Collider、Coffee LOD 和 missing references；即使删除 Texture 后 Unity API 只返回 `null`，仍会检查保存下来的 broken serialized reference。Validator 不会替你自动修复资产。
 
 ## 10. Camera Readability Manual Test
 
@@ -106,8 +108,12 @@ Phase 3 只验证 visual asset pipeline。它没有开始 Phase 4，没有正式
 | Validator | 只读检查器；报告问题，不自动改资产。 |
 | RED / GREEN | 先看到会失败的正确 test，再看到修复后的通过结果。 |
 
-## 13. 完成证据和下一步
+## 13. Whitespace 检查为什么要分两类
 
-已记录的实际资产事实包括尺寸、triangle counts、Material slots、0 Texture references、每个 Prefab 1 个 `BoxCollider` 和 Coffee 的 two-level `LODGroup`。当前已验证的自动化结果是：EditMode `285 / 285`、PlayMode `48 / 48` 全部 passed，failed/skipped/inconclusive 均为 `0`；production validator 为 `3 / 3` benchmark Prefabs valid、`0 issues`。
+手写的 `.cs`、`.py`、`.md`、`.json`、`.asmdef` 使用 `git diff --check a934d0f -- '*.cs' '*.py' '*.md' '*.json' '*.asmdef'` 作为必须通过的 gate。Unity 自己序列化的 `.meta`、`.mat`、`.prefab`、`.unity` 使用 `git diff --check a934d0f -- '*.meta' '*.mat' '*.prefab' '*.unity'` 单独运行并记录结果；这类 YAML 可能带有 Unity 生成的 whitespace，不能为了让整仓库命令“看起来全绿”而机械 trim 或改写。简单说：手写内容发现新 whitespace 就修；Unity-generated YAML 先记录和人工确认，不做无意义格式化。
+
+## 14. 完成证据和下一步
+
+已记录的实际资产事实包括尺寸、triangle counts、Material slots、0 Texture references、每个 Prefab 1 个 `BoxCollider` 和 Coffee 的 two-level `LODGroup`。当前已验证的自动化结果是：EditMode `297 / 297`、PlayMode `48 / 48` 全部 passed，failed/skipped/inconclusive 均为 `0`；production validator 为 `3 / 3` benchmark Prefabs valid、`0 issues`。
 
 下一步不是启动 Phase 4，而是 Studio Owner 完成第 10 节的 Camera review，并明确确认三份用户提供 source 的 license/use-right。完成两项 pending gate 前，Roadmap 保持 `In Review`。

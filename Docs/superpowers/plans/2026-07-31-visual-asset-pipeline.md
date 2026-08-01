@@ -32,6 +32,7 @@
 - Batch baseline：同时显示 Table、Machine、Cup 各 `20` 个，共 `60` 个实例。
 - 不制作大量正式 Models，不加入 gameplay、Decoration Mode、Interaction Anchors、Save、UI 或 pathfinding。
 - 不修改 `MainCafe.unity`。
+- Whitespace gate 必须区分 authored source/text 与 Unity-generated YAML：前者使用 scoped `git diff --check` 并必须 clean；后者单独运行、记录和人工检查，不为了消除 Unity serializer 产生的 warning 而机械格式化。
 - Codex 不 commit、push、merge 或删除 branch/worktree；每个任务只留下清楚的 checkpoint，用户自行使用 GitHub Desktop。
 
 ---
@@ -256,7 +257,7 @@ Expected: `ValidationReport_WithNoIssuesIsValidAndDoesNotExposeMutableState` pas
 
 - [ ] **Step 8: Task 1 checkpoint**
 
-Run focused tests, `git diff --check`, and `git status --short`. Confirm no runtime assembly or `MainCafe.unity` change. Do not commit.
+Run focused tests, the scoped authored-source whitespace check from Task 7 Step 4, and `git status --short`. Confirm no runtime assembly or `MainCafe.unity` change. Do not commit.
 
 ---
 
@@ -370,7 +371,7 @@ All Task 2 tests pass. Refactor only duplicate issue-addition code; rerun focuse
 
 - [ ] **Step 8: Task 2 checkpoint**
 
-Run focused EditMode tests, `git diff --check`, and confirm all intentionally broken fixtures report every expected issue without throwing.
+Run focused EditMode tests, the scoped authored-source whitespace check from Task 7 Step 4, and confirm all intentionally broken fixtures report every expected issue without throwing.
 
 ---
 
@@ -462,7 +463,7 @@ Mentally mutate each maximum, Shader name, `_Surface`, and LOD ratio branch. Con
 
 - [ ] **Step 8: Task 3 checkpoint**
 
-Run all `AssetPipeline` EditMode tests and `git diff --check`. Do not commit.
+Run all `AssetPipeline` EditMode tests and the scoped authored-source whitespace check from Task 7 Step 4. Do not commit.
 
 ---
 
@@ -672,7 +673,7 @@ Run all AssetPipeline EditMode tests and the real batch validator. Expected: zer
 
 - [ ] **Step 11: Task 5 checkpoint**
 
-Record actual dimensions, triangles, Materials, Texture sizes, Collider counts and LOD counts for each asset. Run `git diff --check` and inspect `git status --short`. Do not commit.
+Record actual dimensions, triangles, Materials, Texture sizes, Collider counts and LOD counts for each asset. Run the scoped authored-source whitespace check from Task 7 Step 4, record the separate Unity-YAML result, and inspect `git status --short`. Do not commit.
 
 ---
 
@@ -854,7 +855,8 @@ Do not mark `Completed` before Studio Owner acceptance.
 Run:
 
 ```powershell
-git diff --check
+git diff --check a934d0f -- '*.cs' '*.py' '*.md' '*.json' '*.asmdef'
+git diff --check a934d0f -- '*.meta' '*.mat' '*.prefab' '*.unity'
 $placeholderPattern = @('T'+'BD','T'+'ODO','implement'+' later','稍后'+'实现','待补'+'充') -join '|'
 rg -n -i $placeholderPattern `
   Docs/VisualAssetPipeline_Beginner_Guide.md `
@@ -866,7 +868,11 @@ rg -n "MeshCollider|Standard Shader|Shader Graph" `
 git status --short --branch
 ```
 
-Interpret intentional mentions in validator issue enums/tests; do not treat the presence of a negative test string as a production violation.
+The first command is the blocking authored-file gate and must be clean. Record
+the second command separately as Unity-generated YAML evidence; inspect it, but
+do not mechanically normalize serializer-owned files only to silence whitespace
+warnings. Interpret intentional mentions in validator issue enums/tests; do not
+treat the presence of a negative test string as a production violation.
 
 - [ ] **Step 5: Final fresh regression**
 

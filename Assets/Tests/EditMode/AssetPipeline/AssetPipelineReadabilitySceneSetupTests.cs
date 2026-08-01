@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using AnimalCafe.EditorTools.AssetPipeline;
 using NUnit.Framework;
 using UnityEditor;
@@ -172,6 +173,68 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void Menu_CancelWithDirtySceneLeavesSetupContentAndFileUnchanged()
+        {
+            const string folder = "Assets/Tests/ReadabilityDirtyScene";
+            const string dirtyScenePath = folder + "/DirtyScene.unity";
+            var originalSetup = EditorSceneManager.GetSceneManagerSetup();
+            var dirtyScene = default(Scene);
+            EnsureFolder(folder);
+            try
+            {
+                dirtyScene = EditorSceneManager.NewScene(
+                    NewSceneSetup.EmptyScene,
+                    NewSceneMode.Single);
+                dirtyScene.name = "DirtyScene";
+                new GameObject("SavedRoot");
+                Assert.That(EditorSceneManager.SaveScene(dirtyScene, dirtyScenePath), Is.True);
+                var fileHashBefore = ComputeSha256(dirtyScenePath);
+
+                new GameObject("UnsavedRoot");
+                EditorSceneManager.MarkSceneDirty(dirtyScene);
+                Assert.That(dirtyScene.isDirty, Is.True);
+                var setupBefore = CaptureSceneSetup();
+                var contentBefore = CaptureSceneContent(dirtyScene);
+                var activeSceneBefore = SceneManager.GetActiveScene().path;
+
+                var built = AssetPipelineReadabilitySceneSetup.TryBuildSceneFromMenu(
+                    () => false);
+
+                Assert.That(built, Is.False);
+                Assert.That(CaptureSceneSetup(), Is.EqualTo(setupBefore));
+                Assert.That(SceneManager.GetActiveScene().path, Is.EqualTo(activeSceneBefore));
+                Assert.That(dirtyScene.isLoaded, Is.True);
+                Assert.That(dirtyScene.isDirty, Is.True);
+                Assert.That(CaptureSceneContent(dirtyScene), Is.EqualTo(contentBefore));
+                Assert.That(ComputeSha256(dirtyScenePath), Is.EqualTo(fileHashBefore));
+            }
+            finally
+            {
+                try
+                {
+                    if (dirtyScene.IsValid() && dirtyScene.isLoaded && dirtyScene.isDirty)
+                    {
+                        EditorSceneManager.SaveScene(dirtyScene);
+                    }
+
+                    if (originalSetup.Length > 0 && originalSetup.Count(setup => setup.isActive) == 1)
+                    {
+                        EditorSceneManager.RestoreSceneManagerSetup(originalSetup);
+                    }
+                    else
+                    {
+                        // Batchmode can begin with an unsaved scene that is absent from SceneSetup.
+                        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                    }
+                }
+                finally
+                {
+                    AssetDatabase.DeleteAsset(folder);
+                }
+            }
+        }
+
+        [Test]
         public void Setup_RepeatedRunDoesNotDuplicateObjects()
         {
             AssetPipelineReadabilitySceneSetup.BuildScene();
@@ -236,6 +299,50 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
 
             return bounds;
+        }
+
+        private static string[] CaptureSceneSetup()
+        {
+            return EditorSceneManager.GetSceneManagerSetup()
+                .Select(setup => $"{setup.path}|{setup.isLoaded}|{setup.isActive}")
+                .ToArray();
+        }
+
+        private static string[] CaptureSceneContent(Scene scene)
+        {
+            return scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                .Select(transform =>
+                    $"{GetHierarchyPath(transform)}|{transform.localPosition}|" +
+                    $"{transform.localRotation}|{transform.localScale}")
+                .OrderBy(value => value, StringComparer.Ordinal)
+                .ToArray();
+        }
+
+        private static string GetHierarchyPath(Transform transform)
+        {
+            var path = transform.name;
+            while (transform.parent != null)
+            {
+                transform = transform.parent;
+                path = transform.name + "/" + path;
+            }
+
+            return path;
+        }
+
+        private static string ComputeSha256(string assetPath)
+        {
+            var projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            var absolutePath = Path.Combine(
+                projectRoot,
+                assetPath.Replace('/', Path.DirectorySeparatorChar));
+            using (var stream = File.OpenRead(absolutePath))
+            using (var sha256 = SHA256.Create())
+            {
+                return BitConverter.ToString(sha256.ComputeHash(stream))
+                    .Replace("-", string.Empty);
+            }
         }
 
         private static void AssertDirectChildren(Transform parent, params string[] expected)

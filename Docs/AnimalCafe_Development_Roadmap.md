@@ -404,11 +404,13 @@ available, but Studio Owner manual Camera/readability acceptance and explicit
 source license/use-right confirmation remain pending. Phase 3 must not be
 recorded as `Completed` before both gates are resolved.
 
-Fresh Task 7 automated evidence (2026-08-01):
+Fresh final-fix automated evidence (2026-08-01):
 
-- full EditMode: `285 / 285` passed; failed/skipped/inconclusive all `0`;
+- full EditMode: `297 / 297` passed; failed/skipped/inconclusive all `0`;
 - full PlayMode: `48 / 48` passed; failed/skipped/inconclusive all `0`;
 - production benchmark validator: `3 / 3` Prefabs valid, `0 issues`;
+- focused AssetPipeline EditMode: `106 / 106` passed; focused Task 6
+  AssetReadability PlayMode: `13 / 13` passed;
 - `MainCafe.unity` remains unchanged; PlayMode cleanup restored Build Settings
   to its single enabled `Assets/Scenes/MainCafe.unity` entry.
 

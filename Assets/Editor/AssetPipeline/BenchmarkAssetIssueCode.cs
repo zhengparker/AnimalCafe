@@ -11,6 +11,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
         MissingMesh,
         TriangleBudgetExceeded,
         MaterialSlotBudgetExceeded,
+        MaterialSubmeshMismatch,
         MissingMaterial,
         InvalidShader,
         TransparentMaterial,

@@ -81,8 +81,17 @@ def copy_authoritative_raw(kind):
 
 def open_authoritative(kind):
     path, raw_hash = copy_authoritative_raw(kind)
-    bpy.ops.wm.open_mainfile(filepath=str(path))
-    meshes = [obj for obj in bpy.context.scene.objects if obj.type == "MESH"]
+    # Append into a clean, unsaved in-memory file. This keeps Blender from
+    # writing the workstation's absolute source .blend path into FBX metadata.
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    with bpy.data.libraries.load(str(path), link=False) as (data_from, data_to):
+        data_to.objects = data_from.objects
+
+    loaded_objects = [obj for obj in data_to.objects if obj is not None]
+    for obj in loaded_objects:
+        bpy.context.collection.objects.link(obj)
+
+    meshes = [obj for obj in loaded_objects if obj.type == "MESH"]
     if len(meshes) != 1:
         raise RuntimeError(f"Expected one Raw mesh in authoritative {path}, found {len(meshes)}.")
     return meshes[0], raw_hash
@@ -100,6 +109,22 @@ def select_only(objects):
 
 
 def export_fbx(kind, objects):
+    export_material = bpy.data.materials.new(name=f"{kind}_ExportSurface")
+    export_material.use_nodes = False
+    for obj in objects:
+        obj.data.materials.clear()
+        obj.data.materials.append(export_material)
+        for polygon in obj.data.polygons:
+            polygon.material_index = 0
+
+    for image in list(bpy.data.images):
+        bpy.data.images.remove(image)
+    for texture in list(bpy.data.textures):
+        bpy.data.textures.remove(texture)
+
+    if bpy.data.filepath:
+        raise RuntimeError("FBX export must run from an unsaved in-memory Blender file.")
+
     select_only(objects)
     output = MODEL_DIR / SOURCES[kind]["fbx"]
     bpy.ops.export_scene.fbx(
@@ -112,7 +137,7 @@ def export_fbx(kind, objects):
         axis_forward="-Z",
         axis_up="Y",
         add_leaf_bones=False,
-        path_mode="AUTO",
+        path_mode="STRIP",
         embed_textures=False,
         bake_space_transform=False,
     )

@@ -274,6 +274,11 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             foreach (var renderer in renderers)
             {
                 var sharedMaterials = renderer.sharedMaterials;
+                ValidateMaterialSubmeshMatch(
+                    renderer,
+                    sharedMaterials,
+                    assetPath,
+                    issues);
                 if (sharedMaterials == null || sharedMaterials.Length == 0)
                 {
                     AddMissingRendererMaterialIssues(issues, assetPath);
@@ -304,6 +309,36 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             }
 
             return new MaterialUsage(materialSlots, uniqueMaterials);
+        }
+
+        private static void ValidateMaterialSubmeshMatch(
+            Renderer renderer,
+            Material[] sharedMaterials,
+            string assetPath,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            var mesh = GetMesh(renderer);
+            if (mesh == null)
+            {
+                return;
+            }
+
+            var materialArrayLength = sharedMaterials == null ? 0 : sharedMaterials.Length;
+            var nonNullMaterialCount = sharedMaterials == null
+                ? 0
+                : sharedMaterials.Count(material => material != null);
+            if (materialArrayLength == mesh.subMeshCount &&
+                nonNullMaterialCount == mesh.subMeshCount)
+            {
+                return;
+            }
+
+            AddIssue(
+                issues,
+                BenchmarkAssetIssueCode.MaterialSubmeshMismatch,
+                assetPath,
+                $"Enabled Renderer {renderer.name} has {mesh.subMeshCount} submeshes, " +
+                $"{materialArrayLength} Material slots, and {nonNullMaterialCount} non-null Materials.");
         }
 
         private static void AddMissingRendererMaterialIssues(
@@ -401,28 +436,121 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 return;
             }
 
-            for (var propertyIndex = 0; propertyIndex < ShaderUtil.GetPropertyCount(shader); propertyIndex++)
+
+            var serializedMaterial = new SerializedObject(material);
+            var nullTextureMaterial = new Material(shader);
+            try
             {
-                if (ShaderUtil.GetPropertyType(shader, propertyIndex) != ShaderUtil.ShaderPropertyType.TexEnv)
+                for (var propertyIndex = 0; propertyIndex < ShaderUtil.GetPropertyCount(shader); propertyIndex++)
                 {
-                    continue;
+                    if (ShaderUtil.GetPropertyType(shader, propertyIndex) == ShaderUtil.ShaderPropertyType.TexEnv)
+                    {
+                        nullTextureMaterial.SetTexture(
+                            ShaderUtil.GetPropertyName(shader, propertyIndex),
+                            null);
+                    }
                 }
 
-                var texture = material.GetTexture(ShaderUtil.GetPropertyName(shader, propertyIndex));
-                if (texture == null || string.IsNullOrEmpty(AssetDatabase.GetAssetPath(texture)))
-                {
-                    continue;
-                }
+                var serializedNullTextureMaterial = new SerializedObject(nullTextureMaterial);
+                serializedMaterial.Update();
+                serializedNullTextureMaterial.Update();
 
-                if (texture.width > 512 || texture.height > 512)
+                for (var propertyIndex = 0; propertyIndex < ShaderUtil.GetPropertyCount(shader); propertyIndex++)
                 {
-                    AddIssue(
-                        issues,
-                        BenchmarkAssetIssueCode.TextureBudgetExceeded,
-                        assetPath,
-                        "Project Texture references must not exceed 512 by 512 pixels.");
+                    if (ShaderUtil.GetPropertyType(shader, propertyIndex) != ShaderUtil.ShaderPropertyType.TexEnv)
+                    {
+                        continue;
+                    }
+
+                    var propertyName = ShaderUtil.GetPropertyName(shader, propertyIndex);
+                    var texture = material.GetTexture(propertyName);
+                    if (texture == null)
+                    {
+                        if (HasBrokenSerializedTextureReference(
+                            serializedMaterial,
+                            serializedNullTextureMaterial,
+                            propertyName))
+                        {
+                            AddIssue(
+                                issues,
+                                BenchmarkAssetIssueCode.MissingReference,
+                                assetPath,
+                                $"Material Texture property {propertyName} contains a broken serialized reference.");
+                        }
+
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(AssetDatabase.GetAssetPath(texture)))
+                    {
+                        continue;
+                    }
+
+                    if (texture.width > 512 || texture.height > 512)
+                    {
+                        AddIssue(
+                            issues,
+                            BenchmarkAssetIssueCode.TextureBudgetExceeded,
+                            assetPath,
+                            "Project Texture references must not exceed 512 by 512 pixels.");
+                    }
                 }
             }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(nullTextureMaterial);
+            }
+        }
+
+        private static bool HasBrokenSerializedTextureReference(
+            SerializedObject serializedMaterial,
+            SerializedObject serializedNullTextureMaterial,
+            string propertyName)
+        {
+            var savedReference = FindSavedTextureReference(serializedMaterial, propertyName);
+            if (savedReference == null)
+            {
+                return false;
+            }
+
+            var nullReference = FindSavedTextureReference(
+                serializedNullTextureMaterial,
+                propertyName);
+            return nullReference != null &&
+                !SerializedProperty.DataEquals(savedReference, nullReference);
+        }
+
+        private static SerializedProperty FindSavedTextureReference(
+            SerializedObject serializedMaterial,
+            string propertyName)
+        {
+            // Unity serializes Material Texture PPtrs in m_TexEnvs. Comparing
+            // their serialized data with a known-null PPtr detects a deleted
+            // asset GUID without parsing or rewriting Material YAML.
+            var textureEnvironments = serializedMaterial.FindProperty(
+                "m_SavedProperties.m_TexEnvs");
+            if (textureEnvironments == null || !textureEnvironments.isArray)
+            {
+                return null;
+            }
+
+            for (var index = 0; index < textureEnvironments.arraySize; index++)
+            {
+                var entry = textureEnvironments.GetArrayElementAtIndex(index);
+                var name = entry.FindPropertyRelative("first");
+                if (name == null || !string.Equals(
+                    name.stringValue,
+                    propertyName,
+                    StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                return entry.FindPropertyRelative("second")?
+                    .FindPropertyRelative("m_Texture");
+            }
+
+            return null;
         }
 
         private static void ValidateLods(

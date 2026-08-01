@@ -21,6 +21,30 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_CreamCeramic_01.mat";
 
         [MenuItem("AnimalCafe/Validation/Build Asset Readability Scene")]
+        public static void BuildSceneFromMenu()
+        {
+            TryBuildSceneFromMenu(
+                EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo);
+        }
+
+        internal static bool TryBuildSceneFromMenu(Func<bool> saveModifiedScenesPrompt)
+        {
+            if (saveModifiedScenesPrompt == null)
+            {
+                throw new ArgumentNullException(nameof(saveModifiedScenesPrompt));
+            }
+
+            if (!saveModifiedScenesPrompt())
+            {
+                return false;
+            }
+
+            BuildScene();
+            return true;
+        }
+
+        // Non-interactive helper for deterministic tests and automation. The
+        // interactive MenuItem above owns the user's save/cancel decision.
         public static void BuildScene()
         {
             EnsureFolder(Path.GetDirectoryName(ScenePath)?.Replace('\\', '/'));

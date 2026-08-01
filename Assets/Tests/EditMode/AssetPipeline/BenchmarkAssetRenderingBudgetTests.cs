@@ -1,7 +1,12 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using AnimalCafe.EditorTools.AssetPipeline;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 
 namespace AnimalCafe.Tests.EditMode.AssetPipeline
@@ -127,6 +132,23 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void Rendering_MaterialSlotsWithinKindBudgetButAboveMeshSubmeshesReportsMaterialSubmeshMismatch()
+        {
+            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1, root =>
+            {
+                var renderer = root.transform.Find("Visual").GetComponent<MeshRenderer>();
+                var firstMaterial = renderer.sharedMaterial;
+                var secondMaterial = fixture.CreateMaterialAsset(
+                    Shader.Find("Universal Render Pipeline/Lit"));
+                renderer.sharedMaterials = new[] { firstMaterial, secondMaterial };
+            });
+
+            Assert.That(
+                Validate(path, BenchmarkAssetKind.WorkTable).Select(code => code.ToString()),
+                Does.Contain("MaterialSubmeshMismatch"));
+        }
+
+        [Test]
         public void Rendering_NonUrpLitShaderReportsInvalidShader()
         {
             var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1, root =>
@@ -207,6 +229,118 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             });
 
             AssertHasCode(path, BenchmarkAssetKind.WorkTable, BenchmarkAssetIssueCode.TextureBudgetExceeded);
+        }
+
+        [Test]
+        public void Rendering_DeletedSerializedTextureReferenceReportsMissingReference()
+        {
+            string texturePath = null;
+            string materialPath = null;
+            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1, root =>
+            {
+                var renderer = root.transform.Find("Visual").GetComponent<MeshRenderer>();
+                var texture = fixture.CreateTextureAsset(16, 16);
+                texturePath = AssetDatabase.GetAssetPath(texture);
+                materialPath = AssetDatabase.GetAssetPath(renderer.sharedMaterial);
+                renderer.sharedMaterial.SetTexture("_BaseMap", texture);
+                EditorUtility.SetDirty(renderer.sharedMaterial);
+            });
+            AssetDatabase.SaveAssets();
+
+            Assert.That(AssetDatabase.DeleteAsset(texturePath), Is.True);
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.ImportAsset(materialPath, ImportAssetOptions.ForceUpdate);
+
+            var reloadedMaterial = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            Assert.That(File.Exists(ToAbsoluteProjectPath(texturePath)), Is.False);
+            Assert.That(reloadedMaterial.GetTexture("_BaseMap"), Is.Null,
+                "The deleted Texture must resolve to null while its saved Material reference remains broken.");
+            AssertHasCode(path, BenchmarkAssetKind.WorkTable, BenchmarkAssetIssueCode.MissingReference);
+        }
+
+        [Test]
+        public void Rendering_UnusedNullShaderTexturePropertiesDoNotReportMissingReference()
+        {
+            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1);
+
+            Assert.That(
+                Validate(path, BenchmarkAssetKind.WorkTable),
+                Has.None.EqualTo(BenchmarkAssetIssueCode.MissingReference));
+        }
+
+        [TestCase(
+            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_WarmWood_01.mat",
+            0f,
+            0.18f)]
+        [TestCase(
+            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_SageMetal_01.mat",
+            0.55f,
+            0.42f)]
+        [TestCase(
+            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_CreamCeramic_01.mat",
+            0f,
+            0.30f)]
+        [TestCase(
+            "Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_HoneyAccent_01.mat",
+            0f,
+            0.24f)]
+        public void ProductionMaterials_UseApprovedOpaqueUrpLitSurfaceProperties(
+            string materialPath,
+            float expectedMetallic,
+            float expectedSmoothness)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+
+            Assert.That(material, Is.Not.Null, materialPath);
+            Assert.That(material.shader.name, Is.EqualTo("Universal Render Pipeline/Lit"));
+            Assert.That(material.GetFloat("_Surface"), Is.EqualTo(0f));
+            Assert.That(material.GetFloat("_Metallic"), Is.EqualTo(expectedMetallic).Within(0.0001f));
+            Assert.That(material.GetFloat("_Smoothness"), Is.EqualTo(expectedSmoothness).Within(0.0001f));
+        }
+
+        [Test]
+        public void ProductionCoffeeMachine_RendererMaterialCountsMatchImportedSubmeshes()
+        {
+            const string prefabPath =
+                "Assets/Art/VisualPipeline/Benchmarks/Prefabs/PF_Benchmark_CoffeeMachine_01.prefab";
+            var root = PrefabUtility.LoadPrefabContents(prefabPath);
+            try
+            {
+                var renderers = root.GetComponentsInChildren<MeshRenderer>(true)
+                    .Where(renderer => renderer.enabled && renderer.gameObject.activeInHierarchy)
+                    .ToArray();
+
+                Assert.That(renderers, Has.Length.EqualTo(2));
+                foreach (var renderer in renderers)
+                {
+                    var mesh = renderer.GetComponent<MeshFilter>().sharedMesh;
+                    Assert.That(renderer.sharedMaterials, Has.Length.EqualTo(mesh.subMeshCount),
+                        renderer.name);
+                    Assert.That(renderer.sharedMaterials.Count(material => material != null),
+                        Is.EqualTo(mesh.subMeshCount), renderer.name);
+                }
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        [TestCase("Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_WorkTable_01.fbx")]
+        [TestCase("Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_CoffeeMachine_01.fbx")]
+        [TestCase("Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_CeramicCup_01.fbx")]
+        public void ProductionFbx_ContainsNoMachineAbsolutePathStrings(string assetPath)
+        {
+            var bytes = File.ReadAllBytes(ToAbsoluteProjectPath(assetPath));
+            var printableStrings = ExtractPrintableAsciiStrings(bytes, 8);
+            var machinePaths = printableStrings
+                .Where(value => Regex.IsMatch(
+                    value,
+                    @"(?i)(?:[a-z]:[\\/]|\\\\[a-z0-9._-]+[\\/]|/(?:Users|home|Volumes|private|mnt)/)"))
+                .ToArray();
+
+            Assert.That(machinePaths, Is.Empty,
+                $"{assetPath} contains machine-specific absolute FBX strings: {string.Join(" | ", machinePaths)}");
         }
 
         [Test]
@@ -438,6 +572,42 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         private void AssertHasCode(string path, BenchmarkAssetKind kind, BenchmarkAssetIssueCode expectedCode)
         {
             Assert.That(Validate(path, kind), Does.Contain(expectedCode));
+        }
+
+        private static string[] ExtractPrintableAsciiStrings(byte[] bytes, int minimumLength)
+        {
+            var strings = new List<string>();
+            var current = new StringBuilder();
+            foreach (var value in bytes)
+            {
+                if (value >= 0x20 && value <= 0x7e)
+                {
+                    current.Append((char)value);
+                    continue;
+                }
+
+                if (current.Length >= minimumLength)
+                {
+                    strings.Add(current.ToString());
+                }
+
+                current.Clear();
+            }
+
+            if (current.Length >= minimumLength)
+            {
+                strings.Add(current.ToString());
+            }
+
+            return strings.ToArray();
+        }
+
+        private static string ToAbsoluteProjectPath(string assetPath)
+        {
+            var projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            return Path.Combine(
+                projectRoot,
+                assetPath.Replace('/', Path.DirectorySeparatorChar));
         }
     }
 }

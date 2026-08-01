@@ -7,9 +7,10 @@ using UnityEngine;
 namespace AnimalCafe.EditorTools.AssetPipeline
 {
     /// <summary>
-    /// Rebuilds the three approved benchmark Prefabs from the production FBX files.
+    /// Regenerates the three approved benchmark Prefabs from production FBX files.
     /// This tool deliberately owns only generated Materials and Prefab assembly;
-    /// mesh shape, pivot, scale, and forward direction stay in Blender/FBX.
+    /// protected LOD0 geometry stays byte-identical while approved axis and
+    /// dimension adaptation lives only on Unity visual children.
     /// </summary>
     public static class BenchmarkAssetProductionBuilder
     {
@@ -34,10 +35,26 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             EnsureFolder(PrefabPath);
             AssetDatabase.Refresh();
 
-            var warmWood = EnsureMaterial("M_Benchmark_WarmWood_01", new Color(0.42f, 0.20f, 0.08f));
-            var sageMetal = EnsureMaterial("M_Benchmark_SageMetal_01", new Color(0.14f, 0.25f, 0.18f));
-            var creamCeramic = EnsureMaterial("M_Benchmark_CreamCeramic_01", new Color(0.87f, 0.80f, 0.65f));
-            EnsureMaterial("M_Benchmark_HoneyAccent_01", new Color(0.92f, 0.55f, 0.08f));
+            var warmWood = EnsureMaterial(
+                "M_Benchmark_WarmWood_01",
+                new Color(0.42f, 0.20f, 0.08f),
+                0f,
+                0.18f);
+            var sageMetal = EnsureMaterial(
+                "M_Benchmark_SageMetal_01",
+                new Color(0.14f, 0.25f, 0.18f),
+                0.55f,
+                0.42f);
+            var creamCeramic = EnsureMaterial(
+                "M_Benchmark_CreamCeramic_01",
+                new Color(0.87f, 0.80f, 0.65f),
+                0f,
+                0.30f);
+            EnsureMaterial(
+                "M_Benchmark_HoneyAccent_01",
+                new Color(0.92f, 0.55f, 0.08f),
+                0f,
+                0.24f);
 
             CreateSimplePrefab(
                 "PF_Benchmark_WorkTable_01",
@@ -46,7 +63,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 new[] { warmWood },
                 new Vector3(0.90f, 0.65f, 0.90f),
                 WorkTableVisualScale);
-            CreateCoffeeMachinePrefab(creamCeramic, sageMetal);
+            CreateCoffeeMachinePrefab(sageMetal);
             CreateSimplePrefab(
                 "PF_Benchmark_CeramicCup_01",
                 "SM_Benchmark_CeramicCup_01",
@@ -145,7 +162,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             }
         }
 
-        private static void CreateCoffeeMachinePrefab(Material creamCeramic, Material sageMetal)
+        private static void CreateCoffeeMachinePrefab(Material sageMetal)
         {
             const string prefabName = "PF_Benchmark_CoffeeMachine_01";
             var root = new GameObject(prefabName);
@@ -159,7 +176,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 lod1.transform.localScale = CoffeeMachineLodRendererScale;
                 lod0.enabled = true;
                 lod1.enabled = true;
-                lod0.sharedMaterials = new[] { creamCeramic, sageMetal };
+                lod0.sharedMaterials = new[] { sageMetal };
                 lod1.sharedMaterials = new[] { sageMetal };
                 if (visual.GetComponentsInChildren<LODGroup>(true).Length != 1)
                 {
@@ -256,7 +273,11 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             PrefabUtility.SaveAsPrefabAsset(root, assetPath);
         }
 
-        private static Material EnsureMaterial(string name, Color baseColor)
+        private static Material EnsureMaterial(
+            string name,
+            Color baseColor,
+            float metallic,
+            float smoothness)
         {
             var assetPath = $"{MaterialPath}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(assetPath);
@@ -276,7 +297,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             material.shader = Shader.Find("Universal Render Pipeline/Lit");
             material.SetColor("_BaseColor", baseColor);
             material.SetFloat("_Surface", 0f);
-            material.SetFloat("_Smoothness", 0.18f);
+            material.SetFloat("_Metallic", metallic);
+            material.SetFloat("_Smoothness", smoothness);
             EditorUtility.SetDirty(material);
             return material;
         }
