@@ -142,8 +142,8 @@ Automated tests 不只检查临时假物件，也检查真实 production Prefab 
 
 | Verification | Result |
 |---|---|
-| Full EditMode | `305 / 305` passed |
-| Full PlayMode | `53 / 53` passed |
+| Full EditMode | `307 / 307` passed |
+| Full PlayMode | `55 / 55` passed |
 | Focused AssetPipeline EditMode | `111 / 111` passed |
 | Failed / Skipped / Inconclusive | 全部 `0` |
 | Production Validator | `3 / 3` benchmark Prefabs valid；`0 issues` |
@@ -291,7 +291,7 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 3. 先观察 Game view background。它应是浅黄色 `#F2E6B8`；这个颜色本身是设计结果，不算 failure。只有它让物体被裁切、颜色 washed out 或难以分辨时才记录 failure。
 4. 选中 `Main Camera`，确认 Camera 使用 `Solid Color`；在附加的 Universal camera data 中确认 antialiasing 是 `SMAA`、Quality 是 `High`，并确认 Camera 的 `Post Processing` 已勾选。少了这个勾选，虽然 Inspector 写着 SMAA，锯齿处理也不会真正执行。这些都只是本 Scene 的设置，不应要求修改 global URP/Quality settings。
 5. 确认 Camera 的默认 `Orthographic Size` 是 `4`，而且两张桌子、Coffee Machine、Cup 与角色参考都完整留在画面内，没有贴住边缘。
-6. 确认 `CharacterScaleReference_1_30m` 使用明显的青绿色，并位于右桌更右侧（Scene local `X = 2.50`）。PASS 条件不只是 world position 分开：从 Game Camera 看，它也不能与右桌或 Cup 的轮廓重叠。
+6. 确认 `CharacterScaleReference_1_30m` 使用明显的青绿色，并位于独立的右后方位置（Scene local `(1.75, 0, 2.00)`）。PASS 条件不只是 world position 分开：在 Landscape 和 Portrait Game Camera 中，它都不能与左右两组桌面家具的轮廓重叠。
 7. 检查 original colors：Work Table 应是橙色木纹/黑色细节，Coffee Machine 应有浅蓝/白/黑分区，Ceramic Cup 应是柔和绿色。若仍是旧的统一纯色 palette，应记录 failure。
 8. 在 Inspector 找到 Camera component 的 `Orthographic Size`，依次检查 `4`、`7`、`12`：
    - size `4`：默认主要验收距离；配合固定 `1920 × 1080` 和 `1x`/`Fit` 检查功能细节、Material 差异与物体正面；
@@ -305,9 +305,9 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 ### 9.4 检查 Game view resolution 与 batch display
 
 1. 在 Game view resolution 下拉菜单选择或添加 `1920 × 1080`。PASS 条件：三个 single-display objects 与 `1.30 m` reference 可读，没有被画面边缘遮住。
-2. 再选择或添加 portrait `1170 × 2532`。当前 P3 proxy Scene 中，进入 Play Mode 后可把 Camera `Orthographic Size` 临时改为 `7`，让角色参考也保持可见；PASS 条件是物体没有因为窄屏完全消失或互相遮住。退出 Play Mode 会恢复 Scene 保存的值，不要保存这个临时修改。这只是 P3 readability proxy，不是最终 adaptive Portrait Camera、正式 base framing 或 zoom preset。
+2. 再选择或添加 portrait `1170 × 2532`，保持 Camera `Orthographic Size = 4`，不需要临时改成 `7`。PASS 条件：两张桌子、Coffee Machine、Cup 与角色参考全部完整留在画面 `0.01` safe margin 内，Reference 不与左右 station 重叠。它证明 P3 validation layout 的真实 Portrait readability，但仍不是最终 adaptive Portrait Camera、正式 base framing 或 zoom preset。
 3. 展开 `BatchDisplay`，确认 `WorkTables_20`、`Machines_20`、`Cups_20` 每组各有 `20` 个 benchmark Prefab，总数正好 `60`。
-4. 观察 batch：PASS 条件是物体之间没有 overlap，没有粉红 Material、missing Mesh、异常大小或明显跳位。
+4. Single display Camera 不应看到任何 BatchDisplay 物体。需要检查 batch 时，切回 Scene view：PASS 条件是物体之间没有 overlap，没有粉红 Material、missing Mesh、异常大小或明显跳位。
 5. 在 Scene view 打开 `Gizmos`，逐组选中一些 Prefab 查看 Collider：PASS 条件是每个物体只有一个大致包住可见 Model 的 `BoxCollider`，没有异常巨大、落到地面下方或变成 `MeshCollider`。
 
 ### 9.5 Console、退出与 license statement
@@ -341,7 +341,7 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 | 12 | Two tabletop stations | 观察两张桌子 | 左桌 Machine、右桌 Cup；各自居中、互不遮挡，Machine 四周仍有桌面余量 | |
 | 13 | Coffee LOD | 展开 Coffee Machine 并选中 `Visual` child，检查 two-level LODGroup 与切换 | 无 size/position/pivot/Material/Texture jump | |
 | 14 | Landscape | Game view `1920 × 1080` | 物件可读且未被遮住 | |
-| 15 | Portrait proxy | Game view `1170 × 2532`，Play Mode 临时 size `7` | Reference 可见；物件未互相遮住；退出 Play 后恢复 | |
+| 15 | Portrait proxy | Game view `1170 × 2532`，保持默认 size `4` | 全部 single-display bounds 在 `0.01` margin 内；Reference 与两组 station 不重叠；无 BatchDisplay | |
 | 16 | Batch 60 | 检查三组各 20 | 正好 60、无 overlap/pink/missing/异常 Collider | |
 | 17 | Console | 检查完整 manual run | 无 unexpected error 或 missing reference | |
 | 18 | Play Mode cleanup | 退出且不保存实验性改动 | 没有把临时 Transform 写入 Scene | |
@@ -392,13 +392,14 @@ Phase 3 没有开始或交付：
 
 当前 verified automated evidence：
 
-- EditMode `305 / 305` passed；
-- PlayMode `53 / 53` passed；
+- EditMode `307 / 307` passed；
+- PlayMode `55 / 55` passed；
 - focused AssetPipeline EditMode `111 / 111` passed；
 - failed、skipped、inconclusive 全部为 `0`；
 - production validator `3 / 3` valid、`0 issues`；
 - Camera-projected overlap RED `0 / 1`，修复后 focused EditMode 与 PlayMode 均为 `1 / 1` passed；
 - Size 4 trial focused EditMode `18 / 18`、focused PlayMode `12 / 12` passed；全部 single-display renderer bounds 在真实 Camera viewport `0.01` safe margin 内；
+- exact Landscape/Portrait framing focused EditMode `20 / 20`、focused PlayMode `14 / 14` passed；size `4` 下两个 aspects 均无 clipping、station/reference overlap 或 BatchDisplay intrusion；
 - authored Guide 的 placeholder/static scan 与 `git diff --check` 是文档 closeout gate；Unity-generated YAML 不在本次 Guide rewrite scope 内机械格式化。
 
 当前 manual 状态：

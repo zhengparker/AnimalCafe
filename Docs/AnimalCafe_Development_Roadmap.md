@@ -408,8 +408,8 @@ recorded as `Completed`.
 
 Fresh readability layout review-fix automated evidence (2026-08-01):
 
-- full EditMode: `305 / 305` passed; failed/skipped/inconclusive all `0`;
-- full PlayMode: `53 / 53` passed; failed/skipped/inconclusive all `0`;
+- full EditMode: `307 / 307` passed; failed/skipped/inconclusive all `0`;
+- full PlayMode: `55 / 55` passed; failed/skipped/inconclusive all `0`;
 - production benchmark validator: `3 / 3` Prefabs valid, `0 issues`;
 - focused AssetPipeline EditMode: `111 / 111` passed; focused readability
   Scene EditMode: `15 / 15` passed; focused AssetReadability PlayMode: `9 / 9`
@@ -417,9 +417,12 @@ Fresh readability layout review-fix automated evidence (2026-08-01):
 - validation Scene now uses pale-yellow `#F2E6B8`, scene-only `SMAA High`, a
   dedicated teal Character Scale Reference, and the three Blender original-color
   packed Base Color Textures downscaled to project-relative `512 × 512` sRGB PNGs;
-- a real Camera-projected bounds test proved the previous Character Scale
-  Reference overlapped the right station in view; moving it to local `X = 2.50`
-  passes focused EditMode and PlayMode checks with a `0.01` viewport margin;
+- Camera-projected bounds tests now use exact Landscape `1920 × 1080` and
+  Portrait `1170 × 2532` aspects at size `4`. Character Scale Reference local
+  `(1.75, 0, 2.00)` stays within `0.01` safe margin and does not overlap either
+  station; BatchDisplay local `(-30, 0, 30)` remains outside both viewports;
+- exact-aspect focused evidence is EditMode `20 / 20` and PlayMode `14 / 14`
+  passed; no temporary Portrait Camera-size workaround remains;
 - the approved Size 4 trial now uses orthographic size `4` by default; focused
   EditMode `18 / 18` and focused PlayMode `12 / 12` prove all single-display
   renderer bounds remain inside the real Camera viewport with `0.01` margin;
@@ -2432,7 +2435,7 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 **Phase 3 — Visual Style & Asset Pipeline Foundation** 状态为 `In Review`。
 
-- 已完成 readability Size 4 trial fresh automated evidence：EditMode `305 / 305`、PlayMode `53 / 53` passed，failed、skipped、inconclusive 均为 `0`；focused EditMode `18 / 18`、focused PlayMode `12 / 12` passed；Camera-projected viewport containment 与 non-overlap checks 均通过；production validator 为 `3 / 3` valid、`0 issues`。
+- 已完成真实 Portrait/Landscape size 4 framing fresh automated evidence：EditMode `307 / 307`、PlayMode `55 / 55` passed，failed、skipped、inconclusive 均为 `0`；exact-aspect focused EditMode `20 / 20`、focused PlayMode `14 / 14` passed；Camera-projected viewport containment、两组 station/reference non-overlap 与 BatchDisplay isolation checks 均通过；production validator 为 `3 / 3` valid、`0 issues`。
 - Studio Owner 已确认全部三件 user-provided / Tripo-generated benchmark assets 具备用于开发与商业发布所需的使用权，license/use-right gate 为 `Passed`；Camera/readability manual acceptance 仍为 `Pending`。
 - 当前只是 benchmark pipeline 和 readability baseline；未开始 Phase 4 formal asset set、gameplay、placement 或 runtime integration。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。

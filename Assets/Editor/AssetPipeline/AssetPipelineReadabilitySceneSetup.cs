@@ -108,14 +108,14 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             InstantiateBenchmarkPrefab("CeramicCup", display.transform,
                 new Vector3(cupStationX, 0.65f, 0f));
             CreateCharacterScaleReference(display.transform,
-                new Vector3(2.50f, 0f, 0f));
+                new Vector3(1.75f, 0f, 2.00f));
         }
 
         private static void CreateBatchDisplay(Transform parent)
         {
             var batch = new GameObject("BatchDisplay");
             batch.transform.SetParent(parent, false);
-            batch.transform.localPosition = new Vector3(-5f, 0f, 8f);
+            batch.transform.localPosition = new Vector3(-30f, 0f, 30f);
 
             CreateBatchGroup(batch.transform, "WorkTables_20", "WorkTable", 0f);
             CreateBatchGroup(batch.transform, "Machines_20", "CoffeeMachine", 10f);

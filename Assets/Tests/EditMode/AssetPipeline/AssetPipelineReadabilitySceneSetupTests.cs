@@ -156,6 +156,23 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
         }
 
+        [TestCase(1920f / 1080f, "Landscape1920x1080")]
+        [TestCase(1170f / 2532f, "Portrait1170x2532")]
+        public void Setup_SizeFourFramingKeepsSingleDisplayReadableAndBatchOutside(
+            float aspect,
+            string aspectLabel)
+        {
+            var scene = BuildAndOpenScene();
+            var camera = FindNamedObjects(scene, "Main Camera").Single()
+                .GetComponent<UnityEngine.Camera>();
+            var display = FindNamedObjects(scene, "SingleAssetDisplay").Single();
+            var batch = FindNamedObjects(scene, "BatchDisplay").Single();
+            camera.aspect = aspect;
+
+            AssertSingleDisplayFraming(camera, display.transform, aspectLabel);
+            AssertBatchOutsideViewport(camera, batch.transform, aspectLabel);
+        }
+
         [Test]
         public void Setup_CreatesOneSingleAssetDisplayRoot()
         {
@@ -471,6 +488,78 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
 
             return Rect.MinMaxRect(
                 minimum.x, minimum.y, maximum.x, maximum.y);
+        }
+
+        private static void AssertSingleDisplayFraming(
+            UnityEngine.Camera camera,
+            Transform display,
+            string aspectLabel)
+        {
+            const float safeMargin = 0.01f;
+            foreach (var renderer in display.GetComponentsInChildren<Renderer>(true))
+            {
+                var rect = ProjectBoundsToViewport(camera, renderer.bounds);
+                Assert.That(rect.xMin, Is.GreaterThanOrEqualTo(safeMargin),
+                    $"{aspectLabel}: {renderer.name} is clipped on the left.");
+                Assert.That(rect.xMax, Is.LessThanOrEqualTo(1f - safeMargin),
+                    $"{aspectLabel}: {renderer.name} is clipped on the right.");
+                Assert.That(rect.yMin, Is.GreaterThanOrEqualTo(safeMargin),
+                    $"{aspectLabel}: {renderer.name} is clipped at the bottom.");
+                Assert.That(rect.yMax, Is.LessThanOrEqualTo(1f - safeMargin),
+                    $"{aspectLabel}: {renderer.name} is clipped at the top.");
+            }
+
+            var tables = display.Cast<Transform>()
+                .Where(child => child.name == "PF_Benchmark_WorkTable_01")
+                .OrderBy(child => child.localPosition.x)
+                .ToArray();
+            var machine = display.Cast<Transform>()
+                .Single(child => child.name == "PF_Benchmark_CoffeeMachine_01");
+            var cup = display.Cast<Transform>()
+                .Single(child => child.name == "PF_Benchmark_CeramicCup_01");
+            var reference = display.Cast<Transform>()
+                .Single(child => child.name == "CharacterScaleReference_1_30m");
+            var referenceRect = ProjectBoundsToViewport(camera,
+                CalculateBounds(reference.GetComponentsInChildren<Renderer>(true)));
+
+            var leftBounds = CalculateBounds(
+                tables[0].GetComponentsInChildren<Renderer>(true));
+            leftBounds.Encapsulate(CalculateBounds(
+                machine.GetComponentsInChildren<Renderer>(true)));
+            var rightBounds = CalculateBounds(
+                tables[1].GetComponentsInChildren<Renderer>(true));
+            rightBounds.Encapsulate(CalculateBounds(
+                cup.GetComponentsInChildren<Renderer>(true)));
+            var leftRect = ProjectBoundsToViewport(camera, leftBounds);
+            var rightRect = ProjectBoundsToViewport(camera, rightBounds);
+            leftRect.xMin -= safeMargin;
+            leftRect.xMax += safeMargin;
+            leftRect.yMin -= safeMargin;
+            leftRect.yMax += safeMargin;
+            rightRect.xMin -= safeMargin;
+            rightRect.xMax += safeMargin;
+            rightRect.yMin -= safeMargin;
+            rightRect.yMax += safeMargin;
+
+            Assert.That(referenceRect.Overlaps(leftRect), Is.False,
+                $"{aspectLabel}: reference overlaps the left station.");
+            Assert.That(referenceRect.Overlaps(rightRect), Is.False,
+                $"{aspectLabel}: reference overlaps the right station.");
+        }
+
+        private static void AssertBatchOutsideViewport(
+            UnityEngine.Camera camera,
+            Transform batch,
+            string aspectLabel)
+        {
+            var viewport = new Rect(0f, 0f, 1f, 1f);
+            foreach (var renderer in batch.GetComponentsInChildren<Renderer>(true))
+            {
+                Assert.That(
+                    ProjectBoundsToViewport(camera, renderer.bounds).Overlaps(viewport),
+                    Is.False,
+                    $"{aspectLabel}: BatchDisplay renderer {renderer.name} entered the Camera viewport.");
+            }
         }
 
         private static float ContrastRatio(Color first, Color second)
