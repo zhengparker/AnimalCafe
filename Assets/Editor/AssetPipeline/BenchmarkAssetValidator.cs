@@ -14,8 +14,16 @@ namespace AnimalCafe.EditorTools.AssetPipeline
 
         private const float TransformTolerance = 0.0001f;
         private const float FloorToleranceMeters = 0.005f;
+        private const float ColliderVisibleBoundsToleranceMeters = 0.05f;
         private const float MinimumForwardZ = 0.01f;
         private const float ForwardAngleToleranceDegrees = 1f;
+
+        private static readonly BenchmarkPrefabDescriptor[] BenchmarkPrefabs =
+        {
+            new BenchmarkPrefabDescriptor(BenchmarkAssetKind.WorkTable),
+            new BenchmarkPrefabDescriptor(BenchmarkAssetKind.CoffeeMachine),
+            new BenchmarkPrefabDescriptor(BenchmarkAssetKind.CeramicCup)
+        };
 
         public static BenchmarkAssetValidationReport ValidatePrefab(
             string assetPath,
@@ -34,6 +42,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 ValidateForwardMarker(root, assetPath, issues);
                 materialUsage = ValidateRendering(root, assetPath, kind, issues);
                 ValidateLods(root, assetPath, kind, issues);
+                ValidateColliders(root, assetPath, kind, issues);
             }
             catch (Exception exception)
             {
@@ -55,6 +64,26 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 issues,
                 materialUsage.SlotCount,
                 materialUsage.UniqueMaterialCount);
+        }
+
+        public static BenchmarkAssetValidationReport ValidateAllBenchmarks()
+        {
+            var issues = new List<BenchmarkAssetValidationIssue>();
+            foreach (var benchmarkPrefab in BenchmarkPrefabs)
+            {
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(benchmarkPrefab.AssetPath) == null)
+                {
+                    issues.Add(new BenchmarkAssetValidationIssue(
+                        BenchmarkAssetIssueCode.MissingReference,
+                        benchmarkPrefab.AssetPath,
+                        "Missing expected benchmark Prefab."));
+                    continue;
+                }
+
+                issues.AddRange(ValidatePrefab(benchmarkPrefab.AssetPath, benchmarkPrefab.Kind).Issues);
+            }
+
+            return new BenchmarkAssetValidationReport(issues);
         }
 
         private static void ValidatePathAndName(
@@ -198,15 +227,18 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             var uniqueMaterials = new HashSet<Material>();
             foreach (var renderer in renderers)
             {
-                foreach (var material in renderer.sharedMaterials)
+                var sharedMaterials = renderer.sharedMaterials;
+                if (sharedMaterials == null || sharedMaterials.Length == 0)
+                {
+                    AddMissingRendererMaterialIssues(issues, assetPath);
+                    continue;
+                }
+
+                foreach (var material in sharedMaterials)
                 {
                     if (material == null)
                     {
-                        AddIssue(
-                            issues,
-                            BenchmarkAssetIssueCode.MissingMaterial,
-                            assetPath,
-                            "Enabled Renderer contains a null shared Material slot.");
+                        AddMissingRendererMaterialIssues(issues, assetPath);
                         continue;
                     }
 
@@ -226,6 +258,73 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             }
 
             return new MaterialUsage(materialSlots, uniqueMaterials.Count);
+        }
+
+        private static void AddMissingRendererMaterialIssues(
+            ICollection<BenchmarkAssetValidationIssue> issues,
+            string assetPath)
+        {
+            AddIssue(
+                issues,
+                BenchmarkAssetIssueCode.MissingMaterial,
+                assetPath,
+                "Enabled Renderer contains a null shared Material slot.");
+            AddIssue(
+                issues,
+                BenchmarkAssetIssueCode.MissingReference,
+                assetPath,
+                "Enabled Renderer contains a missing shared Material reference.");
+        }
+
+        private static void ValidateColliders(
+            GameObject root,
+            string assetPath,
+            BenchmarkAssetKind kind,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            var colliders = root.GetComponentsInChildren<Collider>(true)
+                .Where(collider => !IsForwardMarkerDescendant(collider.transform))
+                .ToArray();
+            var rules = BenchmarkAssetRules.For(kind);
+            if (colliders.Length > rules.MaxColliders)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.ColliderBudgetExceeded,
+                    assetPath,
+                    $"Prefab uses {colliders.Length} Colliders; the budget is {rules.MaxColliders}.");
+            }
+
+            var hasVisibleBounds = TryGetWorldVisibleRendererBounds(root, out var visibleBounds);
+            foreach (var collider in colliders)
+            {
+                if (!IsApprovedColliderType(collider))
+                {
+                    AddIssue(
+                        issues,
+                        BenchmarkAssetIssueCode.InvalidColliderType,
+                        assetPath,
+                        "Only BoxCollider, SphereCollider, and CapsuleCollider are allowed.");
+                }
+
+                if (collider.isTrigger)
+                {
+                    AddIssue(
+                        issues,
+                        BenchmarkAssetIssueCode.TriggerColliderNotAllowed,
+                        assetPath,
+                        "Benchmark Colliders must use isTrigger = false.");
+                }
+
+                if (hasVisibleBounds && IsColliderOutsideVisibleBounds(collider.bounds, visibleBounds))
+                {
+                    AddIssue(
+                        issues,
+                        BenchmarkAssetIssueCode.ColliderOutsideModelBounds,
+                        assetPath,
+                        "Collider world bounds extend too far beyond the combined visible Renderer bounds.");
+                }
+            }
         }
 
         private static void ValidateMaterial(
@@ -366,6 +465,25 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 !IsForwardMarkerDescendant(renderer.transform);
         }
 
+        private static bool IsApprovedColliderType(Collider collider)
+        {
+            var colliderType = collider.GetType();
+            return colliderType == typeof(BoxCollider) ||
+                colliderType == typeof(SphereCollider) ||
+                colliderType == typeof(CapsuleCollider);
+        }
+
+        private static bool IsColliderOutsideVisibleBounds(Bounds colliderBounds, Bounds visibleBounds)
+        {
+            return colliderBounds.min.x < visibleBounds.min.x - ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.max.x > visibleBounds.max.x + ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.min.y < visibleBounds.min.y - ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.max.y > visibleBounds.max.y + ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.min.z < visibleBounds.min.z - ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.max.z > visibleBounds.max.z + ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.min.y < -FloorToleranceMeters;
+        }
+
         private static bool IsForwardMarkerDescendant(Transform transform)
         {
             while (transform != null)
@@ -466,6 +584,19 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             public int UniqueMaterialCount { get; }
         }
 
+        private sealed class BenchmarkPrefabDescriptor
+        {
+            public BenchmarkPrefabDescriptor(BenchmarkAssetKind kind)
+            {
+                Kind = kind;
+                AssetPath = $"{BenchmarkPrefabFolderPath}/PF_Benchmark_{kind}_01.prefab";
+            }
+
+            public BenchmarkAssetKind Kind { get; }
+
+            public string AssetPath { get; }
+        }
+
         private static bool TryGetRootLocalRendererBounds(GameObject root, out Bounds combinedBounds)
         {
             var hasBounds = false;
@@ -491,6 +622,26 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                         combinedBounds = new Bounds(rootLocalCorner, Vector3.zero);
                         hasBounds = true;
                     }
+                }
+            }
+
+            return hasBounds;
+        }
+
+        private static bool TryGetWorldVisibleRendererBounds(GameObject root, out Bounds combinedBounds)
+        {
+            var hasBounds = false;
+            combinedBounds = default;
+            foreach (var renderer in GetEnabledRenderers(root))
+            {
+                if (hasBounds)
+                {
+                    combinedBounds.Encapsulate(renderer.bounds);
+                }
+                else
+                {
+                    combinedBounds = renderer.bounds;
+                    hasBounds = true;
                 }
             }
 

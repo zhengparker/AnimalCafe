@@ -439,6 +439,124 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 BenchmarkAssetIssueCode.InvalidForwardMarker);
         }
 
+        [Test]
+        public void Collider_ApprovedPrimitiveCollidersPass()
+        {
+            var path = CreateWorkTablePrefab(root =>
+            {
+                var sphere = root.AddComponent<SphereCollider>();
+                sphere.center = new Vector3(0f, 0.325f, 0f);
+                sphere.radius = 0.1f;
+
+                var capsule = root.AddComponent<CapsuleCollider>();
+                capsule.center = new Vector3(0f, 0.325f, 0f);
+                capsule.radius = 0.1f;
+                capsule.height = 0.4f;
+            });
+
+            Assert.That(
+                BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
+                Is.Empty);
+        }
+
+        [Test]
+        public void Collider_MeshColliderReportsInvalidColliderType()
+        {
+            var path = CreateWorkTablePrefab(root => root.AddComponent<MeshCollider>());
+
+            AssertHasCode(path, BenchmarkAssetKind.WorkTable, BenchmarkAssetIssueCode.InvalidColliderType);
+        }
+
+        [Test]
+        public void Collider_TooManyCollidersReportsColliderBudgetExceeded()
+        {
+            var path = CreateWorkTablePrefab(root =>
+            {
+                AddContainedBoxCollider(root);
+                AddContainedBoxCollider(root);
+                AddContainedBoxCollider(root);
+            });
+
+            AssertHasCode(path, BenchmarkAssetKind.WorkTable, BenchmarkAssetIssueCode.ColliderBudgetExceeded);
+        }
+
+        [Test]
+        public void Collider_TriggerReportsTriggerColliderNotAllowed()
+        {
+            var path = CreateWorkTablePrefab(root => root.GetComponent<BoxCollider>().isTrigger = true);
+
+            AssertHasCode(path, BenchmarkAssetKind.WorkTable, BenchmarkAssetIssueCode.TriggerColliderNotAllowed);
+        }
+
+        [Test]
+        public void Collider_BoundsFarOutsideVisibleModelReportsColliderOutsideModelBounds()
+        {
+            var path = CreateWorkTablePrefab(root =>
+                root.GetComponent<BoxCollider>().center = new Vector3(1f, 0.325f, 0f));
+
+            AssertHasCode(path, BenchmarkAssetKind.WorkTable, BenchmarkAssetIssueCode.ColliderOutsideModelBounds);
+        }
+
+        [Test]
+        public void References_MissingRendererMaterialReportsMissingReference()
+        {
+            var path = CreateWorkTablePrefab(root =>
+                root.transform.Find("Visual").GetComponent<MeshRenderer>().sharedMaterial = null);
+
+            AssertHasCode(path, BenchmarkAssetKind.WorkTable, BenchmarkAssetIssueCode.MissingReference);
+        }
+
+        [Test]
+        public void BatchValidation_ReturnsIssuesForAllThreeAssetsWithoutStoppingEarly()
+        {
+            var workTablePath = CreatePrefabAtBenchmarkPath(
+                "PF_Benchmark_WorkTable_01",
+                new Vector3(0.90f, 0.65f, 0.90f),
+                root => root.AddComponent<MeshCollider>());
+            var coffeeMachinePath = CreatePrefabAtBenchmarkPath(
+                "PF_Benchmark_CoffeeMachine_01",
+                new Vector3(0.65f, 0.62f, 0.50f),
+                root => root.AddComponent<MeshCollider>());
+            var ceramicCupPath = CreatePrefabAtBenchmarkPath(
+                "PF_Benchmark_CeramicCup_01",
+                new Vector3(0.14f, 0.16f, 0.14f),
+                root => root.AddComponent<MeshCollider>());
+
+            var report = BenchmarkAssetValidator.ValidateAllBenchmarks();
+
+            Assert.That(
+                report.Issues.Where(issue => issue.Code == BenchmarkAssetIssueCode.InvalidColliderType)
+                    .Select(issue => issue.AssetPath),
+                Is.EqualTo(new[] { workTablePath, coffeeMachinePath, ceramicCupPath }));
+        }
+
+        [Test]
+        public void BatchValidation_MissingExpectedPrefabReportsMissingReference()
+        {
+            var report = BenchmarkAssetValidator.ValidateAllBenchmarks();
+
+            Assert.That(
+                report.Issues.Select(issue => new { issue.Code, issue.AssetPath }),
+                Is.EqualTo(new[]
+                {
+                    new
+                    {
+                        Code = BenchmarkAssetIssueCode.MissingReference,
+                        AssetPath = $"{BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath}/PF_Benchmark_WorkTable_01.prefab"
+                    },
+                    new
+                    {
+                        Code = BenchmarkAssetIssueCode.MissingReference,
+                        AssetPath = $"{BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath}/PF_Benchmark_CoffeeMachine_01.prefab"
+                    },
+                    new
+                    {
+                        Code = BenchmarkAssetIssueCode.MissingReference,
+                        AssetPath = $"{BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath}/PF_Benchmark_CeramicCup_01.prefab"
+                    }
+                }));
+        }
+
         private string CreateWorkTablePrefab(
             Action<GameObject> configure = null,
             Vector3? bounds = null)
@@ -593,6 +711,23 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         {
             var report = BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
             Assert.That(report.Issues.Select(issue => issue.Code), Is.EquivalentTo(expectedCodes));
+        }
+
+        private static void AddContainedBoxCollider(GameObject root)
+        {
+            var collider = root.AddComponent<BoxCollider>();
+            collider.center = new Vector3(0f, 0.325f, 0f);
+            collider.size = new Vector3(0.1f, 0.1f, 0.1f);
+        }
+
+        private static void AssertHasCode(
+            string path,
+            BenchmarkAssetKind kind,
+            BenchmarkAssetIssueCode expectedCode)
+        {
+            Assert.That(
+                BenchmarkAssetValidator.ValidatePrefab(path, kind).Issues.Select(issue => issue.Code),
+                Does.Contain(expectedCode));
         }
     }
 }
