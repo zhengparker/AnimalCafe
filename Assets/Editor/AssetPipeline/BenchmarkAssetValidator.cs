@@ -15,7 +15,6 @@ namespace AnimalCafe.EditorTools.AssetPipeline
         private const float TransformTolerance = 0.0001f;
         private const float FloorToleranceMeters = 0.005f;
         private const float ColliderVisibleBoundsToleranceMeters = 0.05f;
-        private const float ColliderBoundsComparisonEpsilon = 0.000001f;
         private const float MinimumForwardZ = 0.01f;
         private const float ForwardAngleToleranceDegrees = 1f;
 
@@ -501,13 +500,15 @@ namespace AnimalCafe.EditorTools.AssetPipeline
 
         private static bool IsColliderOutsideVisibleBounds(Bounds colliderBounds, Bounds visibleBounds)
         {
-            return colliderBounds.min.x < visibleBounds.min.x - ColliderVisibleBoundsToleranceMeters - ColliderBoundsComparisonEpsilon ||
-                colliderBounds.max.x > visibleBounds.max.x + ColliderVisibleBoundsToleranceMeters + ColliderBoundsComparisonEpsilon ||
-                colliderBounds.min.y < visibleBounds.min.y - ColliderVisibleBoundsToleranceMeters - ColliderBoundsComparisonEpsilon ||
-                colliderBounds.max.y > visibleBounds.max.y + ColliderVisibleBoundsToleranceMeters + ColliderBoundsComparisonEpsilon ||
-                colliderBounds.min.z < visibleBounds.min.z - ColliderVisibleBoundsToleranceMeters - ColliderBoundsComparisonEpsilon ||
-                colliderBounds.max.z > visibleBounds.max.z + ColliderVisibleBoundsToleranceMeters + ColliderBoundsComparisonEpsilon ||
-                colliderBounds.min.y < -FloorToleranceMeters - ColliderBoundsComparisonEpsilon;
+            var colliderMaxX = colliderBounds.max.x;
+            var allowedMaxX = visibleBounds.max.x + ColliderVisibleBoundsToleranceMeters;
+            return colliderBounds.min.x < visibleBounds.min.x - ColliderVisibleBoundsToleranceMeters ||
+                colliderMaxX > allowedMaxX ||
+                colliderBounds.min.y < visibleBounds.min.y - ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.max.y > visibleBounds.max.y + ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.min.z < visibleBounds.min.z - ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.max.z > visibleBounds.max.z + ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.min.y < -FloorToleranceMeters;
         }
 
         private static bool IsForwardMarkerDescendant(Transform transform)

@@ -71,9 +71,19 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         public void Collider_VisibleBoundsEnvelopeAtExactlyPointZeroFiveMetersPasses()
         {
             var path = CreatePrefab(BenchmarkAssetKind.WorkTable, root =>
-                root.GetComponent<BoxCollider>().size = new Vector3(1.00f, 0.65f, 0.90f));
+            {
+                var collider = root.GetComponent<BoxCollider>();
+                collider.size = new Vector3(0.1f, 0.1f, 0.1f);
+                collider.center = new Vector3(0f, 0.325f, 0f);
+            });
 
-            Assert.That(Validate(path, BenchmarkAssetKind.WorkTable), Is.Empty);
+            var visibleBounds = GetRootVisibleBounds(path);
+            var visibleMaximum = visibleBounds.max.x;
+            SetRootBoxColliderMaximumX(path, visibleMaximum + 0.05f);
+            var colliderBounds = GetRootBoxColliderBounds(path);
+            var report = BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
+            Assert.That(colliderBounds.max.x, Is.EqualTo(visibleMaximum + 0.05f));
+            Assert.That(report.Issues, Is.Empty);
         }
 
         [Test]
@@ -82,6 +92,27 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             var path = CreatePrefab(BenchmarkAssetKind.WorkTable, root =>
                 root.GetComponent<BoxCollider>().size = new Vector3(1.0002f, 0.65f, 0.90f));
 
+            Assert.That(
+                Validate(path, BenchmarkAssetKind.WorkTable),
+                Does.Contain(BenchmarkAssetIssueCode.ColliderOutsideModelBounds));
+        }
+
+        [Test]
+        public void Collider_VisibleBoundsEnvelopeAtNextRepresentableValueBeyondPointZeroFiveMetersReportsOutsideBounds()
+        {
+            var nextMaximum = NextFloatTowardPositiveInfinity(0.50f);
+            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, root =>
+            {
+                var collider = root.GetComponent<BoxCollider>();
+                collider.center = new Vector3(
+                    nextMaximum - collider.size.x * 0.5f,
+                    collider.center.y,
+                    collider.center.z);
+            });
+
+            var actualMaximum = GetRootBoxColliderBounds(path).max.x;
+            Assert.That(actualMaximum, Is.GreaterThan(0.50f));
+            Assert.That(actualMaximum - 0.50f, Is.LessThan(0.000001f));
             Assert.That(
                 Validate(path, BenchmarkAssetKind.WorkTable),
                 Does.Contain(BenchmarkAssetIssueCode.ColliderOutsideModelBounds));
@@ -102,6 +133,28 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             var path = CreatePrefab(BenchmarkAssetKind.WorkTable, root =>
                 root.GetComponent<BoxCollider>().center = new Vector3(0f, 0.3199f, 0f));
 
+            Assert.That(
+                Validate(path, BenchmarkAssetKind.WorkTable),
+                Does.Contain(BenchmarkAssetIssueCode.ColliderOutsideModelBounds));
+        }
+
+        [Test]
+        public void Collider_FloorAtNextRepresentableValueBelowNegativePointZeroZeroFiveMetersReportsOutsideBounds()
+        {
+            var nextMinimum = NextFloatTowardNegativeInfinity(-0.005f);
+            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, root =>
+            {
+                var collider = root.GetComponent<BoxCollider>();
+                collider.size = new Vector3(0.1f, 0f, 0.1f);
+                collider.center = new Vector3(
+                    collider.center.x,
+                    nextMinimum,
+                    collider.center.z);
+            });
+
+            var actualMinimum = GetRootBoxColliderBounds(path).min.y;
+            Assert.That(actualMinimum, Is.LessThan(-0.005f));
+            Assert.That(-0.005f - actualMinimum, Is.LessThan(0.000001f));
             Assert.That(
                 Validate(path, BenchmarkAssetKind.WorkTable),
                 Does.Contain(BenchmarkAssetIssueCode.ColliderOutsideModelBounds));
@@ -266,6 +319,59 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 importer.assetBundleName,
                 importer.assetBundleVariant,
                 importer.userData);
+        }
+
+        private static Bounds GetRootBoxColliderBounds(string assetPath)
+        {
+            var root = PrefabUtility.LoadPrefabContents(assetPath);
+            try
+            {
+                return root.GetComponent<BoxCollider>().bounds;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        private static void SetRootBoxColliderMaximumX(string assetPath, float targetMaximum)
+        {
+            var root = PrefabUtility.LoadPrefabContents(assetPath);
+            try
+            {
+                var collider = root.GetComponent<BoxCollider>();
+                collider.center += new Vector3(targetMaximum - collider.bounds.max.x, 0f, 0f);
+                PrefabUtility.SaveAsPrefabAsset(root, assetPath);
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        private static Bounds GetRootVisibleBounds(string assetPath)
+        {
+            var root = PrefabUtility.LoadPrefabContents(assetPath);
+            try
+            {
+                return root.transform.Find("Visual").GetComponent<Renderer>().bounds;
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        private static float NextFloatTowardPositiveInfinity(float value)
+        {
+            var bits = BitConverter.ToInt32(BitConverter.GetBytes(value), 0);
+            return BitConverter.ToSingle(BitConverter.GetBytes(bits + 1), 0);
+        }
+
+        private static float NextFloatTowardNegativeInfinity(float value)
+        {
+            var bits = BitConverter.ToInt32(BitConverter.GetBytes(value), 0);
+            return BitConverter.ToSingle(BitConverter.GetBytes(bits + 1), 0);
         }
 
         private static void AssertPrefabStateIsUnchanged(PrefabState expected)
