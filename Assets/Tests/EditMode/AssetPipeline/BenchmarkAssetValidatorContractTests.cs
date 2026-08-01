@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using AnimalCafe.EditorTools.AssetPipeline;
 using NUnit.Framework;
@@ -56,7 +57,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
 
             StringAssert.Contains("plain filename", exception.Message);
             Assert.That(
-                AssetDatabase.IsValidFolder(BenchmarkAssetTestFactory.GeneratedFolderPath),
+                AssetDatabase.IsValidFolder(fixture.FixtureFolderPath),
                 Is.False);
         }
 
@@ -71,7 +72,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             Assert.That(
                 AssetDatabase.IsValidFolder(BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath),
                 Is.False);
-            Assert.That(AssetDatabase.IsValidFolder("Assets/Tests/Generated"), Is.False);
+            Assert.That(AssetDatabase.IsValidFolder(fixture.FixtureFolderPath), Is.False);
             Assert.That(AssetDatabase.IsValidFolder("Assets/Art/VisualPipeline/Benchmarks"), Is.False);
             Assert.That(AssetDatabase.IsValidFolder("Assets/Art/VisualPipeline"), Is.False);
         }
@@ -91,6 +92,62 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
 
             Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(path), Is.SameAs(originalPrefab));
             Assert.That(AssetDatabase.AssetPathToGUID(path), Is.EqualTo(originalGuid));
+        }
+
+        [Test]
+        public void CreatePrefabAtPath_ExternalBenchmarkPrefabSurvivesFailedCreateAndFixtureTeardown()
+        {
+            var path = $"{BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath}/{WorkTablePrefabName}.prefab";
+            var createdFolders = EnsureTestAssetFolders(BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath);
+            CreateExternalPrefab(path, "ExternallyOwnedWorkTable");
+            var original = CapturePrefabIdentity(path);
+            try
+            {
+                Assert.Throws<InvalidOperationException>(() =>
+                    fixture.CreatePrefabAtPath(path, new Vector3(1f, 1f, 1f), 1));
+
+                fixture.Dispose();
+
+                AssertPrefabIdentityIsUnchanged(original);
+            }
+            finally
+            {
+                AssetDatabase.DeleteAsset(path);
+                DeleteTestAssetFolders(createdFolders);
+            }
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void FixtureInstances_SanitizedHelperNameCollisionDoesNotAffectForeignPrefabBeforeOwnerDisposes(
+            bool disposeFirstFactoryFirst)
+        {
+            const string firstPath = "Assets/Tests/FixtureCollisionA/A-B.prefab";
+            const string secondPath = "Assets/Tests/FixtureCollisionB/A_B.prefab";
+            using (var firstFixture = new BenchmarkAssetTestFactory())
+            using (var secondFixture = new BenchmarkAssetTestFactory())
+            {
+                firstFixture.CreatePrefabAtPath(firstPath, new Vector3(0.90f, 0.65f, 0.90f), 1);
+                var firstIdentity = CapturePrefabIdentity(firstPath);
+                secondFixture.CreatePrefabAtPath(secondPath, new Vector3(0.90f, 0.65f, 0.90f), 1);
+                var secondIdentity = CapturePrefabIdentity(secondPath);
+
+                Assert.That(secondIdentity.MeshGuid, Is.Not.EqualTo(firstIdentity.MeshGuid));
+                Assert.That(secondIdentity.MaterialGuid, Is.Not.EqualTo(firstIdentity.MaterialGuid));
+
+                if (disposeFirstFactoryFirst)
+                {
+                    firstFixture.Dispose();
+                    AssertPrefabIdentityIsUnchanged(secondIdentity);
+                    secondFixture.Dispose();
+                }
+                else
+                {
+                    secondFixture.Dispose();
+                    AssertPrefabIdentityIsUnchanged(firstIdentity);
+                    firstFixture.Dispose();
+                }
+            }
         }
 
         [Test]
@@ -202,6 +259,38 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             Assert.That(
                 BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
                 Is.Empty);
+        }
+
+        [Test]
+        public void ValidatePrefab_AsymmetricCoffeeMachineNestedTransformUsesRootLocalBounds()
+        {
+            var path = CreatePrefabAtBenchmarkPath(
+                BenchmarkAssetKind.CoffeeMachine,
+                "PF_Benchmark_CoffeeMachine_01",
+                new Vector3(1.30f, 0.62f, 0.25f),
+                root =>
+                {
+                    root.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                    var visual = root.transform.Find("Visual");
+                    var container = new GameObject("CoffeeMachineVisualContainer");
+                    container.transform.SetParent(root.transform, false);
+                    container.transform.localRotation = Quaternion.Euler(0f, 180f, 0f);
+                    container.transform.localScale = new Vector3(0.5f, 1f, 2f);
+                    visual.SetParent(container.transform, false);
+                });
+
+            var report = BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.CoffeeMachine);
+            Assert.That(report.Issues.Select(issue => issue.Code), Does.Contain(BenchmarkAssetIssueCode.RootTransformNotIdentity));
+            Assert.That(report.Issues.Select(issue => issue.Code), Has.None.EqualTo(BenchmarkAssetIssueCode.BoundsOutsideTolerance));
+        }
+
+        [Test]
+        public void ValidatePrefab_VisibleBoundsAboveFloorToleranceReportsBoundsOutsideTolerance()
+        {
+            var path = CreateWorkTablePrefab(root =>
+                root.transform.Find("Visual").localPosition = new Vector3(0f, 0.006f, 0f));
+
+            AssertCodes(path, BenchmarkAssetIssueCode.BoundsOutsideTolerance);
         }
 
         [Test]
@@ -366,6 +455,136 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             var assetPath = $"{BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath}/{prefabName}.prefab";
             fixture.CreatePrefabAtPath(assetPath, bounds, 1, configure);
             return assetPath;
+        }
+
+        private string CreatePrefabAtBenchmarkPath(
+            BenchmarkAssetKind kind,
+            string prefabName,
+            Vector3 bounds,
+            Action<GameObject> configure = null)
+        {
+            var assetPath = $"{BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath}/{prefabName}.prefab";
+            fixture.CreatePrefabAtPath(assetPath, bounds, 1, configure);
+            return assetPath;
+        }
+
+        private static PrefabIdentity CapturePrefabIdentity(string prefabPath)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, "Expected saved Prefab to exist.");
+
+            var visual = prefab.transform.Find("Visual");
+            if (visual == null)
+            {
+                return new PrefabIdentity(
+                    prefabPath,
+                    AssetDatabase.AssetPathToGUID(prefabPath),
+                    prefab.name,
+                    null,
+                    null,
+                    null,
+                    null);
+            }
+
+            var meshFilter = visual.GetComponent<MeshFilter>();
+            var renderer = visual.GetComponent<MeshRenderer>();
+            var meshPath = AssetDatabase.GetAssetPath(meshFilter.sharedMesh);
+            var materialPath = AssetDatabase.GetAssetPath(renderer.sharedMaterial);
+            return new PrefabIdentity(
+                prefabPath,
+                AssetDatabase.AssetPathToGUID(prefabPath),
+                prefab.name,
+                meshPath,
+                AssetDatabase.AssetPathToGUID(meshPath),
+                materialPath,
+                AssetDatabase.AssetPathToGUID(materialPath));
+        }
+
+        private static void AssertPrefabIdentityIsUnchanged(PrefabIdentity identity)
+        {
+            var current = CapturePrefabIdentity(identity.PrefabPath);
+            Assert.That(current.PrefabGuid, Is.EqualTo(identity.PrefabGuid));
+            Assert.That(current.PrefabName, Is.EqualTo(identity.PrefabName));
+            Assert.That(current.MeshPath, Is.EqualTo(identity.MeshPath));
+            Assert.That(current.MeshGuid, Is.EqualTo(identity.MeshGuid));
+            Assert.That(current.MaterialPath, Is.EqualTo(identity.MaterialPath));
+            Assert.That(current.MaterialGuid, Is.EqualTo(identity.MaterialGuid));
+        }
+
+        private static List<string> EnsureTestAssetFolders(string assetFolderPath)
+        {
+            var createdFolders = new List<string>();
+            EnsureTestAssetFolders(assetFolderPath, createdFolders);
+            return createdFolders;
+        }
+
+        private static void EnsureTestAssetFolders(string assetFolderPath, ICollection<string> createdFolders)
+        {
+            if (AssetDatabase.IsValidFolder(assetFolderPath))
+            {
+                return;
+            }
+
+            var parent = Path.GetDirectoryName(assetFolderPath)?.Replace('\\', '/');
+            EnsureTestAssetFolders(parent, createdFolders);
+            AssetDatabase.CreateFolder(parent, Path.GetFileName(assetFolderPath));
+            createdFolders.Add(assetFolderPath);
+        }
+
+        private static void CreateExternalPrefab(string prefabPath, string rootName)
+        {
+            var root = new GameObject(rootName);
+            try
+            {
+                PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
+                AssetDatabase.SaveAssets();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+            }
+        }
+
+        private static void DeleteTestAssetFolders(IEnumerable<string> createdFolders)
+        {
+            foreach (var folderPath in createdFolders.OrderByDescending(path => path.Length))
+            {
+                if (AssetDatabase.IsValidFolder(folderPath))
+                {
+                    AssetDatabase.DeleteAsset(folderPath);
+                }
+            }
+
+            AssetDatabase.Refresh();
+        }
+
+        private sealed class PrefabIdentity
+        {
+            public PrefabIdentity(
+                string prefabPath,
+                string prefabGuid,
+                string prefabName,
+                string meshPath,
+                string meshGuid,
+                string materialPath,
+                string materialGuid)
+            {
+                PrefabPath = prefabPath;
+                PrefabGuid = prefabGuid;
+                PrefabName = prefabName;
+                MeshPath = meshPath;
+                MeshGuid = meshGuid;
+                MaterialPath = materialPath;
+                MaterialGuid = materialGuid;
+            }
+
+            public string PrefabPath { get; }
+            public string PrefabGuid { get; }
+            public string PrefabName { get; }
+            public string MeshPath { get; }
+            public string MeshGuid { get; }
+            public string MaterialPath { get; }
+            public string MaterialGuid { get; }
         }
 
         private static void AssertCodes(string path, params BenchmarkAssetIssueCode[] expectedCodes)

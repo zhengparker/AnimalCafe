@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using UnityEditor;
 using UnityEngine;
 
@@ -17,7 +16,11 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
 
         private readonly List<string> ownedAssetPaths = new List<string>();
         private readonly List<string> ownedFolderPaths = new List<string>();
+        private readonly string fixtureFolderPath =
+            $"Assets/Tests/BenchmarkAssetFixture_{Guid.NewGuid():N}";
         private bool disposed;
+
+        public string FixtureFolderPath => fixtureFolderPath;
 
         public GameObject CreatePrefab(
             string prefabName,
@@ -27,7 +30,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             ValidatePrefabName(prefabName);
 
             return CreatePrefabAtPath(
-                $"{GeneratedFolderPath}/{prefabName}.prefab",
+                $"{fixtureFolderPath}/{prefabName}.prefab",
                 bounds,
                 triangleCount,
                 null);
@@ -55,7 +58,8 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
 
             ThrowIfPrefabAlreadyExists(prefabPath);
 
-            EnsureGeneratedFolder();
+            var callFolderPath = CreateUniqueCallFolderPath();
+            EnsureAssetFolders(callFolderPath);
             EnsureAssetFolders(Path.GetDirectoryName(prefabPath)?.Replace('\\', '/'));
 
             var prefabName = Path.GetFileNameWithoutExtension(prefabPath);
@@ -63,15 +67,14 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             try
             {
                 var mesh = CreateMesh(bounds, triangleCount);
-                var artifactName = ToSafeArtifactName(prefabPath);
-                var meshPath = $"{GeneratedFolderPath}/{artifactName}_Mesh.asset";
-                AssetDatabase.CreateAsset(mesh, meshPath);
+                var meshPath = $"{callFolderPath}/Mesh.asset";
                 TrackOwnedAsset(meshPath);
+                AssetDatabase.CreateAsset(mesh, meshPath);
 
                 var material = CreateUrpLitMaterial();
-                var materialPath = $"{GeneratedFolderPath}/{artifactName}_Material.mat";
-                AssetDatabase.CreateAsset(material, materialPath);
+                var materialPath = $"{callFolderPath}/Material.mat";
                 TrackOwnedAsset(materialPath);
+                AssetDatabase.CreateAsset(material, materialPath);
 
                 var visual = new GameObject("Visual");
                 visual.transform.SetParent(root.transform, false);
@@ -89,8 +92,8 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 forwardMarker.transform.localRotation = Quaternion.identity;
 
                 configure?.Invoke(root);
-                var prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
                 TrackOwnedAsset(prefabPath);
+                var prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
                 AssetDatabase.SaveAssets();
                 return prefab;
             }
@@ -180,11 +183,6 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
         }
 
-        private void EnsureGeneratedFolder()
-        {
-            EnsureAssetFolders(GeneratedFolderPath);
-        }
-
         private void EnsureAssetFolders(string assetFolderPath)
         {
             if (string.IsNullOrEmpty(assetFolderPath) || AssetDatabase.IsValidFolder(assetFolderPath))
@@ -196,6 +194,19 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             EnsureAssetFolders(parent);
             AssetDatabase.CreateFolder(parent, Path.GetFileName(assetFolderPath));
             TrackOwnedFolder(assetFolderPath);
+        }
+
+        private string CreateUniqueCallFolderPath()
+        {
+            string callFolderPath;
+            do
+            {
+                callFolderPath = $"{fixtureFolderPath}/{Guid.NewGuid():N}";
+            }
+            while (AssetDatabase.IsValidFolder(callFolderPath) ||
+                   Directory.Exists(ToAbsoluteAssetPath(callFolderPath)));
+
+            return callFolderPath;
         }
 
         private void ThrowIfPrefabAlreadyExists(string prefabPath)
@@ -210,12 +221,18 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
 
         private void TrackOwnedAsset(string assetPath)
         {
-            ownedAssetPaths.Add(assetPath);
+            if (!ownedAssetPaths.Contains(assetPath))
+            {
+                ownedAssetPaths.Add(assetPath);
+            }
         }
 
         private void TrackOwnedFolder(string assetFolderPath)
         {
-            ownedFolderPaths.Add(assetFolderPath);
+            if (!ownedFolderPaths.Contains(assetFolderPath))
+            {
+                ownedFolderPaths.Add(assetFolderPath);
+            }
         }
 
         private static void DeleteOwnedEmptyAssetFolder(string assetFolderPath)
@@ -238,15 +255,5 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             return Path.Combine(Application.dataPath, assetPath.Substring("Assets/".Length));
         }
 
-        private static string ToSafeArtifactName(string prefabPath)
-        {
-            var builder = new StringBuilder(prefabPath.Length);
-            foreach (var character in prefabPath)
-            {
-                builder.Append(char.IsLetterOrDigit(character) ? character : '_');
-            }
-
-            return builder.ToString();
-        }
     }
 }
