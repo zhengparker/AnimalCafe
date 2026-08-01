@@ -79,7 +79,7 @@ Phase 3 不加入 Decoration Mode、鼠标摆放、功能设备逻辑或正式 g
 - Art direction、基础 color palette 与 shape language；
 - Grid 与 Unity/DCC scale convention；
 - Model dimensions、pivot、forward direction 和 rotation contract；
-- Tripo provenance、raw export 与 Blender cleanup 规则；
+- Tripo provenance、raw export 与 authoritative-source editing rules；
 - Blender source、FBX export 与 Unity import 规则；
 - folder、file、Model、Material 和 Prefab naming；
 - URP Material、Texture 和 shader baseline；
@@ -194,28 +194,27 @@ Tripo 用于生成造型初稿。Tripo raw export 不是 production-ready asset�
 ### 7.3 Studio Owner Original-LOD0 Override (2026-08-01)
 
 The Studio Owner selected the three user-re-supplied original Blender files as
-the authoritative benchmark LOD0 geometry. This override supersedes the
-default cleanup/rebuild expectation for these three benchmark LOD0 meshes only:
+the authoritative byte-identical benchmark LOD0 sources. Their protected
+source contract is:
 
 - copy `Raw/<Kind>/*_user_resupplied_original.blend` byte-for-byte to the
   authoritative `Blender/SM_Benchmark_*.blend` path and record SHA-256
   equality before export;
-- do not save, normalize, retopologize, decimate, repair normals, or apply
-  transforms/modifiers to LOD0;
-- accept Raw topology/non-manifold warnings for these benchmark LOD0 assets;
-- Coffee Machine LOD1 remains an independently simplified derivative only;
+- preserve byte equality after export and accept original topology, normals and
+  non-manifold warnings for these benchmark LOD0 assets;
+- Coffee Machine LOD1 remains the only independently simplified derivative;
 - use Prefab child/import metadata for necessary Unity axis/dimension
   adaptation, while the Prefab root remains identity;
 - all three benchmark LOD0 validator/test boundaries are `6,000` triangles
   pass and `6,001` triangles fail; Coffee LOD1 remains `<= 2,500` and
-  `<= 60%` of LOD0. These budget limits do not authorize an original-LOD0
-  rebuild, cleanup, or topology repair;
-- future automation must not rebuild the Owner-approved LOD0 sources unless
-  the Studio Owner explicitly replaces this override.
+  `<= 60%` of LOD0;
+- a protected LOD0 shape, topology, pivot or forward issue stops for Studio
+  Owner direction. Blender editing is limited to Coffee LOD1 or a future
+  separately approved editable source.
 
-### 7.4 Blender Cleanup (default policy, overridden above for these LOD0 files)
+### 7.4 Source Editing Policy for Independently Approved Sources
 
-进入 production export 前必须检查并按需清理：
+本节只适用于 Coffee Machine 的独立 LOD1 derivative 或未来另行批准的 editable source；不适用于上述受保护的 original LOD0。进入 production export 前可检查：
 
 - 多余或隐藏 mesh；
 - floating geometry；
@@ -570,7 +569,7 @@ Approval gates：
 
 - visual direction 一致；
 - silhouette、scale、Material 与 Camera readability 通过；
-- Tripo/Blender cleanup 与 production contract 可重复；
+- authoritative source preservation、Unity child/import adaptation 与 production contract 可重复；
 - benchmark assets 适合作为后续资产参考，而不是正式内容量承诺。
 
 ### Technical Director

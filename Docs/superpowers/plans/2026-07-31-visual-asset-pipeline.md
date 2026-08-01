@@ -20,10 +20,10 @@
 - Ceramic Cup target：`0.14 × 0.14 × 0.16 m`，约 `±10%`。
 - Furniture-to-character visual reference：标准角色高度 `1.30 m`；P3 只建立 reference，不自动修改现有柴犬 Mesh、Rig 或 Animation。
 - Unity final contract：root position/rotation 为 zero，root scale 为 one，底面中心 pivot，最低点 `Y = 0`，forward 为 `+Z`。
-- Blender source：`Z Up`、front `-Y`；FBX：`Forward -Z`、`Up Y`；错误必须回 source/export 修正。
-- Tripo Raw export 不能直接成为 production Prefab。一般 pipeline 可以使用 cleaned `.blend` 作为 editable source；但本 Phase 3 的三个 benchmark 必须服从下面的 Studio Owner original-LOD0 override，不能把原始 LOD0 改写成 cleaned 或 rebuilt source。
-- Studio Owner override (2026-08-01)：the three user-re-supplied original Blender inputs are authoritative LOD0. Copy Raw bytes to `Blender/`, verify matching SHA-256 before export, and never automatically clean, rebuild, normalize, decimate, or save LOD0. Raw topology warnings are accepted for these benchmarks. Coffee LOD1 alone may be an independent simplified derivative. Required axis/dimension adaptation belongs only on the Prefab Visual child/import metadata; root stays identity.
-- Owner-approved validator/test boundary：Work Table、Coffee Machine LOD0 和 Ceramic Cup 均为 `6,000` triangles pass、`6,001` triangles fail；Coffee LOD1 仍须 `<= 2,500` 且 `<= 60%` of LOD0。这个 budget change 不授权重建、清理或修复任何 original LOD0。
+- Blender source：`Z Up`、front `-Y`；FBX：`Forward -Z`、`Up Y`。axis/export errors follow the applicable source contract; protected original LOD0 follows the Studio Owner contract below.
+- Tripo Raw export 不能直接成为 production Prefab。一般 pipeline 的 editable source 必须由单独批准的 source contract 定义；本 Phase 3 的三个 benchmark 必须服从下面的 Studio Owner original-LOD0 contract。
+- Studio Owner original-LOD0 contract (2026-08-01)：the three user-re-supplied original Blender inputs are the authoritative byte-identical LOD0 sources. Copy Raw bytes to `Blender/`, verify matching SHA-256 before export, and preserve that byte equality after export. Original topology and normals are accepted benchmark facts. Coffee LOD1 alone may be an independently edited simplified derivative. Required axis/dimension adaptation belongs only on the Prefab Visual child/import metadata; root stays identity. A protected LOD0 shape/topology/pivot/forward issue stops for Studio Owner direction; Blender editing is limited to Coffee LOD1 or a future separately approved editable source.
+- Owner-approved validator/test boundary：Work Table、Coffee Machine LOD0 和 Ceramic Cup 均为 `6,000` triangles pass、`6,001` triangles fail；Coffee LOD1 仍须 `<= 2,500` 且 `<= 60%` of LOD0。这个 budget change 不改变 original LOD0 的 byte-identical contract。
 - Shader 只使用 Opaque URP `Lit`；Texture 最大 `512 × 512`；禁止 custom Shader、透明 benchmark Material 与 `MeshCollider`。
 - Triangle budget：Table ≤ `6,000`；Machine LOD0 ≤ `6,000`、LOD1 ≤ `2,500` 且 ≤ LOD0 的 `60%`；Cup ≤ `6,000`。
 - Material slots：Table ≤ `2`；Machine ≤ `3`；Cup ≤ `1`。
@@ -570,7 +570,7 @@ Prompt or user-owned reference description
 Raw exported filename and format
 User-confirmed license/use-right status
 Third-party logo or protected-character check: none
-Blender cleanup file
+Authoritative byte-identical Blender source
 Production FBX file
 ```
 
@@ -586,11 +586,11 @@ For Work Table, Coffee Machine and Ceramic Cup independently:
 
 1. byte-copy each user-re-supplied Raw input to the authoritative Blender path;
 2. verify Raw and authoritative SHA-256 equality before export;
-3. do not modify, save, clean, retopologize, normalize, decimate, or apply transforms to LOD0;
-4. retain user-adjusted dimensions, pivot, orientation, materials and accepted Raw topology warnings;
+3. preserve byte equality between the Raw input and authoritative LOD0 source after export;
+4. retain original dimensions, pivot, orientation, materials, normals and topology as accepted benchmark facts;
 5. adapt only the Unity Prefab Visual child/import metadata if approved bounds require it;
 6. keep the Prefab root at identity;
-7. create Coffee LOD1 as a separate simplified derivative without mutating LOD0.
+7. create Coffee LOD1 as a separate simplified derivative while preserving the LOD0 byte-identical contract.
 
 - [ ] **Step 4: Create Coffee Machine LOD1 in Blender**
 
@@ -605,7 +605,7 @@ Use:
 ```text
 Selected Objects: On
 Object Types: Mesh only
-Apply Transform: On
+Export coordinate conversion: FBX only; authoritative source remains byte-identical
 Forward: -Z Forward
 Up: Y Up
 Add Leaf Bones: Off
@@ -621,7 +621,7 @@ For each FBX:
 - Scale Factor `1`;
 - do not repair size using Prefab root scale;
 - import Materials without generating duplicated embedded `.mat` files;
-- normals use the cleaned source result;
+- normals use the accepted original source result;
 - Read/Write remains disabled unless a named later feature proves it is required;
 - inspect imported bounds and triangle counts in Unity.
 
@@ -656,8 +656,9 @@ Use `AnimalCafe/Validation/Validate Benchmark Assets`.
 For each issue, fix the correct layer:
 
 ```text
-shape/topology/size/pivot/forward → Blender
-axis/export content              → FBX export settings
+protected LOD0 shape/topology/pivot/forward → stop and request Studio Owner direction
+required axis/dimension adaptation           → Unity Prefab Visual child/import metadata only
+Coffee LOD1 or separately approved source    → Blender editing only within that source contract
 Shader/Material sharing          → Unity Material
 Collider/LOD assembly            → Unity Prefab
 naming/path                      → file/folder location
