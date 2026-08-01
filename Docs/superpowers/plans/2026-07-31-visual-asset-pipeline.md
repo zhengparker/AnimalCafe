@@ -29,7 +29,7 @@
 - Triangle budget：Table ≤ `6,000`；Machine LOD0 ≤ `6,000`、LOD1 ≤ `2,500` 且 ≤ LOD0 的 `60%`；Cup ≤ `6,000`。
 - Material slots：Table ≤ `2`；Machine ≤ `3`；Cup ≤ `1`。
 - Collider count：Table ≤ `3`；Machine ≤ `2`；Cup ≤ `1`；只允许 primitive Collider，且 `isTrigger = false`。
-- Camera validation：SolidColor background `#F2E6B8`；scene-only `UniversalAdditionalCameraData` with `SMAA High` and Camera `Post Processing` enabled；orthographic size `4`、`7`、`12`；Windows `1920 × 1080`；mobile portrait reference `1170 × 2532`。不得修改 global URP/Quality settings。
+- Camera validation：SolidColor background `#F2E6B8`；scene-only `UniversalAdditionalCameraData` with `SMAA High` and Camera `Post Processing` enabled；default orthographic size `4`，fixed `1920 × 1080` at `1x`/`Fit` for primary clarity/Material review，size `7`、`12` for distance/readability；`6x` pixel magnification is not a pass criterion；mobile portrait reference `1170 × 2532`。不得修改 global URP/Quality settings。
 - Batch baseline：同时显示 Table、Machine、Cup 各 `20` 个，共 `60` 个实例。
 - 不制作大量正式 Models，不加入 gameplay、Decoration Mode、Interaction Anchors、Save、UI 或 pathfinding。
 - 不修改 `MainCafe.unity`。
@@ -711,6 +711,7 @@ Setup_CreatesOneOrthographicIsometricCamera
 Setup_CreatesOneSingleAssetDisplayRoot
 Setup_SingleDisplayUsesTwoSeparateCenteredTabletopStations
 Setup_CharacterReferenceDoesNotOverlapRightStationInCameraView
+Setup_AllSingleDisplayRenderersFitInsideSizeFourCameraViewport
 Setup_CreatesOneCharacterScaleReferenceAtOnePointThreeMeters
 Setup_CreatesTwentyInstancesOfEachBenchmarkInBatchRoot
 Setup_RepeatedRunDoesNotDuplicateObjects
@@ -749,7 +750,7 @@ AssetReadabilityRoot
    └─ Cups_20
 ```
 
-Camera uses the accepted fixed rotation from the project foundation, is orthographic, starts at size `7`, clears to SolidColor `#F2E6B8`, and has scene-specific `UniversalAdditionalCameraData` with `SMAA High` plus Camera `Post Processing` enabled so SMAA executes. Do not modify global URP or Quality settings. `SingleAssetDisplay` uses two instances of the same Work Table Prefab: Coffee Machine is centered on the left tabletop and Ceramic Cup is centered on the right tabletop. Character Scale Reference uses local `X = 2.50`; project renderer bounds through the real Camera and require no overlap with the right station after adding a `0.01` viewport margin. Arrange batch instances with literal spacing large enough to prevent overlap; no runtime placement system is introduced.
+Camera uses the accepted fixed rotation from the project foundation, is orthographic, starts at size `4`, clears to SolidColor `#F2E6B8`, and has scene-specific `UniversalAdditionalCameraData` with `SMAA High` plus Camera `Post Processing` enabled so SMAA executes. At fixed `1920 × 1080`, `1x`/`Fit` is the primary clarity/Material view; `6x` only magnifies rendered pixels and is not a pass criterion. Do not modify global URP or Quality settings. `SingleAssetDisplay` uses two instances of the same Work Table Prefab: Coffee Machine is centered on the left tabletop and Ceramic Cup is centered on the right tabletop. Every relevant renderer must remain inside the real size-4 Camera viewport with `0.01` safe margin. Character Scale Reference uses local `X = 2.50`; project renderer bounds through the real Camera and require no overlap with the right station after adding a `0.01` viewport margin. Arrange batch instances with literal spacing large enough to prevent overlap; no runtime placement system is introduced.
 
 `CharacterScaleReference_1_30m` is a simple Editor-generated silhouette/reference object with visible bounds exactly `1.30 m` high, bottom at `Y = 0`, and no Collider、Rig、Animation or gameplay script. It uses the dedicated teal `#157A78` URP Lit Material, must contrast clearly against the pale-yellow background, and is not counted among the `60` benchmark batch instances.
 
@@ -763,9 +764,10 @@ Run the setup tests twice. Expected: identical object counts and no `MainCafe.un
 ReadabilityScene_LoadsWithoutMissingBenchmarkReferences
 ReadabilityScene_ContainsExactlySixtyBatchInstances
 ReadabilityScene_CharacterScaleReferenceIsOnePointThreeMetersHigh
-ReadabilityScene_CameraIsOrthographicAndUsesSizeSeven
+ReadabilityScene_CameraIsOrthographicAndUsesSizeFour
 ReadabilityScene_UsesTwoSeparateCenteredTabletopStations
 ReadabilityScene_CharacterReferenceDoesNotOverlapRightStationInCameraView
+ReadabilityScene_AllSingleDisplayRenderersFitInsideSizeFourCameraViewport
 ReadabilityScene_AllRenderersUseUrpLitMaterials
 ReadabilityScene_CoffeeMachineHasTwoValidLodLevels
 ReadabilityScene_ProducesNoUnexpectedErrorLogs

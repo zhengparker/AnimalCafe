@@ -142,8 +142,8 @@ Automated tests 不只检查临时假物件，也检查真实 production Prefab 
 
 | Verification | Result |
 |---|---|
-| Full EditMode | `302 / 302` passed |
-| Full PlayMode | `50 / 50` passed |
+| Full EditMode | `305 / 305` passed |
+| Full PlayMode | `53 / 53` passed |
 | Focused AssetPipeline EditMode | `111 / 111` passed |
 | Failed / Skipped / Inconclusive | 全部 `0` |
 | Production Validator | `3 / 3` benchmark Prefabs valid；`0 issues` |
@@ -287,17 +287,19 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 ### 9.3 在 Play Mode 检查 Camera、比例与 LOD
 
 1. 点击 Unity 顶部 Play button。确认按钮变蓝后再改临时测试值。
-2. 先观察 Game view background。它应是浅黄色 `#F2E6B8`；这个颜色本身是设计结果，不算 failure。只有它让物体被裁切、颜色 washed out 或难以分辨时才记录 failure。
-3. 选中 `Main Camera`，确认 Camera 使用 `Solid Color`；在附加的 Universal camera data 中确认 antialiasing 是 `SMAA`、Quality 是 `High`，并确认 Camera 的 `Post Processing` 已勾选。少了这个勾选，虽然 Inspector 写着 SMAA，锯齿处理也不会真正执行。这些都只是本 Scene 的设置，不应要求修改 global URP/Quality settings。
-4. 确认 `CharacterScaleReference_1_30m` 使用明显的青绿色，并位于右桌更右侧（Scene local `X = 2.50`）。PASS 条件不只是 world position 分开：从 Game Camera 看，它也不能与右桌或 Cup 的轮廓重叠。
-5. 检查 original colors：Work Table 应是橙色木纹/黑色细节，Coffee Machine 应有浅蓝/白/黑分区，Ceramic Cup 应是柔和绿色。若仍是旧的统一纯色 palette，应记录 failure。
-6. 在 Inspector 找到 Camera component 的 `Orthographic Size`，依次输入 `4`、`7`、`12`：
-   - size `4`：能看清主要功能细节、Material 差异与物体正面；
+2. 在 Game view resolution 下拉菜单选择或添加固定 `1920 × 1080`，并把 Game view scale 设为 `1x` 或 `Fit`。这是主要清晰度、边缘和 Material 验收视图。`6x` 只是把已经渲染出的 pixels 放大六倍，会让锯齿和单个 pixel 显得更大，不能作为 PASS/FAIL 标准。
+3. 先观察 Game view background。它应是浅黄色 `#F2E6B8`；这个颜色本身是设计结果，不算 failure。只有它让物体被裁切、颜色 washed out 或难以分辨时才记录 failure。
+4. 选中 `Main Camera`，确认 Camera 使用 `Solid Color`；在附加的 Universal camera data 中确认 antialiasing 是 `SMAA`、Quality 是 `High`，并确认 Camera 的 `Post Processing` 已勾选。少了这个勾选，虽然 Inspector 写着 SMAA，锯齿处理也不会真正执行。这些都只是本 Scene 的设置，不应要求修改 global URP/Quality settings。
+5. 确认 Camera 的默认 `Orthographic Size` 是 `4`，而且两张桌子、Coffee Machine、Cup 与角色参考都完整留在画面内，没有贴住边缘。
+6. 确认 `CharacterScaleReference_1_30m` 使用明显的青绿色，并位于右桌更右侧（Scene local `X = 2.50`）。PASS 条件不只是 world position 分开：从 Game Camera 看，它也不能与右桌或 Cup 的轮廓重叠。
+7. 检查 original colors：Work Table 应是橙色木纹/黑色细节，Coffee Machine 应有浅蓝/白/黑分区，Ceramic Cup 应是柔和绿色。若仍是旧的统一纯色 palette，应记录 failure。
+8. 在 Inspector 找到 Camera component 的 `Orthographic Size`，依次检查 `4`、`7`、`12`：
+   - size `4`：默认主要验收距离；配合固定 `1920 × 1080` 和 `1x`/`Fit` 检查功能细节、Material 差异与物体正面；
    - size `7`：能立即区分 Work Table、Coffee Machine 与 Ceramic Cup；
    - size `12`：Work Table 与 Coffee Machine 仍可辨认，Cup silhouette 保持稳定。
-7. 比较 `CharacterScaleReference_1_30m`：PASS 条件是它确实提供 `1.30 m` 角色比例参考，桌子、咖啡机和杯子的相对大小容易理解，没有明显“杯子像家具”或“机器像玩具”的比例错误。
-8. 观察两张桌子：PASS 条件是左桌只放 Coffee Machine，右桌只放 Ceramic Cup；两件物品都位于各自桌面中央，彼此没有前后遮挡。Coffee Machine 完整位于桌面范围内，四周仍能看到明显桌面余量。
-9. 选中 Coffee Machine，确认有一个 two-level `LODGroup`。通过 Camera zoom 或 LOD preview 观察 LOD0/LOD1 切换：PASS 条件是没有明显 size、position、pivot、silhouette、Material 或 Texture jump。
+9. 比较 `CharacterScaleReference_1_30m`：PASS 条件是它确实提供 `1.30 m` 角色比例参考，桌子、咖啡机和杯子的相对大小容易理解，没有明显“杯子像家具”或“机器像玩具”的比例错误。
+10. 观察两张桌子：PASS 条件是左桌只放 Coffee Machine，右桌只放 Ceramic Cup；两件物品都位于各自桌面中央，彼此没有前后遮挡。Coffee Machine 完整位于桌面范围内，四周仍能看到明显桌面余量。
+11. 选中 Coffee Machine，确认有一个 two-level `LODGroup`。通过 Camera zoom 或 LOD preview 观察 LOD0/LOD1 切换：PASS 条件是没有明显 size、position、pivot、silhouette、Material 或 Texture jump。
 
 ### 9.4 检查 Game view resolution 与 batch display
 
@@ -331,7 +333,7 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 | 5 | SMAA | 检查 Main Camera additional data | scene-only `SMAA High` 且 `Post Processing` 已勾选；未要求改 global settings | |
 | 6 | Reference contrast | 观察青绿色 `1.30 m` reference | 与背景和家具明显区分 | |
 | 7 | Original colors | 对照三件家具 | Table 橙木/黑、Machine 浅蓝/白/黑、Cup 柔和绿 | |
-| 8 | Camera size 4 | Play Mode 设置 size `4` | 细节、Material、正面可读 | |
+| 8 | Primary view | 固定 `1920 × 1080`、`1x`/`Fit`、默认 size `4` | 所有 single-display renderers 在画面内；细节、Material、正面可读 | |
 | 9 | Camera size 7 | 设置 size `7` | 三个 assets 可立即区分 | |
 | 10 | Camera size 12 | 设置 size `12` | Table/Machine 可辨认；Cup silhouette 稳定 | |
 | 11 | Character scale | 比较 `1.30 m` reference | 三件 assets 的相对比例合理 | |
@@ -342,6 +344,8 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 | 16 | Batch 60 | 检查三组各 20 | 正好 60、无 overlap/pink/missing/异常 Collider | |
 | 17 | Console | 检查完整 manual run | 无 unexpected error 或 missing reference | |
 | 18 | Play Mode cleanup | 退出且不保存实验性改动 | 没有把临时 Transform 写入 Scene | |
+
+提示：不要把 Game view 的 `6x` 结果加入 checklist；它只是 pixel magnification，不是 Camera 或 SMAA quality setting。
 | 19 | License | 记录 license/use-right statement | 明确填写“是”，否则保持 Pending | |
 
 ## 10. Phase 3 没有做什么
@@ -387,12 +391,13 @@ Phase 3 没有开始或交付：
 
 当前 verified automated evidence：
 
-- EditMode `304 / 304` passed；
-- PlayMode `52 / 52` passed；
+- EditMode `305 / 305` passed；
+- PlayMode `53 / 53` passed；
 - focused AssetPipeline EditMode `111 / 111` passed；
 - failed、skipped、inconclusive 全部为 `0`；
 - production validator `3 / 3` valid、`0 issues`；
 - Camera-projected overlap RED `0 / 1`，修复后 focused EditMode 与 PlayMode 均为 `1 / 1` passed；
+- Size 4 trial focused EditMode `18 / 18`、focused PlayMode `12 / 12` passed；全部 single-display renderer bounds 在真实 Camera viewport `0.01` safe margin 内；
 - authored Guide 的 placeholder/static scan 与 `git diff --check` 是文档 closeout gate；Unity-generated YAML 不在本次 Guide rewrite scope 内机械格式化。
 
 当前 manual 状态：

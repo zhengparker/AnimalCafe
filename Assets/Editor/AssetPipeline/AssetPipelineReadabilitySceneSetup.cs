@@ -76,7 +76,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 Quaternion.Euler(35.264f, 45f, 0f));
             var camera = cameraObject.AddComponent<UnityEngine.Camera>();
             camera.orthographic = true;
-            camera.orthographicSize = 7f;
+            camera.orthographicSize = 4f;
             camera.nearClipPlane = 0.1f;
             camera.farClipPlane = 100f;
             camera.clearFlags = CameraClearFlags.SolidColor;

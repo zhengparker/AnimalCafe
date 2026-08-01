@@ -93,7 +93,7 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
         }
 
         [UnityTest]
-        public IEnumerator ReadabilityScene_CameraIsOrthographicAndUsesSizeSeven()
+        public IEnumerator ReadabilityScene_CameraIsOrthographicAndUsesSizeFour()
         {
             yield return LoadScene();
 
@@ -101,7 +101,7 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
                 FindObjectsInactive.Include);
             Assert.That(cameras, Has.Length.EqualTo(1));
             Assert.That(cameras[0].orthographic, Is.True);
-            Assert.That(cameras[0].orthographicSize, Is.EqualTo(7f));
+            Assert.That(cameras[0].orthographicSize, Is.EqualTo(4f));
         }
 
         [UnityTest]
@@ -186,6 +186,30 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
 
             Assert.That(stationRect.Overlaps(referenceRect), Is.False,
                 "The reference must not overlap the right table/cup in Camera view.");
+        }
+
+        [UnityTest]
+        public IEnumerator ReadabilityScene_AllSingleDisplayRenderersFitInsideSizeFourCameraViewport()
+        {
+            yield return LoadScene();
+
+            var display = GameObject.Find("SingleAssetDisplay");
+            var camera = Object.FindAnyObjectByType<UnityEngine.Camera>();
+            const float safeMargin = 0.01f;
+
+            Assert.That(camera.orthographicSize, Is.EqualTo(4f));
+            foreach (var renderer in display.GetComponentsInChildren<Renderer>(true))
+            {
+                var viewportRect = ProjectBoundsToViewport(camera, renderer.bounds);
+                Assert.That(viewportRect.xMin, Is.GreaterThanOrEqualTo(safeMargin),
+                    $"{renderer.name} extends beyond the left safe margin.");
+                Assert.That(viewportRect.xMax, Is.LessThanOrEqualTo(1f - safeMargin),
+                    $"{renderer.name} extends beyond the right safe margin.");
+                Assert.That(viewportRect.yMin, Is.GreaterThanOrEqualTo(safeMargin),
+                    $"{renderer.name} extends below the bottom safe margin.");
+                Assert.That(viewportRect.yMax, Is.LessThanOrEqualTo(1f - safeMargin),
+                    $"{renderer.name} extends above the top safe margin.");
+            }
         }
 
         [UnityTest]

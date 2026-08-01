@@ -406,8 +406,8 @@ recorded as `Completed` before both gates are resolved.
 
 Fresh readability layout review-fix automated evidence (2026-08-01):
 
-- full EditMode: `304 / 304` passed; failed/skipped/inconclusive all `0`;
-- full PlayMode: `52 / 52` passed; failed/skipped/inconclusive all `0`;
+- full EditMode: `305 / 305` passed; failed/skipped/inconclusive all `0`;
+- full PlayMode: `53 / 53` passed; failed/skipped/inconclusive all `0`;
 - production benchmark validator: `3 / 3` Prefabs valid, `0 issues`;
 - focused AssetPipeline EditMode: `111 / 111` passed; focused readability
   Scene EditMode: `15 / 15` passed; focused AssetReadability PlayMode: `9 / 9`
@@ -418,6 +418,9 @@ Fresh readability layout review-fix automated evidence (2026-08-01):
 - a real Camera-projected bounds test proved the previous Character Scale
   Reference overlapped the right station in view; moving it to local `X = 2.50`
   passes focused EditMode and PlayMode checks with a `0.01` viewport margin;
+- the approved Size 4 trial now uses orthographic size `4` by default; focused
+  EditMode `18 / 18` and focused PlayMode `12 / 12` prove all single-display
+  renderer bounds remain inside the real Camera viewport with `0.01` margin;
 - `MainCafe.unity` remains unchanged; PlayMode cleanup restored Build Settings
   to its single enabled `Assets/Scenes/MainCafe.unity` entry.
 
@@ -2407,7 +2410,7 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 **Phase 3 — Visual Style & Asset Pipeline Foundation** 状态为 `In Review`。
 
-- 已完成 readability layout review-fix fresh automated evidence：EditMode `304 / 304`、PlayMode `52 / 52` passed，failed、skipped、inconclusive 均为 `0`；Camera-projected overlap focused EditMode 与 PlayMode 均为 `1 / 1` passed；production validator 为 `3 / 3` valid、`0 issues`。
+- 已完成 readability Size 4 trial fresh automated evidence：EditMode `305 / 305`、PlayMode `53 / 53` passed，failed、skipped、inconclusive 均为 `0`；focused EditMode `18 / 18`、focused PlayMode `12 / 12` passed；Camera-projected viewport containment 与 non-overlap checks 均通过；production validator 为 `3 / 3` valid、`0 issues`。
 - Studio Owner Camera/readability manual acceptance 以及 source license/use-right confirmation 仍为 `Pending`。
 - 当前只是 benchmark pipeline 和 readability baseline；未开始 Phase 4 formal asset set、gameplay、placement 或 runtime integration。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
