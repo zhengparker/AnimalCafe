@@ -8,16 +8,18 @@ using UnityEngine;
 
 namespace AnimalCafe.Tests.EditMode.AssetPipeline
 {
-    public static class BenchmarkAssetTestFactory
+    public sealed class BenchmarkAssetTestFactory : IDisposable
     {
         public const string GeneratedFolderPath = "Assets/Tests/Generated/AssetPipeline";
 
         public const string BenchmarkPrefabFolderPath =
             "Assets/Art/VisualPipeline/Benchmarks/Prefabs";
 
-        private static readonly List<string> CreatedBenchmarkPrefabPaths = new List<string>();
+        private readonly List<string> ownedAssetPaths = new List<string>();
+        private readonly List<string> ownedFolderPaths = new List<string>();
+        private bool disposed;
 
-        public static GameObject CreatePrefab(
+        public GameObject CreatePrefab(
             string prefabName,
             Vector3 bounds,
             int triangleCount)
@@ -31,7 +33,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 null);
         }
 
-        public static GameObject CreatePrefabAtPath(
+        public GameObject CreatePrefabAtPath(
             string prefabPath,
             Vector3 bounds,
             int triangleCount,
@@ -51,6 +53,8 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 throw new ArgumentOutOfRangeException(nameof(triangleCount));
             }
 
+            ThrowIfPrefabAlreadyExists(prefabPath);
+
             EnsureGeneratedFolder();
             EnsureAssetFolders(Path.GetDirectoryName(prefabPath)?.Replace('\\', '/'));
 
@@ -62,10 +66,12 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 var artifactName = ToSafeArtifactName(prefabPath);
                 var meshPath = $"{GeneratedFolderPath}/{artifactName}_Mesh.asset";
                 AssetDatabase.CreateAsset(mesh, meshPath);
+                TrackOwnedAsset(meshPath);
 
                 var material = CreateUrpLitMaterial();
                 var materialPath = $"{GeneratedFolderPath}/{artifactName}_Material.mat";
                 AssetDatabase.CreateAsset(material, materialPath);
+                TrackOwnedAsset(materialPath);
 
                 var visual = new GameObject("Visual");
                 visual.transform.SetParent(root.transform, false);
@@ -84,7 +90,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
 
                 configure?.Invoke(root);
                 var prefab = PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
-                TrackBenchmarkPrefab(prefabPath);
+                TrackOwnedAsset(prefabPath);
                 AssetDatabase.SaveAssets();
                 return prefab;
             }
@@ -94,19 +100,31 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
         }
 
-        public static void DeleteGeneratedAssets()
+        public void DeleteGeneratedAssets()
         {
-            AssetDatabase.DeleteAsset(GeneratedFolderPath);
-            foreach (var prefabPath in CreatedBenchmarkPrefabPaths)
+            if (disposed)
             {
-                AssetDatabase.DeleteAsset(prefabPath);
+                return;
             }
 
-            CreatedBenchmarkPrefabPaths.Clear();
-            DeleteEmptyAssetFolder("Assets/Art/VisualPipeline/Benchmarks");
-            DeleteEmptyAssetFolder("Assets/Art/VisualPipeline");
-            DeleteEmptyAssetFolder("Assets/Tests/Generated");
+            for (var index = ownedAssetPaths.Count - 1; index >= 0; index--)
+            {
+                AssetDatabase.DeleteAsset(ownedAssetPaths[index]);
+            }
+
             AssetDatabase.Refresh();
+            foreach (var folderPath in ownedFolderPaths.OrderByDescending(path => path.Length))
+            {
+                DeleteOwnedEmptyAssetFolder(folderPath);
+            }
+
+            AssetDatabase.Refresh();
+            disposed = true;
+        }
+
+        public void Dispose()
+        {
+            DeleteGeneratedAssets();
         }
 
         private static Mesh CreateMesh(Vector3 bounds, int triangleCount)
@@ -162,20 +180,12 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
         }
 
-        private static void EnsureGeneratedFolder()
+        private void EnsureGeneratedFolder()
         {
-            if (!AssetDatabase.IsValidFolder("Assets/Tests/Generated"))
-            {
-                AssetDatabase.CreateFolder("Assets/Tests", "Generated");
-            }
-
-            if (!AssetDatabase.IsValidFolder(GeneratedFolderPath))
-            {
-                AssetDatabase.CreateFolder("Assets/Tests/Generated", "AssetPipeline");
-            }
+            EnsureAssetFolders(GeneratedFolderPath);
         }
 
-        private static void EnsureAssetFolders(string assetFolderPath)
+        private void EnsureAssetFolders(string assetFolderPath)
         {
             if (string.IsNullOrEmpty(assetFolderPath) || AssetDatabase.IsValidFolder(assetFolderPath))
             {
@@ -185,43 +195,47 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             var parent = Path.GetDirectoryName(assetFolderPath)?.Replace('\\', '/');
             EnsureAssetFolders(parent);
             AssetDatabase.CreateFolder(parent, Path.GetFileName(assetFolderPath));
+            TrackOwnedFolder(assetFolderPath);
         }
 
-        private static void TrackBenchmarkPrefab(string prefabPath)
+        private void ThrowIfPrefabAlreadyExists(string prefabPath)
         {
-            if (prefabPath.StartsWith(BenchmarkPrefabFolderPath + "/", StringComparison.Ordinal) &&
-                !CreatedBenchmarkPrefabPaths.Contains(prefabPath))
+            var absolutePath = ToAbsoluteAssetPath(prefabPath);
+            if (AssetDatabase.LoadMainAssetAtPath(prefabPath) != null || File.Exists(absolutePath))
             {
-                CreatedBenchmarkPrefabPaths.Add(prefabPath);
+                throw new InvalidOperationException(
+                    "Fixture Prefab path must be absent before creating test content.");
             }
         }
 
-        private static void DeleteEmptyAssetFolder(string assetFolderPath)
+        private void TrackOwnedAsset(string assetPath)
         {
-            var assetRelativePath = assetFolderPath.Substring("Assets/".Length);
-            var absolutePath = Path.Combine(Application.dataPath, assetRelativePath);
+            ownedAssetPaths.Add(assetPath);
+        }
+
+        private void TrackOwnedFolder(string assetFolderPath)
+        {
+            ownedFolderPaths.Add(assetFolderPath);
+        }
+
+        private static void DeleteOwnedEmptyAssetFolder(string assetFolderPath)
+        {
+            var absolutePath = ToAbsoluteAssetPath(assetFolderPath);
             if (!AssetDatabase.IsValidFolder(assetFolderPath) ||
                 !Directory.Exists(absolutePath))
             {
                 return;
             }
 
-            var nonMetadataFiles = Directory.GetFiles(
-                    absolutePath,
-                    "*",
-                    SearchOption.AllDirectories)
-                .Where(path => !string.Equals(Path.GetExtension(path), ".meta", StringComparison.Ordinal))
-                .ToArray();
-            if (nonMetadataFiles.Length == 0)
+            if (Directory.GetFileSystemEntries(absolutePath).Length == 0)
             {
-                Directory.Delete(absolutePath, true);
-
-                var folderMetaPath = absolutePath + ".meta";
-                if (File.Exists(folderMetaPath))
-                {
-                    File.Delete(folderMetaPath);
-                }
+                AssetDatabase.DeleteAsset(assetFolderPath);
             }
+        }
+
+        private static string ToAbsoluteAssetPath(string assetPath)
+        {
+            return Path.Combine(Application.dataPath, assetPath.Substring("Assets/".Length));
         }
 
         private static string ToSafeArtifactName(string prefabPath)

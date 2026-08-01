@@ -11,11 +11,18 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
     public sealed class BenchmarkAssetValidatorContractTests
     {
         private const string WorkTablePrefabName = "PF_Benchmark_WorkTable_01";
+        private BenchmarkAssetTestFactory fixture;
+
+        [SetUp]
+        public void SetUp()
+        {
+            fixture = new BenchmarkAssetTestFactory();
+        }
 
         [TearDown]
         public void TearDown()
         {
-            BenchmarkAssetTestFactory.DeleteGeneratedAssets();
+            fixture.Dispose();
         }
 
         [Test]
@@ -39,10 +46,10 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         [Test]
         public void CreatePrefab_WithPathSeparatorRejectsNameBeforeCreatingAssets()
         {
-            BenchmarkAssetTestFactory.DeleteGeneratedAssets();
+            fixture.DeleteGeneratedAssets();
 
             var exception = Assert.Throws<ArgumentException>(() =>
-                BenchmarkAssetTestFactory.CreatePrefab(
+                fixture.CreatePrefab(
                     "invalid/name",
                     new UnityEngine.Vector3(1f, 1f, 1f),
                     1));
@@ -58,13 +65,56 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         {
             var path = CreateWorkTablePrefab();
 
-            BenchmarkAssetTestFactory.DeleteGeneratedAssets();
+            fixture.DeleteGeneratedAssets();
 
             Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(path), Is.Null);
             Assert.That(
                 AssetDatabase.IsValidFolder(BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath),
                 Is.False);
             Assert.That(AssetDatabase.IsValidFolder("Assets/Tests/Generated"), Is.False);
+            Assert.That(AssetDatabase.IsValidFolder("Assets/Art/VisualPipeline/Benchmarks"), Is.False);
+            Assert.That(AssetDatabase.IsValidFolder("Assets/Art/VisualPipeline"), Is.False);
+        }
+
+        [Test]
+        public void CreatePrefabAtPath_ExistingBenchmarkPrefabFailsBeforeChangingOriginalPrefab()
+        {
+            var path = CreateWorkTablePrefab();
+            var originalGuid = AssetDatabase.AssetPathToGUID(path);
+            var originalPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+
+            Assert.Throws<InvalidOperationException>(() =>
+                fixture.CreatePrefabAtPath(
+                    path,
+                    new Vector3(1f, 1f, 1f),
+                    1));
+
+            Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(path), Is.SameAs(originalPrefab));
+            Assert.That(AssetDatabase.AssetPathToGUID(path), Is.EqualTo(originalGuid));
+        }
+
+        [Test]
+        public void DeleteGeneratedAssets_PreExistingEmptyBenchmarkParentRemainsUntouched()
+        {
+            const string userFolderPath = "Assets/Art/VisualPipeline";
+            AssetDatabase.CreateFolder("Assets/Art", "VisualPipeline");
+            var originalGuid = AssetDatabase.AssetPathToGUID(userFolderPath);
+            try
+            {
+                CreateWorkTablePrefab();
+
+                fixture.DeleteGeneratedAssets();
+
+                Assert.That(AssetDatabase.IsValidFolder(userFolderPath), Is.True);
+                Assert.That(AssetDatabase.AssetPathToGUID(userFolderPath), Is.EqualTo(originalGuid));
+            }
+            finally
+            {
+                if (AssetDatabase.IsValidFolder(userFolderPath))
+                {
+                    AssetDatabase.DeleteAsset(userFolderPath);
+                }
+            }
         }
 
         [Test]
@@ -80,11 +130,19 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         [Test]
         public void ValidatePrefab_PathOutsideBenchmarkFolderReportsInvalidAssetPath()
         {
-            var prefab = BenchmarkAssetTestFactory.CreatePrefab(
+            var prefab = fixture.CreatePrefab(
                 WorkTablePrefabName,
                 new Vector3(0.90f, 0.65f, 0.90f),
                 1);
             var path = AssetDatabase.GetAssetPath(prefab);
+
+            AssertCodes(path, BenchmarkAssetIssueCode.InvalidAssetPath);
+        }
+
+        [Test]
+        public void ValidatePrefab_PathWithBackslashesReportsInvalidAssetPath()
+        {
+            var path = CreateWorkTablePrefab().Replace('/', '\\');
 
             AssertCodes(path, BenchmarkAssetIssueCode.InvalidAssetPath);
         }
@@ -96,7 +154,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 "PF_Benchmark_Work Table_01",
                 new Vector3(0.90f, 0.65f, 0.90f));
 
-            AssertCodes(path, BenchmarkAssetIssueCode.InvalidName);
+            AssertCodes(path, BenchmarkAssetIssueCode.InvalidAssetPath, BenchmarkAssetIssueCode.InvalidName);
         }
 
         [Test]
@@ -106,7 +164,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 "WorkTable_01",
                 new Vector3(0.90f, 0.65f, 0.90f));
 
-            AssertCodes(path, BenchmarkAssetIssueCode.InvalidName);
+            AssertCodes(path, BenchmarkAssetIssueCode.InvalidAssetPath, BenchmarkAssetIssueCode.InvalidName);
         }
 
         [Test]
@@ -116,7 +174,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 "PF_Benchmark_WorkTable_é_01",
                 new Vector3(0.90f, 0.65f, 0.90f));
 
-            AssertCodes(path, BenchmarkAssetIssueCode.InvalidName);
+            AssertCodes(path, BenchmarkAssetIssueCode.InvalidAssetPath, BenchmarkAssetIssueCode.InvalidName);
         }
 
         [Test]
@@ -140,6 +198,42 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         {
             var path = CreateWorkTablePrefab(
                 bounds: new Vector3(0.944f, 0.682f, 0.856f));
+
+            Assert.That(
+                BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
+                Is.Empty);
+        }
+
+        [Test]
+        public void ValidatePrefab_NestedRotatedAndScaledRendererUsesRootLocalBounds()
+        {
+            var path = CreateWorkTablePrefab(root =>
+            {
+                var visual = root.transform.Find("Visual");
+                var container = new GameObject("VisualContainer");
+                container.transform.SetParent(root.transform, false);
+                container.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                container.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+                visual.SetParent(container.transform, false);
+                visual.localScale = new Vector3(2f, 2f, 2f);
+            });
+
+            Assert.That(
+                BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
+                Is.Empty);
+        }
+
+        [Test]
+        public void ValidatePrefab_DisabledRendererIsExcludedFromVisibleBounds()
+        {
+            var path = CreateWorkTablePrefab(root =>
+            {
+                var disabledVisual = UnityEngine.Object.Instantiate(root.transform.Find("Visual").gameObject);
+                disabledVisual.name = "DisabledVisual";
+                disabledVisual.transform.SetParent(root.transform, false);
+                disabledVisual.transform.localPosition = new Vector3(10f, 0f, 0f);
+                disabledVisual.GetComponent<Renderer>().enabled = false;
+            });
 
             Assert.That(
                 BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable).Issues,
@@ -179,6 +273,43 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void ValidatePrefab_DuplicateForwardMarkerReportsInvalidForwardMarker()
+        {
+            var path = CreateWorkTablePrefab(root =>
+            {
+                var duplicateMarker = new GameObject("ForwardMarker");
+                duplicateMarker.transform.SetParent(root.transform, false);
+                duplicateMarker.transform.localPosition = new Vector3(0f, 0.05f, 0.30f);
+            });
+
+            AssertCodes(path, BenchmarkAssetIssueCode.InvalidForwardMarker);
+        }
+
+        [Test]
+        public void ValidatePrefab_ForwardMarkerWithRendererReportsInvalidForwardMarker()
+        {
+            var path = CreateWorkTablePrefab(root => root.transform.Find("ForwardMarker").gameObject.AddComponent<MeshRenderer>());
+
+            AssertCodes(path, BenchmarkAssetIssueCode.InvalidForwardMarker);
+        }
+
+        [Test]
+        public void ValidatePrefab_ForwardMarkerWithMeshFilterReportsInvalidForwardMarker()
+        {
+            var path = CreateWorkTablePrefab(root => root.transform.Find("ForwardMarker").gameObject.AddComponent<MeshFilter>());
+
+            AssertCodes(path, BenchmarkAssetIssueCode.InvalidForwardMarker);
+        }
+
+        [Test]
+        public void ValidatePrefab_ForwardMarkerWithColliderReportsInvalidForwardMarker()
+        {
+            var path = CreateWorkTablePrefab(root => root.transform.Find("ForwardMarker").gameObject.AddComponent<BoxCollider>());
+
+            AssertCodes(path, BenchmarkAssetIssueCode.InvalidForwardMarker);
+        }
+
+        [Test]
         public void ValidatePrefab_ForwardMarkerBehindOriginReportsInvalidForwardMarker()
         {
             var path = CreateWorkTablePrefab(root => root.transform.Find("ForwardMarker").localPosition = new Vector3(0f, 0.05f, -0.01f));
@@ -209,6 +340,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
 
             AssertCodes(
                 path,
+                BenchmarkAssetIssueCode.InvalidAssetPath,
                 BenchmarkAssetIssueCode.InvalidName,
                 BenchmarkAssetIssueCode.RootTransformNotIdentity,
                 BenchmarkAssetIssueCode.BoundsOutsideTolerance,
@@ -216,7 +348,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 BenchmarkAssetIssueCode.InvalidForwardMarker);
         }
 
-        private static string CreateWorkTablePrefab(
+        private string CreateWorkTablePrefab(
             Action<GameObject> configure = null,
             Vector3? bounds = null)
         {
@@ -226,13 +358,13 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                 configure);
         }
 
-        private static string CreatePrefabAtBenchmarkPath(
+        private string CreatePrefabAtBenchmarkPath(
             string prefabName,
             Vector3 bounds,
             Action<GameObject> configure = null)
         {
             var assetPath = $"{BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath}/{prefabName}.prefab";
-            BenchmarkAssetTestFactory.CreatePrefabAtPath(assetPath, bounds, 1, configure);
+            fixture.CreatePrefabAtPath(assetPath, bounds, 1, configure);
             return assetPath;
         }
 

@@ -64,17 +64,11 @@ namespace AnimalCafe.EditorTools.AssetPipeline
 
             if (!string.Equals(assetPath, expectedPath, StringComparison.Ordinal))
             {
-                var actualFolder = string.IsNullOrEmpty(assetPath)
-                    ? string.Empty
-                    : Path.GetDirectoryName(assetPath)?.Replace('\\', '/');
-                if (!string.Equals(actualFolder, BenchmarkPrefabFolderPath, StringComparison.Ordinal))
-                {
-                    AddIssue(
-                        issues,
-                        BenchmarkAssetIssueCode.InvalidAssetPath,
-                        assetPath,
-                        "Prefab must be stored in the approved benchmark Prefabs folder.");
-                }
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.InvalidAssetPath,
+                    assetPath,
+                    "Prefab path must exactly match the approved slash-separated benchmark path.");
 
                 if (!string.Equals(fileName, expectedFileName, StringComparison.Ordinal) ||
                     !IsAscii(fileName) ||
