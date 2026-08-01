@@ -1,6 +1,8 @@
+using System;
 using System.Collections.Generic;
 using AnimalCafe.EditorTools.AssetPipeline;
 using NUnit.Framework;
+using UnityEditor;
 
 namespace AnimalCafe.Tests.EditMode.AssetPipeline
 {
@@ -28,6 +30,23 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             Assert.That(
                 report.Issues,
                 Is.Not.InstanceOf<IList<BenchmarkAssetValidationIssue>>());
+        }
+
+        [Test]
+        public void CreatePrefab_WithPathSeparatorRejectsNameBeforeCreatingAssets()
+        {
+            BenchmarkAssetTestFactory.DeleteGeneratedAssets();
+
+            var exception = Assert.Throws<ArgumentException>(() =>
+                BenchmarkAssetTestFactory.CreatePrefab(
+                    "invalid/name",
+                    new UnityEngine.Vector3(1f, 1f, 1f),
+                    1));
+
+            StringAssert.Contains("plain filename", exception.Message);
+            Assert.That(
+                AssetDatabase.IsValidFolder(BenchmarkAssetTestFactory.GeneratedFolderPath),
+                Is.False);
         }
     }
 }

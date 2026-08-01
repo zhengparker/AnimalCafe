@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -13,10 +14,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             Vector3 bounds,
             int triangleCount)
         {
-            if (string.IsNullOrWhiteSpace(prefabName))
-            {
-                throw new ArgumentException("A prefab name is required.", nameof(prefabName));
-            }
+            ValidatePrefabName(prefabName);
 
             if (triangleCount <= 0)
             {
@@ -103,6 +101,20 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
 
             return new Material(shader);
+        }
+
+        private static void ValidatePrefabName(string prefabName)
+        {
+            if (string.IsNullOrWhiteSpace(prefabName) ||
+                prefabName.IndexOfAny(new[] { '/', '\\' }) >= 0 ||
+                prefabName.Contains("..") ||
+                Path.HasExtension(prefabName) ||
+                prefabName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                throw new ArgumentException(
+                    "Prefab name must be a plain filename without path separators, traversal, or an extension.",
+                    nameof(prefabName));
+            }
         }
 
         private static void EnsureGeneratedFolder()
