@@ -39,6 +39,8 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
 
             Assert.That(report.IsValid, Is.True);
             Assert.That(report.Issues, Is.Empty);
+            Assert.That(report.MaterialSlotCount, Is.EqualTo(0));
+            Assert.That(report.UniqueSharedMaterialCount, Is.EqualTo(0));
             Assert.That(
                 report.Issues,
                 Is.Not.InstanceOf<IList<BenchmarkAssetValidationIssue>>());

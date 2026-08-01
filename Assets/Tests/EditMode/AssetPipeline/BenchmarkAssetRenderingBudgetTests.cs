@@ -32,6 +32,39 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void Rendering_ValidSharedMaterialsExposeSlotAndUniqueMaterialCounts()
+        {
+            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1, root =>
+            {
+                var sourceRenderer = root.transform.Find("Visual").GetComponent<MeshRenderer>();
+                AddRenderer(root, "SharedMaterialVisual", sourceRenderer.GetComponent<MeshFilter>().sharedMesh, sourceRenderer.sharedMaterial);
+            });
+
+            var report = BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
+
+            Assert.That(report.IsValid, Is.True);
+            Assert.That(report.MaterialSlotCount, Is.EqualTo(2));
+            Assert.That(report.UniqueSharedMaterialCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Rendering_ValidDistinctMaterialsExposeSlotAndUniqueMaterialCounts()
+        {
+            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1, root =>
+            {
+                var sourceRenderer = root.transform.Find("Visual").GetComponent<MeshRenderer>();
+                var distinctMaterial = fixture.CreateMaterialAsset(Shader.Find("Universal Render Pipeline/Lit"));
+                AddRenderer(root, "DistinctMaterialVisual", sourceRenderer.GetComponent<MeshFilter>().sharedMesh, distinctMaterial);
+            });
+
+            var report = BenchmarkAssetValidator.ValidatePrefab(path, BenchmarkAssetKind.WorkTable);
+
+            Assert.That(report.IsValid, Is.True);
+            Assert.That(report.MaterialSlotCount, Is.EqualTo(2));
+            Assert.That(report.UniqueSharedMaterialCount, Is.EqualTo(2));
+        }
+
+        [Test]
         public void Rendering_MissingMeshReportsMissingMesh()
         {
             var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1, root =>
@@ -114,6 +147,25 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                     BenchmarkAssetIssueCode.InvalidShader,
                     BenchmarkAssetIssueCode.TextureBudgetExceeded
                 }));
+        }
+
+        [Test]
+        public void Rendering_NullShaderReportsInvalidShaderAndContinuesCollectingIssues()
+        {
+            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1, root =>
+            {
+                var renderer = root.transform.Find("Visual").GetComponent<MeshRenderer>();
+                var material = fixture.CreateMaterialAsset(Shader.Find("Sprites/Default"));
+                material.shader = null;
+                renderer.sharedMaterial = material;
+                root.transform.Find("Visual").GetComponent<MeshFilter>().sharedMesh = null;
+            });
+
+            var codes = Validate(path, BenchmarkAssetKind.WorkTable);
+
+            Assert.That(codes, Does.Contain(BenchmarkAssetIssueCode.InvalidShader));
+            Assert.That(codes, Does.Contain(BenchmarkAssetIssueCode.MissingMesh));
+            Assert.That(codes, Has.None.EqualTo(BenchmarkAssetIssueCode.InvalidAssetPath));
         }
 
         [Test]
@@ -203,6 +255,26 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void Lod_MachineDisabledOverBudgetRendererInBothLevelsIsExcluded()
+        {
+            var path = CreateMachineWithLods(4000, 2000, disabledSharedLodRendererTriangleCount: 3000);
+
+            Assert.That(Validate(path, BenchmarkAssetKind.CoffeeMachine), Is.Empty);
+        }
+
+        [Test]
+        public void Lod_MachineForwardMarkerRendererInLod1IsExcludedFromLodBudget()
+        {
+            var path = CreateMachineWithLods(4000, 2000, forwardMarkerLod1TriangleCount: 3000);
+            var codes = Validate(path, BenchmarkAssetKind.CoffeeMachine);
+
+            Assert.That(codes, Does.Contain(BenchmarkAssetIssueCode.InvalidForwardMarker));
+            Assert.That(codes, Has.None.EqualTo(BenchmarkAssetIssueCode.TriangleBudgetExceeded));
+            Assert.That(codes, Has.None.EqualTo(BenchmarkAssetIssueCode.LodTriangleBudgetExceeded));
+            Assert.That(codes, Has.None.EqualTo(BenchmarkAssetIssueCode.LodReductionInsufficient));
+        }
+
+        [Test]
         public void Lod_MachineEnabledRendererOutsideLodGroupCountsAgainstLod0Budget()
         {
             var path = CreateMachineWithLods(4000, 2000, false, 1001);
@@ -258,7 +330,9 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             int lod0TriangleCount,
             int lod1TriangleCount,
             bool duplicateLod0Renderer = false,
-            int extraVisibleTriangleCount = 0)
+            int extraVisibleTriangleCount = 0,
+            int disabledSharedLodRendererTriangleCount = 0,
+            int forwardMarkerLod1TriangleCount = 0)
         {
             return CreatePrefab(BenchmarkAssetKind.CoffeeMachine, 1, root =>
             {
@@ -276,10 +350,34 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                     new LOD(0.5f, lod0Renderers),
                     new LOD(0.1f, new Renderer[] { lod1Renderer })
                 });
+                var lods = lodGroup.GetLODs();
 
                 if (extraVisibleTriangleCount > 0)
                 {
                     AddRenderer(root, "OutsideLodGroup", fixture.CreateMeshAsset(CoffeeMachineSize, extraVisibleTriangleCount), sourceRenderer.sharedMaterial);
+                }
+
+                if (disabledSharedLodRendererTriangleCount > 0)
+                {
+                    var disabledRenderer = AddRenderer(
+                        root,
+                        "DisabledSharedLodRenderer",
+                        fixture.CreateMeshAsset(CoffeeMachineSize, disabledSharedLodRendererTriangleCount),
+                        sourceRenderer.sharedMaterial);
+                    disabledRenderer.enabled = false;
+                    lods[0].renderers = lods[0].renderers.Concat(new Renderer[] { disabledRenderer }).ToArray();
+                    lods[1].renderers = lods[1].renderers.Concat(new Renderer[] { disabledRenderer }).ToArray();
+                    lodGroup.SetLODs(lods);
+                }
+
+                if (forwardMarkerLod1TriangleCount > 0)
+                {
+                    var marker = root.transform.Find("ForwardMarker").gameObject;
+                    marker.AddComponent<MeshFilter>().sharedMesh = fixture.CreateMeshAsset(CoffeeMachineSize, forwardMarkerLod1TriangleCount);
+                    var markerRenderer = marker.AddComponent<MeshRenderer>();
+                    markerRenderer.sharedMaterial = sourceRenderer.sharedMaterial;
+                    lods[1].renderers = lods[1].renderers.Concat(new Renderer[] { markerRenderer }).ToArray();
+                    lodGroup.SetLODs(lods);
                 }
             });
         }

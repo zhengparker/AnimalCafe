@@ -22,6 +22,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             BenchmarkAssetKind kind)
         {
             var issues = new List<BenchmarkAssetValidationIssue>();
+            var materialUsage = default(MaterialUsage);
             ValidatePathAndName(assetPath, kind, issues);
 
             GameObject root = null;
@@ -31,7 +32,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 ValidateRootTransform(root, assetPath, issues);
                 ValidateVisibleBounds(root, assetPath, kind, issues);
                 ValidateForwardMarker(root, assetPath, issues);
-                ValidateRendering(root, assetPath, kind, issues);
+                materialUsage = ValidateRendering(root, assetPath, kind, issues);
                 ValidateLods(root, assetPath, kind, issues);
             }
             catch (Exception exception)
@@ -50,7 +51,10 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 }
             }
 
-            return new BenchmarkAssetValidationReport(issues);
+            return new BenchmarkAssetValidationReport(
+                issues,
+                materialUsage.SlotCount,
+                materialUsage.UniqueMaterialCount);
         }
 
         private static void ValidatePathAndName(
@@ -172,7 +176,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             }
         }
 
-        private static void ValidateRendering(
+        private static MaterialUsage ValidateRendering(
             GameObject root,
             string assetPath,
             BenchmarkAssetKind kind,
@@ -220,6 +224,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                     assetPath,
                     $"Prefab uses {materialSlots} shared Material slots and {uniqueMaterials.Count} unique shared Materials; the budget is {rules.MaxMaterialSlots} slots.");
             }
+
+            return new MaterialUsage(materialSlots, uniqueMaterials.Count);
         }
 
         private static void ValidateMaterial(
@@ -244,14 +250,20 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                     "URP Lit Materials must use the opaque _Surface value of 0.");
             }
 
-            for (var propertyIndex = 0; propertyIndex < ShaderUtil.GetPropertyCount(material.shader); propertyIndex++)
+            var shader = material.shader;
+            if (shader == null)
             {
-                if (ShaderUtil.GetPropertyType(material.shader, propertyIndex) != ShaderUtil.ShaderPropertyType.TexEnv)
+                return;
+            }
+
+            for (var propertyIndex = 0; propertyIndex < ShaderUtil.GetPropertyCount(shader); propertyIndex++)
+            {
+                if (ShaderUtil.GetPropertyType(shader, propertyIndex) != ShaderUtil.ShaderPropertyType.TexEnv)
                 {
                     continue;
                 }
 
-                var texture = material.GetTexture(ShaderUtil.GetPropertyName(material.shader, propertyIndex));
+                var texture = material.GetTexture(ShaderUtil.GetPropertyName(shader, propertyIndex));
                 if (texture == null || string.IsNullOrEmpty(AssetDatabase.GetAssetPath(texture)))
                 {
                     continue;
@@ -301,7 +313,9 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 return;
             }
 
-            if (lods[0].renderers.Intersect(lods[1].renderers).Any())
+            var lod0Renderers = GetEligibleLodRenderers(lods[0]).ToArray();
+            var lod1Renderers = GetEligibleLodRenderers(lods[1]).ToArray();
+            if (lod0Renderers.Intersect(lod1Renderers).Any())
             {
                 AddIssue(
                     issues,
@@ -312,8 +326,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             }
 
             var rules = BenchmarkAssetRules.For(kind);
-            var lod0Triangles = CountUniqueMeshTriangles(lods[0].renderers, assetPath, issues);
-            var lod1Triangles = CountUniqueMeshTriangles(lods[1].renderers, assetPath, issues);
+            var lod0Triangles = CountUniqueMeshTriangles(lod0Renderers, assetPath, issues);
+            var lod1Triangles = CountUniqueMeshTriangles(lod1Renderers, assetPath, issues);
             if (lod1Triangles > rules.MaxLod1Triangles)
             {
                 AddIssue(
@@ -336,10 +350,20 @@ namespace AnimalCafe.EditorTools.AssetPipeline
         private static IEnumerable<Renderer> GetEnabledRenderers(GameObject root)
         {
             return root.GetComponentsInChildren<Renderer>(true)
-                .Where(renderer =>
-                    renderer.enabled &&
-                    renderer.gameObject.activeInHierarchy &&
-                    !IsForwardMarkerDescendant(renderer.transform));
+                .Where(IsEligibleRenderer);
+        }
+
+        private static IEnumerable<Renderer> GetEligibleLodRenderers(LOD lod)
+        {
+            return lod.renderers.Where(IsEligibleRenderer);
+        }
+
+        private static bool IsEligibleRenderer(Renderer renderer)
+        {
+            return renderer != null &&
+                renderer.enabled &&
+                renderer.gameObject.activeInHierarchy &&
+                !IsForwardMarkerDescendant(renderer.transform);
         }
 
         private static bool IsForwardMarkerDescendant(Transform transform)
@@ -382,9 +406,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             var lodRenderers = new HashSet<Renderer>(lods
                 .Where(lod => lod.renderers != null)
                 .SelectMany(lod => lod.renderers)
-                .Where(renderer => renderer != null));
-            return lods[0].renderers
-                .Where(renderer => renderer != null)
+                .Where(IsEligibleRenderer));
+            return GetEligibleLodRenderers(lods[0])
                 .Concat(enabledRenderers.Where(renderer => !lodRenderers.Contains(renderer)));
         }
 
@@ -428,6 +451,19 @@ namespace AnimalCafe.EditorTools.AssetPipeline
 
             var skinnedMeshRenderer = renderer as SkinnedMeshRenderer;
             return skinnedMeshRenderer == null ? null : skinnedMeshRenderer.sharedMesh;
+        }
+
+        private struct MaterialUsage
+        {
+            public MaterialUsage(int slotCount, int uniqueMaterialCount)
+            {
+                SlotCount = slotCount;
+                UniqueMaterialCount = uniqueMaterialCount;
+            }
+
+            public int SlotCount { get; }
+
+            public int UniqueMaterialCount { get; }
         }
 
         private static bool TryGetRootLocalRendererBounds(GameObject root, out Bounds combinedBounds)
