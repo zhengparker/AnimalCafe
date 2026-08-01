@@ -324,7 +324,7 @@ Grid occupancy、UI、Scene placement、functional anchors、Save file，以及�
 
 ## Phase 2 — Grid Occupancy & Placement Rules
 
-状态：In Review
+状态：Completed
 
 验证环境：Unity 6000.5.5f1 / Windows
 
@@ -334,9 +334,11 @@ Latest-main integrated evidence（2026-07-30）：Phase 0 Scene cleanup 1 / 1、
 
 PR hardening Option A fresh full regression evidence（2026-07-30，状态仍为 In Review）：`Logs/Phase2PrHardeningOptionAFullEditMode.xml` 为 EditMode `191 / 191` passed；`Logs/Phase2PrHardeningOptionAFullPlayMode.xml` 为 PlayMode `35 / 35` passed；failed、skipped、inconclusive 均为 `0`。覆盖 Phase 0 与 Phase 1 regression。真实 `InputSystemUIInputModule`、Canvas、`GraphicRaycaster` 与 virtual Mouse tests 保护 UI 不穿透到 world selection；`FurnitureDefinition` footprint 超过 `1024` cells 会在 placement 前被拒绝，避免错误的巨大数据创建很长的 cell list。
 
-PR hardening Option A manual evidence（2026-07-30）：用户在 `MainCafe` Play Mode 中创建 temporary `ColorSelectable` Cube，确认点击 `Pause`、`1x`、`2x` 后 Cube selection 一直保持；Camera pan / zoom 正常；Console clean。退出 Play Mode 后 temporary Cube 自动移除。Phase 2 仍为 `In Review`，等待当前 branch commit / push 和 merge approval。
+PR hardening Option A manual evidence（2026-07-30）：用户在 `MainCafe` Play Mode 中创建 temporary `ColorSelectable` Cube，确认点击 `Pause`、`1x`、`2x` 后 Cube selection 一直保持；Camera pan / zoom 正常；Console clean。退出 Play Mode 后 temporary Cube 自动移除。
 
 Manual evidence（2026-07-30）：用户确认 EditMode `184 / 184`、PlayMode `31 / 31` 全部通过；`GridPlacementTests` categories 完整；`MainCafe` 没有提前出现 Phase 2 可见 Grid、furniture、preview 或 UI；mouse pan、wheel zoom、Pause、`1x`、`2x` 正常；Console clean；Beginner Guide 可理解。
+
+Merged-main evidence（2026-07-31）：GitHub PR #1 已 merge 到 `main`，merge commit 为 `abf6729`。在该 merge commit 的独立 worktree 中运行 fresh full regression：EditMode `191 / 191`、PlayMode `35 / 35` passed；failed、skipped、inconclusive 均为 `0`。Phase 2 的 design、implementation、review、manual acceptance、merge 与 merged-main regression gates 已全部通过，因此状态更新为 `Completed`。
 
 ### Goal
 
@@ -2373,11 +2375,9 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 **Phase 1 — Layout Data Model** 已完成 implementation、automated verification、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
 
-**Phase 2 — Grid Occupancy & Placement Rules** 已完成 approved design、implementation、automated verification、review、commit 和 branch push，当前状态为 `In Review`。
+**Phase 2 — Grid Occupancy & Placement Rules** 已完成 approved design、implementation、automated verification、review、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
 
-- Phase 0 review hardening 已完成 automated verification、manual acceptance、commit 和 push。
-- 最新 `main` 已整合到 `codex/phase-2`，fresh integrated regression 与 Phase 2 manual acceptance 已通过。
-- 当前 gate：由用户完成 P2 merge commit 和 branch push，然后批准 merge 到 `main`。
-- Merge 后在 `main` 重新运行 full EditMode 与 PlayMode regression；全部通过后才能把 Phase 2 标记为 `Completed`。
+- GitHub PR #1 已 merge；merged-main regression 为 EditMode `191 / 191`、PlayMode `35 / 35` passed，failed、skipped、inconclusive 均为 `0`。
+- 当前只进行 Phase 2 branch/worktree cleanup 和文档收尾；未经用户批准不开始 Phase 3。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。
