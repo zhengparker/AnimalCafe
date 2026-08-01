@@ -15,6 +15,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
         private const float TransformTolerance = 0.0001f;
         private const float FloorToleranceMeters = 0.005f;
         private const float ColliderVisibleBoundsToleranceMeters = 0.05f;
+        private const float ColliderBoundsComparisonEpsilon = 0.000001f;
         private const float MinimumForwardZ = 0.01f;
         private const float ForwardAngleToleranceDegrees = 1f;
 
@@ -29,8 +30,15 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             string assetPath,
             BenchmarkAssetKind kind)
         {
+            return ValidatePrefabInternal(assetPath, kind).Report;
+        }
+
+        private static ValidatedPrefab ValidatePrefabInternal(
+            string assetPath,
+            BenchmarkAssetKind kind)
+        {
             var issues = new List<BenchmarkAssetValidationIssue>();
-            var materialUsage = default(MaterialUsage);
+            var materialUsage = MaterialUsage.Empty;
             ValidatePathAndName(assetPath, kind, issues);
 
             GameObject root = null;
@@ -60,15 +68,19 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 }
             }
 
-            return new BenchmarkAssetValidationReport(
-                issues,
-                materialUsage.SlotCount,
-                materialUsage.UniqueMaterialCount);
+            return new ValidatedPrefab(
+                new BenchmarkAssetValidationReport(
+                    issues,
+                    materialUsage.SlotCount,
+                    materialUsage.UniqueMaterialCount),
+                materialUsage.UniqueMaterials);
         }
 
         public static BenchmarkAssetValidationReport ValidateAllBenchmarks()
         {
             var issues = new List<BenchmarkAssetValidationIssue>();
+            var materialSlotCount = 0;
+            var uniqueMaterials = new HashSet<Material>();
             foreach (var benchmarkPrefab in BenchmarkPrefabs)
             {
                 if (AssetDatabase.LoadAssetAtPath<GameObject>(benchmarkPrefab.AssetPath) == null)
@@ -80,10 +92,16 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                     continue;
                 }
 
-                issues.AddRange(ValidatePrefab(benchmarkPrefab.AssetPath, benchmarkPrefab.Kind).Issues);
+                var validatedPrefab = ValidatePrefabInternal(benchmarkPrefab.AssetPath, benchmarkPrefab.Kind);
+                issues.AddRange(validatedPrefab.Report.Issues);
+                materialSlotCount += validatedPrefab.Report.MaterialSlotCount;
+                uniqueMaterials.UnionWith(validatedPrefab.UniqueMaterials);
             }
 
-            return new BenchmarkAssetValidationReport(issues);
+            return new BenchmarkAssetValidationReport(
+                issues,
+                materialSlotCount,
+                uniqueMaterials.Count);
         }
 
         private static void ValidatePathAndName(
@@ -257,7 +275,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                     $"Prefab uses {materialSlots} shared Material slots and {uniqueMaterials.Count} unique shared Materials; the budget is {rules.MaxMaterialSlots} slots.");
             }
 
-            return new MaterialUsage(materialSlots, uniqueMaterials.Count);
+            return new MaterialUsage(materialSlots, uniqueMaterials);
         }
 
         private static void AddMissingRendererMaterialIssues(
@@ -283,7 +301,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             ICollection<BenchmarkAssetValidationIssue> issues)
         {
             var colliders = root.GetComponentsInChildren<Collider>(true)
-                .Where(collider => !IsForwardMarkerDescendant(collider.transform))
+                .Where(IsEligibleCollider)
                 .ToArray();
             var rules = BenchmarkAssetRules.For(kind);
             if (colliders.Length > rules.MaxColliders)
@@ -465,6 +483,14 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 !IsForwardMarkerDescendant(renderer.transform);
         }
 
+        private static bool IsEligibleCollider(Collider collider)
+        {
+            return collider != null &&
+                collider.enabled &&
+                collider.gameObject.activeInHierarchy &&
+                !IsForwardMarkerDescendant(collider.transform);
+        }
+
         private static bool IsApprovedColliderType(Collider collider)
         {
             var colliderType = collider.GetType();
@@ -475,13 +501,13 @@ namespace AnimalCafe.EditorTools.AssetPipeline
 
         private static bool IsColliderOutsideVisibleBounds(Bounds colliderBounds, Bounds visibleBounds)
         {
-            return colliderBounds.min.x < visibleBounds.min.x - ColliderVisibleBoundsToleranceMeters ||
-                colliderBounds.max.x > visibleBounds.max.x + ColliderVisibleBoundsToleranceMeters ||
-                colliderBounds.min.y < visibleBounds.min.y - ColliderVisibleBoundsToleranceMeters ||
-                colliderBounds.max.y > visibleBounds.max.y + ColliderVisibleBoundsToleranceMeters ||
-                colliderBounds.min.z < visibleBounds.min.z - ColliderVisibleBoundsToleranceMeters ||
-                colliderBounds.max.z > visibleBounds.max.z + ColliderVisibleBoundsToleranceMeters ||
-                colliderBounds.min.y < -FloorToleranceMeters;
+            return colliderBounds.min.x < visibleBounds.min.x - ColliderVisibleBoundsToleranceMeters - ColliderBoundsComparisonEpsilon ||
+                colliderBounds.max.x > visibleBounds.max.x + ColliderVisibleBoundsToleranceMeters + ColliderBoundsComparisonEpsilon ||
+                colliderBounds.min.y < visibleBounds.min.y - ColliderVisibleBoundsToleranceMeters - ColliderBoundsComparisonEpsilon ||
+                colliderBounds.max.y > visibleBounds.max.y + ColliderVisibleBoundsToleranceMeters + ColliderBoundsComparisonEpsilon ||
+                colliderBounds.min.z < visibleBounds.min.z - ColliderVisibleBoundsToleranceMeters - ColliderBoundsComparisonEpsilon ||
+                colliderBounds.max.z > visibleBounds.max.z + ColliderVisibleBoundsToleranceMeters + ColliderBoundsComparisonEpsilon ||
+                colliderBounds.min.y < -FloorToleranceMeters - ColliderBoundsComparisonEpsilon;
         }
 
         private static bool IsForwardMarkerDescendant(Transform transform)
@@ -571,17 +597,38 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             return skinnedMeshRenderer == null ? null : skinnedMeshRenderer.sharedMesh;
         }
 
-        private struct MaterialUsage
+        private sealed class MaterialUsage
         {
-            public MaterialUsage(int slotCount, int uniqueMaterialCount)
+            public static readonly MaterialUsage Empty = new MaterialUsage(
+                0,
+                Enumerable.Empty<Material>());
+
+            public MaterialUsage(int slotCount, IEnumerable<Material> uniqueMaterials)
             {
                 SlotCount = slotCount;
-                UniqueMaterialCount = uniqueMaterialCount;
+                UniqueMaterials = new HashSet<Material>(uniqueMaterials);
             }
 
             public int SlotCount { get; }
 
-            public int UniqueMaterialCount { get; }
+            public IReadOnlyCollection<Material> UniqueMaterials { get; }
+
+            public int UniqueMaterialCount => UniqueMaterials.Count;
+        }
+
+        private sealed class ValidatedPrefab
+        {
+            public ValidatedPrefab(
+                BenchmarkAssetValidationReport report,
+                IReadOnlyCollection<Material> uniqueMaterials)
+            {
+                Report = report;
+                UniqueMaterials = uniqueMaterials;
+            }
+
+            public BenchmarkAssetValidationReport Report { get; }
+
+            public IReadOnlyCollection<Material> UniqueMaterials { get; }
         }
 
         private sealed class BenchmarkPrefabDescriptor

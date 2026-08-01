@@ -4,16 +4,21 @@ using UnityEngine;
 
 namespace AnimalCafe.EditorTools.AssetPipeline
 {
-    internal static class BenchmarkAssetValidationMenu
+    public static class BenchmarkAssetValidationMenu
     {
         [MenuItem("AnimalCafe/Validation/Validate Benchmark Assets")]
         private static void ValidateBenchmarkAssets()
+        {
+            ExecuteValidation();
+        }
+
+        public static BenchmarkAssetValidationReport ExecuteValidation()
         {
             var report = BenchmarkAssetValidator.ValidateAllBenchmarks();
             if (report.IsValid)
             {
                 Debug.Log("<color=green>Benchmark asset validation passed: 0 issues.</color>");
-                return;
+                return report;
             }
 
             foreach (var issue in report.Issues)
@@ -29,6 +34,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 Selection.activeObject = firstInvalidAsset;
                 EditorGUIUtility.PingObject(firstInvalidAsset);
             }
+
+            return report;
         }
     }
 }
