@@ -1,119 +1,414 @@
-# Phase 3 Visual Asset Pipeline Beginner Guide
+# AnimalCafe Phase 3 Beginner Guide
 
-> 状态：`In Review`。自动化验证已经记录；Camera manual review 和 asset license/use-right confirmation 仍由 Studio Owner 完成。
+> 这是一份面向 Unity 和 coding 初学者的 educational note。
+> 它只解释 Phase 3 的 Visual Asset Pipeline，不负责解释 Phase 4 的正式家具制作、gameplay 或 placement integration。
+> 当前状态是 `In Review`：automated verification 已通过，Camera/readability manual review 和 source license/use-right confirmation 仍为 `Pending`。
 
-先记住一个容易混淆的例子：咖啡机的 **Collider** 是一个大致包住咖啡机的透明简单盒子，方便点击和碰撞判断；**Grid Occupancy** 则是以后摆放家具时决定它占用哪些地面格子的规则。它们不是同一件事：Collider 不能决定家具占几格，Grid Occupancy 也不能代替点击范围。
+## 1. 用一个简单例子说明本阶段
 
-## 1. 用三个家具解释这条 pipeline
+假设我们要把一台 Coffee Machine 放进游戏。只有“看起来像咖啡机”还不够，它还必须经历一条稳定的 pipeline：
 
-这次只用三个 benchmark assets 验证流程：Work Table、Coffee Machine、Ceramic Cup。它们不是 Phase 4 的正式家具套装，也没有接入 gameplay 或摆放系统。
+```text
+用户提供的原始 Blender source
+→ 导出 FBX
+→ Unity import
+→ 组装 Prefab
+→ Validator 检查
+→ 在固定 Camera 下人工观察
+```
 
-流程是：保留可信原始 Model → 导出 FBX → Unity import → 组装 Prefab → Validator 检查 → 在独立 Camera Scene 观察。
+这条 pipeline 的目的，是让以后制作的 Model 都遵守同一套 scale、pivot、forward、Material、Collider、LOD 和 performance rules。
 
-三个物体分别帮助检查不同风险：桌子检查大件尺寸和桌面空间；咖啡机检查正面方向、Collider 和 LOD；杯子检查小物体在远近 Camera 下是否还能辨认。
+这里有一个最容易混淆的概念：Coffee Machine 的 `Collider` 是一个大致包住物体的透明简单盒子，用于点击或碰撞判断；`Grid Occupancy` 则决定家具占用哪些地面格子。Collider 不决定家具占几格，Grid Occupancy 也不能代替 Collider。它们是两个不同系统。
 
-## 2. Tripo、Blender、FBX、Unity 和 Prefab 分别做什么
+Phase 3 用 Work Table、Coffee Machine 和 Ceramic Cup 三个 benchmark assets 证明这条 pipeline 可以重复执行。它们是流程样本，不是 Phase 4 的正式家具套装。
 
-- **Tripo / Raw source**：本次用户重新提供的原始 `.blend` 是三件 benchmark 的 authoritative LOD0 source。
-- **Blender**：保留与 Raw byte-identical 的 `Blender/SM_Benchmark_*.blend`，导出 LOD0；只允许 Coffee Machine 的 LOD1 使用独立简化副本。
-- **FBX**：把 Model 带进 Unity 的交换格式。本次从未保存的 in-memory Blender Scene 导出，并清除 source Texture/media 数据，所以 production FBX 不包含某台电脑的 absolute path。
-- **Unity**：读取 FBX、引用共享 Material，并配置 Prefab、Collider、ForwardMarker 与 Coffee 的 LODGroup。
-- **Prefab**：可重复放进 Scene 的已配置物件模板。
+## 2. 开发前状态与本阶段目标
 
-本次 Owner override 不允许自动保存、清理、重建、retopology、decimate 或 apply transform 到原始 LOD0。需要的轴向/尺寸适配只在 Unity 的 `Visual` child 或 import metadata 上完成，Prefab root 仍保持 identity Transform。
+Phase 2 已经完成 Grid Occupancy 与 Placement Rules，但项目还没有统一的 visual asset production contract。开发前主要缺少：
 
-## 3. Grid 尺寸和 Model 尺寸
+- Raw source、Blender source、FBX 与 Unity Prefab 的明确职责；
+- Model scale、pivot、forward 和 root Transform 标准；
+- shared Material、Texture、Collider 与 LOD budget；
+- 自动检查错误资产的 Validator；
+- 固定 Camera 下的 readability Scene 与 manual checklist。
 
-Model 尺寸是可见物体在 Unity 世界中的宽/高/深（W/H/D），用于看比例、Collider 和 Camera 可读性。本次最终尺寸为：
+Phase 3 的目标是建立这些基础，并用三个真实 benchmark assets 验证。完成本阶段后，未来资产可以复用同一套规则，但还不能自动视为 Phase 4 正式内容。
 
-| Asset | Unity W/H/D |
+## 3. Phase 3 做了什么改动
+
+### 3.1 建立 protected original LOD0 source contract
+
+Studio Owner 指定三份 user-resupplied `.blend` 为 authoritative original LOD0。对应 `Raw/` 与 `Blender/SM_Benchmark_*.blend` 保持 byte-identical，并以 SHA-256 检查相等。
+
+这些 protected original LOD0 不进行自动保存、重建、retopology、decimate、normal repair 或 source Transform 修改。若原始 LOD0 出现 shape、topology、pivot、axis 或 forward 问题，应停下并请求 Studio Owner direction。
+
+允许的例外只有：
+
+- Coffee Machine 的独立 LOD1 derivative 可以单独简化；
+- 未来由 Studio Owner 另行批准的 editable source 可以按自己的 source contract 编辑；
+- benchmark 的 axis/dimension adaptation 只放在 Unity `Visual` child 或 import metadata，Prefab root 保持 identity。
+
+### 3.2 建立 Unity asset 与 Prefab contract
+
+三个 FBX 使用固定路径和命名导入 Unity。Prefab root 的 position/rotation 为 zero、scale 为 one，底部落在 `Y = 0`，并用 `ForwardMarker` 表示 root-local `+Z` 正面。
+
+每个 Prefab 使用 shared Opaque URP `Lit` Material、一个 non-trigger `BoxCollider`。Coffee Machine 另外有 two-level `LODGroup`。本阶段没有给 benchmark Prefab 添加 gameplay script 或 Interaction Anchor。
+
+### 3.3 建立只读 Validator
+
+`BenchmarkAssetValidator` 检查真实 production Prefab 的路径、命名、Transform、bounds、floor alignment、forward、Mesh、Material、Texture、Collider、triangle budget 与 LOD。它只报告 issue，不会自动改动 production asset。
+
+Unity menu 是：
+
+```text
+AnimalCafe > Validation > Validate Benchmark Assets
+```
+
+### 3.4 建立独立 readability Scene
+
+Phase 3 使用独立 Scene：
+
+```text
+Assets/Scenes/Validation/AssetPipelineReadability.unity
+```
+
+它包含三个单独展示的 benchmark、一个 `1.30 m` Character Scale Reference，以及每种 Prefab 各 20 个的 batch display。它不修改 `Assets/Scenes/MainCafe.unity`。
+
+## 4. 重要概念解释
+
+### Pipeline
+
+Asset 从原始 source 变成 Unity 可用 Prefab 的固定步骤。步骤越明确，越容易找到错误发生在哪一层。
+
+### Source、FBX 与 Prefab
+
+- `Raw source`：用户提供的原始文件，用来证明来源与原始内容。
+- `Blender source`：本次 benchmark 的 authoritative LOD0 copy，与对应 Raw byte-identical。
+- `FBX`：把 Mesh 从 DCC tool 带进 Unity 的交换格式。
+- `Prefab`：在 Unity 中组装好的可重复使用模板，包含 Renderer、Material、Collider、ForwardMarker 与必要的 LODGroup。
+
+### Pivot、Forward 与 Transform
+
+`Pivot` 是物体旋转和摆放时的参考点。Phase 3 要求可见物体最低点在 `Y = 0`。
+
+`Forward` 是物体认为的正面。Unity Prefab 用 root-local `+Z` 作为正面，并由 `ForwardMarker` 声明。
+
+Prefab root 必须保持 identity Transform。需要调整 benchmark 尺寸或轴向时，只调整 `Visual` child/import metadata，不能用 root scale 掩盖问题，也不能改写 protected original LOD0。
+
+### Collider 与 Grid Occupancy
+
+`Collider` 是用于点击/碰撞的简单 3D 范围；`Grid Occupancy` 是 Layout data 中的地面格子占用。一个 Collider 可以大致包住 Model，但它不等于 Model，也不等于家具 footprint。
+
+### Material、Texture 与 Shader
+
+三个 benchmark 使用 shared、Opaque 的 URP `Lit` Material。实际 production assets 有 0 个 Texture references；如果未来使用 Texture，单张上限是 `512 × 512`。
+
+Material 不只靠颜色区分。当前 shared Materials 使用不同的 `_Metallic` 与 `_Smoothness`：
+
+- Warm Wood：`0 / 0.18`
+- Sage Metal：`0.55 / 0.42`
+- Cream Ceramic：`0 / 0.30`
+- Honey Accent：`0 / 0.24`
+
+### Triangle 与 LOD
+
+Triangle 是 Mesh 几何复杂度的基本计数。Owner-approved LOD0 上限统一为 `6,000`：`6,000` 必须通过，`6,001` 必须失败。
+
+`LOD` 会在物体变远时切换到更简单的 Mesh。Coffee Machine LOD1 必须同时满足：
+
+- 不超过 `2,500` triangles；
+- 不超过 LOD0 的 `60%`；
+- 切换时没有明显 size、position 或 Material jump。
+
+## 5. 三个 benchmark assets 的实际数据
+
+以下是 Unity 最终 imported/assembled 结果，不是只有目标值：
+
+| Asset | Unity W/H/D | Triangles | Material slots | Texture references | Collider | LOD |
+|---|---|---:|---:|---:|---|---|
+| Work Table | `0.90 / 0.65 / 0.90 m` | LOD0 `4,790` | `1` | `0` | `1` enabled non-trigger `BoxCollider` | 不要求 |
+| Coffee Machine | `0.65 / 0.62 / 0.50 m` | LOD0 `4,607`; LOD1 `2,073` (`45.0%`) | LOD0 `1`; LOD1 `1` | `0` | `1` enabled non-trigger `BoxCollider` | one two-level `LODGroup` |
+| Ceramic Cup | `0.14 / 0.16 / 0.14 m` | LOD0 `4,768` | `1` | `0` | `1` enabled non-trigger `BoxCollider` | 不要求 |
+
+每个 Renderer 的 Material slot 数与 imported Mesh 的 submesh 数一致。Coffee LOD1 是独立 derivative；三个 LOD0 仍是 Studio Owner 指定的 byte-identical original sources。
+
+## 6. Tests 与 Validator：正常结果
+
+Automated tests 不只检查临时假物件，也检查真实 production Prefab 和独立 readability Scene。
+
+当前已验证结果：
+
+| Verification | Result |
 |---|---|
-| Work Table | `0.90 / 0.65 / 0.90 m` |
-| Coffee Machine | `0.65 / 0.62 / 0.50 m` |
-| Ceramic Cup | `0.14 / 0.16 / 0.14 m` |
+| Full EditMode | `297 / 297` passed |
+| Full PlayMode | `48 / 48` passed |
+| Failed / Skipped / Inconclusive | 全部 `0` |
+| Production Validator | `3 / 3` benchmark Prefabs valid；`0 issues` |
 
-Grid Occupancy 是 Layout 系统未来根据 `FurnitureDefinition` 和 `GridSize` 计算的地面格子占用。本 Phase 没有把这三个 benchmark 接到正式 placement，也没有定义它们的正式 footprint；以后做 placement 时，要单独把视觉 Model 尺寸和 Grid footprint 对照确认。
+Validator 正常 GREEN 时，Console 应出现：
 
-## 4. Pivot、Forward 和 Transform
+```text
+Benchmark asset validation passed: 0 issues.
+```
 
-**Pivot** 是旋转和摆放时使用的参考点；本流程要求物件底部对齐地面（最低点 `Y = 0`）。**Forward** 是物件“正面朝哪边”；Prefab root 上的 `ForwardMarker` 用 root-local `+Z` 表示 Unity 中的可见正面。
+这些 automated results 能证明规则、引用和 Scene contract 正常，但不能代替 Studio Owner 对视觉比例、readability、LOD jump 和 license/use-right 的人工判断。
 
-Prefab root 的 position/rotation 为 zero、scale 为 one。不要用 root scale 偷偷补尺寸；本次需要的尺度与轴向调整位于可见 `Visual` child，因而不会改写 authoritative Blender source。
+## 7. Bug 与 Edge Case Tests
 
-## 5. Naming 与 Folder
+Phase 3 tests 会故意建立错误 fixture，确认 Validator 真的能把问题找出来。重要 cases 包括：
 
-生产 Model 位于 `Assets/Art/VisualPipeline/Benchmarks/Models/`，共享 Material 位于 `Assets/Art/VisualPipeline/Benchmarks/Materials/`，Prefab 位于相应 `Prefabs/` folder。Raw 与 Blender source 留在 `ArtSource/VisualPipeline/Benchmarks/`，不直接拖进 `Assets/`。
+- 错误 folder、filename、prefix 或 asset path；
+- Prefab root position/rotation/scale 不是 identity；
+- visible bounds 超出 tolerance，或物体高于/低于地面；
+- `ForwardMarker` 缺失、方向错误或带 Renderer；
+- missing Mesh、missing Material、null Material slot 或 missing script；
+- Material slot 数与 Mesh submesh 数不一致；
+- 非 URP `Lit`、透明 Material 或 broken serialized Texture reference；
+- `512 × 512` Texture 通过、`1024 × 1024` Texture 失败；
+- 三种 LOD0 都验证 `6,000` pass / `6,001` fail；
+- Coffee 缺少 LODGroup、缺少 LOD1、LOD1 超过 `2,500`、超过 LOD0 `60%` 或重复使用无意义 Mesh；
+- `MeshCollider`、trigger Collider、Collider 数量过多或 bounds 明显超出 Model；
+- batch validation 遇到第一个错误后仍继续报告其他资产；
+- readability Scene 重复生成不会增加重复 roots，且不会修改 `MainCafe.unity`；
+- PlayMode 临时修改 Build Settings 后会恢复原始 scene list，即使发生 exception 也会 cleanup。
 
-Validator 依赖固定命名和路径来找到三个 Prefab：`PF_Benchmark_WorkTable_01`、`PF_Benchmark_CoffeeMachine_01`、`PF_Benchmark_CeramicCup_01`。随意改名或移动文件会让验证变红（RED）。
+RED 表示 test 故意证明错误会被发现；GREEN 表示最小规则完成后正确 fixture 与真实 production asset 通过。不能为了让测试变绿而放宽已经批准的 budget。
 
-## 6. Material、Texture 和 Shader
+## 8. Phase 3 Files
 
-这三个 Prefab 使用共享、Opaque 的 URP `Lit` Material，不使用 custom Shader 或透明 Material。实际结果：Work Table、Coffee Machine LOD0、Coffee Machine LOD1 和 Ceramic Cup 都各有 1 个 Material slot，并且每个 Renderer 的 slot 数都与 imported Mesh 的 submesh 数一致；三个 benchmark 都有 0 个 Texture references。
+### Documentation 与 provenance
 
-Material 不只靠颜色区分。Warm Wood 使用 `_Metallic = 0`、`_Smoothness = 0.18`；Sage Metal 使用 `0.55 / 0.42`；Cream Ceramic 使用 `0 / 0.30`；Honey Accent 使用 `0 / 0.24`。这些小而明确的 surface 参数差异让 wood、metal、ceramic 不会只剩同一种哑光表面。
+```text
+Docs/VisualAssetPipeline_Beginner_Guide.md
+Docs/superpowers/specs/2026-07-31-phase-3-visual-asset-pipeline-design.md
+Docs/superpowers/plans/2026-07-31-visual-asset-pipeline.md
+ArtSource/VisualPipeline/Benchmarks/AssetProvenance.md
+```
 
-规则仍允许单张 Texture 最大 `512 × 512`，但“允许”不等于“本次一定使用”。如果将来加 Texture，必须检查它没有超过这个上限，也没有出现 missing reference 或粉红色 Material。
+### Authoritative sources 与 tools
 
-## 7. Collider 是透明的简单包围盒
+```text
+ArtSource/VisualPipeline/Benchmarks/Raw/WorkTable/SM_Benchmark_WorkTable_01_user_resupplied_original.blend
+ArtSource/VisualPipeline/Benchmarks/Raw/CoffeeMachine/SM_Benchmark_CoffeeMachine_01_user_resupplied_original.blend
+ArtSource/VisualPipeline/Benchmarks/Raw/CeramicCup/SM_Benchmark_CeramicCup_01_user_resupplied_original.blend
+ArtSource/VisualPipeline/Benchmarks/Blender/SM_Benchmark_WorkTable_01.blend
+ArtSource/VisualPipeline/Benchmarks/Blender/SM_Benchmark_CoffeeMachine_01.blend
+ArtSource/VisualPipeline/Benchmarks/Blender/SM_Benchmark_CeramicCup_01.blend
+ArtSource/VisualPipeline/Benchmarks/Tools/CreateBenchmarkSources.py
+ArtSource/VisualPipeline/Benchmarks/Tools/AuditBenchmarkAssets.py
+```
 
-Collider 不是 Model 的精确复制品，也不是 Grid 占用数据。它是接近物体外形的简单、透明碰撞体，便于点击/碰撞判定并控制性能。
+### Unity Models、Materials 与 Prefabs
 
-本次每个 benchmark Prefab 都有 1 个 enabled、non-trigger `BoxCollider`：Table `.90/.65/.90`、Coffee `.65/.62/.50`、Cup `.14/.16/.14`。不使用 `MeshCollider`；Coffee 的两级 LOD 也不会各自增加一套 Collider。
+```text
+Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_WorkTable_01.fbx
+Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_CoffeeMachine_01.fbx
+Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_CeramicCup_01.fbx
+Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_WarmWood_01.mat
+Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_SageMetal_01.mat
+Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_CreamCeramic_01.mat
+Assets/Art/VisualPipeline/Benchmarks/Materials/M_Benchmark_HoneyAccent_01.mat
+Assets/Art/VisualPipeline/Benchmarks/Prefabs/PF_Benchmark_WorkTable_01.prefab
+Assets/Art/VisualPipeline/Benchmarks/Prefabs/PF_Benchmark_CoffeeMachine_01.prefab
+Assets/Art/VisualPipeline/Benchmarks/Prefabs/PF_Benchmark_CeramicCup_01.prefab
+```
 
-## 8. Triangle、LOD 与 Mobile Budget
+### Validator、Scene 与 tests
 
-Triangle 越多，GPU 需要处理的几何越多。Phase 3 的 Owner-approved LOD0 上限统一是 `6,000`：`6,000` 必须通过，`6,001` 必须被 Validator 拒绝。
+```text
+Assets/Editor/AssetPipeline/BenchmarkAssetRules.cs
+Assets/Editor/AssetPipeline/BenchmarkAssetValidator.cs
+Assets/Editor/AssetPipeline/BenchmarkAssetValidationMenu.cs
+Assets/Editor/AssetPipeline/AssetPipelineReadabilitySceneSetup.cs
+Assets/Scenes/Validation/AssetPipelineReadability.unity
+Assets/Tests/EditMode/AssetPipeline/BenchmarkAssetRenderingBudgetTests.cs
+Assets/Tests/EditMode/AssetPipeline/BenchmarkAssetValidatorContractTests.cs
+Assets/Tests/EditMode/AssetPipeline/BenchmarkAssetValidatorReviewTests.cs
+Assets/Tests/EditMode/AssetPipeline/AssetPipelineReadabilitySceneSetupTests.cs
+Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityTests.cs
+Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScopeTests.cs
+```
 
-实际 imported triangle counts 是：Work Table `4,790`，Coffee Machine LOD0 `4,607`，Coffee Machine LOD1 `2,073`（LOD0 的 `45.0%`），Ceramic Cup `4,768`。Coffee 的 LOD1 必须同时不超过 `2,500` triangles 和 LOD0 的 `60%`，并在切换时没有明显位置、大小或 Material 跳动。
+## 9. Unity Manual Test
 
-## 9. Validator 的 RED 与 GREEN
+这部分必须由 Studio Owner 在 Unity 中亲自完成。建议每做完一项，就在下方 checklist 的 Result 栏填写 `PASS` 或记录具体问题。
 
-**RED** 不是坏事：故意让规则失败，证明 test 确实能发现问题。例如把 triangle 从 `6,000` 改成 `6,001`，应收到 `TriangleBudgetExceeded`。
+### 9.1 打开正确项目与运行 Validator
 
-**GREEN** 表示真实 Prefab 通过同一套规则。本次 production batch validator 的结果是 `3 / 3` 个 benchmark Prefab valid、`0 issues`。Validator 会检查路径、root Transform、可见 bounds、ForwardMarker、Material/Texture、material-slot/submesh 对齐、Collider、Coffee LOD 和 missing references；即使删除 Texture 后 Unity API 只返回 `null`，仍会检查保存下来的 broken serialized reference。Validator 不会替你自动修复资产。
+1. 打开 Unity Hub。
+2. 选择这个精确 project folder：
 
-## 10. Camera Readability Manual Test
+   ```text
+   E:\Unity\Project\AnimalCafe\.worktrees\phase-3
+   ```
 
-打开独立的 `Assets/Scenes/Validation/AssetPipelineReadability.unity`，不要修改 `MainCafe.unity`。Studio Owner 需要亲自检查：
+3. 确认 Editor version 是 Unity `6000.5.5f1`。如果 Unity 提示用其他版本升级，先停止，不要转换项目。
+4. 等待 Unity import 完成，确认右下角没有正在进行的 compile/import。
+5. 打开 `Window > General > Console`，点击 `Clear`。
+6. 从顶部 menu 选择 `AnimalCafe > Validation > Validate Benchmark Assets`。
+7. PASS 条件：Console 出现绿色 `Benchmark asset validation passed: 0 issues.`，没有红色 error；这代表 `3 / 3` benchmark Prefabs valid。
 
-1. orthographic size `4`：主要细节、材质差异和正面是否可读；
-2. size `7`：桌子、咖啡机、杯子能否立刻区分；
-3. size `12`：桌子和咖啡机是否仍可辨认，杯子 silhouette 是否稳定；
-4. `1.30 m` Character Scale Reference 是否让三者比例容易理解；
-5. Coffee Machine 放在 Work Table 上是否仍有桌面余量；
-6. Coffee LOD switch 是否没有明显 size、position 或 Material jump；
-7. Game view `1920 × 1080` 和 portrait `1170 × 2532` 是否都没有遮住物件；
-8. batch display 是否没有粉红 Material、missing Mesh、异常 Collider 或 Console error。
+### 9.2 打开 readability Scene 并确认 Hierarchy
 
-这项 manual acceptance 目前是 **Pending Studio Owner review**；自动化 bounds test 不能替代视觉判断。
+1. 在 Project window 打开：
 
-## 11. Phase 3 没有做什么
+   ```text
+   Assets/Scenes/Validation/AssetPipelineReadability.unity
+   ```
 
-Phase 3 只验证 visual asset pipeline。它没有开始 Phase 4，没有正式功能家具套装，没有 runtime gameplay、正式 placement / Grid Occupancy integration、Interaction Anchor、角色 Rig、完整 UI 或大批量资产生产。
+2. Hierarchy 应只有一个 Scene root：`AssetReadabilityRoot`。
+3. 展开后应看到：
 
-## 12. Beginner Glossary
+   ```text
+   AssetReadabilityRoot
+   ├─ CameraRoot
+   │  └─ Main Camera
+   ├─ SingleAssetDisplay
+   │  ├─ PF_Benchmark_WorkTable_01
+   │  ├─ PF_Benchmark_CoffeeMachine_01
+   │  ├─ PF_Benchmark_CeramicCup_01
+   │  └─ CharacterScaleReference_1_30m
+   └─ BatchDisplay
+      ├─ WorkTables_20
+      ├─ Machines_20
+      └─ Cups_20
+   ```
 
-| Term | 简单解释 |
+4. PASS 条件：上述 roots 各一个，没有 duplicate、missing script 或空的 Prefab reference。
+
+### 9.3 在 Play Mode 检查 Camera、比例与 LOD
+
+1. 点击 Unity 顶部 Play button。确认按钮变蓝后再改临时测试值。
+2. 选中 `Main Camera`，在 Inspector 找到 Camera component 的 `Orthographic Size`。
+3. 依次输入 `4`、`7`、`12`：
+   - size `4`：能看清主要功能细节、Material 差异与物体正面；
+   - size `7`：能立即区分 Work Table、Coffee Machine 与 Ceramic Cup；
+   - size `12`：Work Table 与 Coffee Machine 仍可辨认，Cup silhouette 保持稳定。
+4. 比较 `CharacterScaleReference_1_30m`：PASS 条件是它确实提供 `1.30 m` 角色比例参考，桌子、咖啡机和杯子的相对大小容易理解，没有明显“杯子像家具”或“机器像玩具”的比例错误。
+5. 观察 Coffee Machine 与 Work Table：PASS 条件是 Coffee Machine 完整位于桌面范围内，四周仍能看到明显桌面余量。
+6. 选中 Coffee Machine，确认有一个 two-level `LODGroup`。通过 Camera zoom 或 LOD preview 观察 LOD0/LOD1 切换：PASS 条件是没有明显 size、position、pivot、silhouette 或 Material jump。
+
+### 9.4 检查 Game view resolution 与 batch display
+
+1. 在 Game view resolution 下拉菜单选择或添加 `1920 × 1080`。PASS 条件：三个 single-display objects 与 `1.30 m` reference 可读，没有被画面边缘遮住。
+2. 再选择或添加 portrait `1170 × 2532`。PASS 条件：物体仍在可观察范围内，没有因为窄屏完全消失或互相遮住。
+3. 展开 `BatchDisplay`，确认 `WorkTables_20`、`Machines_20`、`Cups_20` 每组各有 `20` 个 benchmark Prefab，总数正好 `60`。
+4. 观察 batch：PASS 条件是物体之间没有 overlap，没有粉红 Material、missing Mesh、异常大小或明显跳位。
+5. 在 Scene view 打开 `Gizmos`，逐组选中一些 Prefab 查看 Collider：PASS 条件是每个物体只有一个大致包住可见 Model 的 `BoxCollider`，没有异常巨大、落到地面下方或变成 `MeshCollider`。
+
+### 9.5 Console、退出与 license statement
+
+1. 返回 Console。PASS 条件：没有 unexpected red error、missing reference、missing script 或 repeated exception。
+2. 点击蓝色 Play button 退出 Play Mode。
+3. 不要保存 Play Mode 中实验性的 Camera size、Transform、LOD preview 或其他临时变化。如果 Unity 询问是否保存实验性 Scene 修改，选择不保存，并在不确定时停止记录问题。
+4. Studio Owner 单独确认 source license/use-right。可以使用这句话记录：
+
+   ```text
+   我确认对三份 user-provided benchmark source 拥有用于 AnimalCafe 开发与发布所需的使用权：是 / 否 / 需要进一步确认
+   ```
+
+这不是法律判断模板；如果选择“否”或“需要进一步确认”，license gate 继续保持 `Pending`。
+
+### 9.6 Manual checklist
+
+| # | Item | Action | PASS condition | Result |
+|---:|---|---|---|---|
+| 1 | Project | 用 Unity `6000.5.5f1` 打开精确 phase-3 worktree | 没有升级或打开错误 checkout | |
+| 2 | Validator | 运行 menu validator | `3 / 3` valid、`0 issues`、无红色 error | |
+| 3 | Scene/Hierarchy | 打开 exact readability Scene 并展开 roots | hierarchy 与上方结构完全一致 | |
+| 4 | Camera size 4 | Play Mode 设置 size `4` | 细节、Material、正面可读 | |
+| 5 | Camera size 7 | 设置 size `7` | 三个 assets 可立即区分 | |
+| 6 | Camera size 12 | 设置 size `12` | Table/Machine 可辨认；Cup silhouette 稳定 | |
+| 7 | Character scale | 比较 `1.30 m` reference | 三件 assets 的相对比例合理 | |
+| 8 | Machine on Table | 观察 Coffee 与桌面 | Machine 完整放下且仍有桌面余量 | |
+| 9 | Coffee LOD | 检查 two-level LODGroup 与切换 | 无 size/position/pivot/Material jump | |
+| 10 | Landscape | Game view `1920 × 1080` | 物件可读且未被遮住 | |
+| 11 | Portrait | Game view `1170 × 2532` | 物件仍可观察且未互相遮住 | |
+| 12 | Batch 60 | 检查三组各 20 | 正好 60、无 overlap/pink/missing/异常 Collider | |
+| 13 | Console | 检查完整 manual run | 无 unexpected error 或 missing reference | |
+| 14 | Play Mode cleanup | 退出且不保存实验性改动 | 没有把临时 Transform 写入 Scene | |
+| 15 | License | 记录 license/use-right statement | 明确填写“是”，否则保持 Pending | |
+
+## 10. Phase 3 没有做什么
+
+Phase 3 没有开始或交付：
+
+- Phase 4 formal asset set；
+- 正式 gameplay 或 functional furniture logic；
+- 正式 placement / Grid Occupancy integration；
+- Interaction Anchors；
+- character Rig 或 Animation；
+- Decoration UI；
+- 大批量 Model production；
+- release 或 platform deployment。
+
+因此 benchmark Prefab 还不能被当作完整游戏内容。它们证明的是 pipeline 和 validation baseline。
+
+## 11. Beginner Glossary
+
+| Term | 初学者解释 |
 |---|---|
-| Asset | 游戏中可重复使用的 Model、Material、Texture 等资源。 |
-| Pipeline | 资源从 source 到游戏内可用 Prefab 的固定步骤。 |
-| Prefab | 已配置好、可以反复放进 Scene 的模板。 |
-| FBX | DCC 工具与 Unity 之间常用的 Model 交换格式。 |
-| Pivot | 物体旋转、摆放时的参考点。 |
-| Forward | 物体认为的正面方向。 |
-| Collider | 用于点击/碰撞的简单形状，不等于 Model 或 Grid。 |
-| Grid Occupancy | 家具占用哪些地面格子的 Layout 数据。 |
-| Triangle | Model 的几何面数单位。 |
-| LOD | 远处使用更简单 Model 的等级系统。 |
-| Validator | 只读检查器；报告问题，不自动改资产。 |
-| RED / GREEN | 先看到会失败的正确 test，再看到修复后的通过结果。 |
+| `Asset` | 游戏中可重复使用的 Model、Material、Texture、Prefab 等资源。 |
+| `Pipeline` | Asset 从 source 到游戏内 Prefab 的固定步骤。 |
+| `DCC` | 制作 3D 内容的软件类别；Blender 是一种 DCC tool。 |
+| `Source` | 可追踪来源并用于导出的原始制作文件。 |
+| `FBX` | DCC tool 与 Unity 之间常用的 Model 交换格式。 |
+| `Prefab` | 已配置好、可以反复放进 Scene 的 Unity 模板。 |
+| `Pivot` | 物体旋转、摆放时使用的参考点。 |
+| `Forward` | 物体约定的正面方向；本项目 Unity contract 是 `+Z`。 |
+| `Identity Transform` | position/rotation 为 zero，scale 为 one。 |
+| `Collider` | 用于点击或碰撞的简单 3D 范围，不等于 Model 或 Grid。 |
+| `Grid Occupancy` | 家具占用哪些地面格子的 Layout data。 |
+| `Material` | 决定表面颜色、金属感、粗糙/光滑表现的 Unity asset。 |
+| `Texture` | 提供表面图案或细节的图片资源。 |
+| `Shader` | 告诉 GPU 怎样绘制 Material 的规则。 |
+| `Triangle` | Model 几何复杂度的基本计数单位。 |
+| `LOD` | 物体变远时切换到更简单 Mesh 的等级系统。 |
+| `Validator` | 只读检查器；报告 issue，不自动修改 production asset。 |
+| `RED / GREEN` | 先证明错误会被 test 发现，再证明正确实现通过。 |
+| `Regression` | 新改动意外破坏已经正常的旧功能。 |
 
-## 13. Whitespace 检查为什么要分两类
+## 12. 完成证据、Manual Result Template 与下一道 Gate
 
-手写的 `.cs`、`.py`、`.md`、`.json`、`.asmdef` 使用 `git diff --check a934d0f -- '*.cs' '*.py' '*.md' '*.json' '*.asmdef'` 作为必须通过的 gate。Unity 自己序列化的 `.meta`、`.mat`、`.prefab`、`.unity` 使用 `git diff --check a934d0f -- '*.meta' '*.mat' '*.prefab' '*.unity'` 单独运行并记录结果；这类 YAML 可能带有 Unity 生成的 whitespace，不能为了让整仓库命令“看起来全绿”而机械 trim 或改写。简单说：手写内容发现新 whitespace 就修；Unity-generated YAML 先记录和人工确认，不做无意义格式化。
+当前 verified automated evidence：
 
-## 14. 完成证据和下一步
+- EditMode `297 / 297` passed；
+- PlayMode `48 / 48` passed；
+- failed、skipped、inconclusive 全部为 `0`；
+- production validator `3 / 3` valid、`0 issues`；
+- authored Guide 的 placeholder/static scan 与 `git diff --check` 是文档 closeout gate；Unity-generated YAML 不在本次 Guide rewrite scope 内机械格式化。
 
-已记录的实际资产事实包括尺寸、triangle counts、Material slots、0 Texture references、每个 Prefab 1 个 `BoxCollider` 和 Coffee 的 two-level `LODGroup`。当前已验证的自动化结果是：EditMode `297 / 297`、PlayMode `48 / 48` 全部 passed，failed/skipped/inconclusive 均为 `0`；production validator 为 `3 / 3` benchmark Prefabs valid、`0 issues`。
+当前 manual 状态：
 
-下一步不是启动 Phase 4，而是 Studio Owner 完成第 10 节的 Camera review，并明确确认三份用户提供 source 的 license/use-right。完成两项 pending gate 前，Roadmap 保持 `In Review`。
+- Camera/readability manual review：`Pending Studio Owner`；
+- source license/use-right confirmation：`Pending Studio Owner`；
+- Roadmap Phase 3：`In Review`；
+- Phase 4：未开始。
+
+Studio Owner 完成第 9 节后，可以复制下面模板填写：
+
+```text
+Phase 3 Manual Result
+Date:
+Unity version: 6000.5.5f1
+Project folder: E:\Unity\Project\AnimalCafe\.worktrees\phase-3
+Validator 3/3 valid, 0 issues:
+Hierarchy exact:
+Camera size 4:
+Camera size 7:
+Camera size 12:
+Character 1.30 m proportions:
+Coffee Machine fits on Work Table with remaining space:
+Coffee LOD two-level switch has no visible jump:
+Game view 1920 × 1080:
+Game view 1170 × 2532:
+Batch exactly 60, no overlap/pink/missing/abnormal Collider:
+Console clean:
+Experimental Play Mode transforms not saved:
+License/use-right statement:
+Overall result: Approved / Needs Revision
+Notes:
+```
+
+下一道 gate 是 Studio Owner 提交上述 manual result 和 license statement。只有这两项通过后，才能决定是否把 Roadmap Phase 3 从 `In Review` 改为 `Completed`。本 Guide 不授权开始 Phase 4、push 或 merge。
