@@ -166,11 +166,11 @@ Validation Scene 必须包含一个 `1.30 m` 高的 `CharacterScaleReference`。
 
 - Blender 使用 `Z Up`；
 - Blender source 中物体正面朝 `-Y`；
-- export 前对 production mesh 应用 Rotation 与 Scale；
+- 只有 Coffee Machine 的独立 LOD1 derivative 或未来另行批准的 editable source，才可在 export 前应用 Rotation 与 Scale；受保护的 original LOD0 保持不修改；
 - FBX export 使用 `Forward -Z`、`Up Y`；
 - export 只包含 selected production objects；
 - import 后以 Unity `+Z` forward validation 为最终判断标准；
-- 如果方向不正确，返回 Blender/source 或 export settings 修正，不在 Prefab root 补偿。
+- 对独立 editable source，如果方向不正确，可返回 Blender/source 或 export settings 修正，不在 Prefab root 补偿。受保护的 original LOD0 若出现 axis 或 forward 异常，按 §7.3 停下并请求 Studio Owner direction；允许的 assembly adaptation 仅在 Unity `Visual` child/import metadata，Prefab root 保持 identity。
 
 ## 7. Tripo → Blender Source Policy
 
