@@ -5,6 +5,8 @@ namespace AnimalCafe.Layout
 {
     public sealed class FurnitureDefinition
     {
+        public const int MaxFootprintCellCount = 1024;
+
         private const PlacementSurfaceType KnownPlacementSurfaces =
             PlacementSurfaceType.Floor |
             PlacementSurfaceType.Wall |
@@ -43,6 +45,16 @@ namespace AnimalCafe.Layout
                     nameof(footprint),
                     footprint,
                     "Footprint width and height must each be at least one.");
+            }
+
+            var footprintCellCount =
+                (long)footprint.Width * footprint.Height;
+            if (footprintCellCount > MaxFootprintCellCount)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(footprint),
+                    footprint,
+                    $"Furniture footprint must contain at most {MaxFootprintCellCount} cells; actual area was {footprintCellCount}.");
             }
 
             if (allowedPlacementSurfaces == PlacementSurfaceType.None ||

@@ -1,6 +1,7 @@
 using AnimalCafe.Core.Events;
 using AnimalCafe.Input;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 namespace AnimalCafe.Interaction
 {
@@ -44,7 +45,9 @@ namespace AnimalCafe.Interaction
             }
 
             var inputFrame = inputSource.ReadFrame();
-            if (inputFrame.TapReleased)
+            if (inputFrame.TapReleased
+                && (EventSystem.current == null
+                    || !EventSystem.current.IsPointerOverGameObject()))
             {
                 TrySelectAt(inputFrame.PointerPosition);
             }

@@ -19,6 +19,7 @@
 - Phase 0 保持已完成状态；Phase 1–50 采用 dependency-driven 小阶段。
 - 每个 Phase 只承担一个主要技术风险，并拥有独立 design、implementation plan 和 tests。
 - 每个 Phase 使用独立的 `Docs/PhaseN_Beginner_Guide.md` 作为 beginner educational note；不能把多个 Phase 的教学内容混入同一个 guide。
+- 每份 Phase spec 和 Beginner Guide 的开头必须先用通俗、适合中学生理解的语言说明“这个 Phase 是做什么的”，并至少提供一个具体例子，再进入 architecture、technical rules 或 test details。
 - 每个 Phase 开始前需要用户批准 design 和 implementation plan。
 - 未通过当前 Phase gate 时，不开始下一个 Phase。
 - 每完成一个 Major Milestone，重新 review 后续 roadmap，允许根据实际 playtest 调整远期 Phase。
@@ -232,7 +233,7 @@ Layout Data
 >
 > 原始验收结果（2026-07-25）：16 / 16 Play Mode tests passed；`MainCafe` Scene load 与 Console error scan passed；Camera pan、zoom、bounds、isometric baseline、selection feedback、Pause、`1x` 和 `2x` 已完成人工验收。
 >
-> Completed-phase hardening evidence（2026-07-30）：Game Time owner hardening 后 baseline 为 21 / 21 PlayMode；merge 前 review hardening fresh full EditMode `116 / 116`、fresh full PlayMode `31 / 31` passed，failed、skipped、inconclusive 均为 `0`。新增 Scene-owned root canonicalization、disabled / inactive / destroyed selection cleanup、真实 Input System mouse integration coverage，以及 single-warning、可恢复的 missing-material handling。
+> Completed-phase hardening evidence（2026-07-30）：Game Time owner hardening 后 baseline 为 21 / 21 PlayMode；merge 前 review hardening fresh full EditMode `116 / 116`、fresh full PlayMode `31 / 31` passed，failed、skipped、inconclusive 均为 `0`。新增 Scene-owned root canonicalization、disabled / inactive / destroyed selection cleanup、真实 Input System mouse integration coverage，以及 single-warning、可恢复的 missing-material handling。鼠标在 UGUI 控件上按下并松开时，pointer release 不会再穿透到世界中的 selection。
 >
 > Completed-phase hardening manual evidence（2026-07-30）：用户确认 `MainCafe` Hierarchy 中 `Phase0_Runtime`、`Phase0_TimeControls`、`EventSystem` 各一个；Camera pan / zoom、Pause / `1x` / `2x` 正常；Console clean；Test Runner EditMode `116 / 116`、PlayMode `31 / 31` 全部通过。
 
@@ -325,6 +326,18 @@ Grid occupancy、UI、Scene placement、functional anchors、Save file，以及�
 
 状态：In Review
 
+验证环境：Unity 6000.5.5f1 / Windows
+
+Automated evidence（2026-07-27）：fresh final EditMode 184 / 184 passed；fresh final PlayMode 18 / 18 passed；failed、skipped、inconclusive 均为 0。Placement/transaction/consistency、source boundary、旧 Phase regression 与 git diff check 已通过。
+
+Latest-main integrated evidence（2026-07-30）：Phase 0 Scene cleanup 1 / 1、Phase 0 PlayMode 25 / 25、GridPlacementTests 67 / 67、full EditMode 184 / 184、full PlayMode 31 / 31 passed；failed、skipped、inconclusive 均为 0。Layout production source 没有 UnityEngine reference，Assets 中没有遗留 AddFurnitureInstance call，conflict marker 与 git diff check 均通过。
+
+PR hardening Option A fresh full regression evidence（2026-07-30，状态仍为 In Review）：`Logs/Phase2PrHardeningOptionAFullEditMode.xml` 为 EditMode `191 / 191` passed；`Logs/Phase2PrHardeningOptionAFullPlayMode.xml` 为 PlayMode `35 / 35` passed；failed、skipped、inconclusive 均为 `0`。覆盖 Phase 0 与 Phase 1 regression。真实 `InputSystemUIInputModule`、Canvas、`GraphicRaycaster` 与 virtual Mouse tests 保护 UI 不穿透到 world selection；`FurnitureDefinition` footprint 超过 `1024` cells 会在 placement 前被拒绝，避免错误的巨大数据创建很长的 cell list。
+
+PR hardening Option A manual evidence（2026-07-30）：用户在 `MainCafe` Play Mode 中创建 temporary `ColorSelectable` Cube，确认点击 `Pause`、`1x`、`2x` 后 Cube selection 一直保持；Camera pan / zoom 正常；Console clean。退出 Play Mode 后 temporary Cube 自动移除。Phase 2 仍为 `In Review`，等待当前 branch commit / push 和 merge approval。
+
+Manual evidence（2026-07-30）：用户确认 EditMode `184 / 184`、PlayMode `31 / 31` 全部通过；`GridPlacementTests` categories 完整；`MainCafe` 没有提前出现 Phase 2 可见 Grid、furniture、preview 或 UI；mouse pan、wheel zoom、Pause、`1x`、`2x` 正常；Console clean；Beginner Guide 可理解。
+
 ### Goal
 
 用纯规则判断家具能否放置、移动、旋转或移除。
@@ -337,7 +350,7 @@ Grid occupancy、UI、Scene placement、functional anchors、Save file，以及�
 - Occupy / release
 - Overlap detection
 - Placement transaction
-- Move / remove validation
+- Move / rotate / remove validation
 
 ### Why After Phase 1
 
@@ -2362,9 +2375,9 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 **Phase 2 — Grid Occupancy & Placement Rules** 已完成 approved design、implementation、automated verification、review、commit 和 branch push，当前状态为 `In Review`。
 
-- 当前 gate：Phase 0 review hardening automated 与 manual acceptance 已通过，等待用户通过 GitHub Desktop 把 approved changes commit 到 `main`。
-- 随后将最新 `main` 整合到 `codex/phase-2`，保留 Phase 2 Roadmap 与 Beginner Guide edits，并运行 fresh full regression。
-- Phase 2 用户验收后，由用户批准 merge 到 `main`。
+- Phase 0 review hardening 已完成 automated verification、manual acceptance、commit 和 push。
+- 最新 `main` 已整合到 `codex/phase-2`，fresh integrated regression 与 Phase 2 manual acceptance 已通过。
+- 当前 gate：由用户完成 P2 merge commit 和 branch push，然后批准 merge 到 `main`。
 - Merge 后在 `main` 重新运行 full EditMode 与 PlayMode regression；全部通过后才能把 Phase 2 标记为 `Completed`。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。

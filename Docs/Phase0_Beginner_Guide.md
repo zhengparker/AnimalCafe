@@ -17,6 +17,8 @@ Phase 0 的目标不是制作完整咖啡店，而是建立之后所有 Phase �
 
 Phase 0 完成后，项目具备了一个稳定、可重复测试的 Unity foundation。
 
+UI button 和 Scene 是两层不同的操作区域。点击 `Pause`、`1x` 或 `2x` 时，应该只操作这个 button；不能同时点击或选中 UI 后面 Scene 里的 object。这样玩家按时间控制时，原来选中的世界 object 不会被意外改变。
+
 ## 2. 开发前是什么状态
 
 项目最初只有很少的 Unity 默认内容，还没有统一的：
@@ -174,12 +176,13 @@ Phase 0 automated tests 验证：
 - 真实 virtual mouse press / drag / release 在 Pause 时仍可读取。
 - Camera 与 interaction 在同一 frame 读取相同 cached input。
 - selection 能选择、切换和清除。
+- 真实 virtual Mouse、`InputSystemUIInputModule`、Canvas 和 `GraphicRaycaster` 会一起验证 UI pointer；点击 UGUI 时不会改变 world selection。
 - selected object 被 disabled、设为 inactive 或 destroyed 后，selection reference 会安全清理。
 - Renderer 缺少可用 material color property 时输出明确 warning，并保持 Scene 可运行。
 - time-control buttons 调用正确速度。
 - `MainCafe` 包含正式 runtime objects。
 
-原始 Phase 0 acceptance 是 `16 / 16` PlayMode；Game Time owner hardening 后 baseline 增加到 `21 / 21`。2026-07-30 review hardening 的 fresh automated evidence 是 EditMode `116 / 116` 与 PlayMode `31 / 31`，failed、skipped、inconclusive 都是 `0`。后续 Phase 不应让这些基础失效。
+原始 Phase 0 acceptance 是 `16 / 16` PlayMode；Game Time owner hardening 后 baseline 增加到 `21 / 21`。2026-07-30 早期 review hardening 的 fresh automated evidence 是 EditMode `116 / 116` 与 PlayMode `31 / 31`，failed、skipped、inconclusive 都是 `0`。本轮 Option A full regression 的最新 XML 结果是 EditMode `191 / 191` 与 PlayMode `35 / 35`，failed、skipped、inconclusive 都是 `0`。后续 Phase 不应让这些基础失效。
 
 ## 7. Unity Manual Test
 
@@ -187,14 +190,27 @@ Phase 0 automated tests 验证：
 2. 打开 `Assets/Scenes/MainCafe.unity`。
 3. 在 Hierarchy 确认只有一个 `Phase0_Runtime`、一个 `Phase0_TimeControls` 和一个 `EventSystem`。
 4. 清空 Console。
-5. 进入 Play Mode。
-6. 用 mouse wheel 测试 Camera zoom。
-7. 用 mouse drag 测试 Camera pan。
-8. 点击 `Pause`、`1x`、`2x`，确认 buttons 可以响应。
-9. 退出 Play Mode。
-10. 确认 Console 没有 unexpected error 或 warning。
-11. 在 Test Runner 运行 EditMode tests，确认 `116 / 116` 全部绿色。
-12. 运行 PlayMode tests，确认 `31 / 31` 全部绿色。
+5. 点击 Unity 顶部中间的 Play 按钮进入 Play Mode。确认 Play 按钮已经变成蓝色，再进行下一步；这样下面创建的 object 才是临时 fixture。
+6. 在 Hierarchy 的空白位置点击右键，选择 `3D Object > Cube`。
+7. 把新 Cube 重命名为 `Temporary_Selection_Test_Cube`。
+8. 选中它，在 Inspector 的 Transform 输入：
+   - Position：`X = 0`、`Y = 0`、`Z = 0`
+   - Rotation：`X = 0`、`Y = 0`、`Z = 0`
+   - Scale：`X = 2`、`Y = 2`、`Z = 2`
+9. 在 Inspector 底部点击 `Add Component`，搜索并添加 `ColorSelectable`。不用手动填写 Renderer；它会自动找到 Cube 已有的 `Mesh Renderer`。
+10. 点击 `Game` tab，然后用 mouse 点击画面中央的 Cube。Cube 应变为黄色 / 橙黄色，表示 world selection 已生效。
+11. 依次点击画面底部的 `Pause`、`1x`、`2x`。每次点击后，Cube 都应保持黄色 / 橙黄色；UI button 不能清除 selection，也不能把点击穿透到 Scene。
+12. 用 mouse wheel 测试 Camera zoom，再用 mouse drag 测试 Camera pan。drag 不应被误判成 click。
+13. 如果 Game view 看不到 Cube：
+    - 先确认当前是 `Game` tab，而不是 `Scene` tab；
+    - 在 Hierarchy 重新选中 `Temporary_Selection_Test_Cube`，再次核对 Position 是 `(0, 0, 0)`；
+    - 可以只在 Play Mode 中把 Scale 临时改为 `(3, 3, 3)`；
+    - 不要移动 `Main Camera`，不要修改或保存 production Scene asset；如果仍不可见，停止并记录 Console 信息。
+14. 点击顶部蓝色 Play 按钮退出 Play Mode。确认 `Temporary_Selection_Test_Cube` 自动从 Hierarchy 消失。
+15. 这个 Cube 是在 Play Mode 中创建的，因此退出时 Unity 会丢弃它；不要在 Play Mode 中保存 Scene，这样不会把 fixture 写进 `MainCafe.unity`。
+16. 确认 Console 没有 unexpected error 或 warning。
+17. 在 Test Runner 运行 EditMode tests，确认 `191 / 191` 全部绿色。
+18. 运行 PlayMode tests，确认 `35 / 35` 全部绿色。
 
 ## 8. Phase 0 没有做什么
 
@@ -231,7 +247,9 @@ Phase 0 曾经使用 demo cubes 和一个 time mover 来观察功能。它们是
 
 Phase 0 已完成并成为 regression baseline。
 
-2026-07-30 的 completed-phase hardening 已通过 automated verification 和用户 manual acceptance：Hierarchy 三个 setup-owned roots 各一个，Camera pan / zoom、Pause / `1x` / `2x` 正常，Console clean，EditMode `116 / 116` 与 PlayMode `31 / 31` 全部通过。当前等待用户通过 GitHub Desktop commit；之后才把最新 `main` 整合到 Phase 2 branch。
+2026-07-30 的 completed-phase hardening 已通过 automated verification 和用户 manual acceptance：Hierarchy 三个 setup-owned roots 各一个，Camera pan / zoom、Pause / `1x` / `2x` 正常，Console clean。当前 Phase 2 PR hardening Option A 的 fresh full regression 为 EditMode `191 / 191`、PlayMode `35 / 35`，failed、skipped、inconclusive 都是 `0`；真实 UGUI/Input System tests 已验证点击时间 UI controls 不会改变已有的 world selection。
+
+用户也已完成本 guide 的 Play Mode-only temporary Cube manual acceptance：点击 `Pause`、`1x`、`2x` 后 Cube selection 一直保持，Camera pan / zoom 正常，Console clean。下一步是完成 Phase 2 branch commit / push；之后再由用户批准 merge，并在 merged `main` 上运行 full regression。
 
 Phase 1 在这个基础上建立 Layout Data Model，并清理 Phase 0 的 demo-only Scene 内容。Phase 1 的解释请阅读：
 
