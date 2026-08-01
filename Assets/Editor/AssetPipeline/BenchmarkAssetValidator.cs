@@ -234,10 +234,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                     BenchmarkAssetIssueCode.InvalidShader,
                     assetPath,
                     "Materials must use the Universal Render Pipeline/Lit shader.");
-                return;
             }
-
-            if (!material.HasProperty("_Surface") || material.GetFloat("_Surface") != 0f)
+            else if (!material.HasProperty("_Surface") || material.GetFloat("_Surface") != 0f)
             {
                 AddIssue(
                     issues,

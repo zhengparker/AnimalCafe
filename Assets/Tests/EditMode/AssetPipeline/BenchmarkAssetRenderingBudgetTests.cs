@@ -98,6 +98,25 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void Rendering_NonUrpLitMaterialStillChecksProjectTextureBudget()
+        {
+            var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1, root =>
+            {
+                var material = fixture.CreateMaterialAsset(Shader.Find("Sprites/Default"));
+                material.SetTexture("_MainTex", fixture.CreateTextureAsset(1024, 1024));
+                root.transform.Find("Visual").GetComponent<MeshRenderer>().sharedMaterial = material;
+            });
+
+            Assert.That(
+                Validate(path, BenchmarkAssetKind.WorkTable),
+                Is.SupersetOf(new[]
+                {
+                    BenchmarkAssetIssueCode.InvalidShader,
+                    BenchmarkAssetIssueCode.TextureBudgetExceeded
+                }));
+        }
+
+        [Test]
         public void Rendering_TransparentSurfaceReportsTransparentMaterial()
         {
             var path = CreatePrefab(BenchmarkAssetKind.WorkTable, 1, root =>
