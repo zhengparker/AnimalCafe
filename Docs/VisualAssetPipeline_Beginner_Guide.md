@@ -289,7 +289,7 @@ Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityBuildSettingsScop
 1. 点击 Unity 顶部 Play button。确认按钮变蓝后再改临时测试值。
 2. 先观察 Game view background。它应是浅黄色 `#F2E6B8`；这个颜色本身是设计结果，不算 failure。只有它让物体被裁切、颜色 washed out 或难以分辨时才记录 failure。
 3. 选中 `Main Camera`，确认 Camera 使用 `Solid Color`；在附加的 Universal camera data 中确认 antialiasing 是 `SMAA`、Quality 是 `High`，并确认 Camera 的 `Post Processing` 已勾选。少了这个勾选，虽然 Inspector 写着 SMAA，锯齿处理也不会真正执行。这些都只是本 Scene 的设置，不应要求修改 global URP/Quality settings。
-4. 确认 `CharacterScaleReference_1_30m` 使用明显的青绿色，能快速从浅黄色背景和三件家具中分辨出来。
+4. 确认 `CharacterScaleReference_1_30m` 使用明显的青绿色，并位于右桌更右侧（Scene local `X = 2.50`）。PASS 条件不只是 world position 分开：从 Game Camera 看，它也不能与右桌或 Cup 的轮廓重叠。
 5. 检查 original colors：Work Table 应是橙色木纹/黑色细节，Coffee Machine 应有浅蓝/白/黑分区，Ceramic Cup 应是柔和绿色。若仍是旧的统一纯色 palette，应记录 failure。
 6. 在 Inspector 找到 Camera component 的 `Orthographic Size`，依次输入 `4`、`7`、`12`：
    - size `4`：能看清主要功能细节、Material 差异与物体正面；
@@ -387,11 +387,12 @@ Phase 3 没有开始或交付：
 
 当前 verified automated evidence：
 
-- EditMode `302 / 302` passed；
-- PlayMode `50 / 50` passed；
+- EditMode `304 / 304` passed；
+- PlayMode `52 / 52` passed；
 - focused AssetPipeline EditMode `111 / 111` passed；
 - failed、skipped、inconclusive 全部为 `0`；
 - production validator `3 / 3` valid、`0 issues`；
+- Camera-projected overlap RED `0 / 1`，修复后 focused EditMode 与 PlayMode 均为 `1 / 1` passed；
 - authored Guide 的 placeholder/static scan 与 `git diff --check` 是文档 closeout gate；Unity-generated YAML 不在本次 Guide rewrite scope 内机械格式化。
 
 当前 manual 状态：

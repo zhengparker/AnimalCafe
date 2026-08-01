@@ -382,7 +382,7 @@ Cup 的 Collider 只用于验证小物件 Prefab contract。未来如果正式 C
 - 使用项目已确认的 fixed `3/4 isometric-like Camera`；
 - Camera Clear Flags 使用 `SolidColor`，background 固定为浅黄色 `#F2E6B8`；
 - validation Scene 的 Main Camera 单独使用 `UniversalAdditionalCameraData`，antialiasing 为 `SMAA High`，并开启该 Camera 的 `Post Processing`，确保 SMAA 真正执行；不得修改 global URP 或 Quality settings；
-- `SingleAssetDisplay` 使用两张相同 Work Table：Coffee Machine 单独居中放在左桌，Ceramic Cup 单独居中放在右桌；Character Scale Reference 独立摆放且不得遮挡家具；
+- `SingleAssetDisplay` 使用两张相同 Work Table：Coffee Machine 单独居中放在左桌，Ceramic Cup 单独居中放在右桌；Character Scale Reference 放在 local `X = 2.50`，并须通过真实 Camera-projected bounds non-overlap 检查，与右桌/Cup 保持至少 `0.01` viewport margin；
 - orthographic size 检查 `4`、`7`、`12`；
 - Windows reference resolution：`1920 × 1080`；
 - mobile portrait framing reference：`1170 × 2532`；

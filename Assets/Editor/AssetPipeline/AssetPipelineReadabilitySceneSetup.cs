@@ -108,7 +108,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             InstantiateBenchmarkPrefab("CeramicCup", display.transform,
                 new Vector3(cupStationX, 0.65f, 0f));
             CreateCharacterScaleReference(display.transform,
-                new Vector3(1.75f, 0f, 0f));
+                new Vector3(2.50f, 0f, 0f));
         }
 
         private static void CreateBatchDisplay(Transform parent)

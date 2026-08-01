@@ -100,6 +100,39 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void Setup_CharacterReferenceDoesNotOverlapRightStationInCameraView()
+        {
+            var scene = BuildAndOpenScene();
+            var display = FindNamedObjects(scene, "SingleAssetDisplay").Single();
+            var camera = FindNamedObjects(scene, "Main Camera").Single()
+                .GetComponent<UnityEngine.Camera>();
+            var rightTable = display.transform.Cast<Transform>()
+                .Where(child => child.name == "PF_Benchmark_WorkTable_01")
+                .OrderByDescending(child => child.localPosition.x)
+                .First();
+            var cup = display.transform.Cast<Transform>()
+                .Single(child => child.name == "PF_Benchmark_CeramicCup_01");
+            var reference = FindNamedObjects(
+                scene, "CharacterScaleReference_1_30m").Single();
+
+            var stationBounds = CalculateBounds(
+                rightTable.GetComponentsInChildren<Renderer>(true));
+            stationBounds.Encapsulate(CalculateBounds(
+                cup.GetComponentsInChildren<Renderer>(true)));
+            var stationRect = ProjectBoundsToViewport(camera, stationBounds);
+            var referenceRect = ProjectBoundsToViewport(camera, CalculateBounds(
+                reference.GetComponentsInChildren<Renderer>(true)));
+            const float readabilityMargin = 0.01f;
+            stationRect.xMin -= readabilityMargin;
+            stationRect.xMax += readabilityMargin;
+            stationRect.yMin -= readabilityMargin;
+            stationRect.yMax += readabilityMargin;
+
+            Assert.That(stationRect.Overlaps(referenceRect), Is.False,
+                "The reference must not overlap the right table/cup in Camera view.");
+        }
+
+        [Test]
         public void Setup_CreatesOneSingleAssetDisplayRoot()
         {
             var scene = BuildAndOpenScene();
@@ -389,6 +422,31 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             }
 
             return bounds;
+        }
+
+        private static Rect ProjectBoundsToViewport(
+            UnityEngine.Camera camera,
+            Bounds bounds)
+        {
+            var minimum = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            var maximum = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            for (var x = -1; x <= 1; x += 2)
+            {
+                for (var y = -1; y <= 1; y += 2)
+                {
+                    for (var z = -1; z <= 1; z += 2)
+                    {
+                        var world = bounds.center + Vector3.Scale(
+                            bounds.extents, new Vector3(x, y, z));
+                        var viewport = camera.WorldToViewportPoint(world);
+                        minimum = Vector2.Min(minimum, viewport);
+                        maximum = Vector2.Max(maximum, viewport);
+                    }
+                }
+            }
+
+            return Rect.MinMaxRect(
+                minimum.x, minimum.y, maximum.x, maximum.y);
         }
 
         private static float ContrastRatio(Color first, Color second)

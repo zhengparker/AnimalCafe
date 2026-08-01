@@ -710,6 +710,7 @@ Setup_CreatesDedicatedValidationScene
 Setup_CreatesOneOrthographicIsometricCamera
 Setup_CreatesOneSingleAssetDisplayRoot
 Setup_SingleDisplayUsesTwoSeparateCenteredTabletopStations
+Setup_CharacterReferenceDoesNotOverlapRightStationInCameraView
 Setup_CreatesOneCharacterScaleReferenceAtOnePointThreeMeters
 Setup_CreatesTwentyInstancesOfEachBenchmarkInBatchRoot
 Setup_RepeatedRunDoesNotDuplicateObjects
@@ -748,7 +749,7 @@ AssetReadabilityRoot
    └─ Cups_20
 ```
 
-Camera uses the accepted fixed rotation from the project foundation, is orthographic, starts at size `7`, clears to SolidColor `#F2E6B8`, and has scene-specific `UniversalAdditionalCameraData` with `SMAA High` plus Camera `Post Processing` enabled so SMAA executes. Do not modify global URP or Quality settings. `SingleAssetDisplay` uses two instances of the same Work Table Prefab: Coffee Machine is centered on the left tabletop and Ceramic Cup is centered on the right tabletop. Arrange batch instances with literal spacing large enough to prevent overlap; no runtime placement system is introduced.
+Camera uses the accepted fixed rotation from the project foundation, is orthographic, starts at size `7`, clears to SolidColor `#F2E6B8`, and has scene-specific `UniversalAdditionalCameraData` with `SMAA High` plus Camera `Post Processing` enabled so SMAA executes. Do not modify global URP or Quality settings. `SingleAssetDisplay` uses two instances of the same Work Table Prefab: Coffee Machine is centered on the left tabletop and Ceramic Cup is centered on the right tabletop. Character Scale Reference uses local `X = 2.50`; project renderer bounds through the real Camera and require no overlap with the right station after adding a `0.01` viewport margin. Arrange batch instances with literal spacing large enough to prevent overlap; no runtime placement system is introduced.
 
 `CharacterScaleReference_1_30m` is a simple Editor-generated silhouette/reference object with visible bounds exactly `1.30 m` high, bottom at `Y = 0`, and no Collider、Rig、Animation or gameplay script. It uses the dedicated teal `#157A78` URP Lit Material, must contrast clearly against the pale-yellow background, and is not counted among the `60` benchmark batch instances.
 
@@ -764,6 +765,7 @@ ReadabilityScene_ContainsExactlySixtyBatchInstances
 ReadabilityScene_CharacterScaleReferenceIsOnePointThreeMetersHigh
 ReadabilityScene_CameraIsOrthographicAndUsesSizeSeven
 ReadabilityScene_UsesTwoSeparateCenteredTabletopStations
+ReadabilityScene_CharacterReferenceDoesNotOverlapRightStationInCameraView
 ReadabilityScene_AllRenderersUseUrpLitMaterials
 ReadabilityScene_CoffeeMachineHasTwoValidLodLevels
 ReadabilityScene_ProducesNoUnexpectedErrorLogs
