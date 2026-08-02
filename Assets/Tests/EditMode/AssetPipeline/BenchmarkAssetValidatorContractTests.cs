@@ -402,6 +402,45 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void ValidatePrefab_ForwardMarkerChildWithRendererReportsInvalidForwardMarker()
+        {
+            var path = CreateWorkTablePrefab(root =>
+            {
+                var child = new GameObject("UnexpectedVisibleChild");
+                child.transform.SetParent(root.transform.Find("ForwardMarker"), false);
+                child.AddComponent<MeshRenderer>();
+            });
+
+            AssertCodes(path, BenchmarkAssetIssueCode.InvalidForwardMarker);
+        }
+
+        [Test]
+        public void ValidatePrefab_ForwardMarkerChildWithMeshFilterReportsInvalidForwardMarker()
+        {
+            var path = CreateWorkTablePrefab(root =>
+            {
+                var child = new GameObject("UnexpectedMeshChild");
+                child.transform.SetParent(root.transform.Find("ForwardMarker"), false);
+                child.AddComponent<MeshFilter>();
+            });
+
+            AssertCodes(path, BenchmarkAssetIssueCode.InvalidForwardMarker);
+        }
+
+        [Test]
+        public void ValidatePrefab_ForwardMarkerChildWithColliderReportsInvalidForwardMarker()
+        {
+            var path = CreateWorkTablePrefab(root =>
+            {
+                var child = new GameObject("UnexpectedColliderChild");
+                child.transform.SetParent(root.transform.Find("ForwardMarker"), false);
+                child.AddComponent<BoxCollider>();
+            });
+
+            AssertCodes(path, BenchmarkAssetIssueCode.InvalidForwardMarker);
+        }
+
+        [Test]
         public void ValidatePrefab_ForwardMarkerBehindOriginReportsInvalidForwardMarker()
         {
             var path = CreateWorkTablePrefab(root => root.transform.Find("ForwardMarker").localPosition = new Vector3(0f, 0.05f, -0.01f));
@@ -415,6 +454,27 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
             var path = CreateWorkTablePrefab(root => root.transform.Find("ForwardMarker").localRotation = Quaternion.Euler(0f, 2f, 0f));
 
             AssertCodes(path, BenchmarkAssetIssueCode.InvalidForwardMarker);
+        }
+
+        [Test]
+        public void ValidatePrefab_NonReadableMeshStillReportsTriangleBudgetExceeded()
+        {
+            var path = CreateWorkTablePrefab(
+                root =>
+                {
+                    var mesh = root.transform.Find("Visual").GetComponent<MeshFilter>().sharedMesh;
+                    mesh.UploadMeshData(true);
+                    Assert.That(mesh.isReadable, Is.False);
+                },
+                triangleCount: 10001);
+
+            var codes = fixture.ValidatePrefab(path, BenchmarkAssetKind.WorkTable)
+                .Issues
+                .Select(issue => issue.Code)
+                .ToArray();
+
+            Assert.That(codes, Does.Contain(BenchmarkAssetIssueCode.TriangleBudgetExceeded));
+            Assert.That(codes, Has.None.EqualTo(BenchmarkAssetIssueCode.InvalidAssetPath));
         }
 
         [Test]
@@ -586,21 +646,24 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
 
         private string CreateWorkTablePrefab(
             Action<GameObject> configure = null,
-            Vector3? bounds = null)
+            Vector3? bounds = null,
+            int triangleCount = 1)
         {
             return CreatePrefabAtBenchmarkPath(
                 WorkTablePrefabName,
                 bounds ?? new Vector3(0.90f, 0.65f, 0.90f),
-                configure);
+                configure,
+                triangleCount);
         }
 
         private string CreatePrefabAtBenchmarkPath(
             string prefabName,
             Vector3 bounds,
-            Action<GameObject> configure = null)
+            Action<GameObject> configure = null,
+            int triangleCount = 1)
         {
             var assetPath = $"{BenchmarkAssetTestFactory.BenchmarkPrefabFolderPath}/{prefabName}.prefab";
-            fixture.CreatePrefabAtPath(assetPath, bounds, 1, configure);
+            fixture.CreatePrefabAtPath(assetPath, bounds, triangleCount, configure);
             return assetPath;
         }
 

@@ -201,6 +201,17 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void ProductionBenchmarks_NonReadableImportedMeshesCompleteValidation()
+        {
+            var report = BenchmarkAssetValidator.ValidateAllBenchmarks();
+
+            Assert.That(
+                report.Issues.Select(issue => issue.Code),
+                Has.None.EqualTo(BenchmarkAssetIssueCode.InvalidAssetPath));
+            Assert.That(report.IsValid, Is.True);
+        }
+
+        [Test]
         public void Menu_InvalidAssetsLogsEveryIssueSelectsFirstExistingAssetAndDoesNotMutateAssets()
         {
             var paths = CreateInvalidBatchPrefabs();

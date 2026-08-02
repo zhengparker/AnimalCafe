@@ -240,9 +240,9 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             var rootLocalForward = root.transform.InverseTransformDirection(marker.forward);
             if (rootLocalPosition.z <= MinimumForwardZ ||
                 Vector3.Angle(rootLocalForward, Vector3.forward) > ForwardAngleToleranceDegrees ||
-                marker.GetComponent<Renderer>() != null ||
-                marker.GetComponent<MeshFilter>() != null ||
-                marker.GetComponent<Collider>() != null)
+                marker.GetComponentsInChildren<Renderer>(true).Length > 0 ||
+                marker.GetComponentsInChildren<MeshFilter>(true).Length > 0 ||
+                marker.GetComponentsInChildren<Collider>(true).Length > 0)
             {
                 AddInvalidForwardMarkerIssue(
                     issues,
@@ -718,7 +718,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             return lod.renderers != null && lod.renderers.Length > 0 && lod.renderers.All(renderer => renderer != null);
         }
 
-        private static int CountUniqueMeshTriangles(
+        private static long CountUniqueMeshTriangles(
             IEnumerable<Renderer> renderers,
             string assetPath,
             ICollection<BenchmarkAssetValidationIssue> issues)
@@ -740,7 +740,16 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 meshes.Add(mesh);
             }
 
-            return meshes.Sum(mesh => mesh.triangles.Length / 3);
+            long triangleCount = 0;
+            foreach (var mesh in meshes)
+            {
+                for (var subMeshIndex = 0; subMeshIndex < mesh.subMeshCount; subMeshIndex++)
+                {
+                    triangleCount += (long)mesh.GetIndexCount(subMeshIndex) / 3;
+                }
+            }
+
+            return triangleCount;
         }
 
         private static Mesh GetMesh(Renderer renderer)
