@@ -508,6 +508,8 @@ Grid cell、footprint 和 rotation 已稳定，Model standards 才能使用真�
 - Basic cup
 - Source files、Models、Materials、Colliders 和 Unity Prefabs
 - Accurate footprint、surface 和 anchor markers
+- 建立所有未来家具共用的 Unity `FurnitureDefinition Asset` authoring 入口。Studio Owner 可在 Inspector 中为每件家具填写 stable ID、Display Name、Prefab、`Footprint Width × Depth` 和 Placement Surface；例如大桌子填写 `2 × 3`，长沙发填写 `1 × 3`。
+- 建立 `FurnitureDefinition Asset → FurnitureDefinition → Prefab` mapping 与 catalogue registration。Grid footprint 是明确的 gameplay data，不根据 Model bounds 或 Collider 自动猜测。
 
 ### Why Before Decoration
 
@@ -520,6 +522,7 @@ Basic Decoration 和 Functional Furniture 必须用真实或生产级尺寸验�
 ### Risks / Likely Bugs
 
 - Model 视觉尺寸与 Grid footprint 不一致。
+- Definition 填错 `2 × 3` / `3 × 2`，或漏掉 Prefab、ID、surface，导致 preview 与实际占格不一致。
 - Door、counter 或 machine pivot 导致 placement 偏移。
 - Collider 阻挡原本可用的 Interaction Anchor。
 - Prefab 修改覆盖 source import data。
@@ -527,6 +530,9 @@ Basic Decoration 和 Functional Furniture 必须用真实或生产级尺寸验�
 ### Tests
 
 - Scale、pivot、rotation 和 footprint。
+- Inspector authoring 支持 `1 × 1`、`2 × 3`、`1 × 3` 等合法 footprint；拒绝零值、负值、过大 footprint、duplicate ID 和 missing Prefab。
+- `2 × 3` furniture 旋转 90° / 270° 后占用 `3 × 2`，旋转 0° / 180° 后保持 `2 × 3`。
+- Work Table、Coffee Machine 和 Ceramic Cup 的第一批正式 Definition 能加载正确 Prefab、footprint 和 Placement Surface。
 - Collider 与 visual bounds。
 - Door / window wall attachment。
 - Functional furniture surface 和 anchor markers。
@@ -595,7 +601,9 @@ Title Screen、完整 feature pages、正式 icons、tutorial 和 mobile-specifi
 
 - 进入 Decoration Mode 自动 Pause。
 - Furniture catalogue placeholder。
+- Catalogue item 读取 Phase 4 的 `FurnitureDefinition Asset`，而不是在 UI 或 placement code 中重复写 footprint。
 - Placement preview。
+- Placement preview 按 Definition 的 `Footprint Width × Depth` 显示完整占格；旋转时同步交换 width / depth。
 - Select、move、rotate、confirm、cancel 和 store。
 - Valid / invalid visual feedback。
 - Layout data 与 Scene representation 同步。
@@ -622,6 +630,7 @@ Preview 使用临时 placement state，不直接修改正式 Layout。只有 Con
 - Confirm 只提交一次。
 - Cancel 恢复原位置。
 - Illegal placement 不能确认。
+- `2 × 3`、`1 × 3` 等 multi-cell furniture 必须检查全部 cells；任意一格 blocked、locked 或 overlap 都不能 Confirm。
 - Rotate、move、store 后 data 与 Scene 一致。
 - Decoration Mode 强制 Pause。
 - UI interaction 不触发 Scene placement。
@@ -1417,6 +1426,7 @@ Events 会读取 Order、Economy、Character、Mood 和 Relationships，必须�
 - Basic theme starter set
 - Bakery / Merchandise 基础 display furniture
 - Source files、Models、Materials、Colliders 和 Prefabs
+- 每件新家具都创建对应的 `FurnitureDefinition Asset`，填写 ID、Display Name、Prefab、Footprint Width、Footprint Depth 和 Placement Surface，并注册到 content catalogue。
 - Furniture catalogue thumbnails / icons 的生产边界
 
 ### Why After Management MVP
@@ -1425,7 +1435,7 @@ Events 会读取 Order、Economy、Character、Mood 和 Relationships，必须�
 
 ### Main Difficulty 与 Solution
 
-以小型 modular set 覆盖多种布局，不追求大量单件。每件家具必须先通过 footprint、pathfinding 和 camera readability，再进入 content catalogue。
+以小型 modular set 覆盖多种布局，不追求大量单件。每件家具必须完成 `Model → Prefab → FurnitureDefinition Asset → catalogue registration`，并通过 footprint、pathfinding 和 camera readability，才能进入 content catalogue。大桌子、长沙发等 multi-cell furniture 的 footprint 由 content author 在 Inspector 明确填写，不从 Model 自动推断。
 
 ### Risks / Likely Bugs
 
@@ -1437,6 +1447,8 @@ Events 会读取 Order、Economy、Character、Mood 和 Relationships，必须�
 ### Tests
 
 - Scale、pivot、footprint 和 rotation。
+- Definition / Prefab mapping、duplicate ID、missing reference、invalid footprint 与 catalogue registration validation。
+- 抽查 `2 × 3` table、`1 × 3` sofa 等 multi-cell furniture，确认 Inspector 数据、placement preview 和实际 occupied cells 一致。
 - Collider / NavMesh behavior。
 - Camera-distance readability。
 - Table / chair anchor compatibility。
