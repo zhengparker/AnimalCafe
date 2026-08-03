@@ -624,7 +624,27 @@ Latte + Lychee + Pistachio
 
 可能的主题包括森林、日式、复古、海边、圣诞或特定动物主题。主题可以影响整体 Atmosphere、特定客群或特殊事件，但具体规则尚未确定。
 
-### 10.4 Grid 自由摆放
+### 10.4 室内墙面与结构编辑阶段
+
+室内墙体采用分阶段实现：
+
+- 早期店面使用固定墙体，不允许玩家建造、移动或删除墙。
+- 玩家可以选择兼容的墙面或地面区域，更换 Paint、Wallpaper、Wainscoting 和 Floor Surface。
+- Wall Decoration 可以吸附到兼容墙面，并跟随稳定 Surface ID 保存位置。
+- 门窗开口属于墙体结构的一部分；更换墙面外观不能改变门窗位置、入口连接或可通行性。
+- Preview 不直接修改正式 Layout；只有确认后才提交 Surface appearance change。
+- Camera 或墙体遮挡时，Decoration Mode 应提供可读的编辑显示，例如临时隐藏、淡化或切换墙面显示；具体表现由对应 Phase design 确认。
+
+Store Expansion 稳定后，系统可以再加入高级结构编辑：
+
+- 建造、移动或删除墙
+- 调整房间边界
+- 放置、移动门窗
+- 重新计算 Room、Surface、Grid Occupancy、NavMesh 和营业 readiness
+
+高级结构编辑不能静默破坏现有家具、Wall Decoration、功能路径或 Save。发生冲突时必须指出受影响对象，并要求玩家修复或取消修改。
+
+### 10.5 Grid 自由摆放
 
 家具采用 Grid-based 自由摆放：
 
@@ -637,7 +657,7 @@ Latte + Lychee + Pistachio
 
 “自由摆放”不代表功能家具必须使用固定形状或固定位置。玩家可以用长 Counter、小桌子、岛台或多件家具组合出自己的服务布局。
 
-### 10.5 功能家具与自动 Interaction Anchors
+### 10.6 功能家具与自动 Interaction Anchors
 
 大部分功能家具根据自身位置和朝向自动提供 Interaction Anchors，玩家不需要手动配置所有工作点。
 
@@ -660,7 +680,7 @@ Order Queue 不要求玩家手动逐格设置。系统根据 Cash Register 的�
 
 家具不需要被定义为永久的“Counter”。经营功能由具体设备、可用表面、Interaction Anchors 和路径共同形成。
 
-### 10.6 玩家设置的 Pick-up Point
+### 10.7 玩家设置的 Pick-up Point
 
 Pick-up Point 是当前需要玩家主动决定的主要 Interaction Point。
 
@@ -676,7 +696,7 @@ Pick-up Point 是当前需要玩家主动决定的主要 Interaction Point。
 
 这允许玩家使用小桌子、长柜台、独立货架或其他兼容家具作为 Pick-up 区，而不要求固定的柜台方向。
 
-### 10.7 Placement Validation 与 Pathfinding
+### 10.8 Placement Validation 与 Pathfinding
 
 系统在确认布局前检查：
 
@@ -689,7 +709,7 @@ Pick-up Point 是当前需要玩家主动决定的主要 Interaction Point。
 
 如果布局无效，游戏应指出具体原因和问题位置，不能只显示模糊的“无法摆放”。
 
-### 10.8 Decoration Mode
+### 10.9 Decoration Mode
 
 玩家可以随时进入 Decoration Mode：
 
@@ -700,7 +720,7 @@ Pick-up Point 是当前需要玩家主动决定的主要 Interaction Point。
 - 玩家可以保留尚未完成的装修，但在必需服务路径无效时不能开始或恢复营业。
 - 非必需功能的布局无效时，对应功能明确标记为不可用，不阻塞其他有效区域。
 
-### 10.9 Atmosphere 方向
+### 10.10 Atmosphere 方向
 
 Atmosphere 属于装修系统的重要成长方向，但不是当前基础架构的核心。
 
@@ -716,7 +736,7 @@ Atmosphere 属于装修系统的重要成长方向，但不是当前基础架构
 
 为保留扩展空间，Furniture Data 应能够描述 Category、Theme Tags、Grid Footprint、Rotation、Surface Type、Interaction Anchors 和基础 Atmosphere 等信息。
 
-### 10.10 店铺外观
+### 10.11 店铺外观
 
 外部装修可以包括：
 
@@ -731,7 +751,7 @@ Atmosphere 属于装修系统的重要成长方向，但不是当前基础架构
 
 外观不应只存在于装修菜单中。顾客进店前的场景也应显示玩家选择的外部装修，让购买和布置具有实际存在感。
 
-### 10.11 Save 与系统边界
+### 10.12 Save 与系统边界
 
 装修存档至少需要表达：
 
@@ -804,6 +824,10 @@ Atmosphere、家具价格和具体 Pathfinding 实现可以独立演进。Furnit
 - 楼梯和多楼层之间的移动方式
 - Grid 单格的实际尺寸
 - 不规则 Furniture Footprint 的表示方式
+- Paint、Wallpaper 和 Wainscoting 是按单个 wall segment、整段连续墙面还是整个 room 应用
+- Wallpaper pattern 的缩放、转角衔接和门窗开口显示规则
+- 高级结构编辑使用的墙体厚度、Grid 对齐、Room detection 和门窗连接规则
+- 建墙、拆墙或移动墙影响已有家具、Wall Decoration 和营业路径时的修复流程
 - 哪些家具表面允许绑定 Pick-up Point
 - Pick-up Point 移动、更换和失效时的订单处理
 - Cash Register 与 Pick-up Queue 自动选择方向时的确定性规则

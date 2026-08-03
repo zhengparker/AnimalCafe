@@ -16,7 +16,7 @@
 
 - `AnimalCafe_Project_Design.md` 是长期游戏规则的 Source of Truth。
 - 本文档定义 implementation 顺序、system dependencies、risks 和 phase gates。
-- Phase 0 保持已完成状态；Phase 1–50 采用 dependency-driven 小阶段。
+- Phase 0 保持已完成状态；Phase 1–52 采用 dependency-driven 小阶段。
 - 每个 Phase 只承担一个主要技术风险，并拥有独立 design、implementation plan 和 tests。
 - 每个 Phase 使用独立的 `Docs/PhaseN_Beginner_Guide.md` 作为 beginner educational note；不能把多个 Phase 的教学内容混入同一个 guide。
 - 每份 Phase spec 和 Beginner Guide 的开头必须先用通俗、适合中学生理解的语言说明“这个 Phase 是做什么的”，并至少提供一个具体例子，再进入 architecture、technical rules 或 test details。
@@ -135,50 +135,52 @@ Layout Data
 | 4 | Core Architecture & Functional Furniture Models | Unity + Model | Visual Foundation |
 | 5 | UI Architecture & Design System | UI/UX + Unity | Visual Foundation |
 | 6 | Basic Decoration Mode | Unity + UI | Layout Foundation |
-| 7 | Functional Furniture & Layout Readiness | Unity | Layout Foundation |
-| 8 | Order Domain | Unity | Core Cafe Loop |
-| 9 | Capacity & Reservation | Unity | Core Cafe Loop |
-| 10 | Navigation & Movement Recovery | Unity | Core Cafe Loop |
-| 11 | Customer Spawn & Counter Queue | Unity | Core Cafe Loop |
-| 12 | Employee Task Flow | Unity | Core Cafe Loop |
-| 13 | Integrated Takeout Cafe Loop | Unity + UI | Core Cafe Loop Prototype |
-| 14 | Business Day Lifecycle | Unity + UI | Management MVP |
-| 15 | Economy & Daily Report | Unity + UI | Management MVP |
-| 16 | Save Foundation | Unity | Management MVP |
-| 17 | Application Shell & Loading | UI/UX + Unity | Management MVP |
-| 18 | Recipe & Menu | Unity + UI | Management MVP |
-| 19 | Inventory, Reservation & Restocking | Unity + UI | Playable Management MVP |
-| 20 | Core Character Models & Animation Pipeline | Unity + Model | Character Vertical Slice |
-| 21 | Staff Identity & Work Capabilities | Unity + UI | Character Vertical Slice |
-| 22 | Customer Identity & Returning Visits | Unity + UI | Character Vertical Slice |
-| 23 | Traits, Mood & Relationships | Unity + UI | Character Vertical Slice |
-| 24 | Events & Player Decisions | Unity + UI | Character-driven Vertical Slice |
-| 25 | Interior Furniture Model Set | Unity + Model | Cafe Growth |
-| 26 | Progression & Unlocks | Unity + UI | Cafe Growth |
-| 27 | Store Expansion | Unity + UI | Cafe Growth |
-| 28 | Exterior Model Set | Unity + Model | Exterior Decoration |
-| 29 | Exterior Zone & Facade | Unity + Model | Exterior Decoration |
-| 30 | Outdoor Decoration Placement | Unity + UI | Exterior Decoration |
-| 31 | Entrance Route & Exterior Validation | Unity | Exterior Decoration |
-| 32 | Seating & Dine-in Service | Unity + UI | Cafe Growth |
-| 33 | Atmosphere & Themes | Unity + UI | Advanced Decoration |
-| 34 | Special Rooms & Multi-floor | Unity + Model | Advanced Decoration |
-| 35 | Coffee Bean Visual Asset Set | Model | Signature Content |
-| 36 | Coffee Bean Exploration | Unity + UI | Signature Content |
-| 37 | Syrup & Add-on Visual Asset Set | Model | Signature Content |
-| 38 | Syrup & Add-on Gameplay | Unity + UI | Signature Content |
-| 39 | Bakery Visual Asset Set | Model | Signature Content |
-| 40 | Bakery Gameplay | Unity + UI | Signature Content |
-| 41 | Merchandise Visual Asset Set | Model | Signature Content |
-| 42 | Merchandise Gameplay | Unity + UI | Signature Content |
-| 43 | Offline Progression | Unity + UI | Feature-complete Alpha |
-| 44 | Online Identity & Cloud Save — Optional | Online + Unity | Optional Online Services |
-| 45 | UI/UX Integration & Accessibility | UI/UX + Unity | Release Preparation |
-| 46 | VFX Production & Integration | Unity + Model | Release Preparation |
-| 47 | Final Model Replacement & Asset Optimization | Unity + Model | Release Preparation |
-| 48 | Windows Release Preparation | Platform + Unity | Windows Release Candidate |
-| 49 | Mobile UI Adaptation | UI/UX + Unity | Mobile Release Preparation |
-| 50 | iOS Adaptation | Platform + Unity | iOS Release Candidate |
+| 7 | Interior Walls & Surface Customization | Unity + UI | Layout Foundation |
+| 8 | Functional Furniture & Layout Readiness | Unity | Layout Foundation |
+| 9 | Order Domain | Unity | Core Cafe Loop |
+| 10 | Capacity & Reservation | Unity | Core Cafe Loop |
+| 11 | Navigation & Movement Recovery | Unity | Core Cafe Loop |
+| 12 | Customer Spawn & Counter Queue | Unity | Core Cafe Loop |
+| 13 | Employee Task Flow | Unity | Core Cafe Loop |
+| 14 | Integrated Takeout Cafe Loop | Unity + UI | Core Cafe Loop Prototype |
+| 15 | Business Day Lifecycle | Unity + UI | Management MVP |
+| 16 | Economy & Daily Report | Unity + UI | Management MVP |
+| 17 | Save Foundation | Unity | Management MVP |
+| 18 | Application Shell & Loading | UI/UX + Unity | Management MVP |
+| 19 | Recipe & Menu | Unity + UI | Management MVP |
+| 20 | Inventory, Reservation & Restocking | Unity + UI | Playable Management MVP |
+| 21 | Core Character Models & Animation Pipeline | Unity + Model | Character Vertical Slice |
+| 22 | Staff Identity & Work Capabilities | Unity + UI | Character Vertical Slice |
+| 23 | Customer Identity & Returning Visits | Unity + UI | Character Vertical Slice |
+| 24 | Traits, Mood & Relationships | Unity + UI | Character Vertical Slice |
+| 25 | Events & Player Decisions | Unity + UI | Character-driven Vertical Slice |
+| 26 | Interior Furniture Model Set | Unity + Model | Cafe Growth |
+| 27 | Progression & Unlocks | Unity + UI | Cafe Growth |
+| 28 | Store Expansion | Unity + UI | Cafe Growth |
+| 29 | Advanced Wall Construction & Room Editing | Unity + UI | Cafe Growth |
+| 30 | Exterior Model Set | Unity + Model | Exterior Decoration |
+| 31 | Exterior Zone & Facade | Unity + Model | Exterior Decoration |
+| 32 | Outdoor Decoration Placement | Unity + UI | Exterior Decoration |
+| 33 | Entrance Route & Exterior Validation | Unity | Exterior Decoration |
+| 34 | Seating & Dine-in Service | Unity + UI | Cafe Growth |
+| 35 | Atmosphere & Themes | Unity + UI | Advanced Decoration |
+| 36 | Special Rooms & Multi-floor | Unity + Model | Advanced Decoration |
+| 37 | Coffee Bean Visual Asset Set | Model | Signature Content |
+| 38 | Coffee Bean Exploration | Unity + UI | Signature Content |
+| 39 | Syrup & Add-on Visual Asset Set | Model | Signature Content |
+| 40 | Syrup & Add-on Gameplay | Unity + UI | Signature Content |
+| 41 | Bakery Visual Asset Set | Model | Signature Content |
+| 42 | Bakery Gameplay | Unity + UI | Signature Content |
+| 43 | Merchandise Visual Asset Set | Model | Signature Content |
+| 44 | Merchandise Gameplay | Unity + UI | Signature Content |
+| 45 | Offline Progression | Unity + UI | Feature-complete Alpha |
+| 46 | Online Identity & Cloud Save — Optional | Online + Unity | Optional Online Services |
+| 47 | UI/UX Integration & Accessibility | UI/UX + Unity | Release Preparation |
+| 48 | VFX Production & Integration | Unity + Model | Release Preparation |
+| 49 | Final Model Replacement & Asset Optimization | Unity + Model | Release Preparation |
+| 50 | Windows Release Preparation | Platform + Unity | Windows Release Candidate |
+| 51 | Mobile UI Adaptation | UI/UX + Unity | Mobile Release Preparation |
+| 52 | iOS Adaptation | Platform + Unity | iOS Release Candidate |
 
 ---
 
@@ -214,10 +216,10 @@ Layout Data
 
 ### 5.4 Feature UI 与 Functional Feedback Rule
 
-- 每个 gameplay Phase 同时交付完成该功能所需的可用 UI，不把所有页面推迟到 Phase 45。
+- 每个 gameplay Phase 同时交付完成该功能所需的可用 UI，不把所有页面推迟到 Phase 47。
 - Feature UI 必须复用 Phase 5 的 Design System 和 navigation rules。
 - 每个功能同时交付用于理解状态的 functional feedback，例如 placement validity、Order ready、Coins change、Unlock 或 Error reason。
-- Phase 45 负责全局 UI/UX integration、onboarding 和 accessibility；Phase 46 负责正式 VFX，不负责第一次补齐缺失的核心反馈。
+- Phase 47 负责全局 UI/UX integration、onboarding 和 accessibility；Phase 48 负责正式 VFX，不负责第一次补齐缺失的核心反馈。
 
 ---
 
@@ -356,7 +358,7 @@ Merged-main evidence（2026-07-31）：GitHub PR #1 已 merge 到 `main`，merge
 
 ### Why After Phase 1
 
-Occupancy 必须操作稳定的 Layout data。先证明规则正确，Phase 3 的 visual placement 才不会混合 UI bugs 与数据 bugs。
+Occupancy 必须操作稳定的 Layout data。先证明规则正确，Phase 6 的 visual placement 才不会混合 UI bugs 与数据 bugs。
 
 ### Main Difficulty 与 Solution
 
@@ -580,7 +582,71 @@ Preview 使用临时 placement state，不直接修改正式 Layout。只有 Con
 
 ---
 
-## Phase 7 — Functional Furniture & Layout Readiness
+## Phase 7 — Interior Walls & Surface Customization
+
+### Goal
+
+在固定墙体结构中，让玩家安全更换室内墙面与地面风格，并放置 Wall Decoration。
+
+### Scope
+
+- 选择稳定 wall segment、wall surface 或 floor region。
+- Paint、Wallpaper、Wainscoting 和 Floor Surface definitions。
+- Surface preview、confirm 和 cancel transaction。
+- Wall Decoration attachment、move、rotation 和 remove。
+- Door / window opening compatibility。
+- Camera 遮挡时的墙面编辑显示。
+- Stable Surface ID 与未来 Save contract。
+- 明确排除建墙、拆墙和移动墙。
+
+### Why After Basic Decoration
+
+Phase 6 已证明 selection、preview、confirm、cancel 和 UI input boundary。墙面系统可以复用这些 interaction，而不重新实现 Decoration Mode。
+
+### Why Before Functional Furniture
+
+墙体和 Surface 会影响 Furniture attachment、Interaction Anchor validity、Camera 可读性和经营路径。先稳定 Surface contract，Phase 8 才能安全验证功能家具。
+
+### Main Difficulty 与 Solution
+
+墙面外观和墙体结构分离保存。Paint、Wallpaper 和 Wainscoting 只修改 Surface appearance，不改变 wall geometry、Door、Window、Grid Occupancy 或 Navigation。所有修改使用 preview transaction，确认后才写入 Layout data。
+
+### Risks / Likely Bugs
+
+- 修改一面墙时意外改变整个 room。
+- Wallpaper pattern 在转角、重复区间或门窗周围断裂和拉伸。
+- Wall Decoration 在更换墙面后丢失或漂移。
+- Camera 无法看清背面墙，导致选错 Surface。
+- Surface ID 因 Scene rebuild 改变，未来 Save 无法恢复。
+- Floor Surface 被错误当作实体 furniture，占用 Grid 或阻挡 NavMesh。
+
+### Tests
+
+- 单个 wall segment、连续 surface 和 floor region selection boundary。
+- Paint、Wallpaper、Wainscoting 和 Floor Surface preview / confirm / cancel。
+- Cancel 不修改正式 Layout。
+- Door / window openings 保持位置与可通行性。
+- Wall Decoration attachment、move、remove 和 surface-change persistence。
+- Stable Surface ID 在 Scene rebuild 后保持一致。
+- Surface appearance 不改变 Grid Occupancy 或 NavMesh。
+- Camera fade / hide mode 下仍选择正确 Surface。
+- 多种 resolution 下 UI 可读且不穿透 Scene。
+- 人工 Play Mode 检查 pattern seam、corner、opening 和 Camera readability。
+
+### Not Included
+
+- 建造、移动或删除墙。
+- 改变 Room boundary。
+- 移动 Door / Window openings。
+- Atmosphere 数值和完整 Theme bonus。
+
+### Future Consumer
+
+Store Expansion 稳定后，高级结构编辑可复用 Surface ID、attachment 和 validation rules，另行设计建墙、拆墙、Room detection、NavMesh rebuild 与冲突修复。
+
+---
+
+## Phase 8 — Functional Furniture & Layout Readiness
 
 ### Goal
 
@@ -628,7 +694,7 @@ Anchors 使用 furniture-local coordinates。家具位置或旋转变化后重�
 
 # Milestone B — Core Cafe Loop
 
-## Phase 8 — Order Domain
+## Phase 9 — Order Domain
 
 ### Goal
 
@@ -668,7 +734,7 @@ Order 是完整 Cafe Loop 的业务核心，先以纯逻辑验证，不混入 NP
 
 ---
 
-## Phase 9 — Capacity & Reservation
+## Phase 10 — Capacity & Reservation
 
 ### Goal
 
@@ -708,7 +774,7 @@ Service 返回明确 reservation token / ownership，只有 owner 可以完成�
 
 ---
 
-## Phase 10 — Navigation & Movement Recovery
+## Phase 11 — Navigation & Movement Recovery
 
 ### Goal
 
@@ -753,7 +819,7 @@ Customer 和 Employee state machines 只需要处理 movement result，不重复
 
 ---
 
-## Phase 11 — Customer Spawn & Counter Queue
+## Phase 12 — Customer Spawn & Counter Queue
 
 ### Goal
 
@@ -794,7 +860,7 @@ Queue order 由一个 queue authority 管理；Customer 不自行决定 slot。S
 
 ---
 
-## Phase 12 — Employee Task Flow
+## Phase 13 — Employee Task Flow
 
 ### Goal
 
@@ -812,7 +878,7 @@ Queue order 由一个 queue authority 管理；Customer 不自行决定 slot。S
 
 ### Why Before Integration
 
-Employee workflow 先用 controlled tasks 验证，Phase 10 再连接真实 Customer 和 Order。
+Employee workflow 先用 controlled tasks 验证，Phase 14 再连接真实 Customer 和 Order。
 
 ### Main Difficulty 与 Solution
 
@@ -836,7 +902,7 @@ Employee 一次拥有一个 task handle；task 负责声明 station capability�
 
 ---
 
-## Phase 13 — Integrated Takeout Cafe Loop
+## Phase 14 — Integrated Takeout Cafe Loop
 
 ### Goal
 
@@ -896,7 +962,7 @@ Order、Capacity、Movement、Customer 和 Employee 已分别通过 tests，inte
 
 # Milestone C — Playable Management MVP
 
-## Phase 14 — Business Day Lifecycle
+## Phase 15 — Business Day Lifecycle
 
 ### Goal
 
@@ -933,7 +999,7 @@ Order、Capacity、Movement、Customer 和 Employee 已分别通过 tests，inte
 
 ---
 
-## Phase 15 — Economy & Daily Report
+## Phase 16 — Economy & Daily Report
 
 ### Goal
 
@@ -969,7 +1035,7 @@ Daily Report 依赖可靠的 day start / end，不能使用不明确的统计清
 
 ---
 
-## Phase 16 — Save Foundation
+## Phase 17 — Save Foundation
 
 ### Goal
 
@@ -1010,7 +1076,7 @@ Daily Report 依赖可靠的 day start / end，不能使用不明确的统计清
 
 ---
 
-## Phase 17 — Application Shell & Loading
+## Phase 18 — Application Shell & Loading
 
 ### Goal
 
@@ -1060,7 +1126,7 @@ Online login、Cloud Save、正式 VFX 和 mobile platform lifecycle。
 
 ---
 
-## Phase 18 — Recipe & Menu
+## Phase 19 — Recipe & Menu
 
 ### Goal
 
@@ -1096,7 +1162,7 @@ Inventory 必须依据 Recipe 检查和预留材料；先定义商品需求，�
 
 ---
 
-## Phase 19 — Inventory, Reservation & Restocking
+## Phase 20 — Inventory, Reservation & Restocking
 
 ### Goal
 
@@ -1146,7 +1212,7 @@ Inventory transaction 依赖稳定 Order states、Recipe requirements 和 persis
 
 # Milestone D — Character-driven Vertical Slice
 
-## Phase 20 — Core Character Models & Animation Pipeline
+## Phase 21 — Core Character Models & Animation Pipeline
 
 ### Goal
 
@@ -1165,7 +1231,7 @@ Inventory transaction 依赖稳定 Order states、Recipe requirements 和 persis
 
 ### Why Before Character Systems
 
-Phase 8–13 可用 Capsule 验证逻辑；在 Staff identity 和 Species 差异进入正式体验前，必须证明角色视觉与 animation pipeline 可扩展。
+Phase 9–14 可用 Capsule 验证逻辑；在 Staff identity 和 Species 差异进入正式体验前，必须证明角色视觉与 animation pipeline 可扩展。
 
 ### Main Difficulty 与 Solution
 
@@ -1196,7 +1262,7 @@ Phase 8–13 可用 Capsule 验证逻辑；在 Staff identity 和 Species 差异
 
 ---
 
-## Phase 21 — Staff Identity & Work Capabilities
+## Phase 22 — Staff Identity & Work Capabilities
 
 ### Goal
 
@@ -1232,7 +1298,7 @@ Phase 8–13 可用 Capsule 验证逻辑；在 Staff identity 和 Species 差异
 
 ---
 
-## Phase 22 — Customer Identity & Returning Visits
+## Phase 23 — Customer Identity & Returning Visits
 
 ### Goal
 
@@ -1267,7 +1333,7 @@ Traits、Mood 和 Relationships 都需要可靠确认“这是同一个 Customer
 
 ---
 
-## Phase 23 — Traits, Mood & Relationships
+## Phase 24 — Traits, Mood & Relationships
 
 ### Goal
 
@@ -1308,7 +1374,7 @@ Species 和 Breed 只提供概率倾向；Traits 使用有上下限的 modifiers
 
 ---
 
-## Phase 24 — Events & Player Decisions
+## Phase 25 — Events & Player Decisions
 
 ### Goal
 
@@ -1351,7 +1417,7 @@ Events 会读取 Order、Economy、Character、Mood 和 Relationships，必须�
 
 # Milestone E — Cafe Growth 与 Advanced Decoration
 
-## Phase 25 — Interior Furniture Model Set
+## Phase 26 — Interior Furniture Model Set
 
 ### Goal
 
@@ -1393,7 +1459,7 @@ Events 会读取 Order、Economy、Character、Mood 和 Relationships，必须�
 
 ---
 
-## Phase 26 — Progression & Unlocks
+## Phase 27 — Progression & Unlocks
 
 ### Goal
 
@@ -1428,7 +1494,7 @@ Events 会读取 Order、Economy、Character、Mood 和 Relationships，必须�
 
 ---
 
-## Phase 27 — Store Expansion
+## Phase 28 — Store Expansion
 
 ### Goal
 
@@ -1464,7 +1530,67 @@ Expansion 需要明确 cost、unlock source 和 gameplay value。
 
 ---
 
-## Phase 28 — Exterior Model Set
+## Phase 29 — Advanced Wall Construction & Room Editing
+
+### Goal
+
+在 Store Expansion 稳定后，让玩家建造、移动或删除室内墙体，并安全调整房间边界。
+
+### Scope
+
+- Build、move 和 remove wall segments。
+- Grid-aligned wall thickness 和 corner / junction rules。
+- Door / window opening placement 与 compatibility。
+- Room detection 和 room boundary rebuild。
+- Surface ID preservation / migration。
+- Existing furniture、Wall Decoration 和 functional anchor conflict report。
+- NavMesh、Camera occlusion 和 business readiness rebuild。
+- Confirm / cancel transaction 与 conflict recovery。
+
+### Why After Store Expansion
+
+结构编辑依赖稳定的 unlocked regions、Camera bounds、Save、Decoration、Surface 和经营路径。更早实现会让每次 Expansion 都重新设计墙体与 Room ownership。
+
+### Why Before Exterior Systems
+
+Interior 与 Exterior 都需要明确 Building envelope、Door 和 Entrance boundary。先稳定室内结构编辑，Exterior Facade 才能安全复用墙体、Opening 和 attachment contracts。
+
+### Main Difficulty 与 Solution
+
+整个结构修改使用 staged transaction：先在 preview layout 中重建 Room、Surface、Occupancy、Anchors 和 paths，生成 conflict report；只有玩家确认且营业 readiness 通过后，才替换正式 Layout。无法迁移的对象必须明确列出，不能静默删除。
+
+### Risks / Likely Bugs
+
+- 拆墙后 Room detection 合并或分割错误。
+- Corner、junction 和 wall thickness 产生缝隙或重叠。
+- Door / Window 失去宿主墙面。
+- Surface ID 改变导致 Wallpaper 或 Wall Decoration 丢失。
+- Furniture 或 functional anchor 被新墙覆盖。
+- NavMesh 尚未 rebuild 就恢复营业。
+- Cancel 后正式 Layout 已被部分修改。
+
+### Tests
+
+- Build / move / remove wall segment transactions。
+- Straight、corner、T-junction 和 enclosed-room fixtures。
+- Door / Window host compatibility。
+- Room split / merge detection。
+- Surface appearance 和 Wall Decoration migration。
+- Furniture / anchor / path conflict reporting。
+- Cancel 保持正式 Layout 完全不变。
+- Confirm 后 Occupancy、NavMesh、Camera 和 readiness 一致。
+- Save / Load 与旧固定墙体 Save migration。
+- 人工 Play Mode 检查墙体 seams、Camera occlusion 和修复提示。
+
+### Not Included
+
+- 多楼层与楼梯。
+- Exterior Facade 和户外区域。
+- Atmosphere 数值。
+
+---
+
+## Phase 30 — Exterior Model Set
 
 ### Goal
 
@@ -1506,7 +1632,7 @@ Facade modules 和 free-placement decorations 使用不同 contracts。分别建
 
 ---
 
-## Phase 29 — Exterior Zone & Facade
+## Phase 31 — Exterior Zone & Facade
 
 ### Goal
 
@@ -1526,7 +1652,7 @@ Facade modules 和 free-placement decorations 使用不同 contracts。分别建
 
 ### Why After Store Expansion
 
-Exterior 是可解锁店铺区域的一部分，需要复用 Phase 21 的 region ownership、unlock 和 expansion rules。
+Exterior 是可解锁店铺区域的一部分，需要复用 Phase 28 的 region ownership、unlock 和 expansion rules。
 
 ### Main Difficulty 与 Solution
 
@@ -1554,7 +1680,7 @@ Facade elements 不使用普通地面 Grid placement。墙面、门窗、招牌�
 
 ---
 
-## Phase 30 — Outdoor Decoration Placement
+## Phase 32 — Outdoor Decoration Placement
 
 ### Goal
 
@@ -1573,7 +1699,7 @@ Facade elements 不使用普通地面 Grid placement。墙面、门窗、招牌�
 
 ### Why After Exterior Facade
 
-先建立稳定 Exterior zone 和 attachment surfaces，再复用 Phase 2–3 的 occupancy 与 Decoration Mode rules。
+先建立稳定 Exterior zone 和 attachment surfaces，再复用 Phase 2 的 occupancy rules 与 Phase 6 的 Decoration Mode rules。
 
 ### Main Difficulty 与 Solution
 
@@ -1604,7 +1730,7 @@ Customer path readiness、可使用的户外座位、Atmosphere bonus 和外部�
 
 ---
 
-## Phase 31 — Entrance Route & Exterior Validation
+## Phase 33 — Entrance Route & Exterior Validation
 
 ### Goal
 
@@ -1654,7 +1780,7 @@ Layout data 先检查 required corridor，再由 Navigation layer 验证完整 p
 
 ---
 
-## Phase 32 — Seating & Dine-in Service
+## Phase 34 — Seating & Dine-in Service
 
 ### Goal
 
@@ -1668,7 +1794,7 @@ Layout data 先检查 required corridor，再由 Navigation layer 验证完整 p
 - Table delivery
 - Dining duration
 - Table cleanup
-- Phase 23 已允许摆放的 Outdoor tables / chairs 在本 Phase 获得实际 seat reservation、delivery、dining 和 cleanup 功能。
+- Phase 32 已允许摆放的 Outdoor tables / chairs 在本 Phase 获得实际 seat reservation、delivery、dining 和 cleanup 功能。
 
 ### Why After Expansion
 
@@ -1692,7 +1818,7 @@ Dine-in 需要更大空间，也用于验证 Expansion 是否提供真实 gamepl
 
 ---
 
-## Phase 33 — Atmosphere & Themes
+## Phase 35 — Atmosphere & Themes
 
 ### Goal
 
@@ -1727,7 +1853,7 @@ Dine-in 需要更大空间，也用于验证 Expansion 是否提供真实 gamepl
 
 ---
 
-## Phase 34 — Special Rooms & Multi-floor
+## Phase 36 — Special Rooms & Multi-floor
 
 ### Goal
 
@@ -1766,7 +1892,7 @@ Dine-in 需要更大空间，也用于验证 Expansion 是否提供真实 gamepl
 
 # Milestone F — Signature Content
 
-## Phase 35 — Coffee Bean Visual Asset Set
+## Phase 37 — Coffee Bean Visual Asset Set
 
 ### Goal
 
@@ -1802,7 +1928,7 @@ Dine-in 需要更大空间，也用于验证 Expansion 是否提供真实 gamepl
 
 ---
 
-## Phase 36 — Coffee Bean Exploration
+## Phase 38 — Coffee Bean Exploration
 
 ### Goal
 
@@ -1829,7 +1955,7 @@ Dine-in 需要更大空间，也用于验证 Expansion 是否提供真实 gamepl
 
 ---
 
-## Phase 37 — Syrup & Add-on Visual Asset Set
+## Phase 39 — Syrup & Add-on Visual Asset Set
 
 ### Goal
 
@@ -1855,7 +1981,7 @@ Add-on 是永久装备而 Syrup 是消耗资源，视觉上必须明确区分，
 
 ---
 
-## Phase 38 — Syrup & Add-on Gameplay
+## Phase 40 — Syrup & Add-on Gameplay
 
 ### Goal
 
@@ -1883,7 +2009,7 @@ Add-on 是永久装备而 Syrup 是消耗资源，视觉上必须明确区分，
 
 ---
 
-## Phase 39 — Bakery Visual Asset Set
+## Phase 41 — Bakery Visual Asset Set
 
 ### Goal
 
@@ -1910,7 +2036,7 @@ Bakery 会同时出现 production 与 display states，Model set 必须先证明
 
 ---
 
-## Phase 40 — Bakery Gameplay
+## Phase 42 — Bakery Gameplay
 
 ### Goal
 
@@ -1937,7 +2063,7 @@ Bakery 会改变 production time、equipment queue、shared Milk 和 throughput�
 
 ---
 
-## Phase 41 — Merchandise Visual Asset Set
+## Phase 43 — Merchandise Visual Asset Set
 
 ### Goal
 
@@ -1964,7 +2090,7 @@ Merchandise 不进入制作流程，视觉和 Prefab contract 必须与 food pro
 
 ---
 
-## Phase 42 — Merchandise Gameplay
+## Phase 44 — Merchandise Gameplay
 
 ### Goal
 
@@ -1993,7 +2119,7 @@ Merchandise 依赖成熟的 Customer budget、interest、Relationship 和 Econom
 
 # Milestone G — Offline 与 Release
 
-## Phase 43 — Offline Progression
+## Phase 45 — Offline Progression
 
 ### Goal
 
@@ -2040,7 +2166,7 @@ Offline Mode 必须总结前面几乎所有稳定 gameplay rules。过早实现�
 
 ---
 
-## Phase 44 — Online Identity & Cloud Save — Optional
+## Phase 46 — Online Identity & Cloud Save — Optional
 
 ### Goal
 
@@ -2090,7 +2216,7 @@ Cloud synchronization 必须建立在稳定 Save schema、versioning、migration
 
 ---
 
-## Phase 45 — UI/UX Integration & Accessibility
+## Phase 47 — UI/UX Integration & Accessibility
 
 ### Goal
 
@@ -2133,7 +2259,7 @@ Cloud synchronization 必须建立在稳定 Save schema、versioning、migration
 
 ---
 
-## Phase 46 — VFX Production & Integration
+## Phase 48 — VFX Production & Integration
 
 ### Goal
 
@@ -2172,7 +2298,7 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 
 ---
 
-## Phase 47 — Final Model Replacement & Asset Optimization
+## Phase 49 — Final Model Replacement & Asset Optimization
 
 ### Goal
 
@@ -2211,7 +2337,7 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 
 ---
 
-## Phase 48 — Windows Release Preparation
+## Phase 50 — Windows Release Preparation
 
 ### Goal
 
@@ -2258,7 +2384,7 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 
 ---
 
-## Phase 49 — Mobile UI Adaptation
+## Phase 51 — Mobile UI Adaptation
 
 ### Goal
 
@@ -2298,7 +2424,7 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 
 ---
 
-## Phase 50 — iOS Adaptation
+## Phase 52 — iOS Adaptation
 
 ### Goal
 
@@ -2347,19 +2473,19 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 |---|---:|---|
 | Foundation Prototype | 0 | 基础 interaction 与 time 是否稳定 |
 | Visual Foundation | 5 | Asset pipeline、第一批正式 Models 与 UI foundation 是否可重复扩展 |
-| Layout Foundation | 7 | Layout contracts 是否足够支持经营，但未 over-engineer |
-| Core Cafe Loop Prototype | 13 | 自动外带服务是否稳定、可读、无卡死 |
-| Playable Management MVP | 19 | 多日经营、Application Shell、Menu、Inventory 与 Save 是否形成闭环 |
-| Character-driven Vertical Slice | 24 | 正式角色 pipeline 与角色差异是否真实影响体验 |
-| Exterior Decoration | 31 | Exterior assets、outdoor placement 与 Customer entrance 是否安全连接 |
-| Cafe Growth | 34 | Expansion、Dine-in 与 Advanced Decoration 是否互相支持 |
-| Signature Content | 42 | 特色视觉资产与 gameplay 是否增加选择而非无意义复杂度 |
-| Feature-complete Alpha | 43 | 所有核心 rules 是否支持 Offline summary |
-| Optional Online Services | 44 | 如启用，Cloud conflicts、offline fallback 和账号安全是否可靠 |
-| Release Visual & UX Integration | 47 | UI、VFX、Models 和 performance 是否达到 release preparation 标准 |
-| Windows Release Candidate | 48 | Stability、usability、balance 和 performance |
-| Mobile UI Ready | 49 | Touch layout、Safe Area 和 mobile workflows 是否完整 |
-| iOS Release Candidate | 50 | Platform lifecycle、device performance 和 build checklist |
+| Layout Foundation | 8 | Layout、Surface 与 functional furniture contracts 是否足够支持经营，但未 over-engineer |
+| Core Cafe Loop Prototype | 14 | 自动外带服务是否稳定、可读、无卡死 |
+| Playable Management MVP | 20 | 多日经营、Application Shell、Menu、Inventory 与 Save 是否形成闭环 |
+| Character-driven Vertical Slice | 25 | 正式角色 pipeline 与角色差异是否真实影响体验 |
+| Exterior Decoration | 33 | Exterior assets、outdoor placement 与 Customer entrance 是否安全连接 |
+| Cafe Growth | 36 | Expansion、Dine-in 与 Advanced Decoration 是否互相支持 |
+| Signature Content | 44 | 特色视觉资产与 gameplay 是否增加选择而非无意义复杂度 |
+| Feature-complete Alpha | 45 | 所有核心 rules 是否支持 Offline summary |
+| Optional Online Services | 46 | 如启用，Cloud conflicts、offline fallback 和账号安全是否可靠 |
+| Release Visual & UX Integration | 49 | UI、VFX、Models 和 performance 是否达到 release preparation 标准 |
+| Windows Release Candidate | 50 | Stability、usability、balance 和 performance |
+| Mobile UI Ready | 51 | Touch layout、Safe Area 和 mobile workflows 是否完整 |
+| iOS Release Candidate | 52 | Platform lifecycle、device performance 和 build checklist |
 
 每个 Milestone 完成后：
 
