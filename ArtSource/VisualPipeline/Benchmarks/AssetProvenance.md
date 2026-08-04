@@ -67,7 +67,7 @@ release or broader production use.
 - Prompt or user-owned reference description: no prompt/reference was supplied
 - Raw original Blender input: `Raw/WorkTable/SM_Benchmark_WorkTable_01_user_resupplied_original.blend`
 - Raw SHA-256: `CDA670B6DEAF309225E1636AA3B07EEBECC6D7D8497939027BC05659C156F60A`
-- User-confirmed license/use-right status: pending explicit Studio Owner confirmation
+- User-confirmed license/use-right status: Passed — Studio Owner confirmed use for AnimalCafe development and commercial release
 - Third-party logo or protected-character check: none observed in the Studio Owner-supplied input
 - Authoritative byte-identical Blender source: `Blender/SM_Benchmark_WorkTable_01.blend`
 - Production FBX file: `Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_WorkTable_01.fbx`
@@ -81,7 +81,7 @@ release or broader production use.
 - Prompt or user-owned reference description: no prompt/reference was supplied
 - Raw original Blender input: `Raw/CoffeeMachine/SM_Benchmark_CoffeeMachine_01_user_resupplied_original.blend`
 - Raw SHA-256: `1798013B314421693587470C25D9C5FFBD397F5995695965C5C86089ED6094B5`
-- User-confirmed license/use-right status: pending explicit Studio Owner confirmation
+- User-confirmed license/use-right status: Passed — Studio Owner confirmed use for AnimalCafe development and commercial release
 - Third-party logo or protected-character check: none observed in the Studio Owner-supplied input
 - Authoritative byte-identical Blender source: `Blender/SM_Benchmark_CoffeeMachine_01.blend`
 - Production FBX file: `Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_CoffeeMachine_01.fbx`
@@ -95,7 +95,7 @@ release or broader production use.
 - Prompt or user-owned reference description: no prompt/reference was supplied
 - Raw original Blender input: `Raw/CeramicCup/SM_Benchmark_CeramicCup_01_user_resupplied_original.blend`
 - Raw SHA-256: `D949A038F600B4DCFE2E81468C4A4B47266C53429316859DBCDC33B45A061A37`
-- User-confirmed license/use-right status: pending explicit Studio Owner confirmation
+- User-confirmed license/use-right status: Passed — Studio Owner confirmed use for AnimalCafe development and commercial release
 - Third-party logo or protected-character check: none observed in the Studio Owner-supplied input
 - Authoritative byte-identical Blender source: `Blender/SM_Benchmark_CeramicCup_01.blend`
 - Production FBX file: `Assets/Art/VisualPipeline/Benchmarks/Models/SM_Benchmark_CeramicCup_01.fbx`

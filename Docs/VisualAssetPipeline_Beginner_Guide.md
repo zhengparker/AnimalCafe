@@ -2,7 +2,7 @@
 
 > 这是一份面向 Unity 和 coding 初学者的 educational note。
 > 它只解释 Phase 3 的 Visual Asset Pipeline，不负责解释 Phase 4 的正式家具制作、gameplay 或 placement integration。
-> 当前状态是 `In Review`：automated verification 已通过，三件 benchmark assets 的 source license/use-right 已由 Studio Owner 确认通过；Camera/readability manual review 仍为 `Pending`。
+> 当前状态是 `Completed`：automated verification、Studio Owner Camera/readability manual review、source license/use-right confirmation、GitHub merge 与 merged-main regression 均已通过。
 
 ## 1. 用一个简单例子说明本阶段
 
@@ -142,7 +142,7 @@ Automated tests 不只检查临时假物件，也检查真实 production Prefab 
 
 | Verification | Result |
 |---|---|
-| Full EditMode | `307 / 307` passed |
+| Full EditMode | `312 / 312` passed |
 | Full PlayMode | `55 / 55` passed |
 | Focused AssetPipeline EditMode | `111 / 111` passed |
 | Failed / Skipped / Inconclusive | 全部 `0` |
@@ -392,7 +392,7 @@ Phase 3 没有开始或交付：
 
 当前 verified automated evidence：
 
-- EditMode `307 / 307` passed；
+- EditMode `312 / 312` passed；
 - PlayMode `55 / 55` passed；
 - focused AssetPipeline EditMode `111 / 111` passed；
 - failed、skipped、inconclusive 全部为 `0`；
@@ -400,13 +400,14 @@ Phase 3 没有开始或交付：
 - Camera-projected overlap RED `0 / 1`，修复后 focused EditMode 与 PlayMode 均为 `1 / 1` passed；
 - Size 4 trial focused EditMode `18 / 18`、focused PlayMode `12 / 12` passed；全部 single-display renderer bounds 在真实 Camera viewport `0.01` safe margin 内；
 - exact Landscape/Portrait framing focused EditMode `20 / 20`、focused PlayMode `14 / 14` passed；size `4` 下两个 aspects 均无 clipping、station/reference overlap 或 BatchDisplay intrusion；
+- GitHub PR #2 已 merge；merge commit `fb410d3` 上的 post-merge full EditMode `312 / 312`、PlayMode `55 / 55` 与 production validator `3 / 3`、`0 issues` 均通过；
 - authored Guide 的 placeholder/static scan 与 `git diff --check` 是文档 closeout gate；Unity-generated YAML 不在本次 Guide rewrite scope 内机械格式化。
 
 当前 manual 状态：
 
-- Camera/readability manual review：`Pending Studio Owner`；
+- Camera/readability manual review：`Passed — Studio Owner approved`；
 - source license/use-right confirmation：`Passed — Studio Owner confirmed Yes for all 3 user-provided / Tripo-generated assets, including development and commercial release`；
-- Roadmap Phase 3：`In Review`；
+- Roadmap Phase 3：`Completed`；
 - Phase 4：未开始。
 
 Studio Owner 完成第 9 节后，可以复制下面模板填写：
@@ -438,4 +439,4 @@ Overall result: Approved / Needs Revision
 Notes:
 ```
 
-License/use-right gate 已通过。下一道 gate 只剩 Studio Owner 提交 Camera/readability manual result；该项通过后，才能决定是否把 Roadmap Phase 3 从 `In Review` 改为 `Completed`。本 Guide 不授权开始 Phase 4、push 或 merge。
+Phase 3 的 license/use-right、manual Camera/readability、merge 与 merged-main regression gates 已全部通过。Phase 4 可以进入独立 design/spec approval gate；这不表示 Phase 4 implementation 已自动获准或已经开始。

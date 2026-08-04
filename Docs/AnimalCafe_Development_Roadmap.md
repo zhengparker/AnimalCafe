@@ -401,16 +401,14 @@ Mouse placement、preview、Scene rendering、pathfinding。
 
 ### Status
 
-`In Review` — Task 1–6 implementation and fresh automated evidence are
-available. Studio Owner has confirmed the required development and commercial
-release rights for all three user-provided / Tripo-generated benchmark assets;
-the source license/use-right gate is passed. Studio Owner manual
-Camera/readability acceptance remains pending, so Phase 3 must not yet be
-recorded as `Completed`.
+`Completed` — implementation、PR review hardening、Studio Owner manual
+Camera/readability acceptance、source license/use-right confirmation、GitHub
+merge 与 merged-main regression gates 均已通过。PR #2 merge commit 为
+`fb410d3`。
 
-Fresh readability layout review-fix automated evidence (2026-08-01):
+Latest review-hardening and merged-main automated evidence (2026-08-03):
 
-- full EditMode: `307 / 307` passed; failed/skipped/inconclusive all `0`;
+- full EditMode: `312 / 312` passed; failed/skipped/inconclusive all `0`;
 - full PlayMode: `55 / 55` passed; failed/skipped/inconclusive all `0`;
 - production benchmark validator: `3 / 3` Prefabs valid, `0 issues`;
 - focused AssetPipeline EditMode: `111 / 111` passed; focused readability
@@ -2571,10 +2569,10 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 **Phase 2 — Grid Occupancy & Placement Rules** 已完成 approved design、implementation、automated verification、review、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
 
-**Phase 3 — Visual Style & Asset Pipeline Foundation** 状态为 `In Review`。
+**Phase 3 — Visual Style & Asset Pipeline Foundation** 已完成 approved design、implementation、review hardening、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
 
-- 已完成真实 Portrait/Landscape size 4 framing fresh automated evidence：EditMode `307 / 307`、PlayMode `55 / 55` passed，failed、skipped、inconclusive 均为 `0`；exact-aspect focused EditMode `20 / 20`、focused PlayMode `14 / 14` passed；Camera-projected viewport containment、两组 station/reference non-overlap 与 BatchDisplay isolation checks 均通过；production validator 为 `3 / 3` valid、`0 issues`。
-- Studio Owner 已确认全部三件 user-provided / Tripo-generated benchmark assets 具备用于开发与商业发布所需的使用权，license/use-right gate 为 `Passed`；Camera/readability manual acceptance 仍为 `Pending`。
-- 当前只是 benchmark pipeline 和 readability baseline；未开始 Phase 4 formal asset set、gameplay、placement 或 runtime integration。
+- merged-main post-merge evidence（2026-08-03）：EditMode `312 / 312`、PlayMode `55 / 55` passed，failed、skipped、inconclusive 均为 `0`；production validator 为 `3 / 3` valid、`0 issues`；Build Settings/MainCafe isolation 继续由 automated suites 覆盖。
+- Studio Owner 已确认全部三件 user-provided / Tripo-generated benchmark assets 具备用于开发与商业发布所需的使用权，license/use-right gate 为 `Passed`；Camera/readability manual acceptance 为 `Passed`。
+- Phase 4 可开始 design/spec gate；尚未开始 Phase 4 implementation、gameplay、placement 或 runtime integration。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。
