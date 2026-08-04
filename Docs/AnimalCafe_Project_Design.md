@@ -629,9 +629,13 @@ Latte + Lychee + Pistachio
 室内墙体采用分阶段实现：
 
 - 早期店面使用固定墙体，不允许玩家建造、移动或删除墙。
+- 初始店面使用 `8 × 8` Floor Grid；固定 Camera 下只显示 Back-left 与 Back-right 两面墙，靠近 Camera 的两侧保持开放显示，但 Floor Layout Bounds 仍限制家具不能摆到店外。
 - 玩家可以选择兼容的墙面或地面区域，更换 Paint、Wallpaper、Wainscoting 和 Floor Surface。
 - Wall Decoration 可以吸附到兼容墙面，并跟随稳定 Surface ID 保存位置。
-- 门窗开口属于墙体结构的一部分；更换墙面外观不能改变门窗位置、入口连接或可通行性。
+- 每面初始墙使用独立 `Wall Slot Grid`：水平方向 8 columns、垂直方向 2 rows，每个 Slot 为 `1 m × 1 m`；下层从地面上方约 `0.5 m` 开始，上下两层分别约高 `1 m`。
+- Window 在早期版本中作为固定方向的 Wall-mounted object 使用 `Wall Footprint`，可占上层或下层 Slot，并与挂画等 Wall Decoration 共享 occupancy；同一 Slot 不能重叠，物品不能跨墙角，也暂时不能自由旋转。
+- 初始店面在 Back-right Wall 下层中央附近放置一个 `1 × 1` Window；后续玩家可以移动、增加或移除 Window。真正切割 Wall geometry 的 Door / Window Opening 属于后期高级结构编辑。
+- 初始 Entrance 位于靠近 Camera 的开放边界中央，以稳定 Entrance ID 和清楚的简单光线或地面标记表示；入口内侧 `2 × 2` Grid 是可行走但禁止家具占用的 Entrance Clearance Zone。
 - Preview 不直接修改正式 Layout；只有确认后才提交 Surface appearance change。
 - Camera 或墙体遮挡时，Decoration Mode 应提供可读的编辑显示，例如临时隐藏、淡化或切换墙面显示；具体表现由对应 Phase design 确认。
 
@@ -639,7 +643,7 @@ Store Expansion 稳定后，系统可以再加入高级结构编辑：
 
 - 建造、移动或删除墙
 - 调整房间边界
-- 放置、移动门窗
+- 放置、移动真实 Door / Window Openings；早期 wall-mounted Window 继续由 Wall Slot occupancy 管理
 - 重新计算 Room、Surface、Grid Occupancy、NavMesh 和营业 readiness
 
 高级结构编辑不能静默破坏现有家具、Wall Decoration、功能路径或 Save。发生冲突时必须指出受影响对象，并要求玩家修复或取消修改。
@@ -657,9 +661,19 @@ Store Expansion 稳定后，系统可以再加入高级结构编辑：
 
 “自由摆放”不代表功能家具必须使用固定形状或固定位置。玩家可以用长 Counter、小桌子、岛台或多件家具组合出自己的服务布局。
 
+Counter 使用明确的 modular contract：
+
+- `1 × 1 Counter Module` 始终是独立 Furniture Instance，提供一个 `1 × 1` Surface Slot；多个相邻模块不会自动合并。
+- 正式 `1 × 3 Counter` 是一个完整 Furniture Instance，整体移动和旋转，并提供三个独立的 `1 × 1` Surface Slots。
+- Surface Slots 由 Prefab 中明确的 local markers 定义，不根据 Floor Footprint 或 Model bounds 自动猜测；相同 `1 × 3` Footprint 的 Sofa 可以完全没有 Surface Slot。
+
 ### 10.6 功能家具与自动 Interaction Anchors
 
-大部分功能家具根据自身位置和朝向自动提供 Interaction Anchors，玩家不需要手动配置所有工作点。
+家具种类先决定 gameplay function，Prefab 的明确方向或 markers 只负责说明功能发生在哪里；普通家具不需要无关的 Interaction markers。
+
+- Coffee Machine 的 Function Type 明确标识其功能，设备 `+Z` 正面是员工 Interaction Side，不需要 Customer Side。
+- Cash Register 的 Function Type 明确标识其功能，并必须提供互相相反的 Employee Side 与 Customer Side。
+- Coffee Machine 与 Cash Register 都可以在一个 Surface Slot 上按 `90°` 旋转；方向数据随设备旋转，但不改变支撑家具的 Floor Footprint。
 
 以放置在桌面或 Counter 上的 Cash Register 为例，系统自动计算：
 
@@ -669,7 +683,7 @@ Store Expansion 稳定后，系统可以再加入高级结构编辑：
 
 玩家可以移动或旋转 Cash Register 及其支撑家具。Interaction Anchors 会随位置和朝向重新计算。
 
-Order Queue 不要求玩家手动逐格设置。系统根据 Cash Register 的朝向、可通行区域和确定性的选点规则自动选择有效队列方向。
+Order Queue 不要求玩家手动逐格设置。第一位顾客的 Interaction Position 固定在 Cash Register 的 Customer Side；Queue 从该位置向远离 Cash Register 的方向开始，后续队伍可按确定性规则转弯绕开障碍。Employee Side 位于相反方向，不参与 Queue 初始方向。
 
 系统验证：
 
@@ -686,6 +700,8 @@ Pick-up Point 是当前需要玩家主动决定的主要 Interaction Point。
 
 - Pick-up Point 必须绑定到桌子、Counter、架子等兼容商品表面。
 - 玩家可以选择该家具占用范围内的有效 `1 × 1` Surface Slot。
+- 一个 `1 × 1 Counter Module` 只有一个主要 Surface Slot；一个正式 `1 × 3 Counter` 有三个可独立使用的 Surface Slots。Cash Register、Coffee Machine 或 Pick-up Point 各使用一个主要 Slot。
+- Ceramic Cup 等制作过程中的商品视觉可以短暂出现在设备或 Pick-up 表面，但不作为永久家具占用整个 Surface Slot。
 - Pick-up Point 使用相对家具的局部位置保存；移动或旋转家具时，Pick-up Point 随家具一起移动。
 - 系统自动生成员工交付位置和客人取餐位置。
 - 员工把完成的商品送到绑定表面。

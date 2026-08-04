@@ -500,15 +500,17 @@ Grid cell、footprint 和 rotation 已稳定，Model standards 才能使用真�
 
 ### Scope
 
-- Floor、wall、door 和 window
-- Counter
-- Cash Register
-- Coffee Machine
-- Pick-up shelf / table
-- Basic cup
+- 与 `8 × 8` Grid 对齐的浅黄色 Floor、两面固定金黄色 Wall、开放边界 Entrance Portal 和一个默认 Window；使用 approved 配色 B。
+- 每面 Wall 提供 8 columns × 2 rows 的 `1 m × 1 m` Wall Slots；Window 使用固定 `1 × 1` Wall Footprint，与未来 Wall Decoration 共享 occupancy 且暂时不能自由旋转。
+- Entrance Portal 使用稳定 ID，并在内侧保留可行走但禁止家具占用的 `2 × 2` Entrance Clearance Zone。
+- Work Table、`1 × 1` Counter Module、Coffee Machine、Cash Register 和 Ceramic Cup visual。
+- `1 × 1 Counter Module` 提供一个主要 Surface Slot；`1 × 3 Counter` authoring fixture 证明一个完整 Instance 可提供三个独立 Surface Slots。
+- Cash Register 使用 `vintage computer monitor 3d model.glb` 的清理、缩放和优化版本，必须标识互相相反的 Employee Side 与 Customer Side；Customer Side 同时提供未来 Queue 的初始方向。
+- Coffee Machine 使用 `+Z` 正面作为员工 Interaction Side；Coffee Machine 与 Cash Register 可在 Surface Slot 上按 `90°` 旋转。
+- Ceramic Cup 是后续制作与 Pick-up 流程使用的临时商品视觉，不创建 `FurnitureDefinition Asset`，也不作为永久家具占用 Surface Slot。
 - Source files、Models、Materials、Colliders 和 Unity Prefabs
 - Accurate footprint、surface 和 anchor markers
-- 建立所有未来家具共用的 Unity `FurnitureDefinition Asset` authoring 入口。Studio Owner 可在 Inspector 中为每件家具填写 stable ID、Display Name、Prefab、`Footprint Width × Depth` 和 Placement Surface；例如大桌子填写 `2 × 3`，长沙发填写 `1 × 3`。
+- 建立所有未来家具共用的 Unity `FurnitureDefinition Asset` authoring 入口。Studio Owner 可在 Inspector 中为每件家具填写 stable ID、Display Name、Prefab、`Footprint Width × Depth`、Placement Surface 和 Function Type；例如大桌子填写 `2 × 3`，长沙发填写 `1 × 3`。
 - 建立 `FurnitureDefinition Asset → FurnitureDefinition → Prefab` mapping 与 catalogue registration。Grid footprint 是明确的 gameplay data，不根据 Model bounds 或 Collider 自动猜测。
 
 ### Why Before Decoration
@@ -523,22 +525,36 @@ Basic Decoration 和 Functional Furniture 必须用真实或生产级尺寸验�
 
 - Model 视觉尺寸与 Grid footprint 不一致。
 - Definition 填错 `2 × 3` / `3 × 2`，或漏掉 Prefab、ID、surface，导致 preview 与实际占格不一致。
-- Door、counter 或 machine pivot 导致 placement 偏移。
+- Entrance、counter 或 machine pivot 导致 placement 偏移。
 - Collider 阻挡原本可用的 Interaction Anchor。
 - Prefab 修改覆盖 source import data。
+- Floor、Furniture Surface 与 Wall Slot occupancy 被错误混在一起。
+- Cash Register 的 Customer / Employee sides 填反，或 Window 与 Wall Decoration 错误重叠。
 
 ### Tests
 
 - Scale、pivot、rotation 和 footprint。
 - Inspector authoring 支持 `1 × 1`、`2 × 3`、`1 × 3` 等合法 footprint；拒绝零值、负值、过大 footprint、duplicate ID 和 missing Prefab。
 - `2 × 3` furniture 旋转 90° / 270° 后占用 `3 × 2`，旋转 0° / 180° 后保持 `2 × 3`。
-- Work Table、Coffee Machine 和 Ceramic Cup 的第一批正式 Definition 能加载正确 Prefab、footprint 和 Placement Surface。
+- Work Table、Counter、Coffee Machine 和 Cash Register 的第一批正式 Definition 能加载正确 Prefab、footprint、Placement Surface 和 Function Type；Ceramic Cup 只作为已验证的商品视觉加载。
+- `1 × 1` Counter 提供一个 Surface Slot；`1 × 3` Counter fixture 提供三个稳定且独立的 Surface Slots。
+- Cash Register 的 Customer Side 与 Employee Side 必须互相相反；Coffee Machine `+Z` 正面必须正确。
+- `8 × 8` Floor、两面各 `8 × 2` Wall Slots、默认 Window 和 `2 × 2` Entrance Clearance fixture 正确。
 - Collider 与 visual bounds。
-- Door / window wall attachment。
+- Window wall attachment、Wall Footprint、overlap、out-of-bounds 与 cross-corner rejection。
 - Functional furniture surface 和 anchor markers。
 - NavMesh obstacle smoke test。
 - Missing material / texture / reference scan。
 - Scene 中的 primitive 可被对应正式 Prefab 安全替换。
+- 正常、invalid、boundary、regression 与 Studio Owner manual acceptance 全部按 approved P4 spec 留存证据。
+
+### Downstream Ownership
+
+- Phase 5 建立 UI foundation；Phase 6 实现 Floor Furniture 的 Decoration Mode、selection、preview、confirm 与 cancel。
+- Phase 7 复用 Wall Slot contract，实现 Window 与其他 Wall-mounted objects 的移动、增加、移除及 Surface customization。
+- Phase 8 将 Function Type、Surface Slots 与 Interaction directions 接入 Layout Readiness。
+- Phase 11–14 分别负责 Navigation、Customer Queue、Employee tasks 与完整基础 Coffee Loop。
+- Phase 17 建立 Save / Load；Phase 29 实现 Entrance 或真实 Door / Window Opening 的高级结构移动与 migration；Phase 33 验证 Exterior Spawn → Entrance route；Phase 48 制作正式 Entrance VFX。
 
 ---
 
@@ -653,8 +669,8 @@ Preview 使用临时 placement state，不直接修改正式 Layout。只有 Con
 - 选择稳定 wall segment、wall surface 或 floor region。
 - Paint、Wallpaper、Wainscoting 和 Floor Surface definitions。
 - Surface preview、confirm 和 cancel transaction。
-- Wall Decoration attachment、move、rotation 和 remove。
-- Door / window opening compatibility。
+- Wall Decoration 与 Window attachment、move 和 remove；Wall-mounted objects 使用 author-defined fixed footprint，暂时不提供自由旋转。
+- Door / window opening compatibility；P4 wall-mounted Window 不切割 Wall geometry，并与其他 Wall Decoration 共用 Slot occupancy。
 - Camera 遮挡时的墙面编辑显示。
 - Stable Surface ID 与未来 Save contract。
 - 明确排除建墙、拆墙和移动墙。
@@ -686,7 +702,7 @@ Phase 6 已证明 selection、preview、confirm、cancel 和 UI input boundary�
 - Paint、Wallpaper、Wainscoting 和 Floor Surface preview / confirm / cancel。
 - Cancel 不修改正式 Layout。
 - Door / window openings 保持位置与可通行性。
-- Wall Decoration attachment、move、remove 和 surface-change persistence。
+- Window 与 Wall Decoration attachment、move、remove、Slot overlap rejection 和 surface-change persistence。
 - Stable Surface ID 在 Scene rebuild 后保持一致。
 - Surface appearance 不改变 Grid Occupancy 或 NavMesh。
 - Camera fade / hide mode 下仍选择正确 Surface。
@@ -697,7 +713,7 @@ Phase 6 已证明 selection、preview、confirm、cancel 和 UI input boundary�
 
 - 建造、移动或删除墙。
 - 改变 Room boundary。
-- 移动 Door / Window openings。
+- 移动真实 Door / Window openings；P4 wall-mounted Window 的移动属于本 Phase。
 - Atmosphere 数值和完整 Theme bonus。
 
 ### Future Consumer
@@ -1604,6 +1620,7 @@ Expansion 需要明确 cost、unlock source 和 gameplay value。
 - Build、move 和 remove wall segments。
 - Grid-aligned wall thickness 和 corner / junction rules。
 - Door / window opening placement 与 compatibility。
+- 开放边界 Entrance Portal 的移动、`2 × 2` Clearance Zone 重定位与 existing-layout conflict report。
 - Room detection 和 room boundary rebuild。
 - Surface ID preservation / migration。
 - Existing furniture、Wall Decoration 和 functional anchor conflict report。
@@ -1627,6 +1644,7 @@ Interior 与 Exterior 都需要明确 Building envelope、Door 和 Entrance boun
 - 拆墙后 Room detection 合并或分割错误。
 - Corner、junction 和 wall thickness 产生缝隙或重叠。
 - Door / Window 失去宿主墙面。
+- Entrance 移动后 Clearance Zone 与 Furniture、Room boundary 或营业路径冲突。
 - Surface ID 改变导致 Wallpaper 或 Wall Decoration 丢失。
 - Furniture 或 functional anchor 被新墙覆盖。
 - NavMesh 尚未 rebuild 就恢复营业。
@@ -1637,6 +1655,7 @@ Interior 与 Exterior 都需要明确 Building envelope、Door 和 Entrance boun
 - Build / move / remove wall segment transactions。
 - Straight、corner、T-junction 和 enclosed-room fixtures。
 - Door / Window host compatibility。
+- Entrance relocation、Clearance conflict 与 stable Entrance ID preservation。
 - Room split / merge detection。
 - Surface appearance 和 Wall Decoration migration。
 - Furniture / anchor / path conflict reporting。
@@ -2573,6 +2592,6 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 - merged-main post-merge evidence（2026-08-03）：EditMode `312 / 312`、PlayMode `55 / 55` passed，failed、skipped、inconclusive 均为 `0`；production validator 为 `3 / 3` valid、`0 issues`；Build Settings/MainCafe isolation 继续由 automated suites 覆盖。
 - Studio Owner 已确认全部三件 user-provided / Tripo-generated benchmark assets 具备用于开发与商业发布所需的使用权，license/use-right gate 为 `Passed`；Camera/readability manual acceptance 为 `Passed`。
-- Phase 4 可开始 design/spec gate；尚未开始 Phase 4 implementation、gameplay、placement 或 runtime integration。
+- Phase 4 的 design discussions、TDD scope、manual acceptance matrix 与 written spec 已获 Studio Owner final approval；implementation plan 已创建并等待 Studio Owner review。尚未创建 P4 implementation worktree / branch，也未开始 implementation、gameplay、placement 或 runtime integration。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。
