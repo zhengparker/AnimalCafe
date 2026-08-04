@@ -5,7 +5,8 @@
     "AnimalCafe.Runtime",
     "Unity.InputSystem",
     "Unity.InputSystem.UI",
-    "UnityEngine.UI"
+    "UnityEngine.UI",
+    "Unity.RenderPipelines.Universal.Runtime"
   ],
   "includePlatforms": [
     "Editor"

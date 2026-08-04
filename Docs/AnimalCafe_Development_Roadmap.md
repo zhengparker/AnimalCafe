@@ -8,7 +8,7 @@
 >
 > 目标兼容平台：iOS
 >
-> 更新日期：2026-07-27
+> 更新日期：2026-08-01
 
 ## 1. 文档用途
 
@@ -399,6 +399,59 @@ Mouse placement、preview、Scene rendering、pathfinding。
 
 建立所有正式 Models、Materials、Textures 和 Unity Prefabs 共用的视觉方向与技术标准。
 
+### Status
+
+`In Review` — Task 1–6 implementation and fresh automated evidence are
+available. Studio Owner has confirmed the required development and commercial
+release rights for all three user-provided / Tripo-generated benchmark assets;
+the source license/use-right gate is passed. Studio Owner manual
+Camera/readability acceptance remains pending, so Phase 3 must not yet be
+recorded as `Completed`.
+
+Fresh readability layout review-fix automated evidence (2026-08-01):
+
+- full EditMode: `307 / 307` passed; failed/skipped/inconclusive all `0`;
+- full PlayMode: `55 / 55` passed; failed/skipped/inconclusive all `0`;
+- production benchmark validator: `3 / 3` Prefabs valid, `0 issues`;
+- focused AssetPipeline EditMode: `111 / 111` passed; focused readability
+  Scene EditMode: `15 / 15` passed; focused AssetReadability PlayMode: `9 / 9`
+  passed;
+- validation Scene now uses pale-yellow `#F2E6B8`, scene-only `SMAA High`, a
+  dedicated teal Character Scale Reference, and the three Blender original-color
+  packed Base Color Textures downscaled to project-relative `512 × 512` sRGB PNGs;
+- Camera-projected bounds tests now use exact Landscape `1920 × 1080` and
+  Portrait `1170 × 2532` aspects at size `4`. Character Scale Reference local
+  `(1.75, 0, 2.00)` stays within `0.01` safe margin and does not overlap either
+  station; BatchDisplay local `(-30, 0, 30)` remains outside both viewports;
+- exact-aspect focused evidence is EditMode `20 / 20` and PlayMode `14 / 14`
+  passed; no temporary Portrait Camera-size workaround remains;
+- the approved Size 4 trial now uses orthographic size `4` by default; focused
+  EditMode `18 / 18` and focused PlayMode `12 / 12` prove all single-display
+  renderer bounds remain inside the real Camera viewport with `0.01` margin;
+- `MainCafe.unity` remains unchanged; PlayMode cleanup restored Build Settings
+  to its single enabled `Assets/Scenes/MainCafe.unity` entry.
+
+Known limitation: this is a benchmark pipeline and readability baseline only.
+It is not the Phase 4 formal asset set, gameplay, placement, or runtime
+integration.
+
+### Deferred Formal Camera Contract
+
+- Formal gameplay framing is **Portrait-first**.
+- Gameplay zoom is one continuous factor from `1.0x` through `3.0x`, not three
+  preset Camera sizes. Windows uses smooth mouse-wheel zoom; a future iPhone
+  build uses pinch zoom over the same logical range.
+- Exact base orthographic size, Portrait framing and adaptive aspect behavior
+  remain deliberately open until formal Portrait/mobile Camera work. The P3
+  size `4` / `7` / `12` readability checks are visual proxies, not final zoom
+  stops and not approval of an exact gameplay base.
+- Phase 49 owns Portrait/mobile presentation, Safe Area and UI-versus-Camera
+  gesture priority, including selection of the exact base framing. Phase 50
+  owns iPhone pinch/device integration and platform validation; it must reuse
+  the same `1.0x`–`3.0x` logical envelope rather than fork gameplay Camera rules.
+- Any formal Camera change must preserve Phase 0 pan, smooth mouse-wheel zoom,
+  Camera bounds and existing input/UI regressions through fresh Phase 0 tests.
+
 ### Scope
 
 - Art direction、color palette 和 shape language
@@ -457,6 +510,8 @@ Grid cell、footprint 和 rotation 已稳定，Model standards 才能使用真�
 - Basic cup
 - Source files、Models、Materials、Colliders 和 Unity Prefabs
 - Accurate footprint、surface 和 anchor markers
+- 建立所有未来家具共用的 Unity `FurnitureDefinition Asset` authoring 入口。Studio Owner 可在 Inspector 中为每件家具填写 stable ID、Display Name、Prefab、`Footprint Width × Depth` 和 Placement Surface；例如大桌子填写 `2 × 3`，长沙发填写 `1 × 3`。
+- 建立 `FurnitureDefinition Asset → FurnitureDefinition → Prefab` mapping 与 catalogue registration。Grid footprint 是明确的 gameplay data，不根据 Model bounds 或 Collider 自动猜测。
 
 ### Why Before Decoration
 
@@ -469,6 +524,7 @@ Basic Decoration 和 Functional Furniture 必须用真实或生产级尺寸验�
 ### Risks / Likely Bugs
 
 - Model 视觉尺寸与 Grid footprint 不一致。
+- Definition 填错 `2 × 3` / `3 × 2`，或漏掉 Prefab、ID、surface，导致 preview 与实际占格不一致。
 - Door、counter 或 machine pivot 导致 placement 偏移。
 - Collider 阻挡原本可用的 Interaction Anchor。
 - Prefab 修改覆盖 source import data。
@@ -476,6 +532,9 @@ Basic Decoration 和 Functional Furniture 必须用真实或生产级尺寸验�
 ### Tests
 
 - Scale、pivot、rotation 和 footprint。
+- Inspector authoring 支持 `1 × 1`、`2 × 3`、`1 × 3` 等合法 footprint；拒绝零值、负值、过大 footprint、duplicate ID 和 missing Prefab。
+- `2 × 3` furniture 旋转 90° / 270° 后占用 `3 × 2`，旋转 0° / 180° 后保持 `2 × 3`。
+- Work Table、Coffee Machine 和 Ceramic Cup 的第一批正式 Definition 能加载正确 Prefab、footprint 和 Placement Surface。
 - Collider 与 visual bounds。
 - Door / window wall attachment。
 - Functional furniture surface 和 anchor markers。
@@ -544,7 +603,9 @@ Title Screen、完整 feature pages、正式 icons、tutorial 和 mobile-specifi
 
 - 进入 Decoration Mode 自动 Pause。
 - Furniture catalogue placeholder。
+- Catalogue item 读取 Phase 4 的 `FurnitureDefinition Asset`，而不是在 UI 或 placement code 中重复写 footprint。
 - Placement preview。
+- Placement preview 按 Definition 的 `Footprint Width × Depth` 显示完整占格；旋转时同步交换 width / depth。
 - Select、move、rotate、confirm、cancel 和 store。
 - Valid / invalid visual feedback。
 - Layout data 与 Scene representation 同步。
@@ -571,6 +632,7 @@ Preview 使用临时 placement state，不直接修改正式 Layout。只有 Con
 - Confirm 只提交一次。
 - Cancel 恢复原位置。
 - Illegal placement 不能确认。
+- `2 × 3`、`1 × 3` 等 multi-cell furniture 必须检查全部 cells；任意一格 blocked、locked 或 overlap 都不能 Confirm。
 - Rotate、move、store 后 data 与 Scene 一致。
 - Decoration Mode 强制 Pause。
 - UI interaction 不触发 Scene placement。
@@ -1430,6 +1492,7 @@ Events 会读取 Order、Economy、Character、Mood 和 Relationships，必须�
 - Basic theme starter set
 - Bakery / Merchandise 基础 display furniture
 - Source files、Models、Materials、Colliders 和 Prefabs
+- 每件新家具都创建对应的 `FurnitureDefinition Asset`，填写 ID、Display Name、Prefab、Footprint Width、Footprint Depth 和 Placement Surface，并注册到 content catalogue。
 - Furniture catalogue thumbnails / icons 的生产边界
 
 ### Why After Management MVP
@@ -1438,7 +1501,7 @@ Events 会读取 Order、Economy、Character、Mood 和 Relationships，必须�
 
 ### Main Difficulty 与 Solution
 
-以小型 modular set 覆盖多种布局，不追求大量单件。每件家具必须先通过 footprint、pathfinding 和 camera readability，再进入 content catalogue。
+以小型 modular set 覆盖多种布局，不追求大量单件。每件家具必须完成 `Model → Prefab → FurnitureDefinition Asset → catalogue registration`，并通过 footprint、pathfinding 和 camera readability，才能进入 content catalogue。大桌子、长沙发等 multi-cell furniture 的 footprint 由 content author 在 Inspector 明确填写，不从 Model 自动推断。
 
 ### Risks / Likely Bugs
 
@@ -1450,6 +1513,8 @@ Events 会读取 Order、Economy、Character、Mood 和 Relationships，必须�
 ### Tests
 
 - Scale、pivot、footprint 和 rotation。
+- Definition / Prefab mapping、duplicate ID、missing reference、invalid footprint 与 catalogue registration validation。
+- 抽查 `2 × 3` table、`1 × 3` sofa 等 multi-cell furniture，确认 Inspector 数据、placement preview 和实际 occupied cells 一致。
 - Collider / NavMesh behavior。
 - Camera-distance readability。
 - Table / chair anchor compatibility。
@@ -2395,6 +2460,8 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 - Touch target sizes
 - Safe Area
 - Mobile aspect ratios
+- Portrait-first base Camera framing and adaptive aspect presentation
+- Continuous `1.0x`–`3.0x` zoom presentation and UI / Camera gesture priority
 - Small-screen panel variants
 - Gesture / UI conflict handling
 - Mobile text scale
@@ -2433,6 +2500,7 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 ### Scope
 
 - Touch pan / pinch zoom / tap
+- Map iPhone pinch to the shared continuous `1.0x`–`3.0x` zoom envelope
 - Mobile-safe UI
 - Safe Area
 - Background / foreground lifecycle
@@ -2503,7 +2571,10 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 **Phase 2 — Grid Occupancy & Placement Rules** 已完成 approved design、implementation、automated verification、review、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
 
-- GitHub PR #1 已 merge；merged-main regression 为 EditMode `191 / 191`、PlayMode `35 / 35` passed，failed、skipped、inconclusive 均为 `0`。
-- 当前只进行 Phase 2 branch/worktree cleanup 和文档收尾；未经用户批准不开始 Phase 3。
+**Phase 3 — Visual Style & Asset Pipeline Foundation** 状态为 `In Review`。
+
+- 已完成真实 Portrait/Landscape size 4 framing fresh automated evidence：EditMode `307 / 307`、PlayMode `55 / 55` passed，failed、skipped、inconclusive 均为 `0`；exact-aspect focused EditMode `20 / 20`、focused PlayMode `14 / 14` passed；Camera-projected viewport containment、两组 station/reference non-overlap 与 BatchDisplay isolation checks 均通过；production validator 为 `3 / 3` valid、`0 issues`。
+- Studio Owner 已确认全部三件 user-provided / Tripo-generated benchmark assets 具备用于开发与商业发布所需的使用权，license/use-right gate 为 `Passed`；Camera/readability manual acceptance 仍为 `Pending`。
+- 当前只是 benchmark pipeline 和 readability baseline；未开始 Phase 4 formal asset set、gameplay、placement 或 runtime integration。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。

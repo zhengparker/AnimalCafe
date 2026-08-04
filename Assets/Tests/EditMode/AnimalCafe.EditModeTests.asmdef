@@ -3,7 +3,8 @@
   "rootNamespace": "AnimalCafe.Tests",
   "references": [
     "AnimalCafe.Runtime",
-    "AnimalCafe.Editor"
+    "AnimalCafe.Editor",
+    "Unity.RenderPipelines.Universal.Runtime"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"

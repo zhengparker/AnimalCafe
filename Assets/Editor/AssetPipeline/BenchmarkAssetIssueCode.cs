@@ -1,0 +1,29 @@
+namespace AnimalCafe.EditorTools.AssetPipeline
+{
+    public enum BenchmarkAssetIssueCode
+    {
+        InvalidAssetPath,
+        InvalidName,
+        RootTransformNotIdentity,
+        BoundsOutsideTolerance,
+        BelowGround,
+        InvalidForwardMarker,
+        MissingMesh,
+        TriangleBudgetExceeded,
+        MaterialSlotBudgetExceeded,
+        MaterialSubmeshMismatch,
+        MissingMaterial,
+        InvalidShader,
+        TransparentMaterial,
+        TextureBudgetExceeded,
+        InvalidColliderType,
+        ColliderBudgetExceeded,
+        TriggerColliderNotAllowed,
+        ColliderOutsideModelBounds,
+        MissingLodGroup,
+        MissingLod1,
+        LodTriangleBudgetExceeded,
+        LodReductionInsufficient,
+        MissingReference
+    }
+}

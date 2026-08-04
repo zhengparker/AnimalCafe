@@ -1,0 +1,913 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEngine;
+
+namespace AnimalCafe.EditorTools.AssetPipeline
+{
+    public static class BenchmarkAssetValidator
+    {
+        private const string BenchmarkPrefabFolderPath =
+            "Assets/Art/VisualPipeline/Benchmarks/Prefabs";
+
+        private const float TransformTolerance = 0.0001f;
+        private const float FloorToleranceMeters = 0.005f;
+        private const float ColliderVisibleBoundsToleranceMeters = 0.05f;
+        private const float MinimumForwardZ = 0.01f;
+        private const float ForwardAngleToleranceDegrees = 1f;
+
+        private static readonly BenchmarkPrefabDescriptor[] BenchmarkPrefabs =
+        {
+            new BenchmarkPrefabDescriptor(BenchmarkAssetKind.WorkTable),
+            new BenchmarkPrefabDescriptor(BenchmarkAssetKind.CoffeeMachine),
+            new BenchmarkPrefabDescriptor(BenchmarkAssetKind.CeramicCup)
+        };
+
+        public static BenchmarkAssetValidationReport ValidatePrefab(
+            string assetPath,
+            BenchmarkAssetKind kind)
+        {
+            return ValidatePrefabInternal(assetPath, kind, ExpectedAssetPath(kind)).Report;
+        }
+
+        internal static BenchmarkAssetValidationReport ValidatePrefab(
+            string assetPath,
+            BenchmarkAssetKind kind,
+            string expectedAssetPath)
+        {
+            return ValidatePrefabInternal(assetPath, kind, expectedAssetPath).Report;
+        }
+
+        private static ValidatedPrefab ValidatePrefabInternal(
+            string assetPath,
+            BenchmarkAssetKind kind,
+            string expectedAssetPath)
+        {
+            var issues = new List<BenchmarkAssetValidationIssue>();
+            var materialUsage = MaterialUsage.Empty;
+            ValidatePathAndName(assetPath, kind, expectedAssetPath, issues);
+
+            GameObject root = null;
+            try
+            {
+                root = PrefabUtility.LoadPrefabContents(assetPath);
+                ValidateRootTransform(root, assetPath, issues);
+                ValidateVisibleBounds(root, assetPath, kind, issues);
+                ValidateForwardMarker(root, assetPath, issues);
+                materialUsage = ValidateRendering(root, assetPath, kind, issues);
+                ValidateLods(root, assetPath, kind, issues);
+                ValidateColliders(root, assetPath, kind, issues);
+            }
+            catch (Exception exception)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.InvalidAssetPath,
+                    assetPath,
+                    $"Could not load Prefab contents: {exception.Message}");
+            }
+            finally
+            {
+                if (root != null)
+                {
+                    PrefabUtility.UnloadPrefabContents(root);
+                }
+            }
+
+            return new ValidatedPrefab(
+                new BenchmarkAssetValidationReport(
+                    issues,
+                    materialUsage.SlotCount,
+                    materialUsage.UniqueMaterialCount),
+                materialUsage.UniqueMaterials);
+        }
+
+        public static BenchmarkAssetValidationReport ValidateAllBenchmarks()
+        {
+            return ValidateAllBenchmarks(BenchmarkPrefabs.Select(prefab =>
+                new BenchmarkAssetValidationTarget(prefab.Kind, prefab.AssetPath)));
+        }
+
+        internal static BenchmarkAssetValidationReport ValidateAllBenchmarks(
+            IEnumerable<BenchmarkAssetValidationTarget> benchmarkPrefabs)
+        {
+            if (benchmarkPrefabs == null)
+            {
+                throw new ArgumentNullException(nameof(benchmarkPrefabs));
+            }
+
+            var issues = new List<BenchmarkAssetValidationIssue>();
+            var materialSlotCount = 0;
+            var uniqueMaterials = new HashSet<Material>();
+            foreach (var benchmarkPrefab in benchmarkPrefabs)
+            {
+                if (AssetDatabase.LoadAssetAtPath<GameObject>(benchmarkPrefab.AssetPath) == null)
+                {
+                    issues.Add(new BenchmarkAssetValidationIssue(
+                        BenchmarkAssetIssueCode.MissingReference,
+                        benchmarkPrefab.AssetPath,
+                        "Missing expected benchmark Prefab."));
+                    continue;
+                }
+
+                var validatedPrefab = ValidatePrefabInternal(
+                    benchmarkPrefab.AssetPath,
+                    benchmarkPrefab.Kind,
+                    benchmarkPrefab.AssetPath);
+                issues.AddRange(validatedPrefab.Report.Issues);
+                materialSlotCount += validatedPrefab.Report.MaterialSlotCount;
+                uniqueMaterials.UnionWith(validatedPrefab.UniqueMaterials);
+            }
+
+            return new BenchmarkAssetValidationReport(
+                issues,
+                materialSlotCount,
+                uniqueMaterials.Count);
+        }
+
+        private static void ValidatePathAndName(
+            string assetPath,
+            BenchmarkAssetKind kind,
+            string expectedPath,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            var expectedFileName = $"PF_Benchmark_{kind}_01.prefab";
+            var fileName = string.IsNullOrEmpty(assetPath)
+                ? string.Empty
+                : Path.GetFileName(assetPath);
+
+            if (!string.Equals(assetPath, expectedPath, StringComparison.Ordinal))
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.InvalidAssetPath,
+                    assetPath,
+                    "Prefab path must exactly match the approved slash-separated benchmark path.");
+
+                if (!string.Equals(fileName, expectedFileName, StringComparison.Ordinal) ||
+                    !IsAscii(fileName) ||
+                    fileName.IndexOf(' ') >= 0)
+                {
+                    AddIssue(
+                        issues,
+                        BenchmarkAssetIssueCode.InvalidName,
+                        assetPath,
+                        $"Prefab filename must be exactly {expectedFileName}.");
+                }
+            }
+        }
+
+        private static string ExpectedAssetPath(BenchmarkAssetKind kind)
+        {
+            return $"{BenchmarkPrefabFolderPath}/PF_Benchmark_{kind}_01.prefab";
+        }
+
+        private static void ValidateRootTransform(
+            GameObject root,
+            string assetPath,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            var transform = root.transform;
+            if ((transform.localPosition - Vector3.zero).sqrMagnitude > TransformTolerance * TransformTolerance ||
+                Quaternion.Angle(transform.localRotation, Quaternion.identity) > TransformTolerance ||
+                (transform.localScale - Vector3.one).sqrMagnitude > TransformTolerance * TransformTolerance)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.RootTransformNotIdentity,
+                    assetPath,
+                    "Prefab root transform must use identity position, rotation, and scale.");
+            }
+        }
+
+        private static void ValidateVisibleBounds(
+            GameObject root,
+            string assetPath,
+            BenchmarkAssetKind kind,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            if (!TryGetRootLocalRendererBounds(root, out var visibleBounds))
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.BoundsOutsideTolerance,
+                    assetPath,
+                    "Prefab must contain at least one enabled visible Renderer.");
+                return;
+            }
+
+            var rules = BenchmarkAssetRules.For(kind);
+            if (!IsWithinTolerance(visibleBounds.size.x, rules.TargetSize.x, rules.BoundsTolerance) ||
+                !IsWithinTolerance(visibleBounds.size.y, rules.TargetSize.y, rules.BoundsTolerance) ||
+                !IsWithinTolerance(visibleBounds.size.z, rules.TargetSize.z, rules.BoundsTolerance) ||
+                visibleBounds.min.y > FloorToleranceMeters)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.BoundsOutsideTolerance,
+                    assetPath,
+                    "Visible Renderer bounds must match the approved size and rest on the floor.");
+            }
+
+            if (visibleBounds.min.y < -FloorToleranceMeters)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.BelowGround,
+                    assetPath,
+                    "Visible Renderer bounds extend below the floor tolerance.");
+            }
+        }
+
+        private static void ValidateForwardMarker(
+            GameObject root,
+            string assetPath,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            var markers = root.GetComponentsInChildren<Transform>(true)
+                .Where(candidate => candidate.name == "ForwardMarker")
+                .ToArray();
+            if (markers.Length != 1)
+            {
+                AddInvalidForwardMarkerIssue(issues, assetPath, "Prefab must contain exactly one ForwardMarker descendant.");
+                return;
+            }
+
+            var marker = markers[0];
+            var rootLocalPosition = root.transform.InverseTransformPoint(marker.position);
+            var rootLocalForward = root.transform.InverseTransformDirection(marker.forward);
+            if (rootLocalPosition.z <= MinimumForwardZ ||
+                Vector3.Angle(rootLocalForward, Vector3.forward) > ForwardAngleToleranceDegrees ||
+                marker.GetComponentsInChildren<Renderer>(true).Length > 0 ||
+                marker.GetComponentsInChildren<MeshFilter>(true).Length > 0 ||
+                marker.GetComponentsInChildren<Collider>(true).Length > 0)
+            {
+                AddInvalidForwardMarkerIssue(
+                    issues,
+                    assetPath,
+                    "ForwardMarker must point along root-local +Z, sit in front of the origin, and remain non-visible.");
+            }
+        }
+
+        private static MaterialUsage ValidateRendering(
+            GameObject root,
+            string assetPath,
+            BenchmarkAssetKind kind,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            var rules = BenchmarkAssetRules.For(kind);
+            var renderers = GetEnabledRenderers(root).ToArray();
+            var triangleRenderers = GetTriangleBudgetRenderers(root, kind, renderers);
+            if (CountUniqueMeshTriangles(triangleRenderers, assetPath, issues) > rules.MaxLod0Triangles)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.TriangleBudgetExceeded,
+                    assetPath,
+                    $"LOD0 triangle count exceeds the {rules.MaxLod0Triangles} triangle budget.");
+            }
+
+            var materialSlots = 0;
+            var uniqueMaterials = new HashSet<Material>();
+            foreach (var renderer in renderers)
+            {
+                var sharedMaterials = renderer.sharedMaterials;
+                ValidateMaterialSubmeshMatch(
+                    renderer,
+                    sharedMaterials,
+                    assetPath,
+                    issues);
+                if (sharedMaterials == null || sharedMaterials.Length == 0)
+                {
+                    AddMissingRendererMaterialIssues(issues, assetPath);
+                    continue;
+                }
+
+                foreach (var material in sharedMaterials)
+                {
+                    if (material == null)
+                    {
+                        AddMissingRendererMaterialIssues(issues, assetPath);
+                        continue;
+                    }
+
+                    materialSlots++;
+                    uniqueMaterials.Add(material);
+                    ValidateMaterial(material, assetPath, issues);
+                }
+            }
+
+            if (materialSlots > rules.MaxMaterialSlots)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.MaterialSlotBudgetExceeded,
+                    assetPath,
+                    $"Prefab uses {materialSlots} shared Material slots and {uniqueMaterials.Count} unique shared Materials; the budget is {rules.MaxMaterialSlots} slots.");
+            }
+
+            return new MaterialUsage(materialSlots, uniqueMaterials);
+        }
+
+        private static void ValidateMaterialSubmeshMatch(
+            Renderer renderer,
+            Material[] sharedMaterials,
+            string assetPath,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            var mesh = GetMesh(renderer);
+            if (mesh == null)
+            {
+                return;
+            }
+
+            var materialArrayLength = sharedMaterials == null ? 0 : sharedMaterials.Length;
+            var nonNullMaterialCount = sharedMaterials == null
+                ? 0
+                : sharedMaterials.Count(material => material != null);
+            if (materialArrayLength == mesh.subMeshCount &&
+                nonNullMaterialCount == mesh.subMeshCount)
+            {
+                return;
+            }
+
+            AddIssue(
+                issues,
+                BenchmarkAssetIssueCode.MaterialSubmeshMismatch,
+                assetPath,
+                $"Enabled Renderer {renderer.name} has {mesh.subMeshCount} submeshes, " +
+                $"{materialArrayLength} Material slots, and {nonNullMaterialCount} non-null Materials.");
+        }
+
+        private static void AddMissingRendererMaterialIssues(
+            ICollection<BenchmarkAssetValidationIssue> issues,
+            string assetPath)
+        {
+            AddIssue(
+                issues,
+                BenchmarkAssetIssueCode.MissingMaterial,
+                assetPath,
+                "Enabled Renderer contains a null shared Material slot.");
+            AddIssue(
+                issues,
+                BenchmarkAssetIssueCode.MissingReference,
+                assetPath,
+                "Enabled Renderer contains a missing shared Material reference.");
+        }
+
+        private static void ValidateColliders(
+            GameObject root,
+            string assetPath,
+            BenchmarkAssetKind kind,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            var colliders = root.GetComponentsInChildren<Collider>(true)
+                .Where(IsEligibleCollider)
+                .ToArray();
+            var rules = BenchmarkAssetRules.For(kind);
+            if (colliders.Length > rules.MaxColliders)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.ColliderBudgetExceeded,
+                    assetPath,
+                    $"Prefab uses {colliders.Length} Colliders; the budget is {rules.MaxColliders}.");
+            }
+
+            var hasVisibleBounds = TryGetWorldVisibleRendererBounds(root, out var visibleBounds);
+            foreach (var collider in colliders)
+            {
+                if (!IsApprovedColliderType(collider))
+                {
+                    AddIssue(
+                        issues,
+                        BenchmarkAssetIssueCode.InvalidColliderType,
+                        assetPath,
+                        "Only BoxCollider, SphereCollider, and CapsuleCollider are allowed.");
+                }
+
+                if (collider.isTrigger)
+                {
+                    AddIssue(
+                        issues,
+                        BenchmarkAssetIssueCode.TriggerColliderNotAllowed,
+                        assetPath,
+                        "Benchmark Colliders must use isTrigger = false.");
+                }
+
+                if (hasVisibleBounds && IsColliderOutsideVisibleBounds(collider.bounds, visibleBounds))
+                {
+                    AddIssue(
+                        issues,
+                        BenchmarkAssetIssueCode.ColliderOutsideModelBounds,
+                        assetPath,
+                        "Collider world bounds extend too far beyond the combined visible Renderer bounds.");
+                }
+            }
+        }
+
+        private static void ValidateMaterial(
+            Material material,
+            string assetPath,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            if (material.shader == null || material.shader.name != "Universal Render Pipeline/Lit")
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.InvalidShader,
+                    assetPath,
+                    "Materials must use the Universal Render Pipeline/Lit shader.");
+            }
+            else if (!material.HasProperty("_Surface") || material.GetFloat("_Surface") != 0f)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.TransparentMaterial,
+                    assetPath,
+                    "URP Lit Materials must use the opaque _Surface value of 0.");
+            }
+
+            var shader = material.shader;
+            if (shader == null)
+            {
+                return;
+            }
+
+
+            var serializedMaterial = new SerializedObject(material);
+            var nullTextureMaterial = new Material(shader);
+            try
+            {
+                for (var propertyIndex = 0; propertyIndex < ShaderUtil.GetPropertyCount(shader); propertyIndex++)
+                {
+                    if (ShaderUtil.GetPropertyType(shader, propertyIndex) == ShaderUtil.ShaderPropertyType.TexEnv)
+                    {
+                        nullTextureMaterial.SetTexture(
+                            ShaderUtil.GetPropertyName(shader, propertyIndex),
+                            null);
+                    }
+                }
+
+                var serializedNullTextureMaterial = new SerializedObject(nullTextureMaterial);
+                serializedMaterial.Update();
+                serializedNullTextureMaterial.Update();
+
+                for (var propertyIndex = 0; propertyIndex < ShaderUtil.GetPropertyCount(shader); propertyIndex++)
+                {
+                    if (ShaderUtil.GetPropertyType(shader, propertyIndex) != ShaderUtil.ShaderPropertyType.TexEnv)
+                    {
+                        continue;
+                    }
+
+                    var propertyName = ShaderUtil.GetPropertyName(shader, propertyIndex);
+                    var texture = material.GetTexture(propertyName);
+                    if (texture == null)
+                    {
+                        if (HasBrokenSerializedTextureReference(
+                            serializedMaterial,
+                            serializedNullTextureMaterial,
+                            propertyName))
+                        {
+                            AddIssue(
+                                issues,
+                                BenchmarkAssetIssueCode.MissingReference,
+                                assetPath,
+                                $"Material Texture property {propertyName} contains a broken serialized reference.");
+                        }
+
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(AssetDatabase.GetAssetPath(texture)))
+                    {
+                        continue;
+                    }
+
+                    if (texture.width > 512 || texture.height > 512)
+                    {
+                        AddIssue(
+                            issues,
+                            BenchmarkAssetIssueCode.TextureBudgetExceeded,
+                            assetPath,
+                            "Project Texture references must not exceed 512 by 512 pixels.");
+                    }
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(nullTextureMaterial);
+            }
+        }
+
+        private static bool HasBrokenSerializedTextureReference(
+            SerializedObject serializedMaterial,
+            SerializedObject serializedNullTextureMaterial,
+            string propertyName)
+        {
+            var savedReference = FindSavedTextureReference(serializedMaterial, propertyName);
+            if (savedReference == null)
+            {
+                return false;
+            }
+
+            var nullReference = FindSavedTextureReference(
+                serializedNullTextureMaterial,
+                propertyName);
+            return nullReference != null &&
+                !SerializedProperty.DataEquals(savedReference, nullReference);
+        }
+
+        private static SerializedProperty FindSavedTextureReference(
+            SerializedObject serializedMaterial,
+            string propertyName)
+        {
+            // Unity serializes Material Texture PPtrs in m_TexEnvs. Comparing
+            // their serialized data with a known-null PPtr detects a deleted
+            // asset GUID without parsing or rewriting Material YAML.
+            var textureEnvironments = serializedMaterial.FindProperty(
+                "m_SavedProperties.m_TexEnvs");
+            if (textureEnvironments == null || !textureEnvironments.isArray)
+            {
+                return null;
+            }
+
+            for (var index = 0; index < textureEnvironments.arraySize; index++)
+            {
+                var entry = textureEnvironments.GetArrayElementAtIndex(index);
+                var name = entry.FindPropertyRelative("first");
+                if (name == null || !string.Equals(
+                    name.stringValue,
+                    propertyName,
+                    StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                return entry.FindPropertyRelative("second")?
+                    .FindPropertyRelative("m_Texture");
+            }
+
+            return null;
+        }
+
+        private static void ValidateLods(
+            GameObject root,
+            string assetPath,
+            BenchmarkAssetKind kind,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            if (!BenchmarkAssetRules.For(kind).RequiresLodGroup)
+            {
+                return;
+            }
+
+            var lodGroups = root.GetComponentsInChildren<LODGroup>(true);
+            if (lodGroups.Length != 1)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.MissingLodGroup,
+                    assetPath,
+                    "Coffee Machine requires exactly one LODGroup.");
+                return;
+            }
+
+            var lods = lodGroups[0].GetLODs();
+            if (lods.Length < 2 || !HasOnlyNonNullRenderers(lods[0]) || !HasOnlyNonNullRenderers(lods[1]))
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.MissingLod1,
+                    assetPath,
+                    "Coffee Machine requires non-empty LOD0 and LOD1 renderer levels without null Renderers.");
+                return;
+            }
+
+            var lod0Renderers = GetEligibleLodRenderers(lods[0]).ToArray();
+            var lod1Renderers = GetEligibleLodRenderers(lods[1]).ToArray();
+            if (lod0Renderers.Intersect(lod1Renderers).Any())
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.LodReductionInsufficient,
+                    assetPath,
+                    "LOD0 and LOD1 must not reuse the same Renderer.");
+                return;
+            }
+
+            var rules = BenchmarkAssetRules.For(kind);
+            var lod0Triangles = CountUniqueMeshTriangles(lod0Renderers, assetPath, issues);
+            var lod1Triangles = CountUniqueMeshTriangles(lod1Renderers, assetPath, issues);
+            if (lod1Triangles > rules.MaxLod1Triangles)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.LodTriangleBudgetExceeded,
+                    assetPath,
+                    $"LOD1 triangle count exceeds the {rules.MaxLod1Triangles} triangle budget.");
+            }
+
+            if (lod0Triangles == 0 || (float)lod1Triangles / lod0Triangles > rules.MaxLod1TriangleRatio)
+            {
+                AddIssue(
+                    issues,
+                    BenchmarkAssetIssueCode.LodReductionInsufficient,
+                    assetPath,
+                    $"LOD1 must use no more than {rules.MaxLod1TriangleRatio:P0} of LOD0 triangles.");
+            }
+        }
+
+        private static IEnumerable<Renderer> GetEnabledRenderers(GameObject root)
+        {
+            return root.GetComponentsInChildren<Renderer>(true)
+                .Where(IsEligibleRenderer);
+        }
+
+        private static IEnumerable<Renderer> GetEligibleLodRenderers(LOD lod)
+        {
+            return lod.renderers.Where(IsEligibleRenderer);
+        }
+
+        private static bool IsEligibleRenderer(Renderer renderer)
+        {
+            return renderer != null &&
+                renderer.enabled &&
+                renderer.gameObject.activeInHierarchy &&
+                !IsForwardMarkerDescendant(renderer.transform);
+        }
+
+        private static bool IsEligibleCollider(Collider collider)
+        {
+            return collider != null &&
+                collider.enabled &&
+                collider.gameObject.activeInHierarchy &&
+                !IsForwardMarkerDescendant(collider.transform);
+        }
+
+        private static bool IsApprovedColliderType(Collider collider)
+        {
+            var colliderType = collider.GetType();
+            return colliderType == typeof(BoxCollider) ||
+                colliderType == typeof(SphereCollider) ||
+                colliderType == typeof(CapsuleCollider);
+        }
+
+        private static bool IsColliderOutsideVisibleBounds(Bounds colliderBounds, Bounds visibleBounds)
+        {
+            var colliderMaxX = colliderBounds.max.x;
+            var allowedMaxX = visibleBounds.max.x + ColliderVisibleBoundsToleranceMeters;
+            return colliderBounds.min.x < visibleBounds.min.x - ColliderVisibleBoundsToleranceMeters ||
+                colliderMaxX > allowedMaxX ||
+                colliderBounds.min.y < visibleBounds.min.y - ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.max.y > visibleBounds.max.y + ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.min.z < visibleBounds.min.z - ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.max.z > visibleBounds.max.z + ColliderVisibleBoundsToleranceMeters ||
+                colliderBounds.min.y < -FloorToleranceMeters;
+        }
+
+        private static bool IsForwardMarkerDescendant(Transform transform)
+        {
+            while (transform != null)
+            {
+                if (transform.name == "ForwardMarker")
+                {
+                    return true;
+                }
+
+                transform = transform.parent;
+            }
+
+            return false;
+        }
+
+        private static IEnumerable<Renderer> GetTriangleBudgetRenderers(
+            GameObject root,
+            BenchmarkAssetKind kind,
+            IEnumerable<Renderer> enabledRenderers)
+        {
+            if (!BenchmarkAssetRules.For(kind).RequiresLodGroup)
+            {
+                return enabledRenderers;
+            }
+
+            var lodGroups = root.GetComponentsInChildren<LODGroup>(true);
+            if (lodGroups.Length != 1)
+            {
+                return enabledRenderers;
+            }
+
+            var lods = lodGroups[0].GetLODs();
+            if (lods.Length == 0)
+            {
+                return enabledRenderers;
+            }
+
+            var lodRenderers = new HashSet<Renderer>(lods
+                .Where(lod => lod.renderers != null)
+                .SelectMany(lod => lod.renderers)
+                .Where(IsEligibleRenderer));
+            return GetEligibleLodRenderers(lods[0])
+                .Concat(enabledRenderers.Where(renderer => !lodRenderers.Contains(renderer)));
+        }
+
+        private static bool HasOnlyNonNullRenderers(LOD lod)
+        {
+            return lod.renderers != null && lod.renderers.Length > 0 && lod.renderers.All(renderer => renderer != null);
+        }
+
+        private static long CountUniqueMeshTriangles(
+            IEnumerable<Renderer> renderers,
+            string assetPath,
+            ICollection<BenchmarkAssetValidationIssue> issues)
+        {
+            var meshes = new HashSet<Mesh>();
+            foreach (var renderer in renderers)
+            {
+                var mesh = GetMesh(renderer);
+                if (mesh == null)
+                {
+                    AddIssue(
+                        issues,
+                        BenchmarkAssetIssueCode.MissingMesh,
+                        assetPath,
+                        "Renderer must reference a Mesh.");
+                    continue;
+                }
+
+                meshes.Add(mesh);
+            }
+
+            long triangleCount = 0;
+            foreach (var mesh in meshes)
+            {
+                for (var subMeshIndex = 0; subMeshIndex < mesh.subMeshCount; subMeshIndex++)
+                {
+                    triangleCount += (long)mesh.GetIndexCount(subMeshIndex) / 3;
+                }
+            }
+
+            return triangleCount;
+        }
+
+        private static Mesh GetMesh(Renderer renderer)
+        {
+            var meshFilter = renderer.GetComponent<MeshFilter>();
+            if (meshFilter != null)
+            {
+                return meshFilter.sharedMesh;
+            }
+
+            var skinnedMeshRenderer = renderer as SkinnedMeshRenderer;
+            return skinnedMeshRenderer == null ? null : skinnedMeshRenderer.sharedMesh;
+        }
+
+        private sealed class MaterialUsage
+        {
+            public static readonly MaterialUsage Empty = new MaterialUsage(
+                0,
+                Enumerable.Empty<Material>());
+
+            public MaterialUsage(int slotCount, IEnumerable<Material> uniqueMaterials)
+            {
+                SlotCount = slotCount;
+                UniqueMaterials = new HashSet<Material>(uniqueMaterials);
+            }
+
+            public int SlotCount { get; }
+
+            public IReadOnlyCollection<Material> UniqueMaterials { get; }
+
+            public int UniqueMaterialCount => UniqueMaterials.Count;
+        }
+
+        private sealed class ValidatedPrefab
+        {
+            public ValidatedPrefab(
+                BenchmarkAssetValidationReport report,
+                IReadOnlyCollection<Material> uniqueMaterials)
+            {
+                Report = report;
+                UniqueMaterials = uniqueMaterials;
+            }
+
+            public BenchmarkAssetValidationReport Report { get; }
+
+            public IReadOnlyCollection<Material> UniqueMaterials { get; }
+        }
+
+        private sealed class BenchmarkPrefabDescriptor
+        {
+            public BenchmarkPrefabDescriptor(BenchmarkAssetKind kind)
+            {
+                Kind = kind;
+                AssetPath = $"{BenchmarkPrefabFolderPath}/PF_Benchmark_{kind}_01.prefab";
+            }
+
+            public BenchmarkAssetKind Kind { get; }
+
+            public string AssetPath { get; }
+        }
+
+        private static bool TryGetRootLocalRendererBounds(GameObject root, out Bounds combinedBounds)
+        {
+            var hasBounds = false;
+            combinedBounds = default;
+            var rootWorldToLocal = root.transform.worldToLocalMatrix;
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+            {
+                if (!renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                foreach (var rendererLocalCorner in GetBoundsCorners(renderer.localBounds))
+                {
+                    var worldCorner = renderer.localToWorldMatrix.MultiplyPoint3x4(rendererLocalCorner);
+                    var rootLocalCorner = rootWorldToLocal.MultiplyPoint3x4(worldCorner);
+                    if (hasBounds)
+                    {
+                        combinedBounds.Encapsulate(rootLocalCorner);
+                    }
+                    else
+                    {
+                        combinedBounds = new Bounds(rootLocalCorner, Vector3.zero);
+                        hasBounds = true;
+                    }
+                }
+            }
+
+            return hasBounds;
+        }
+
+        private static bool TryGetWorldVisibleRendererBounds(GameObject root, out Bounds combinedBounds)
+        {
+            var hasBounds = false;
+            combinedBounds = default;
+            foreach (var renderer in GetEnabledRenderers(root))
+            {
+                if (hasBounds)
+                {
+                    combinedBounds.Encapsulate(renderer.bounds);
+                }
+                else
+                {
+                    combinedBounds = renderer.bounds;
+                    hasBounds = true;
+                }
+            }
+
+            return hasBounds;
+        }
+
+        private static IEnumerable<Vector3> GetBoundsCorners(Bounds bounds)
+        {
+            var minimum = bounds.min;
+            var maximum = bounds.max;
+            yield return new Vector3(minimum.x, minimum.y, minimum.z);
+            yield return new Vector3(minimum.x, minimum.y, maximum.z);
+            yield return new Vector3(minimum.x, maximum.y, minimum.z);
+            yield return new Vector3(minimum.x, maximum.y, maximum.z);
+            yield return new Vector3(maximum.x, minimum.y, minimum.z);
+            yield return new Vector3(maximum.x, minimum.y, maximum.z);
+            yield return new Vector3(maximum.x, maximum.y, minimum.z);
+            yield return new Vector3(maximum.x, maximum.y, maximum.z);
+        }
+
+        private static bool IsWithinTolerance(float value, float target, float tolerance)
+        {
+            var minimum = target * (1f - tolerance);
+            var maximum = target * (1f + tolerance);
+            return value >= minimum && value <= maximum;
+        }
+
+        private static bool IsAscii(string value)
+        {
+            return value.All(character => character <= 127);
+        }
+
+        private static void AddInvalidForwardMarkerIssue(
+            ICollection<BenchmarkAssetValidationIssue> issues,
+            string assetPath,
+            string message)
+        {
+            AddIssue(issues, BenchmarkAssetIssueCode.InvalidForwardMarker, assetPath, message);
+        }
+
+        private static void AddIssue(
+            ICollection<BenchmarkAssetValidationIssue> issues,
+            BenchmarkAssetIssueCode code,
+            string assetPath,
+            string message)
+        {
+            if (issues.Any(issue => issue.Code == code))
+            {
+                return;
+            }
+
+            issues.Add(new BenchmarkAssetValidationIssue(code, assetPath, message));
+        }
+    }
+}
