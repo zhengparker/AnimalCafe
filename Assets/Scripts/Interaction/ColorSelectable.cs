@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace AnimalCafe.Interaction
@@ -115,6 +116,28 @@ namespace AnimalCafe.Interaction
         private void OnDisable()
         {
             Deselect();
+        }
+
+        /// <summary>
+        /// Assigns the renderer that this selectable should control.
+        /// Assigns a serialized renderer reference for scene-authored objects.
+        /// </summary>
+        public void Configure(Renderer renderer)
+        {
+            if (renderer == null)
+            {
+                throw new ArgumentNullException(nameof(renderer));
+            }
+
+            Deselect();
+            targetRenderer = renderer;
+            propertyBlock = null;
+            originalColor = Color.white;
+            activeColorProperty = BaseColorId;
+            isInitialized = false;
+            hasLoggedMissingRendererWarning = false;
+            hasLoggedUnsupportedMaterialWarning = false;
+            enabled = true;
         }
 
         public void Select()

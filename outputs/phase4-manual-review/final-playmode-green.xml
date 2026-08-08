@@ -1,0 +1,562 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="74" result="Passed" total="74" passed="74" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:13:01Z" duration="7.4864929">
+  <test-suite type="TestSuite" id="1096" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="74" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:13:01Z" duration="7.486493" total="74" passed="74" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1087" name="AnimalCafe.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-4/Library/ScriptAssemblies/AnimalCafe.PlayModeTests.dll" runstate="Runnable" testcasecount="74" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:13:01Z" duration="7.471791" total="74" passed="74" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="33312" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1088" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="74" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:13:01Z" duration="7.465337" total="74" passed="74" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1089" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="74" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:13:01Z" duration="7.459319" total="74" passed="74" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1090" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="74" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:13:01Z" duration="7.453686" total="74" passed="74" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1092" name="AssetReadability" fullname="AnimalCafe.Tests.PlayMode.AssetReadability" runstate="Runnable" testcasecount="21" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:12:57Z" duration="3.748423" total="21" passed="21" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1063" name="AssetPipelineReadabilityBuildSettingsScopeTests" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:12:53Z" duration="0.068557" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1067" name="Scope_AbsentValidationSceneRestoresExactOriginal" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests.Scope_AbsentValidationSceneRestoresExactOriginal" methodname="Scope_AbsentValidationSceneRestoresExactOriginal" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests" runstate="Runnable" seed="1055627189" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:12:53Z" duration="0.020720" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1068" name="Scope_DuplicatesAndOrderRestoreExactOriginal" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests.Scope_DuplicatesAndOrderRestoreExactOriginal" methodname="Scope_DuplicatesAndOrderRestoreExactOriginal" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests" runstate="Runnable" seed="1518994629" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:12:53Z" duration="0.008860" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1070" name="Scope_ExceptionCleanupRestoresExactOriginal" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests.Scope_ExceptionCleanupRestoresExactOriginal" methodname="Scope_ExceptionCleanupRestoresExactOriginal" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests" runstate="Runnable" seed="2137308512" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:12:53Z" duration="0.007889" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1066" name="Scope_PreexistingValidationSceneRestoresExactOriginal" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests.Scope_PreexistingValidationSceneRestoresExactOriginal" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:12:53Z" duration="0.010933" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1064" name="Scope_PreexistingValidationSceneRestoresExactOriginal(True)" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests.Scope_PreexistingValidationSceneRestoresExactOriginal(True)" methodname="Scope_PreexistingValidationSceneRestoresExactOriginal" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests" runstate="Runnable" seed="1312252253" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:12:53Z" duration="0.002046" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1065" name="Scope_PreexistingValidationSceneRestoresExactOriginal(False)" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests.Scope_PreexistingValidationSceneRestoresExactOriginal(False)" methodname="Scope_PreexistingValidationSceneRestoresExactOriginal" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests" runstate="Runnable" seed="1000477418" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:12:53Z" duration="0.001590" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1069" name="Scope_RepeatedSetupAndCleanupRestoresExactOriginal" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests.Scope_RepeatedSetupAndCleanupRestoresExactOriginal" methodname="Scope_RepeatedSetupAndCleanupRestoresExactOriginal" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityBuildSettingsScopeTests" runstate="Runnable" seed="242366728" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:12:53Z" duration="0.001942" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="1071" name="AssetPipelineReadabilityTests" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" testcasecount="15" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:12:57Z" duration="3.672812" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1083" name="ReadabilityScene_AllRenderersUseUrpLitMaterials" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_AllRenderersUseUrpLitMaterials" methodname="ReadabilityScene_AllRenderersUseUrpLitMaterials" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="851306819" result="Passed" start-time="2026-08-08 16:12:53Z" end-time="2026-08-08 16:12:54Z" duration="0.312384" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1080" name="ReadabilityScene_AllSingleDisplayRenderersFitInsideSizeFourCameraViewport" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_AllSingleDisplayRenderersFitInsideSizeFourCameraViewport" methodname="ReadabilityScene_AllSingleDisplayRenderersFitInsideSizeFourCameraViewport" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="1399234903" result="Passed" start-time="2026-08-08 16:12:54Z" end-time="2026-08-08 16:12:54Z" duration="0.287714" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1075" name="ReadabilityScene_CameraIsOrthographicAndUsesSizeFour" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_CameraIsOrthographicAndUsesSizeFour" methodname="ReadabilityScene_CameraIsOrthographicAndUsesSizeFour" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="2037405066" result="Passed" start-time="2026-08-08 16:12:54Z" end-time="2026-08-08 16:12:54Z" duration="0.233324" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1076" name="ReadabilityScene_CameraUsesPaleYellowSolidColorBackground" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_CameraUsesPaleYellowSolidColorBackground" methodname="ReadabilityScene_CameraUsesPaleYellowSolidColorBackground" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="1261427120" result="Passed" start-time="2026-08-08 16:12:54Z" end-time="2026-08-08 16:12:54Z" duration="0.233716" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1077" name="ReadabilityScene_CameraUsesSceneSpecificSmaaHigh" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_CameraUsesSceneSpecificSmaaHigh" methodname="ReadabilityScene_CameraUsesSceneSpecificSmaaHigh" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="378161799" result="Passed" start-time="2026-08-08 16:12:54Z" end-time="2026-08-08 16:12:55Z" duration="0.231900" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1079" name="ReadabilityScene_CharacterReferenceDoesNotOverlapRightStationInCameraView" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_CharacterReferenceDoesNotOverlapRightStationInCameraView" methodname="ReadabilityScene_CharacterReferenceDoesNotOverlapRightStationInCameraView" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="953466725" result="Passed" start-time="2026-08-08 16:12:55Z" end-time="2026-08-08 16:12:55Z" duration="0.238117" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1074" name="ReadabilityScene_CharacterScaleReferenceIsOnePointThreeMetersHigh" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_CharacterScaleReferenceIsOnePointThreeMetersHigh" methodname="ReadabilityScene_CharacterScaleReferenceIsOnePointThreeMetersHigh" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="1595972795" result="Passed" start-time="2026-08-08 16:12:55Z" end-time="2026-08-08 16:12:55Z" duration="0.232994" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1084" name="ReadabilityScene_CoffeeMachineHasTwoValidLodLevels" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_CoffeeMachineHasTwoValidLodLevels" methodname="ReadabilityScene_CoffeeMachineHasTwoValidLodLevels" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="246525341" result="Passed" start-time="2026-08-08 16:12:55Z" end-time="2026-08-08 16:12:55Z" duration="0.232794" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1073" name="ReadabilityScene_ContainsExactlySixtyBatchInstances" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_ContainsExactlySixtyBatchInstances" methodname="ReadabilityScene_ContainsExactlySixtyBatchInstances" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="465958704" result="Passed" start-time="2026-08-08 16:12:55Z" end-time="2026-08-08 16:12:55Z" duration="0.235815" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1072" name="ReadabilityScene_LoadsWithoutMissingBenchmarkReferences" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_LoadsWithoutMissingBenchmarkReferences" methodname="ReadabilityScene_LoadsWithoutMissingBenchmarkReferences" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="809038421" result="Passed" start-time="2026-08-08 16:12:55Z" end-time="2026-08-08 16:12:56Z" duration="0.242708" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1085" name="ReadabilityScene_ProducesNoUnexpectedErrorLogs" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_ProducesNoUnexpectedErrorLogs" methodname="ReadabilityScene_ProducesNoUnexpectedErrorLogs" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="391728709" result="Passed" start-time="2026-08-08 16:12:56Z" end-time="2026-08-08 16:12:56Z" duration="0.236262" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1081" name="ReadabilityScene_SizeFourLandscapeFramingIsIsolated" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_SizeFourLandscapeFramingIsIsolated" methodname="ReadabilityScene_SizeFourLandscapeFramingIsIsolated" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="940084301" result="Passed" start-time="2026-08-08 16:12:56Z" end-time="2026-08-08 16:12:56Z" duration="0.239934" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1082" name="ReadabilityScene_SizeFourPortraitFramingIsIsolated" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_SizeFourPortraitFramingIsIsolated" methodname="ReadabilityScene_SizeFourPortraitFramingIsIsolated" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="336043069" result="Passed" start-time="2026-08-08 16:12:56Z" end-time="2026-08-08 16:12:56Z" duration="0.239340" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1078" name="ReadabilityScene_UsesTwoSeparateCenteredTabletopStations" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.ReadabilityScene_UsesTwoSeparateCenteredTabletopStations" methodname="ReadabilityScene_UsesTwoSeparateCenteredTabletopStations" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="891000971" result="Passed" start-time="2026-08-08 16:12:56Z" end-time="2026-08-08 16:12:57Z" duration="0.232411" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1086" name="RestoreSceneOrCreateFallback_NonLoadablePriorSceneLeavesNoColliders" fullname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests.RestoreSceneOrCreateFallback_NonLoadablePriorSceneLeavesNoColliders" methodname="RestoreSceneOrCreateFallback_NonLoadablePriorSceneLeavesNoColliders" classname="AnimalCafe.Tests.PlayMode.AssetReadability.AssetPipelineReadabilityTests" runstate="Runnable" seed="2067113371" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.232227" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+            </test-suite>
+            <test-suite type="TestFixture" id="1036" name="MouseCameraInputIntegrationTests" fullname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests" classname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.269917" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1037" name="MouseInput_ClickReleaseProducesTap" fullname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests.MouseInput_ClickReleaseProducesTap" methodname="MouseInput_ClickReleaseProducesTap" classname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests" runstate="Runnable" seed="584000945" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.068943" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1038" name="MouseInput_DragReleaseNeverProducesTap" fullname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests.MouseInput_DragReleaseNeverProducesTap" methodname="MouseInput_DragReleaseNeverProducesTap" classname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests" runstate="Runnable" seed="678416054" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.045029" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1041" name="MouseInput_PauseStillReadsPointerAndTap" fullname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests.MouseInput_PauseStillReadsPointerAndTap" methodname="MouseInput_PauseStillReadsPointerAndTap" classname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests" runstate="Runnable" seed="806939552" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.036818" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1039" name="MouseInput_ReturningAfterDragStillDoesNotTap" fullname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests.MouseInput_ReturningAfterDragStillDoesNotTap" methodname="MouseInput_ReturningAfterDragStillDoesNotTap" classname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests" runstate="Runnable" seed="1878524116" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.045302" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1042" name="MouseInput_ScrollFlowsToZoomDelta" fullname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests.MouseInput_ScrollFlowsToZoomDelta" methodname="MouseInput_ScrollFlowsToZoomDelta" classname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests" runstate="Runnable" seed="1733032343" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.026062" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1040" name="MouseInput_TwoConsumersReceiveSameFrameValues" fullname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests.MouseInput_TwoConsumersReceiveSameFrameValues" methodname="MouseInput_TwoConsumersReceiveSameFrameValues" classname="AnimalCafe.Tests.PlayMode.MouseCameraInputIntegrationTests" runstate="Runnable" seed="908366243" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.035636" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestFixture" id="1001" name="Phase0PlayModeTests" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" testcasecount="26" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:58Z" duration="1.314667" total="26" passed="26" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1012" name="Camera_ClampsPositionAndZoomToConfiguredBounds" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.Camera_ClampsPositionAndZoomToConfiguredBounds" methodname="Camera_ClampsPositionAndZoomToConfiguredBounds" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="488671852" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.001816" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-suite type="ParameterizedMethod" id="1015" name="Camera_ZoomTreatsAnyWheelEventAsOneStep" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.Camera_ZoomTreatsAnyWheelEventAsOneStep" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.008175" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1013" name="Camera_ZoomTreatsAnyWheelEventAsOneStep(0.1f)" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.Camera_ZoomTreatsAnyWheelEventAsOneStep(0.1f)" methodname="Camera_ZoomTreatsAnyWheelEventAsOneStep" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="1335852914" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.000900" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1014" name="Camera_ZoomTreatsAnyWheelEventAsOneStep(120.0f)" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.Camera_ZoomTreatsAnyWheelEventAsOneStep(120.0f)" methodname="Camera_ZoomTreatsAnyWheelEventAsOneStep" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="1007797599" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.000199" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-case id="1017" name="ColorSelectable_ConfigureBindsRendererAndSupportsSelection" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.ColorSelectable_ConfigureBindsRendererAndSupportsSelection" methodname="ColorSelectable_ConfigureBindsRendererAndSupportsSelection" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="1390777872" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.002896" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1018" name="ColorSelectable_MissingMaterialWarnsOnceAndRecovers" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.ColorSelectable_MissingMaterialWarnsOnceAndRecovers" methodname="ColorSelectable_MissingMaterialWarnsOnceAndRecovers" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="401095819" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.023756" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[[ColorSelectable] Renderer material must expose _BaseColor or _Color.
+]]></output>
+              </test-case>
+              <test-case id="1016" name="ColorSelectable_SelectAndDeselectUpdateState" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.ColorSelectable_SelectAndDeselectUpdateState" methodname="ColorSelectable_SelectAndDeselectUpdateState" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="490163447" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.000487" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1002" name="GameTime_AcceptsOnlySupportedSpeeds" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.GameTime_AcceptsOnlySupportedSpeeds" methodname="GameTime_AcceptsOnlySupportedSpeeds" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="266873620" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.001544" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[[GameTimeService] Unsupported game speed: 3.
+]]></output>
+              </test-case>
+              <test-case id="1005" name="GameTime_DestroyingDuplicateDoesNotAffectOwner" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.GameTime_DestroyingDuplicateDoesNotAffectOwner" methodname="GameTime_DestroyingDuplicateDoesNotAffectOwner" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="226406249" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.000724" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1004" name="GameTime_DuplicateCannotChangeTimeOrPublishEvent" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.GameTime_DuplicateCannotChangeTimeOrPublishEvent" methodname="GameTime_DuplicateCannotChangeTimeOrPublishEvent" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="1269286929" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.001116" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[[GameTimeService] Ignored speed change from duplicate instance.
+]]></output>
+              </test-case>
+              <test-case id="1006" name="GameTime_DuplicateDoesNotAutoPromoteAfterOwnerIsDestroyed" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.GameTime_DuplicateDoesNotAutoPromoteAfterOwnerIsDestroyed" methodname="GameTime_DuplicateDoesNotAutoPromoteAfterOwnerIsDestroyed" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="362417484" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.000976" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[[GameTimeService] Ignored speed change from duplicate instance.
+]]></output>
+              </test-case>
+              <test-case id="1003" name="GameTime_PauseSetsTimeScaleToZero" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.GameTime_PauseSetsTimeScaleToZero" methodname="GameTime_PauseSetsTimeScaleToZero" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="1393733657" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.000482" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1022" name="Interaction_DestroyedSelectionClearsWithoutException" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.Interaction_DestroyedSelectionClearsWithoutException" methodname="Interaction_DestroyedSelectionClearsWithoutException" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="399077852" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.040660" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1020" name="Interaction_DisabledSelectionClearsOnce" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.Interaction_DisabledSelectionClearsOnce" methodname="Interaction_DisabledSelectionClearsOnce" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="449364652" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.027621" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1021" name="Interaction_InactiveGameObjectClearsSelectionOnce" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.Interaction_InactiveGameObjectClearsSelectionOnce" methodname="Interaction_InactiveGameObjectClearsSelectionOnce" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="814501216" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.031231" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1023" name="Interaction_ReenabledSelectableCanBeSelectedAgain" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.Interaction_ReenabledSelectableCanBeSelectedAgain" methodname="Interaction_ReenabledSelectableCanBeSelectedAgain" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="1137329224" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.020226" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1019" name="Interaction_SelectsSwitchesAndClearsSelection" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.Interaction_SelectsSwitchesAndClearsSelection" methodname="Interaction_SelectsSwitchesAndClearsSelection" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="1675287984" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.001131" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1024" name="LegacyPhase1Predicate_DetectsInactiveExactNameFixture" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.LegacyPhase1Predicate_DetectsInactiveExactNameFixture" methodname="LegacyPhase1Predicate_DetectsInactiveExactNameFixture" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="995884455" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:57Z" duration="0.000623" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1029" name="MainCafe_LoadsWithRequiredPhase0Objects" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.MainCafe_LoadsWithRequiredPhase0Objects" methodname="MainCafe_LoadsWithRequiredPhase0Objects" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="841061067" result="Passed" start-time="2026-08-08 16:12:57Z" end-time="2026-08-08 16:12:58Z" duration="0.397846" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-suite type="ParameterizedMethod" id="1011" name="MouseInput_TapDependsOnDragDistance" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.MouseInput_TapDependsOnDragDistance" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.049039" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1007" name="MouseInput_TapDependsOnDragDistance(3.0f,6.0f,True)" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.MouseInput_TapDependsOnDragDistance(3.0f,6.0f,True)" methodname="MouseInput_TapDependsOnDragDistance" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="16943331" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.000534" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1008" name="MouseInput_TapDependsOnDragDistance(6.0f,6.0f,True)" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.MouseInput_TapDependsOnDragDistance(6.0f,6.0f,True)" methodname="MouseInput_TapDependsOnDragDistance" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="770523497" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.000137" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1009" name="MouseInput_TapDependsOnDragDistance(6.1f,6.0f,False)" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.MouseInput_TapDependsOnDragDistance(6.1f,6.0f,False)" methodname="MouseInput_TapDependsOnDragDistance" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="1946022258" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.000125" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1010" name="MouseInput_TapDependsOnDragDistance(0.0f,-1.0f,True)" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.MouseInput_TapDependsOnDragDistance(0.0f,-1.0f,True)" methodname="MouseInput_TapDependsOnDragDistance" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="1042479288" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.000124" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-case id="1025" name="NavMeshPredicate_DistinguishesEmptySettingsFromBakedData" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.NavMeshPredicate_DistinguishesEmptySettingsFromBakedData" methodname="NavMeshPredicate_DistinguishesEmptySettingsFromBakedData" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="1852768302" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.000321" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1028" name="TimeControlPanel_ButtonsSetExpectedSpeeds" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.TimeControlPanel_ButtonsSetExpectedSpeeds" methodname="TimeControlPanel_ButtonsSetExpectedSpeeds" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="1942073915" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.002018" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1026" name="TimeMover_FastMovesFartherThanNormal" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.TimeMover_FastMovesFartherThanNormal" methodname="TimeMover_FastMovesFartherThanNormal" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="803011946" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.527188" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1027" name="TimeMover_PauseStopsMovement" fullname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests.TimeMover_PauseStopsMovement" methodname="TimeMover_PauseStopsMovement" classname="AnimalCafe.Tests.PlayMode.Phase0PlayModeTests" runstate="Runnable" seed="823739829" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.165822" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="TestSuite" id="1091" name="Phase4" fullname="AnimalCafe.Tests.PlayMode.Phase4" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:13:00Z" duration="1.910857" total="16" passed="16" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1043" name="ManualReviewPingPongMoverTests" fullname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests" classname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:59Z" duration="0.623061" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1048" name="ConfigurationFieldsAreSerializedForScenePersistence" fullname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests.ConfigurationFieldsAreSerializedForScenePersistence" methodname="ConfigurationFieldsAreSerializedForScenePersistence" classname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests" runstate="Runnable" seed="1125107127" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.000574" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="1047" name="ConfigureClampsSpeedToTheMinimum" fullname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests.ConfigureClampsSpeedToTheMinimum" classname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.007527" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1045" name="ConfigureClampsSpeedToTheMinimum(-1.0f)" fullname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests.ConfigureClampsSpeedToTheMinimum(-1.0f)" methodname="ConfigureClampsSpeedToTheMinimum" classname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests" runstate="Runnable" seed="1274741250" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.000616" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1046" name="ConfigureClampsSpeedToTheMinimum(0.0f)" fullname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests.ConfigureClampsSpeedToTheMinimum(0.0f)" methodname="ConfigureClampsSpeedToTheMinimum" classname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests" runstate="Runnable" seed="1897680248" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.000133" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="1044" name="DefaultsExposeTheManualReviewPathAndSpeed" fullname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests.DefaultsExposeTheManualReviewPathAndSpeed" methodname="DefaultsExposeTheManualReviewPathAndSpeed" classname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests" runstate="Runnable" seed="1679142965" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:58Z" duration="0.000396" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1050" name="MovementReversesAfterReachingPointB" fullname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests.MovementReversesAfterReachingPointB" methodname="MovementReversesAfterReachingPointB" classname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests" runstate="Runnable" seed="1223994382" result="Passed" start-time="2026-08-08 16:12:58Z" end-time="2026-08-08 16:12:59Z" duration="0.029622" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1049" name="MovementUsesScaledTimeForPauseNormalAndFast" fullname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests.MovementUsesScaledTimeForPauseNormalAndFast" methodname="MovementUsesScaledTimeForPauseNormalAndFast" classname="AnimalCafe.Tests.PlayMode.Phase4.ManualReviewPingPongMoverTests" runstate="Runnable" seed="282510180" result="Passed" start-time="2026-08-08 16:12:59Z" end-time="2026-08-08 16:12:59Z" duration="0.576701" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="1051" name="Phase4BuildSettingsIsolationTests" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-08-08 16:12:59Z" end-time="2026-08-08 16:12:59Z" duration="0.028925" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1052" name="Scope_AbsentValidationSceneRestoresExactOriginal" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests.Scope_AbsentValidationSceneRestoresExactOriginal" methodname="Scope_AbsentValidationSceneRestoresExactOriginal" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests" runstate="Runnable" seed="71371089" result="Passed" start-time="2026-08-08 16:12:59Z" end-time="2026-08-08 16:12:59Z" duration="0.005801" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1054" name="Scope_DisposeAfterFailureRestoresExactOriginal" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests.Scope_DisposeAfterFailureRestoresExactOriginal" methodname="Scope_DisposeAfterFailureRestoresExactOriginal" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests" runstate="Runnable" seed="386884810" result="Passed" start-time="2026-08-08 16:12:59Z" end-time="2026-08-08 16:12:59Z" duration="0.009652" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1056" name="Scope_ExternalCleanupBeforeDisposeDoesNotReintroduceExternalScene" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests.Scope_ExternalCleanupBeforeDisposeDoesNotReintroduceExternalScene" methodname="Scope_ExternalCleanupBeforeDisposeDoesNotReintroduceExternalScene" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests" runstate="Runnable" seed="679878550" result="Passed" start-time="2026-08-08 16:12:59Z" end-time="2026-08-08 16:12:59Z" duration="0.002107" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1053" name="Scope_PreexistingDuplicatesOrderAndFlagsRestoreExactOriginal" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests.Scope_PreexistingDuplicatesOrderAndFlagsRestoreExactOriginal" methodname="Scope_PreexistingDuplicatesOrderAndFlagsRestoreExactOriginal" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests" runstate="Runnable" seed="1314999918" result="Passed" start-time="2026-08-08 16:12:59Z" end-time="2026-08-08 16:12:59Z" duration="0.001604" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1055" name="Scope_RepeatedSetupAndCleanupRestoresExactOriginal" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests.Scope_RepeatedSetupAndCleanupRestoresExactOriginal" methodname="Scope_RepeatedSetupAndCleanupRestoresExactOriginal" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4BuildSettingsIsolationTests" runstate="Runnable" seed="371840396" result="Passed" start-time="2026-08-08 16:12:59Z" end-time="2026-08-08 16:12:59Z" duration="0.001844" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="1057" name="Phase4EnvironmentIntegrationTests" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-08-08 16:12:59Z" end-time="2026-08-08 16:13:00Z" duration="1.249972" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1060" name="Phase4Scene_EntranceVisualDoesNotBlockTwoByTwoClearance" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests.Phase4Scene_EntranceVisualDoesNotBlockTwoByTwoClearance" methodname="Phase4Scene_EntranceVisualDoesNotBlockTwoByTwoClearance" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests" runstate="Runnable" seed="1997107368" result="Passed" start-time="2026-08-08 16:12:59Z" end-time="2026-08-08 16:12:59Z" duration="0.257452" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1061" name="Phase4Scene_FloorRemainsOnSelectableRaycastLayer" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests.Phase4Scene_FloorRemainsOnSelectableRaycastLayer" methodname="Phase4Scene_FloorRemainsOnSelectableRaycastLayer" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests" runstate="Runnable" seed="1025892314" result="Passed" start-time="2026-08-08 16:12:59Z" end-time="2026-08-08 16:13:00Z" duration="0.248090" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1062" name="Phase4Scene_HasNoMissingScriptsOrUnexpectedLogs" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests.Phase4Scene_HasNoMissingScriptsOrUnexpectedLogs" methodname="Phase4Scene_HasNoMissingScriptsOrUnexpectedLogs" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests" runstate="Runnable" seed="2109868154" result="Passed" start-time="2026-08-08 16:13:00Z" end-time="2026-08-08 16:13:00Z" duration="0.241931" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1058" name="Phase4Scene_LoadsWithExactStableEnvironment" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests.Phase4Scene_LoadsWithExactStableEnvironment" methodname="Phase4Scene_LoadsWithExactStableEnvironment" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests" runstate="Runnable" seed="1894803271" result="Passed" start-time="2026-08-08 16:13:00Z" end-time="2026-08-08 16:13:00Z" duration="0.251025" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1059" name="Phase4Scene_ProductionCatalogResolvesEveryApprovedPrefab" fullname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests.Phase4Scene_ProductionCatalogResolvesEveryApprovedPrefab" methodname="Phase4Scene_ProductionCatalogResolvesEveryApprovedPrefab" classname="AnimalCafe.Tests.PlayMode.Phase4.Phase4EnvironmentIntegrationTests" runstate="Runnable" seed="890853167" result="Passed" start-time="2026-08-08 16:13:00Z" end-time="2026-08-08 16:13:00Z" duration="0.241578" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+            </test-suite>
+            <test-suite type="TestFixture" id="1030" name="RealUiSceneInteractionTests" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-08-08 16:13:00Z" end-time="2026-08-08 16:13:01Z" duration="0.203492" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1034" name="EventSystemTapOutsideUiStillSelectsWorldObject" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests.EventSystemTapOutsideUiStillSelectsWorldObject" methodname="EventSystemTapOutsideUiStillSelectsWorldObject" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" seed="61070833" result="Passed" start-time="2026-08-08 16:13:00Z" end-time="2026-08-08 16:13:00Z" duration="0.070398" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1035" name="NoEventSystemTapStillSelectsWorldObject" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests.NoEventSystemTapStillSelectsWorldObject" methodname="NoEventSystemTapStillSelectsWorldObject" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" seed="687870069" result="Passed" start-time="2026-08-08 16:13:00Z" end-time="2026-08-08 16:13:00Z" duration="0.020967" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1031" name="QueueMousePosition_ProcessesAbsoluteStateImmediately" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests.QueueMousePosition_ProcessesAbsoluteStateImmediately" methodname="QueueMousePosition_ProcessesAbsoluteStateImmediately" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" seed="1320802888" result="Passed" start-time="2026-08-08 16:13:00Z" end-time="2026-08-08 16:13:00Z" duration="0.027037" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1032" name="RealUiTapAtEmptyWorldPreservesSelection" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests.RealUiTapAtEmptyWorldPreservesSelection" methodname="RealUiTapAtEmptyWorldPreservesSelection" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" seed="1299064077" result="Passed" start-time="2026-08-08 16:13:00Z" end-time="2026-08-08 16:13:01Z" duration="0.037979" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1033" name="RealUiTapDoesNotSelectWorldObjectBehindUi" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests.RealUiTapDoesNotSelectWorldObjectBehindUi" methodname="RealUiTapDoesNotSelectWorldObjectBehindUi" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" seed="1192593048" result="Passed" start-time="2026-08-08 16:13:01Z" end-time="2026-08-08 16:13:01Z" duration="0.034692" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

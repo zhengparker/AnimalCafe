@@ -20,12 +20,28 @@ namespace AnimalCafe.Layout
         public string DisplayName { get; }
         public GridSize Footprint { get; }
         public PlacementSurfaceType AllowedPlacementSurfaces { get; }
+        public FurnitureFunctionType FunctionType { get; }
 
         public FurnitureDefinition(
             string id,
             string displayName,
             GridSize footprint,
             PlacementSurfaceType allowedPlacementSurfaces)
+            : this(
+                id,
+                displayName,
+                footprint,
+                allowedPlacementSurfaces,
+                FurnitureFunctionType.None)
+        {
+        }
+
+        public FurnitureDefinition(
+            string id,
+            string displayName,
+            GridSize footprint,
+            PlacementSurfaceType allowedPlacementSurfaces,
+            FurnitureFunctionType functionType)
         {
             ValidateDefinitionId(id, nameof(id));
 
@@ -66,10 +82,19 @@ namespace AnimalCafe.Layout
                     "Allowed placement surfaces must contain only known non-None flags.");
             }
 
+            if (!Enum.IsDefined(typeof(FurnitureFunctionType), functionType))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(functionType),
+                    functionType,
+                    "Furniture function type must be a defined value.");
+            }
+
             Id = id;
             DisplayName = displayName;
             Footprint = footprint;
             AllowedPlacementSurfaces = allowedPlacementSurfaces;
+            FunctionType = functionType;
         }
 
         internal static void ValidateDefinitionId(string id, string paramName)
