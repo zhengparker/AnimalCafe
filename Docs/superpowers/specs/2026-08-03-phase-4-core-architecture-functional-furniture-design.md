@@ -249,7 +249,7 @@ P3 benchmark Prefab 与 validator fixture 保持不变；P4 formal Prefab 复用
 ### 7.2 Counter Module
 
 - 从 Work Table Blender source 派生；
-- uniform scale 后约 `1.00 × 0.72 × 1.00 m`；
+- Studio Owner 于 2026-08-04 批准本 Counter 派生使用 controlled non-uniform scale：authoritative Work Table source 的实测 bounds 为约 `0.781529 × 0.650000 × 0.781529 m`（Unity axes），无法通过 uniform scale 同时达到目标；因此各轴受控缩放至约 `1.00 × 0.72 × 1.00 m`；
 - Blender Apply Scale 后导出，Unity Prefab root scale 必须为 `1,1,1`；
 - Floor Footprint：`1 × 1`；
 - Placement Surface：Floor；

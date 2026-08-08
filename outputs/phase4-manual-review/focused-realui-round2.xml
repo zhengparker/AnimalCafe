@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="5" result="Passed" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.3932608">
+  <test-suite type="TestSuite" id="1096" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="74" result="Passed" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.393261" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1087" name="AnimalCafe.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-4/Library/ScriptAssemblies/AnimalCafe.PlayModeTests.dll" runstate="Runnable" testcasecount="74" result="Passed" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.378586" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="39460" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1088" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="74" result="Passed" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.371335" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1089" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="74" result="Passed" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.364457" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1090" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="74" result="Passed" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.357343" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1030" name="RealUiSceneInteractionTests" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.349352" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1034" name="EventSystemTapOutsideUiStillSelectsWorldObject" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests.EventSystemTapOutsideUiStillSelectsWorldObject" methodname="EventSystemTapOutsideUiStillSelectsWorldObject" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" seed="1962887067" result="Passed" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.178118" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1035" name="NoEventSystemTapStillSelectsWorldObject" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests.NoEventSystemTapStillSelectsWorldObject" methodname="NoEventSystemTapStillSelectsWorldObject" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" seed="2146327199" result="Passed" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.023014" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1031" name="QueueMousePosition_ProcessesAbsoluteStateImmediately" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests.QueueMousePosition_ProcessesAbsoluteStateImmediately" methodname="QueueMousePosition_ProcessesAbsoluteStateImmediately" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" seed="1214964276" result="Passed" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.045587" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1032" name="RealUiTapAtEmptyWorldPreservesSelection" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests.RealUiTapAtEmptyWorldPreservesSelection" methodname="RealUiTapAtEmptyWorldPreservesSelection" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" seed="1518350708" result="Passed" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.042718" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1033" name="RealUiTapDoesNotSelectWorldObjectBehindUi" fullname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests.RealUiTapDoesNotSelectWorldObjectBehindUi" methodname="RealUiTapDoesNotSelectWorldObjectBehindUi" classname="AnimalCafe.Tests.PlayMode.RealUiSceneInteractionTests" runstate="Runnable" seed="1059649322" result="Passed" start-time="2026-08-08 16:11:57Z" end-time="2026-08-08 16:11:57Z" duration="0.040961" asserts="0">
+                <properties>
+                  <property name="_JOINTYPE" value="UnityCombinatorial" />
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

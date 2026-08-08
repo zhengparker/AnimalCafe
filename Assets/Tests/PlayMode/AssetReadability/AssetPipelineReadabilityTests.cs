@@ -1,4 +1,5 @@
 using System.Collections;
+using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
@@ -12,6 +13,9 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
     {
         private const string ScenePath =
             "Assets/Scenes/Validation/AssetPipelineReadability.unity";
+        private const string FallbackSceneName =
+            "AssetPipelineReadabilityTests_ColliderFreeFallback";
+        private string previousActiveScenePath;
 
         public void Setup()
         {
@@ -21,6 +25,69 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
         public void Cleanup()
         {
             AssetPipelineReadabilityBuildSettingsScope.Cleanup();
+        }
+
+        [OneTimeSetUp]
+        public void CapturePreviousActiveScene()
+        {
+            previousActiveScenePath = SceneManager.GetActiveScene().path;
+        }
+
+        [TearDown]
+        public void RestorePreviousActiveScene()
+        {
+            RestoreSceneOrCreateFallback(previousActiveScenePath);
+        }
+
+        private static void RestoreSceneOrCreateFallback(string previousScenePath)
+        {
+            if (!string.IsNullOrEmpty(previousScenePath)
+                && !previousScenePath.StartsWith("Assets/InitTestScene")
+                && File.Exists(previousScenePath)
+                && Application.CanStreamedLevelBeLoaded(previousScenePath))
+            {
+                if (SceneManager.GetActiveScene().path != previousScenePath)
+                {
+                    SceneManager.LoadScene(previousScenePath, LoadSceneMode.Single);
+                }
+
+                if (SceneManager.GetActiveScene().path == previousScenePath)
+                {
+                    return;
+                }
+            }
+
+            var readabilityScene = SceneManager.GetActiveScene();
+            var fallback = readabilityScene.IsValid()
+                && readabilityScene.isLoaded
+                && readabilityScene.name == FallbackSceneName
+                    ? readabilityScene
+                    : SceneManager.CreateScene(FallbackSceneName);
+            if (SceneManager.GetActiveScene() != fallback)
+            {
+                Assert.That(SceneManager.SetActiveScene(fallback), Is.True);
+            }
+
+            foreach (var root in fallback.GetRootGameObjects())
+            {
+                Object.DestroyImmediate(root);
+            }
+
+            Assert.That(fallback.GetRootGameObjects(), Is.Empty);
+
+            if (readabilityScene.IsValid()
+                && readabilityScene.isLoaded
+                && readabilityScene != fallback)
+            {
+                foreach (var root in readabilityScene.GetRootGameObjects())
+                {
+                    Object.DestroyImmediate(root);
+                }
+
+                Assert.That(readabilityScene.GetRootGameObjects(), Is.Empty);
+                var unload = SceneManager.UnloadSceneAsync(readabilityScene);
+                Assert.That(unload, Is.Not.Null);
+            }
         }
 
         [UnityTest]
@@ -258,6 +325,25 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
         {
             yield return LoadScene();
             LogAssert.NoUnexpectedReceived();
+        }
+
+        [UnityTest]
+        public IEnumerator RestoreSceneOrCreateFallback_NonLoadablePriorSceneLeavesNoColliders()
+        {
+            yield return LoadScene();
+            var readabilityScene = SceneManager.GetActiveScene();
+            Assert.That(readabilityScene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<Collider>(true)),
+                Is.Not.Empty);
+
+            RestoreSceneOrCreateFallback(string.Empty);
+
+            var fallback = SceneManager.GetActiveScene();
+            Assert.That(fallback.name,
+                Is.EqualTo("AssetPipelineReadabilityTests_ColliderFreeFallback"));
+            Assert.That(fallback.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<Collider>(true)),
+                Is.Empty);
         }
 
         private static IEnumerator LoadScene()

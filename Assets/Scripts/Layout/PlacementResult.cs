@@ -9,7 +9,8 @@ namespace AnimalCafe.Layout
         Overlap = 2,
         InstanceNotFound = 3,
         InstanceAlreadyPlaced = 4,
-        UnsupportedPlacementSurface = 5
+        UnsupportedPlacementSurface = 5,
+        ReservedEntranceClearance = 6
     }
 
     public sealed class PlacementResult
