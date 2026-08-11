@@ -25,6 +25,7 @@ namespace AnimalCafe.Interaction
         private ICameraInputSource inputSource;
         private IUiPointerBoundary uiPointerBoundary;
         private readonly HashSet<int> pendingScenePointerPresses = new();
+        private readonly HashSet<int> activePointerIds = new();
 
         public ISelectable CurrentSelection { get; private set; }
 
@@ -52,6 +53,7 @@ namespace AnimalCafe.Interaction
             var inputFrame = inputSource.ReadFrame();
             if (uiPointerBoundary != null && inputFrame.PointerPressed)
             {
+                activePointerIds.Add(inputFrame.PointerId);
                 var pointerOverUi = EventSystem.current != null
                     && EventSystem.current.IsPointerOverGameObject(
                         inputFrame.PointerId);
@@ -79,12 +81,13 @@ namespace AnimalCafe.Interaction
             {
                 uiPointerBoundary?.ReleasePointer(inputFrame.PointerId);
                 pendingScenePointerPresses.Remove(inputFrame.PointerId);
+                activePointerIds.Remove(inputFrame.PointerId);
             }
         }
 
         private void OnDisable()
         {
-            pendingScenePointerPresses.Clear();
+            ReleaseActivePointerOwnership();
             ClearSelection();
         }
 
@@ -92,10 +95,10 @@ namespace AnimalCafe.Interaction
             UnityEngine.Camera camera,
             ICameraInputSource cameraInputSource)
         {
+            ReleaseActivePointerOwnership();
             targetCamera = camera;
             inputSource = cameraInputSource;
             uiPointerBoundary = null;
-            pendingScenePointerPresses.Clear();
         }
 
         public void Configure(
@@ -103,10 +106,10 @@ namespace AnimalCafe.Interaction
             ICameraInputSource cameraInputSource,
             IUiPointerBoundary pointerBoundary)
         {
+            ReleaseActivePointerOwnership();
             targetCamera = camera;
             inputSource = cameraInputSource;
             uiPointerBoundary = pointerBoundary;
-            pendingScenePointerPresses.Clear();
         }
 
         private void RegisterPendingScenePointerPresses()
@@ -121,6 +124,20 @@ namespace AnimalCafe.Interaction
                 uiPointerBoundary.RegisterScenePointerPress(pointerId);
             }
 
+            pendingScenePointerPresses.Clear();
+        }
+
+        private void ReleaseActivePointerOwnership()
+        {
+            if (uiPointerBoundary != null)
+            {
+                foreach (var pointerId in activePointerIds)
+                {
+                    uiPointerBoundary.ReleasePointer(pointerId);
+                }
+            }
+
+            activePointerIds.Clear();
             pendingScenePointerPresses.Clear();
         }
 

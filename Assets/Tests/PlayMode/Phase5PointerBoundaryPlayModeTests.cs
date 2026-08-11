@@ -78,8 +78,8 @@ namespace AnimalCafe.Tests.PlayMode
         public IEnumerator IT006_OutsideDismiss_ClosesUiWithoutSelectingWorldOnSameRelease()
         {
             using var fixture = new PointerBoundaryFixture();
-            fixture.PlaceButtonAt(fixture.SelectablePosition);
-            fixture.CloseButtonOnClick();
+            fixture.ShowDismissibleSheet(new Vector2(30f, 30f));
+            fixture.ShowOutsideDismissTarget();
 
             fixture.QueueMouseState(fixture.SelectablePosition, true);
             yield return null;
@@ -88,9 +88,68 @@ namespace AnimalCafe.Tests.PlayMode
             yield return null;
             yield return null;
 
-            Assert.That(fixture.ButtonClickCount, Is.EqualTo(1));
-            Assert.That(fixture.ButtonObject.activeSelf, Is.False);
+            Assert.That(fixture.OutsideDismissCount, Is.EqualTo(1));
+            Assert.That(fixture.SheetObject.activeSelf, Is.False);
+            Assert.That(fixture.ButtonClickCount, Is.EqualTo(0));
             Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator Disable_ReleasesActiveUiOwnershipAndAllowsNextUiPress()
+        {
+            using var fixture = new PointerBoundaryFixture();
+            fixture.PlaceButtonAt(fixture.SelectablePosition);
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            yield return null;
+            yield return null;
+            Assert.That(
+                fixture.Boundary.GetOwnership(fixture.Mouse.deviceId),
+                Is.EqualTo(UiPointerOwnership.Ui));
+
+            fixture.Interaction.gameObject.SetActive(false);
+
+            Assert.That(
+                fixture.Boundary.GetOwnership(fixture.Mouse.deviceId),
+                Is.EqualTo(UiPointerOwnership.None));
+
+            fixture.Interaction.gameObject.SetActive(true);
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            yield return null;
+
+            Assert.That(
+                fixture.Boundary.GetOwnership(fixture.Mouse.deviceId),
+                Is.EqualTo(UiPointerOwnership.Ui));
+        }
+
+        [UnityTest]
+        public IEnumerator Configure_ReleasesRegisteredSceneOwnershipFromPreviousBoundary()
+        {
+            using var fixture = new PointerBoundaryFixture();
+            fixture.PlaceButtonAt(new Vector2(30f, 30f));
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            yield return null;
+            yield return null;
+            Assert.That(
+                fixture.Boundary.GetOwnership(fixture.Mouse.deviceId),
+                Is.EqualTo(UiPointerOwnership.Scene));
+
+            var replacementBoundary = new UiPointerBoundary();
+            fixture.Interaction.Configure(null, fixture.Input, replacementBoundary);
+
+            Assert.That(
+                fixture.Boundary.GetOwnership(fixture.Mouse.deviceId),
+                Is.EqualTo(UiPointerOwnership.None));
+            replacementBoundary.RegisterScenePointerPress(fixture.Mouse.deviceId);
+            Assert.That(
+                replacementBoundary.GetOwnership(fixture.Mouse.deviceId),
+                Is.EqualTo(UiPointerOwnership.Scene));
         }
 
         [UnityTest]
@@ -191,6 +250,8 @@ namespace AnimalCafe.Tests.PlayMode
             private readonly Button button;
             private readonly Image modalOverlay;
             private readonly Image toastOverlay;
+            private readonly Button outsideDismissButton;
+            private readonly RectTransform sheetRect;
             private readonly PointerDownRecorder buttonPointerRecorder;
 
             public PointerBoundaryFixture()
@@ -240,6 +301,26 @@ namespace AnimalCafe.Tests.PlayMode
                 toastOverlay.raycastTarget = false;
                 toastObject.SetActive(false);
 
+                var outsideDismissObject = CreateRaycastTarget(
+                    "Phase5OutsideDismissTarget",
+                    out var outsideDismissRect);
+                outsideDismissRect.anchorMin = Vector2.zero;
+                outsideDismissRect.anchorMax = Vector2.one;
+                outsideDismissRect.offsetMin = Vector2.zero;
+                outsideDismissRect.offsetMax = Vector2.zero;
+                outsideDismissButton = outsideDismissObject.AddComponent<Button>();
+                outsideDismissObject.AddComponent<UiPointerBoundaryEventHook>()
+                    .Configure(Boundary);
+                outsideDismissObject.SetActive(false);
+
+                SheetObject = CreateRaycastTarget("Phase5DismissibleSheet", out sheetRect);
+                SheetObject.SetActive(false);
+                outsideDismissButton.onClick.AddListener(() =>
+                {
+                    OutsideDismissCount++;
+                    SheetObject.SetActive(false);
+                });
+
                 eventSystemObject = new GameObject("Phase5PointerEventSystem");
                 EventSystem = eventSystemObject.AddComponent<EventSystem>();
                 InputModule = eventSystemObject.AddComponent<InputSystemUIInputModule>();
@@ -259,10 +340,12 @@ namespace AnimalCafe.Tests.PlayMode
             public ColorSelectable Selectable { get; }
             public Vector2 SelectablePosition { get; }
             public GameObject ButtonObject { get; }
+            public GameObject SheetObject { get; }
             public EventSystem EventSystem { get; }
             public InputSystemUIInputModule InputModule { get; }
             public Mouse Mouse { get; }
             public int ButtonClickCount { get; private set; }
+            public int OutsideDismissCount { get; private set; }
             public int ButtonPointerId => buttonPointerRecorder.PointerId;
 
             public void PlaceButtonAt(Vector2 screenPosition)
@@ -271,9 +354,15 @@ namespace AnimalCafe.Tests.PlayMode
                 ButtonObject.SetActive(true);
             }
 
-            public void CloseButtonOnClick()
+            public void ShowDismissibleSheet(Vector2 screenPosition)
             {
-                button.onClick.AddListener(() => ButtonObject.SetActive(false));
+                PlaceAt(sheetRect, screenPosition);
+                SheetObject.SetActive(true);
+            }
+
+            public void ShowOutsideDismissTarget()
+            {
+                outsideDismissButton.gameObject.SetActive(true);
             }
 
             public void ShowModalOverlayAt(Vector2 screenPosition)
