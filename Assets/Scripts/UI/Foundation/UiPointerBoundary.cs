@@ -18,6 +18,8 @@ namespace AnimalCafe.UI.Foundation
     /// </summary>
     public interface IUiPointerBoundary
     {
+        void RegisterScenePointerPress(int pointerId);
+
         bool CanProcessScenePointer(int pointerId);
 
         void ReleasePointer(int pointerId);

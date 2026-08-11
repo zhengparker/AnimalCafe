@@ -77,6 +77,23 @@ namespace AnimalCafe.Tests.Phase5
         }
 
         [Test]
+        public void AT027_NestedSceneBlocks_ReleaseOnlyAfterFinalIdempotentDispose()
+        {
+            var boundary = new UiPointerBoundary();
+            var outerBlock = boundary.AcquireSceneBlock();
+            var innerBlock = boundary.AcquireSceneBlock();
+
+            innerBlock.Dispose();
+            innerBlock.Dispose();
+
+            Assert.That(boundary.CanProcessScenePointer(0), Is.False);
+
+            outerBlock.Dispose();
+
+            Assert.That(boundary.CanProcessScenePointer(0), Is.True);
+        }
+
+        [Test]
         public void AT028_ToastWithoutModal_DoesNotClaimPointerOwnership()
         {
             var boundary = new UiPointerBoundary();

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using AnimalCafe.Core.Events;
 using AnimalCafe.Input;
 using AnimalCafe.UI.Foundation;
@@ -23,6 +24,7 @@ namespace AnimalCafe.Interaction
 
         private ICameraInputSource inputSource;
         private IUiPointerBoundary uiPointerBoundary;
+        private readonly HashSet<int> pendingScenePointerPresses = new();
 
         public ISelectable CurrentSelection { get; private set; }
 
@@ -38,7 +40,7 @@ namespace AnimalCafe.Interaction
             }
         }
 
-        private void Update()
+        private void LateUpdate()
         {
             ClearInvalidSelection();
             if (inputSource == null)
@@ -46,28 +48,43 @@ namespace AnimalCafe.Interaction
                 return;
             }
 
+            RegisterPendingScenePointerPresses();
             var inputFrame = inputSource.ReadFrame();
-            if (!inputFrame.TapReleased)
+            if (uiPointerBoundary != null && inputFrame.PointerPressed)
             {
-                return;
+                var pointerOverUi = EventSystem.current != null
+                    && EventSystem.current.IsPointerOverGameObject(
+                        inputFrame.PointerId);
+                if (!pointerOverUi)
+                {
+                    pendingScenePointerPresses.Add(inputFrame.PointerId);
+                }
             }
 
-            const int mousePointerId = PointerInputModule.kMouseLeftId;
-            var canProcessScenePointer = uiPointerBoundary != null
-                ? uiPointerBoundary.CanProcessScenePointer(mousePointerId)
-                : EventSystem.current == null
-                  || !EventSystem.current.IsPointerOverGameObject();
-            if (canProcessScenePointer)
+            if (inputFrame.TapReleased)
             {
-                TrySelectAt(inputFrame.PointerPosition);
+                var canProcessScenePointer = uiPointerBoundary != null
+                    ? uiPointerBoundary.CanProcessScenePointer(
+                        inputFrame.PointerId)
+                    : EventSystem.current == null
+                      || !EventSystem.current.IsPointerOverGameObject();
+                if (canProcessScenePointer)
+                {
+                    TrySelectAt(inputFrame.PointerPosition);
+                }
             }
 
-            // Clear only after Scene has made its release decision.
-            uiPointerBoundary?.ReleasePointer(mousePointerId);
+            // Clear only after Scene has made its release decision, including drags.
+            if (inputFrame.PointerReleased)
+            {
+                uiPointerBoundary?.ReleasePointer(inputFrame.PointerId);
+                pendingScenePointerPresses.Remove(inputFrame.PointerId);
+            }
         }
 
         private void OnDisable()
         {
+            pendingScenePointerPresses.Clear();
             ClearSelection();
         }
 
@@ -78,6 +95,7 @@ namespace AnimalCafe.Interaction
             targetCamera = camera;
             inputSource = cameraInputSource;
             uiPointerBoundary = null;
+            pendingScenePointerPresses.Clear();
         }
 
         public void Configure(
@@ -88,6 +106,22 @@ namespace AnimalCafe.Interaction
             targetCamera = camera;
             inputSource = cameraInputSource;
             uiPointerBoundary = pointerBoundary;
+            pendingScenePointerPresses.Clear();
+        }
+
+        private void RegisterPendingScenePointerPresses()
+        {
+            if (uiPointerBoundary == null || pendingScenePointerPresses.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var pointerId in pendingScenePointerPresses)
+            {
+                uiPointerBoundary.RegisterScenePointerPress(pointerId);
+            }
+
+            pendingScenePointerPresses.Clear();
         }
 
         public bool TrySelectAt(Vector2 screenPosition)

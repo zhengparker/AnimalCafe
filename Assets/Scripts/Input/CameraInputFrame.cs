@@ -12,12 +12,18 @@ namespace AnimalCafe.Input
             Vector2 panDelta,
             float zoomDelta,
             bool tapReleased,
-            Vector2 pointerPosition)
+            Vector2 pointerPosition,
+            int pointerId = -1,
+            bool pointerPressed = false,
+            bool pointerReleased = false)
         {
             PanDelta = panDelta;
             ZoomDelta = zoomDelta;
             TapReleased = tapReleased;
             PointerPosition = pointerPosition;
+            PointerId = pointerId;
+            PointerPressed = pointerPressed;
+            PointerReleased = pointerReleased || tapReleased;
         }
 
         public Vector2 PanDelta { get; }
@@ -27,5 +33,15 @@ namespace AnimalCafe.Input
         public bool TapReleased { get; }
 
         public Vector2 PointerPosition { get; }
+
+        /// <summary>
+        /// Input System pointer identity for this frame. -1 is the legacy mouse default.
+        /// è¯¥ frame çš„ Input System pointer identityï¼›-1 ä¿ç•™ä¸ºæ—§ mouse é»˜è®¤å€¼ã€‚
+        /// </summary>
+        public int PointerId { get; }
+
+        public bool PointerPressed { get; }
+
+        public bool PointerReleased { get; }
     }
 }

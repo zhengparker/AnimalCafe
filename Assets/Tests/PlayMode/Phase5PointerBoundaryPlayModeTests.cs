@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 
@@ -16,134 +17,169 @@ namespace AnimalCafe.Tests.PlayMode
     public sealed class Phase5PointerBoundaryPlayModeTests
     {
         [UnityTest]
-        public IEnumerator IT005_EventSystemUiPress_DoesNotSelectWorldObjectOnRelease()
+        public IEnumerator MouseCameraInput_ReportsRealPointerIdentityAndDragRelease()
         {
-            using var fixture = new PointerBoundaryFixture();
-            var uiPosition = fixture.SelectablePosition;
-            fixture.PlaceUiAt(uiPosition);
-            QueueMousePosition(fixture.Mouse, uiPosition);
-            yield return null;
+            using var focusScope = new InputFocusIsolationScope();
+            var mouse = InputSystem.AddDevice<Mouse>();
+            var inputObject = new GameObject("Phase5MouseCameraInput");
+            var input = inputObject.AddComponent<MouseCameraInput>();
+            input.DragThresholdPixels = 6f;
 
-            fixture.AssertUiRaycast(uiPosition, true);
-            fixture.SendUiPress(uiPosition);
-            fixture.Input.NextFrame = new CameraInputFrame(
-                Vector2.zero,
-                0f,
-                true,
-                uiPosition);
-            yield return null;
+            try
+            {
+                QueueMouseState(mouse, Vector2.zero, true);
+                yield return null;
+                var pressed = input.ReadFrame();
 
-            Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
-            Assert.That(fixture.Selectable.IsSelected, Is.False);
+                QueueMouseState(mouse, new Vector2(20f, 0f), true);
+                yield return null;
+                input.ReadFrame();
+
+                QueueMouseState(mouse, new Vector2(20f, 0f), false);
+                yield return null;
+                var released = input.ReadFrame();
+
+                Assert.That(pressed.PointerId, Is.EqualTo(mouse.deviceId));
+                Assert.That(pressed.PointerPressed, Is.True);
+                Assert.That(released.PointerReleased, Is.True);
+                Assert.That(released.TapReleased, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(inputObject);
+                if (mouse.added)
+                {
+                    InputSystem.RemoveDevice(mouse);
+                }
+            }
         }
 
         [UnityTest]
-        public IEnumerator IT006_OutsideDismissRelease_AfterUiClosedDoesNotSelectWorldObject()
+        public IEnumerator IT005_InputSystemUiButtonClick_InvokesOnceWithoutWorldSelection()
         {
             using var fixture = new PointerBoundaryFixture();
-            var worldPosition = fixture.SelectablePosition;
-            fixture.PlaceUiAt(new Vector2(30f, 30f));
-            fixture.SendUiPress(new Vector2(30f, 30f));
-            fixture.UiImage.gameObject.SetActive(false);
-            QueueMousePosition(fixture.Mouse, worldPosition);
+            fixture.PlaceButtonAt(fixture.SelectablePosition);
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            yield return null;
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
             yield return null;
 
-            fixture.Input.NextFrame = new CameraInputFrame(
-                Vector2.zero,
-                0f,
-                true,
-                worldPosition);
-            yield return null;
-
+            Assert.That(fixture.ButtonClickCount, Is.EqualTo(1));
             Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
-            Assert.That(fixture.Selectable.IsSelected, Is.False);
+            Assert.That(
+                fixture.Boundary.GetOwnership(fixture.Mouse.deviceId),
+                Is.EqualTo(UiPointerOwnership.None));
         }
 
         [UnityTest]
-        public IEnumerator IT007_UiPressThenDragToWorldRelease_DoesNotSelectWorldObject()
+        public IEnumerator IT006_OutsideDismiss_ClosesUiWithoutSelectingWorldOnSameRelease()
         {
             using var fixture = new PointerBoundaryFixture();
-            var worldPosition = fixture.SelectablePosition;
-            fixture.PlaceUiAt(new Vector2(30f, 30f));
-            fixture.SendUiPress(new Vector2(30f, 30f));
-            QueueMousePosition(fixture.Mouse, worldPosition);
+            fixture.PlaceButtonAt(fixture.SelectablePosition);
+            fixture.CloseButtonOnClick();
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            yield return null;
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
             yield return null;
 
-            fixture.AssertUiRaycast(worldPosition, false);
-            fixture.Input.NextFrame = new CameraInputFrame(
-                Vector2.zero,
-                0f,
-                true,
-                worldPosition);
-            yield return null;
-
+            Assert.That(fixture.ButtonClickCount, Is.EqualTo(1));
+            Assert.That(fixture.ButtonObject.activeSelf, Is.False);
             Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
-            Assert.That(fixture.Selectable.IsSelected, Is.False);
         }
 
         [UnityTest]
-        public IEnumerator IT008_WorldTap_StillSelectsWorldObject()
+        public IEnumerator IT007_InputSystemUiPressThenDragToWorld_ClearsOwnershipWithoutSelection()
         {
             using var fixture = new PointerBoundaryFixture();
-            var worldPosition = fixture.SelectablePosition;
-            fixture.PlaceUiAt(new Vector2(30f, 30f));
-            QueueMousePosition(fixture.Mouse, worldPosition);
+            var uiPosition = new Vector2(30f, 30f);
+            fixture.PlaceButtonAt(uiPosition);
+
+            fixture.QueueMouseState(uiPosition, true);
+            yield return null;
+            yield return null;
+            Assert.That(
+                fixture.ButtonPointerId,
+                Is.EqualTo(fixture.Mouse.deviceId));
+            Assert.That(
+                fixture.Boundary.GetOwnership(fixture.Mouse.deviceId),
+                Is.EqualTo(UiPointerOwnership.Ui));
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
             yield return null;
 
-            fixture.AssertUiRaycast(worldPosition, false);
-            fixture.Input.NextFrame = new CameraInputFrame(
-                Vector2.zero,
-                0f,
-                true,
-                worldPosition);
+            Assert.That(fixture.ButtonClickCount, Is.EqualTo(0));
+            Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
+            Assert.That(
+                fixture.Boundary.GetOwnership(fixture.Mouse.deviceId),
+                Is.EqualTo(UiPointerOwnership.None));
+        }
+
+        [UnityTest]
+        public IEnumerator IT008_InputSystemWorldTap_SelectsAndClearsOwnership()
+        {
+            using var fixture = new PointerBoundaryFixture();
+            fixture.PlaceButtonAt(new Vector2(30f, 30f));
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
             yield return null;
 
             Assert.That(fixture.Interaction.CurrentSelection, Is.SameAs(fixture.Selectable));
-            Assert.That(fixture.Selectable.IsSelected, Is.True);
+            Assert.That(
+                fixture.Boundary.GetOwnership(fixture.Mouse.deviceId),
+                Is.EqualTo(UiPointerOwnership.None));
         }
 
         [UnityTest]
-        public IEnumerator IT009_ModalSceneBlock_PreventsWorldSelection()
+        public IEnumerator IT009_ModalOverlay_BlocksLowerButtonAndWorld()
         {
             using var fixture = new PointerBoundaryFixture();
+            fixture.PlaceButtonAt(fixture.SelectablePosition);
+            fixture.ShowModalOverlayAt(fixture.SelectablePosition);
             using (fixture.Boundary.AcquireSceneBlock())
             {
-                fixture.Input.NextFrame = new CameraInputFrame(
-                    Vector2.zero,
-                    0f,
-                    true,
-                    fixture.SelectablePosition);
+                fixture.QueueMouseState(fixture.SelectablePosition, true);
+                yield return null;
+                fixture.QueueMouseState(fixture.SelectablePosition, false);
+                yield return null;
                 yield return null;
             }
 
+            Assert.That(fixture.ButtonClickCount, Is.EqualTo(0));
             Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
-            Assert.That(fixture.Selectable.IsSelected, Is.False);
         }
 
         [UnityTest]
-        public IEnumerator IT011_ToastDoesNotBlockWorldSelection()
+        public IEnumerator IT011_ToastOverlayWithoutRaycastTarget_AllowsUnderlyingButtonClick()
         {
             using var fixture = new PointerBoundaryFixture();
-            fixture.Boundary.NotifyToastShown();
-            fixture.Input.NextFrame = new CameraInputFrame(
-                Vector2.zero,
-                0f,
-                true,
-                fixture.SelectablePosition);
+            fixture.PlaceButtonAt(fixture.SelectablePosition);
+            fixture.ShowToastOverlayAt(fixture.SelectablePosition);
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
             yield return null;
 
-            Assert.That(fixture.Interaction.CurrentSelection, Is.SameAs(fixture.Selectable));
-            Assert.That(fixture.Selectable.IsSelected, Is.True);
-        }
-
-        private static void QueueMousePosition(Mouse mouse, Vector2 position)
-        {
-            InputSystem.QueueStateEvent(mouse, new MouseState { position = position });
-            InputSystem.Update();
+            Assert.That(fixture.ButtonClickCount, Is.EqualTo(1));
+            Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
         }
 
         private sealed class PointerBoundaryFixture : System.IDisposable
         {
+            private readonly InputFocusIsolationScope inputFocusScope;
             private readonly GameObject cameraObject;
             private readonly GameObject controllerObject;
             private readonly GameObject selectableObject;
@@ -151,9 +187,15 @@ namespace AnimalCafe.Tests.PlayMode
             private readonly GameObject canvasObject;
             private readonly GameObject eventSystemObject;
             private readonly List<GameObject> disabledEventSystems = new();
+            private readonly RectTransform buttonRect;
+            private readonly Button button;
+            private readonly Image modalOverlay;
+            private readonly Image toastOverlay;
+            private readonly PointerDownRecorder buttonPointerRecorder;
 
             public PointerBoundaryFixture()
             {
+                inputFocusScope = new InputFocusIsolationScope();
                 DisableExistingEventSystems();
 
                 cameraObject = new GameObject("Phase5PointerCamera");
@@ -162,7 +204,7 @@ namespace AnimalCafe.Tests.PlayMode
 
                 controllerObject = new GameObject("Phase5PointerController");
                 Interaction = controllerObject.AddComponent<SceneInteractionController>();
-                Input = controllerObject.AddComponent<CameraInputTestFixture>();
+                Input = controllerObject.AddComponent<MouseCameraInput>();
                 Boundary = new UiPointerBoundary();
                 Interaction.Configure(camera, Input, Boundary);
 
@@ -181,23 +223,28 @@ namespace AnimalCafe.Tests.PlayMode
                     typeof(Canvas),
                     typeof(GraphicRaycaster));
                 canvasObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-                var uiImageObject = new GameObject(
-                    "Phase5PointerUiImage",
-                    typeof(RectTransform),
-                    typeof(CanvasRenderer),
-                    typeof(Image));
-                UiImage = uiImageObject.GetComponent<RectTransform>();
-                UiImage.SetParent(canvasObject.transform, false);
-                UiImage.anchorMin = Vector2.zero;
-                UiImage.anchorMax = Vector2.zero;
-                UiImage.pivot = new Vector2(0.5f, 0.5f);
-                UiImage.sizeDelta = new Vector2(80f, 80f);
-                UiImage.GetComponent<Image>().color = Color.white;
-                UiHook = UiImage.gameObject.AddComponent<UiPointerBoundaryEventHook>();
-                UiHook.Configure(Boundary);
+
+                ButtonObject = CreateRaycastTarget("Phase5PointerButton", out buttonRect);
+                button = ButtonObject.AddComponent<Button>();
+                ButtonObject.AddComponent<UiPointerBoundaryEventHook>().Configure(Boundary);
+                buttonPointerRecorder = ButtonObject.AddComponent<PointerDownRecorder>();
+                button.onClick.AddListener(() => ButtonClickCount++);
+
+                var modalObject = CreateRaycastTarget("Phase5ModalOverlay", out var modalRect);
+                modalOverlay = modalObject.GetComponent<Image>();
+                modalObject.AddComponent<UiPointerBoundaryEventHook>().Configure(Boundary);
+                modalObject.SetActive(false);
+
+                var toastObject = CreateRaycastTarget("Phase5ToastOverlay", out var toastRect);
+                toastOverlay = toastObject.GetComponent<Image>();
+                toastOverlay.raycastTarget = false;
+                toastObject.SetActive(false);
 
                 eventSystemObject = new GameObject("Phase5PointerEventSystem");
                 EventSystem = eventSystemObject.AddComponent<EventSystem>();
+                InputModule = eventSystemObject.AddComponent<InputSystemUIInputModule>();
+                InputModule.UnassignActions();
+                InputModule.AssignDefaultActions();
 
                 Mouse = InputSystem.AddDevice<Mouse>();
                 if (!Mouse.enabled)
@@ -208,45 +255,50 @@ namespace AnimalCafe.Tests.PlayMode
 
             public UiPointerBoundary Boundary { get; }
             public SceneInteractionController Interaction { get; }
-            public CameraInputTestFixture Input { get; }
+            public MouseCameraInput Input { get; }
             public ColorSelectable Selectable { get; }
             public Vector2 SelectablePosition { get; }
-            public RectTransform UiImage { get; }
-            public UiPointerBoundaryEventHook UiHook { get; }
+            public GameObject ButtonObject { get; }
             public EventSystem EventSystem { get; }
+            public InputSystemUIInputModule InputModule { get; }
             public Mouse Mouse { get; }
+            public int ButtonClickCount { get; private set; }
+            public int ButtonPointerId => buttonPointerRecorder.PointerId;
 
-            public void PlaceUiAt(Vector2 screenPosition)
+            public void PlaceButtonAt(Vector2 screenPosition)
             {
-                UiImage.anchoredPosition = screenPosition;
-                Canvas.ForceUpdateCanvases();
+                PlaceAt(buttonRect, screenPosition);
+                ButtonObject.SetActive(true);
             }
 
-            public void SendUiPress(Vector2 screenPosition)
+            public void CloseButtonOnClick()
             {
-                ExecuteEvents.Execute(
-                    UiImage.gameObject,
-                    new PointerEventData(EventSystem)
-                    {
-                        pointerId = PointerInputModule.kMouseLeftId,
-                        position = screenPosition
-                    },
-                    ExecuteEvents.pointerDownHandler);
+                button.onClick.AddListener(() => ButtonObject.SetActive(false));
             }
 
-            public void AssertUiRaycast(Vector2 screenPosition, bool expectedOverUi)
+            public void ShowModalOverlayAt(Vector2 screenPosition)
             {
-                var results = new List<RaycastResult>();
-                EventSystem.RaycastAll(
-                    new PointerEventData(EventSystem) { position = screenPosition },
-                    results);
-                Assert.That(
-                    results.Exists(result => result.gameObject == UiImage.gameObject),
-                    Is.EqualTo(expectedOverUi));
+                PlaceAt(modalOverlay.rectTransform, screenPosition);
+                modalOverlay.gameObject.SetActive(true);
+            }
+
+            public void ShowToastOverlayAt(Vector2 screenPosition)
+            {
+                PlaceAt(toastOverlay.rectTransform, screenPosition);
+                toastOverlay.gameObject.SetActive(true);
+            }
+
+            public void QueueMouseState(Vector2 position, bool leftDown)
+            {
+                Phase5PointerBoundaryPlayModeTests.QueueMouseState(
+                    Mouse,
+                    position,
+                    leftDown);
             }
 
             public void Dispose()
             {
+                InputModule.UnassignActions();
                 if (Mouse != null && Mouse.added)
                 {
                     InputSystem.RemoveDevice(Mouse);
@@ -266,6 +318,31 @@ namespace AnimalCafe.Tests.PlayMode
                         eventSystemObject.SetActive(true);
                     }
                 }
+
+                inputFocusScope.Dispose();
+            }
+
+            private GameObject CreateRaycastTarget(string name, out RectTransform rect)
+            {
+                var gameObject = new GameObject(
+                    name,
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image));
+                rect = gameObject.GetComponent<RectTransform>();
+                rect.SetParent(canvasObject.transform, false);
+                rect.anchorMin = Vector2.zero;
+                rect.anchorMax = Vector2.zero;
+                rect.pivot = new Vector2(0.5f, 0.5f);
+                rect.sizeDelta = new Vector2(100f, 100f);
+                gameObject.GetComponent<Image>().color = Color.white;
+                return gameObject;
+            }
+
+            private static void PlaceAt(RectTransform rect, Vector2 screenPosition)
+            {
+                rect.anchoredPosition = screenPosition;
+                Canvas.ForceUpdateCanvases();
             }
 
             private void DisableExistingEventSystems()
@@ -280,6 +357,52 @@ namespace AnimalCafe.Tests.PlayMode
                         eventSystem.gameObject.SetActive(false);
                     }
                 }
+            }
+        }
+
+        private static void QueueMouseState(Mouse mouse, Vector2 position, bool leftDown)
+        {
+            var state = new MouseState { position = position };
+            if (leftDown)
+            {
+                state = state.WithButton(MouseButton.Left);
+            }
+
+            InputSystem.QueueStateEvent(mouse, state);
+        }
+
+        private sealed class PointerDownRecorder : MonoBehaviour, IPointerDownHandler
+        {
+            public int PointerId { get; private set; } = int.MinValue;
+
+            public void OnPointerDown(PointerEventData eventData)
+            {
+                PointerId = eventData.pointerId;
+            }
+        }
+
+        private sealed class InputFocusIsolationScope : System.IDisposable
+        {
+            private readonly InputSettings.BackgroundBehavior originalBackgroundBehavior;
+            private readonly InputSettings.EditorInputBehaviorInPlayMode originalEditorInputBehavior;
+            private readonly bool originalRunInBackground;
+
+            public InputFocusIsolationScope()
+            {
+                originalBackgroundBehavior = InputSystem.settings.backgroundBehavior;
+                originalEditorInputBehavior = InputSystem.settings.editorInputBehaviorInPlayMode;
+                originalRunInBackground = Application.runInBackground;
+                Application.runInBackground = true;
+                InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+                InputSystem.settings.editorInputBehaviorInPlayMode =
+                    InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            }
+
+            public void Dispose()
+            {
+                InputSystem.settings.backgroundBehavior = originalBackgroundBehavior;
+                InputSystem.settings.editorInputBehaviorInPlayMode = originalEditorInputBehavior;
+                Application.runInBackground = originalRunInBackground;
             }
         }
     }
