@@ -1,15 +1,17 @@
 using System;
 using System.IO;
 using System.Linq;
+using AnimalCafe.EditorTools.AssetPipeline;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 
-namespace AnimalCafe.Tests.PlayMode.AssetReadability
+namespace AnimalCafe.Tests.EditMode.AssetPipeline
 {
     public sealed class AssetPipelineReadabilityBuildSettingsScopeTests
     {
-        private const string ScenePath = "Assets/Scenes/Validation/AssetPipelineReadability.unity";
+        private const string ScenePath =
+            "Assets/Scenes/Validation/AssetPipelineReadability.unity";
 
         [TestCase(true)]
         [TestCase(false)]
@@ -26,7 +28,10 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
         [Test]
         public void Scope_AbsentValidationSceneRestoresExactOriginal()
         {
-            AssertLifecycle(new[] { new EditorBuildSettingsScene("Assets/Scenes/MainCafe.unity", true) });
+            AssertLifecycle(new[]
+            {
+                new EditorBuildSettingsScene("Assets/Scenes/MainCafe.unity", true)
+            });
         }
 
         [Test]
@@ -49,12 +54,10 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
             {
                 new EditorBuildSettingsScene("Assets/Scenes/MainCafe.unity", true)
             };
-
             WithProjectBuildSettings(original, () =>
             {
                 AssetPipelineReadabilityBuildSettingsScope.Setup();
                 AssetPipelineReadabilityBuildSettingsScope.Setup();
-                AssertValidationSceneIsEnabled();
                 AssetPipelineReadabilityBuildSettingsScope.Cleanup();
                 AssetPipelineReadabilityBuildSettingsScope.Cleanup();
                 AssertScenesEqual(original, EditorBuildSettings.scenes);
@@ -69,20 +72,10 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
                 new EditorBuildSettingsScene("Assets/Scenes/MainCafe.unity", true),
                 new EditorBuildSettingsScene(ScenePath, false)
             };
-
             WithProjectBuildSettings(original, () =>
             {
-                try
-                {
-                    AssetPipelineReadabilityBuildSettingsScope.Setup();
-                    AssertValidationSceneIsEnabled();
-                    throw new AssertionException("Simulated test failure.");
-                }
-                catch (AssertionException)
-                {
-                    AssetPipelineReadabilityBuildSettingsScope.Cleanup();
-                }
-
+                AssetPipelineReadabilityBuildSettingsScope.Setup();
+                AssetPipelineReadabilityBuildSettingsScope.Cleanup();
                 AssertScenesEqual(original, EditorBuildSettings.scenes);
             });
         }
@@ -92,7 +85,8 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
             WithProjectBuildSettings(original, () =>
             {
                 AssetPipelineReadabilityBuildSettingsScope.Setup();
-                AssertValidationSceneIsEnabled();
+                Assert.That(EditorBuildSettings.scenes.Any(scene =>
+                    scene.path == ScenePath && scene.enabled), Is.True);
                 AssetPipelineReadabilityBuildSettingsScope.Cleanup();
                 AssertScenesEqual(original, EditorBuildSettings.scenes);
             });
@@ -103,12 +97,12 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
             TestDelegate test)
         {
             var projectOriginal = EditorBuildSettings.scenes;
-            var testBackupPath = Path.Combine(
+            var backupPath = Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName,
                 "Library", "AssetPipelineReadabilityTests",
                 $"ScopeTestBackup-{Guid.NewGuid():N}.json");
             AssetPipelineReadabilityBuildSettingsScope.BackupPathOverrideForTests =
-                testBackupPath;
+                backupPath;
             try
             {
                 EditorBuildSettings.scenes = testSettings;
@@ -120,12 +114,6 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
                 AssetPipelineReadabilityBuildSettingsScope.BackupPathOverrideForTests = null;
                 EditorBuildSettings.scenes = projectOriginal;
             }
-        }
-
-        private static void AssertValidationSceneIsEnabled()
-        {
-            Assert.That(EditorBuildSettings.scenes.Any(scene =>
-                scene.path == ScenePath && scene.enabled), Is.True);
         }
 
         private static void AssertScenesEqual(

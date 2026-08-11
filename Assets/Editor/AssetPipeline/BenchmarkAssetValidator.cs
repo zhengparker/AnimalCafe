@@ -441,12 +441,13 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             var nullTextureMaterial = new Material(shader);
             try
             {
-                for (var propertyIndex = 0; propertyIndex < ShaderUtil.GetPropertyCount(shader); propertyIndex++)
+                for (var propertyIndex = 0; propertyIndex < shader.GetPropertyCount(); propertyIndex++)
                 {
-                    if (ShaderUtil.GetPropertyType(shader, propertyIndex) == ShaderUtil.ShaderPropertyType.TexEnv)
+                    if (shader.GetPropertyType(propertyIndex) ==
+                        UnityEngine.Rendering.ShaderPropertyType.Texture)
                     {
                         nullTextureMaterial.SetTexture(
-                            ShaderUtil.GetPropertyName(shader, propertyIndex),
+                            shader.GetPropertyName(propertyIndex),
                             null);
                     }
                 }
@@ -455,14 +456,15 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 serializedMaterial.Update();
                 serializedNullTextureMaterial.Update();
 
-                for (var propertyIndex = 0; propertyIndex < ShaderUtil.GetPropertyCount(shader); propertyIndex++)
+                for (var propertyIndex = 0; propertyIndex < shader.GetPropertyCount(); propertyIndex++)
                 {
-                    if (ShaderUtil.GetPropertyType(shader, propertyIndex) != ShaderUtil.ShaderPropertyType.TexEnv)
+                    if (shader.GetPropertyType(propertyIndex) !=
+                        UnityEngine.Rendering.ShaderPropertyType.Texture)
                     {
                         continue;
                     }
 
-                    var propertyName = ShaderUtil.GetPropertyName(shader, propertyIndex);
+                    var propertyName = shader.GetPropertyName(propertyIndex);
                     var texture = material.GetTexture(propertyName);
                     if (texture == null)
                     {

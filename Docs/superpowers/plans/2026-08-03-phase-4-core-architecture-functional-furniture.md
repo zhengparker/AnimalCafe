@@ -1,6 +1,6 @@
 # AnimalCafe Phase 4 — Core Architecture & Functional Furniture Models Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 建立正式 `FurnitureDefinition Asset` authoring、Entrance / Surface / Wall contracts、第一批 production assets 与可重复验证 Scene，让后续 P6–P14 能使用稳定数据而不把家具写死在 Scene 中。
 
@@ -99,11 +99,11 @@
 - Consumes: verified `origin/main` after Phase 3 merge。
 - Produces: isolated `codex/phase-4` worktree and recorded baseline counts for every later task。
 
-- [ ] **Step 1: Invoke the required worktree skill**
+- [x] **Step 1: Invoke the required worktree skill**
 
 Read and follow `superpowers:using-git-worktrees` before any branch or worktree command. Resolve `git rev-parse --git-dir`、`--git-common-dir`、current branch、status and existing worktrees first。
 
-- [ ] **Step 2: Verify main and fetch remote state**
+- [x] **Step 2: Verify main and fetch remote state**
 
 Run from `E:\Unity\Project\AnimalCafe`：
 
@@ -118,7 +118,7 @@ git worktree list --porcelain
 
 Expected：main checkout remains on `main`; user-owned `.gitignore` / `AnimalCafe.slnx` changes remain untouched; Phase 3 post-merge commit and the Studio Owner-approved P4 Design / Roadmap / spec / plan documents exist on `origin/main`。If those docs are still uncommitted or not pushed, stop at this gate and ask the Studio Owner to commit / push them through GitHub Desktop; do not create a branch from stale `origin/main`。
 
-- [ ] **Step 3: Create the isolated local branch / worktree**
+- [x] **Step 3: Create the isolated local branch / worktree**
 
 ```powershell
 git worktree add -b codex/phase-4 'E:\Unity\Project\AnimalCafe\.worktrees\phase-4' origin/main
@@ -126,7 +126,7 @@ git worktree add -b codex/phase-4 'E:\Unity\Project\AnimalCafe\.worktrees\phase-
 
 Expected：new worktree reports branch `codex/phase-4`; original checkout stays on `main`。
 
-- [ ] **Step 4: Create the remote branch explicitly authorized by the Studio Owner**
+- [x] **Step 4: Create the remote branch explicitly authorized by the Studio Owner**
 
 Run inside the P4 worktree：
 
@@ -136,7 +136,7 @@ git push -u origin codex/phase-4
 
 Expected：`origin/codex/phase-4` points to the verified starting hash。This push does not authorize later implementation pushes without a fresh request。
 
-- [ ] **Step 5: Run full baseline EditMode**
+- [x] **Step 5: Run full baseline EditMode**
 
 ```powershell
 & 'E:\Unity\Hub\Editor\6000.5.5f1\Editor\Unity.exe' -batchmode -nographics `
@@ -148,7 +148,7 @@ Expected：`origin/codex/phase-4` points to the verified starting hash。This pu
 
 Expected：fresh XML exists; all tests pass; failed / skipped / inconclusive are zero。Licensing timeout without XML is not a test result and must be retried outside the sandbox when approved。
 
-- [ ] **Step 6: Run full baseline PlayMode**
+- [x] **Step 6: Run full baseline PlayMode**
 
 ```powershell
 & 'E:\Unity\Hub\Editor\6000.5.5f1\Editor\Unity.exe' -batchmode -nographics `
@@ -160,7 +160,7 @@ Expected：fresh XML exists; all tests pass; failed / skipped / inconclusive are
 
 Expected：all PlayMode tests pass; the P3 production validator tests remain GREEN。
 
-- [ ] **Step 7: Record the gate**
+- [x] **Step 7: Record the gate**
 
 Report exact hashes、counts、XML paths、limitations and `git status --short`。Do not commit。Suggested checkpoint label：`P4 baseline verified`。
 
@@ -179,7 +179,7 @@ Report exact hashes、counts、XML paths、limitations and `git status --short`�
 - Consumes: existing `FurnitureRotation` and `FurnitureDefinition` validation。
 - Produces: `FurnitureDefinition.FunctionType`、`CardinalDirection.Rotate(FurnitureRotation)`、`CashRegisterSides.EmployeeSide / CustomerSide / QueueDirection`。
 
-- [ ] **Step 1: Write RED tests for backward-compatible Function Type**
+- [x] **Step 1: Write RED tests for backward-compatible Function Type**
 
 ```csharp
 [Test]
@@ -203,11 +203,11 @@ public void FiveArgumentConstructor_PreservesCashRegisterType()
 }
 ```
 
-- [ ] **Step 2: Run focused tests and confirm RED**
+- [x] **Step 2: Run focused tests and confirm RED**
 
 Run EditMode filtered to `AnimalCafe.Tests.Phase4.FurnitureFunctionContractTests`。Expected：compile failure because `FurnitureFunctionType` / new overload do not exist。
 
-- [ ] **Step 3: Implement the minimal compatible enum and overload**
+- [x] **Step 3: Implement the minimal compatible enum and overload**
 
 ```csharp
 public enum FurnitureFunctionType
@@ -220,7 +220,7 @@ public enum FurnitureFunctionType
 
 Keep the existing four-argument constructor and delegate to the new overload with `None`; validate with `Enum.IsDefined`。
 
-- [ ] **Step 4: Write RED tests for direction rotation and opposite sides**
+- [x] **Step 4: Write RED tests for direction rotation and opposite sides**
 
 ```csharp
 [TestCase(CardinalDirection.North, FurnitureRotation.Degrees90, CardinalDirection.East)]
@@ -239,11 +239,11 @@ public void CashRegisterSides_ExposesCustomerSideAsQueueDirection()
 }
 ```
 
-- [ ] **Step 5: Run RED, implement immutable side validation, run GREEN**
+- [x] **Step 5: Run RED, implement immutable side validation, run GREEN**
 
 `CashRegisterSides` constructor must reject same or perpendicular sides and expose `Rotate(FurnitureRotation)` returning a new value。Run focused tests, existing `FurnitureDefinitionTests`, `GridValueTests` and `FurnitureDefinitionCatalogTests`。
 
-- [ ] **Step 6: Review checkpoint**
+- [x] **Step 6: Review checkpoint**
 
 Report files and fresh counts。Do not commit。Suggested commit message for Studio Owner：`feat: add furniture function direction contracts`。
 
@@ -263,7 +263,7 @@ Report files and fresh counts。Do not commit。Suggested commit message for Stu
 - Consumes: `GridPosition`、`GridSize`、existing atomic placement transactions。
 - Produces: `CafeLayout.AddReservation(LayoutReservation)`、`Reservations` read-only view、`PlacementFailureReason.ReservedEntranceClearance`。
 
-- [ ] **Step 1: Write RED value-object tests**
+- [x] **Step 1: Write RED value-object tests**
 
 ```csharp
 [Test]
@@ -281,11 +281,11 @@ public void EntranceReservation_ContainsAllFourCells()
 
 Add null / malformed ID、unknown type、overflow-safe bounds and non-`2 × 2` P4 fixture validator cases without hard-coding all future reservations to `2 × 2` in the general value object。
 
-- [ ] **Step 2: Run RED and implement `LayoutReservation`**
+- [x] **Step 2: Run RED and implement `LayoutReservation`**
 
 Use `long` when calculating right / top boundaries。Expose immutable Id、Type、Origin、Size and `Contains(GridPosition)`。
 
-- [ ] **Step 3: Write RED CafeLayout transaction tests**
+- [x] **Step 3: Write RED CafeLayout transaction tests**
 
 ```csharp
 [Test]
@@ -306,15 +306,15 @@ public void PlaceFurniture_IntersectingEntranceClearance_IsRejectedAtomically()
 
 Add Move / Rotate failure fixtures proving original instance and occupied cells remain unchanged；add a query proving reservation does not mark cells as furniture occupancy or non-walkable。
 
-- [ ] **Step 4: Run RED and implement minimal CafeLayout reservation ownership**
+- [x] **Step 4: Run RED and implement minimal CafeLayout reservation ownership**
 
 Add private list / dictionary, read-only view and duplicate-ID validation。Check reservations after unlocked-region validation and before overlap so the reason remains specific。
 
-- [ ] **Step 5: Run focused and full P2 regression**
+- [x] **Step 5: Run focused and full P2 regression**
 
 Expected：new reservation suite GREEN; all existing placement tests unchanged; existing constructor behavior unchanged when no reservations exist。
 
-- [ ] **Step 6: Review checkpoint**
+- [x] **Step 6: Review checkpoint**
 
 Do not commit。Suggested commit message：`feat: reserve entrance clearance cells`。
 
@@ -333,7 +333,7 @@ Do not commit。Suggested commit message：`feat: reserve entrance clearance cel
 - Consumes: stable ID validation patterns but no `CafeLayout` occupancy dictionary。
 - Produces: `WallSurfaceLayout.TryPlace / TryMove / TryRemove` with immutable state and explicit wall failure reasons local to this subsystem。
 
-- [ ] **Step 1: Write RED tests for positive Wall values**
+- [x] **Step 1: Write RED tests for positive Wall values**
 
 ```csharp
 [Test]
@@ -350,19 +350,19 @@ public void OneByTwoFootprint_OccupiesSameColumnAcrossBothRows()
 }
 ```
 
-- [ ] **Step 2: Write RED boundary / atomic tests**
+- [x] **Step 2: Write RED boundary / atomic tests**
 
 Cover zero / negative columns、rows、footprints；`1 × 2` starting at row 1；`2 × 1` starting at column 7；overlap；cross-surface attempt；duplicate item ID；failed move preserving origin；remove releasing exact owner；repeated remove safe failure。
 
-- [ ] **Step 3: Run RED and implement minimal domain**
+- [x] **Step 3: Run RED and implement minimal domain**
 
 Use a private `Dictionary<WallSlotPosition,string>` owned only by `WallSurfaceLayout`。Do not reference `CafeLayout` or `FurnitureRotation`。A Wall item has no rotation field in P4。
 
-- [ ] **Step 4: Run focused GREEN and mutation regression**
+- [x] **Step 4: Run focused GREEN and mutation regression**
 
 Assert Floor layout occupancy remains unchanged in a fixture holding both owners。Expected：all focused cases GREEN with no coupling between owners。
 
-- [ ] **Step 5: Review checkpoint**
+- [x] **Step 5: Review checkpoint**
 
 Do not commit。Suggested commit message：`feat: add wall slot occupancy domain`。
 
@@ -380,7 +380,7 @@ Do not commit。Suggested commit message：`feat: add wall slot occupancy domain
 - Consumes: Task 1 `FurnitureFunctionType` and existing runtime catalogue。
 - Produces: `FurnitureDefinitionAsset.ToRuntimeDefinition()`、`FurnitureContentCatalog.BuildRuntimeCatalog()`、`TryGetPrefab(string, out GameObject)`。
 
-- [ ] **Step 1: Write RED conversion tests using serialized fields**
+- [x] **Step 1: Write RED conversion tests using serialized fields**
 
 ```csharp
 [Test]
@@ -401,11 +401,11 @@ public void ToRuntimeDefinition_PreservesInspectorAuthoredValues()
 
 Add exact tests for missing Prefab、zero / negative / oversized sizes、invalid enum values and source Asset non-mutation。
 
-- [ ] **Step 2: Run RED and implement beginner-readable ScriptableObject**
+- [x] **Step 2: Run RED and implement beginner-readable ScriptableObject**
 
 Use `[CreateAssetMenu(menuName = "AnimalCafe/Content/Furniture Definition")]` and `[Min(1)]` for Width / Depth, while retaining runtime validation as authority。Expose read-only properties for validator use。
 
-- [ ] **Step 3: Write RED catalogue mapping tests**
+- [x] **Step 3: Write RED catalogue mapping tests**
 
 ```csharp
 [Test]
@@ -423,15 +423,15 @@ public void BuildRuntimeCatalog_MapsSameStableIdToDefinitionAndPrefab()
 
 Add duplicate ID、null entry、failed build does not partially cache and deterministic list-order cases。
 
-- [ ] **Step 4: Implement minimal adapter and run GREEN**
+- [x] **Step 4: Implement minimal adapter and run GREEN**
 
 Keep Unity `GameObject` references out of `FurnitureDefinition`。Build runtime Definition list first, validate all entries, then publish lookup snapshots atomically。
 
-- [ ] **Step 5: Run full existing catalogue regression**
+- [x] **Step 5: Run full existing catalogue regression**
 
 Expected：existing pure C# catalogue behavior remains unchanged。
 
-- [ ] **Step 6: Review checkpoint**
+- [x] **Step 6: Review checkpoint**
 
 Do not commit。Suggested commit message：`feat: add furniture definition asset authoring`。
 
@@ -452,7 +452,7 @@ Do not commit。Suggested commit message：`feat: add furniture definition asset
 - Consumes: stable IDs、Task 1 directions、Task 2 reservation and Task 3 Wall values。
 - Produces: authoring data readable by Task 6 validator and Task 8 scene builder。
 
-- [ ] **Step 1: Write RED component tests**
+- [x] **Step 1: Write RED component tests**
 
 ```csharp
 [Test]
@@ -472,19 +472,19 @@ public void EntranceAuthoring_CreatesExactTwoByTwoReservation()
 }
 ```
 
-- [ ] **Step 2: Add RED tests for Cash Register sides and Wall defaults**
+- [x] **Step 2: Add RED tests for Cash Register sides and Wall defaults**
 
 Require exactly one Employee and one Customer marker at opposite cardinal local directions。Require Wall `Columns = 8`、`Rows = 2`、`SlotSize = 1f` only in the production fixture validator, not in the general reusable component constructor。
 
-- [ ] **Step 3: Implement minimal components and gizmos**
+- [x] **Step 3: Implement minimal components and gizmos**
 
 Use `OnDrawGizmosSelected` only; no runtime update loop。Markers contain data and visual editor hints, not gameplay state。Do not add a QueueDirection marker。
 
-- [ ] **Step 4: Run focused tests and compile PlayMode assembly**
+- [x] **Step 4: Run focused tests and compile PlayMode assembly**
 
 Expected：components serialize and expose data; no marker adds Renderer、Collider or runtime behavior inadvertently。
 
-- [ ] **Step 5: Review checkpoint**
+- [x] **Step 5: Review checkpoint**
 
 Do not commit。Suggested commit message：`feat: add phase 4 spatial authoring markers`。
 
@@ -504,7 +504,7 @@ Do not commit。Suggested commit message：`feat: add phase 4 spatial authoring 
 - Consumes: Tasks 4–5 authoring objects and existing P3 Mesh / Material validation lessons。
 - Produces: `Phase4AssetValidator.ValidateAll()` and `ValidateFurnitureDefinition(FurnitureDefinitionAsset)` with searchable issue codes。
 
-- [ ] **Step 1: Write RED issue/report tests**
+- [x] **Step 1: Write RED issue/report tests**
 
 ```csharp
 [Test]
@@ -519,11 +519,11 @@ public void MissingPrefab_ReportsSpecificAssetAndIssueCode()
 }
 ```
 
-- [ ] **Step 2: Add RED contract matrices**
+- [x] **Step 2: Add RED contract matrices**
 
 Create focused fixtures for Definition IDs / sizes / surface / Function Type；Counter Slot count / duplicate ID / inactive descendant / bounds；Coffee Forward；Cash Register opposite sides；Wall dimensions / overlap / cross-corner；Entrance `2 × 2` / bounds；technical Model / Material / Shader / Texture / triangles / Collider / root transform / unexpected Camera / Light / mesh。
 
-- [ ] **Step 3: Implement validator in small private methods**
+- [x] **Step 3: Implement validator in small private methods**
 
 Required public issue codes include：
 
@@ -543,11 +543,11 @@ MissingReference
 
 Use `Mesh.GetIndexCount(subMesh)` for triangle totals so non-readable Meshes work。Inspect full inactive descendant trees with `GetComponentsInChildren<T>(true)`。Do not call or weaken `BenchmarkAssetValidator`。
 
-- [ ] **Step 4: Run RED / GREEN per validator family**
+- [x] **Step 4: Run RED / GREEN per validator family**
 
 Do not implement all checks before observing focused RED。Run one fixture family at a time, then full `Phase4AssetValidatorTests` and P3 validator suites。
 
-- [ ] **Step 5: Add menu summary**
+- [x] **Step 5: Add menu summary**
 
 Menu items：
 
@@ -558,7 +558,7 @@ AnimalCafe/Phase 4/Build Validation Scene
 
 Log exact valid / invalid asset counts and issue list；do not modify invalid assets。
 
-- [ ] **Step 6: Review checkpoint**
+- [x] **Step 6: Review checkpoint**
 
 Do not commit。Suggested commit message：`test: add phase 4 production validation`。
 
@@ -578,7 +578,7 @@ Do not commit。Suggested commit message：`test: add phase 4 production validat
 - Consumes: approved Work Table source、new vintage GLB、Task 6 technical rules。
 - Produces: repeatable production Blender / FBX / Texture inputs for Prefab assembly。
 
-- [ ] **Step 1: Write RED production-path tests**
+- [x] **Step 1: Write RED production-path tests**
 
 ```csharp
 [Test]
@@ -593,23 +593,23 @@ public void ProductionInputs_UseApprovedCashRegisterAndNotOldPosSource()
 
 Add expected production FBX names、size rules and exact texture maximum cases。
 
-- [ ] **Step 2: Create Counter Blender source from approved Work Table source**
+- [x] **Step 2: Create Counter Blender source from approved Work Table source**
 
-Use Blender `5.2.0 LTS`。Uniform-scale visual bounds from `0.90 × 0.65 × 0.90` to approximately `1.00 × 0.72 × 1.00 m`；Apply Scale；bottom-center origin；forward `+Y` in Blender for Unity export contract；preserve approved visual material source；reopen the saved `.blend` and remeasure。
+Use Blender `5.2.0 LTS`。Studio Owner approved controlled non-uniform scaling on 2026-08-04 after the authoritative Work Table source was measured at approximately `0.781529 × 0.650000 × 0.781529 m` in Unity axes and proved unable to reach both targets uniformly。Scale the derivative by controlled per-axis factors to approximately `1.00 × 0.72 × 1.00 m`；Apply Scale so the saved object and Unity root return to `1,1,1`；bottom-center origin；forward `+Y` in Blender for Unity export contract；preserve approved visual material source；reopen the saved `.blend` and remeasure。
 
-- [ ] **Step 3: Create Cash Register Blender source from the approved GLB**
+- [x] **Step 3: Create Cash Register Blender source from the approved GLB**
 
 Import only the high-detail terminal mesh；remove raw Cube、Camera、Light；uniform-scale to approximately `0.43 × 0.45 × 0.26 m`；bottom-center origin；choose Employee screen as forward；optimize only if triangle count exceeds `6000` after cleanup；resize Base Color to `512²` without overwriting the raw GLB；save and reopen `.blend`。
 
-- [ ] **Step 4: Export production FBX / textures**
+- [x] **Step 4: Export production FBX / textures**
 
 Use Blender Z-up and FBX `Forward -Z / Up Y` so Unity root forward is `+Z`。Export only intended meshes; do not embed Camera / Light。Keep raw GLB unchanged。
 
-- [ ] **Step 5: Run automated technical validation**
+- [x] **Step 5: Run automated technical validation**
 
 Expected Counter and Cash Register bounds within approved tolerances；Cash Register ≤ `6000` triangles；texture ≤ `1024²` and target `512²`；root scale one after Unity import。
 
-- [ ] **Step 6: Art / Technical Art review checkpoint**
+- [x] **Step 6: Art / Technical Art review checkpoint**
 
 Provide before / after dimensions、triangles、texture size、materials and preview renders。Do not commit。Suggested commit message：`art: add phase 4 counter and cash register sources`。
 
@@ -626,7 +626,7 @@ Provide before / after dimensions、triangles、texture size、materials and pre
 - Consumes: Tasks 4–7。
 - Produces: formal Work Table、Counter、Coffee Machine、Cash Register Definitions；Cup visual registration；Window Definition；one Furniture Content Catalogue。
 
-- [ ] **Step 1: Write RED expected-content test**
+- [x] **Step 1: Write RED expected-content test**
 
 ```csharp
 [Test]
@@ -644,27 +644,27 @@ public void BuildProductionContent_CreatesExactlyApprovedFurnitureDefinitions()
 }
 ```
 
-- [ ] **Step 2: Run RED and implement idempotent material / Prefab assembly**
+- [x] **Step 2: Run RED and implement idempotent material / Prefab assembly**
 
 Create production variants without renaming or overwriting P3 benchmark Prefabs。Add one Counter `SurfaceSlotMarker`；Coffee uses exactly one validated Forward；Cash Register gets exactly one Employee and one Customer marker with opposite directions。
 
-- [ ] **Step 3: Build Definition Assets and catalogue atomically**
+- [x] **Step 3: Build Definition Assets and catalogue atomically**
 
 Use exact Footprints / surfaces / Function Types from spec。If any required Prefab is missing or invalid, abort before publishing catalogue changes。
 
-- [ ] **Step 4: Create long-Counter fixture**
+- [x] **Step 4: Create long-Counter fixture**
 
 Create validation-only `1 × 3` parent fixture with one stable instance identity and `slot.0 / slot.1 / slot.2` markers。Do not add it to final content catalogue unless a formal Definition is explicitly approved later。
 
-- [ ] **Step 5: Run builder twice and compare results**
+- [x] **Step 5: Run builder twice and compare results**
 
 Expected：no duplicate Assets、Definitions、markers or catalogue entries；stable GUID-bearing Unity Assets remain at same paths。
 
-- [ ] **Step 6: Run Phase 4 and P3 validators**
+- [x] **Step 6: Run Phase 4 and P3 validators**
 
 Expected：all P4 production content valid; P3 benchmark validator still `3 / 3` valid。
 
-- [ ] **Step 7: Review checkpoint**
+- [x] **Step 7: Review checkpoint**
 
 Do not commit。Suggested commit message：`feat: build phase 4 furniture content`。
 
@@ -682,7 +682,7 @@ Do not commit。Suggested commit message：`feat: build phase 4 furniture conten
 - Consumes: Tasks 2–6 and palette B。
 - Produces: deterministic Scene fixture with stable names / IDs consumed by PlayMode tests and manual QA。
 
-- [ ] **Step 1: Write RED scene-shape tests**
+- [x] **Step 1: Write RED scene-shape tests**
 
 ```csharp
 [Test]
@@ -698,23 +698,23 @@ public void ConfigureScene_CreatesExactEnvironmentContract()
 }
 ```
 
-- [ ] **Step 2: Add RED idempotence / isolation tests**
+- [x] **Step 2: Add RED idempotence / isolation tests**
 
 Run configure twice and assert exactly one root、Floor、two Walls、Window、Entrance、Camera and fixture group。Assert no MainCafe Scene modification and no Build Settings mutation。
 
-- [ ] **Step 3: Implement environment Materials and geometry**
+- [x] **Step 3: Implement environment Materials and geometry**
 
 Build Floor aligned to `8 × 8` cells；two visible walls only；physical wall height about `3 m`；Wall authoring origin places lower slots at `0.5 m`；Window on Back-right lower center；Entrance at open front with exact `2 × 2` overlay。Use simple functional Entrance visual, not formal VFX。
 
-- [ ] **Step 4: Add fixture groups**
+- [x] **Step 4: Add fixture groups**
 
 Include three adjacent Counter modules、one `1 × 3` Counter fixture、Coffee Machine at four rotations、Cash Register at four rotations、valid / invalid Wall items and overlap / corner examples。Keep invalid fixtures clearly separated and disabled by default where they would fail production validation。
 
-- [ ] **Step 5: Run scene tests and save deterministically**
+- [x] **Step 5: Run scene tests and save deterministically**
 
 Expected：setup twice yields identical counts and stable IDs；Scene saves only after validation succeeds。
 
-- [ ] **Step 6: Review checkpoint**
+- [x] **Step 6: Review checkpoint**
 
 Do not commit。Suggested commit message：`feat: add phase 4 validation environment`。
 
@@ -731,7 +731,7 @@ Do not commit。Suggested commit message：`feat: add phase 4 validation environ
 - Consumes: saved Task 9 validation Scene and production content。
 - Produces: runtime smoke evidence without permanently editing Build Settings。
 
-- [ ] **Step 1: Write RED PlayMode environment tests**
+- [x] **Step 1: Write RED PlayMode environment tests**
 
 ```csharp
 [UnityTest]
@@ -747,19 +747,19 @@ public IEnumerator Phase4Scene_LoadsWithExactStableEnvironment()
 
 Add tests for production catalogue / Prefab resolution、Entrance Collider not covering clearance、Floor selection raycast layer and no missing scripts。
 
-- [ ] **Step 2: Implement temporary Build Settings scope**
+- [x] **Step 2: Implement temporary Build Settings scope**
 
 Copy the proven disposal pattern, not the P3 names。Add Phase4 Scene only for the test lifetime and restore the exact prior Build Settings list in `Dispose` / `finally`。
 
-- [ ] **Step 3: Run focused PlayMode RED / GREEN**
+- [x] **Step 3: Run focused PlayMode RED / GREEN**
 
 Expected：tests fail before scene/build scope exists, then pass with no persistent Build Settings change。
 
-- [ ] **Step 4: Run all PlayMode regression**
+- [x] **Step 4: Run all PlayMode regression**
 
 Expected：Phase 0 controls、MainCafe、P3 readability and new P4 tests all GREEN。
 
-- [ ] **Step 5: Review checkpoint**
+- [x] **Step 5: Review checkpoint**
 
 Do not commit。Suggested commit message：`test: verify phase 4 scene integration`。
 
@@ -775,31 +775,31 @@ Do not commit。Suggested commit message：`test: verify phase 4 scene integrati
 - Consumes: Tasks 1–10 complete implementation。
 - Produces: traceable coverage map for approved `N01–N69` and `B01–B112`。
 
-- [ ] **Step 1: Create a coverage table inside the test report, not new behavior**
+- [x] **Step 1: Create a coverage table inside the test report, not new behavior**
 
 Map each approved ID to an automated test method or manual gate。No approved ID may disappear merely because multiple assertions share one method。
 
-- [ ] **Step 2: Run focused P4 EditMode**
+- [x] **Step 2: Run focused P4 EditMode**
 
 Use `-testFilter AnimalCafe.Tests.Phase4` and fresh XML。Expected：all P4 EditMode tests GREEN。
 
-- [ ] **Step 3: Run full EditMode**
+- [x] **Step 3: Run full EditMode**
 
 Expected：all existing + P4 tests pass；failed / skipped / inconclusive zero。
 
-- [ ] **Step 4: Run focused and full PlayMode**
+- [x] **Step 4: Run focused and full PlayMode**
 
 Expected：P4 focused and full PlayMode pass；Build Settings restored exactly。
 
-- [ ] **Step 5: Run production validators**
+- [x] **Step 5: Run production validators**
 
 Run P3 benchmark and P4 production validation。Expected：P3 `3 / 3` valid and all approved P4 production assets valid with zero issues。
 
-- [ ] **Step 6: Request independent code / asset review**
+- [x] **Step 6: Request independent code / asset review**
 
 Use `superpowers:requesting-code-review` after implementation is complete。Reproduce every finding before changing code；use `superpowers:receiving-code-review` for unclear or questionable feedback。Any bugfix returns to correct RED → GREEN。
 
-- [ ] **Step 7: Review checkpoint**
+- [x] **Step 7: Review checkpoint**
 
 Do not commit。Suggested commit message：`test: complete phase 4 regression coverage`。
 
@@ -817,7 +817,7 @@ Do not commit。Suggested commit message：`test: complete phase 4 regression co
 - Consumes: stable final menu paths、Scene、assets and test evidence。
 - Produces: beginner runbook、manual `M01–M88` record and accurate project truth。
 
-- [ ] **Step 1: Write the beginner runbook with exact actions**
+- [x] **Step 1: Write the beginner runbook with exact actions**
 
 The guide must include：
 
@@ -834,27 +834,27 @@ Exit Play Mode and rerun validators
 
 Explain Inspector identifiers in Chinese while preserving English field names。
 
-- [ ] **Step 2: Confirm Cash Register use rights**
+- [x] **Step 2: Confirm Cash Register use rights**
 
 Studio Owner must explicitly record permission for development and future commercial release。Without this, Art gate is Blocked even if tests pass。
 
-- [ ] **Step 3: Execute grouped manual checks**
+- [x] **Step 3: Execute grouped manual checks**
 
 Record `Passed / Failed / Blocked / justified Not Applicable` for：Inspector、Floor / Wall / Entrance、Counter、Coffee Machine、Cash Register、Window、Camera / palette、MainCafe regression and Console。One operation may satisfy multiple IDs, but evidence must list all IDs covered。
 
-- [ ] **Step 4: Fix any manual failure through RED / GREEN**
+- [x] **Step 4: Fix any manual failure through RED / GREEN**
 
 Visual-only failures require a validator fixture or explicit before / after screenshot when automation is not meaningful。Rerun the affected group and full relevant regression。
 
-- [ ] **Step 5: Run verification-before-completion**
+- [x] **Step 5: Run verification-before-completion**
 
 Invoke `superpowers:verification-before-completion`。Collect fresh final EditMode XML、PlayMode XML、P3 validator、P4 validator、Git status and manual record。Do not claim complete from older output。
 
-- [ ] **Step 6: Update Roadmap only after the Studio Owner accepts**
+- [x] **Step 6: Update Roadmap only after the Studio Owner accepts**
 
 Set Phase 4 `Completed` only when all required automated / manual / rights gates pass。Record exact counts、known limitations and next gate。Do not start Phase 5 automatically。
 
-- [ ] **Step 7: Final handoff**
+- [x] **Step 7: Final handoff**
 
 List modified / new files、binary assets、tests、manual evidence、remaining limitations and suggested commit groups。Do not commit、push、merge、delete branch or remove worktree without a new explicit request。
 

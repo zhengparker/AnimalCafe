@@ -48,6 +48,20 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         }
 
         [Test]
+        public void ValidatorSource_DoesNotUseObsoleteShaderUtilPropertyApis()
+        {
+            var sourcePath = Path.Combine(
+                Application.dataPath,
+                "Editor/AssetPipeline/BenchmarkAssetValidator.cs");
+            var source = File.ReadAllText(sourcePath);
+
+            StringAssert.DoesNotContain("ShaderUtil.GetPropertyCount", source);
+            StringAssert.DoesNotContain("ShaderUtil.GetPropertyType", source);
+            StringAssert.DoesNotContain("ShaderUtil.GetPropertyName", source);
+            StringAssert.DoesNotContain("ShaderUtil.ShaderPropertyType", source);
+        }
+
+        [Test]
         public void CreatePrefab_WithPathSeparatorRejectsNameBeforeCreatingAssets()
         {
             fixture.DeleteGeneratedAssets();

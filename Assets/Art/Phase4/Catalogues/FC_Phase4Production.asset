@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b6d0a146c72a6f45b1320f1d3c8c303, type: 3}
+  m_Name: FC_Phase4Production
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Content.FurnitureContentCatalog
+  entries:
+  - {fileID: 11400000, guid: 829415979f805b049b9ac73546af171d, type: 2}
+  - {fileID: 11400000, guid: 8f6b3c69d942ab34b95ec2784d89668a, type: 2}
+  - {fileID: 11400000, guid: 3017da14d4ee0e343886a1bc03d6745b, type: 2}
+  - {fileID: 11400000, guid: a8e2fed11cff997409b09ed48e50d27c, type: 2}

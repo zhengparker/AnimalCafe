@@ -8,12 +8,15 @@ namespace AnimalCafe.Layout
         private readonly FurnitureDefinitionCatalog definitionCatalog;
         private readonly List<LayoutRegion> unlockedRegions;
         private readonly Dictionary<string, LayoutRegion> regionsById;
+        private readonly List<LayoutReservation> reservations;
+        private readonly Dictionary<string, LayoutReservation> reservationsById;
         private readonly List<FurnitureInstance> furnitureInstances;
         private readonly Dictionary<string, FurnitureInstance> furnitureInstancesById;
         private readonly Dictionary<GridPosition, string> occupantByCell;
 
         public GridSettings GridSettings { get; }
         public IReadOnlyList<LayoutRegion> UnlockedRegions { get; }
+        public IReadOnlyList<LayoutReservation> Reservations { get; }
         public IReadOnlyList<FurnitureInstance> FurnitureInstances { get; }
         public int OccupiedCellCount => occupantByCell.Count;
 
@@ -28,12 +31,16 @@ namespace AnimalCafe.Layout
 
             unlockedRegions = new List<LayoutRegion>();
             regionsById = new Dictionary<string, LayoutRegion>(StringComparer.Ordinal);
+            reservations = new List<LayoutReservation>();
+            reservationsById =
+                new Dictionary<string, LayoutReservation>(StringComparer.Ordinal);
             furnitureInstances = new List<FurnitureInstance>();
             furnitureInstancesById =
                 new Dictionary<string, FurnitureInstance>(StringComparer.Ordinal);
             occupantByCell = new Dictionary<GridPosition, string>();
 
             UnlockedRegions = unlockedRegions.AsReadOnly();
+            Reservations = reservations.AsReadOnly();
             FurnitureInstances = furnitureInstances.AsReadOnly();
         }
 
@@ -53,6 +60,31 @@ namespace AnimalCafe.Layout
 
             regionsById.Add(region.Id, region);
             unlockedRegions.Add(region);
+        }
+
+        public void AddReservation(LayoutReservation reservation)
+        {
+            if (reservation == null)
+            {
+                throw new ArgumentNullException(nameof(reservation));
+            }
+
+            if (reservationsById.ContainsKey(reservation.Id))
+            {
+                throw new ArgumentException(
+                    $"Duplicate Reservation ID '{reservation.Id}'.",
+                    nameof(reservation));
+            }
+
+            if (ReservationIntersectsFurniture(reservation))
+            {
+                throw new ArgumentException(
+                    $"Reservation ID '{reservation.Id}' overlaps placed furniture.",
+                    nameof(reservation));
+            }
+
+            reservationsById.Add(reservation.Id, reservation);
+            reservations.Add(reservation);
         }
 
         public PlacementResult PlaceFurniture(FurnitureInstance instance)
@@ -314,6 +346,12 @@ namespace AnimalCafe.Layout
                         PlacementFailureReason.OutOfUnlockedRegion);
                 }
 
+                if (IsCellReserved(cell))
+                {
+                    return PlacementResult.Failure(
+                        PlacementFailureReason.ReservedEntranceClearance);
+                }
+
                 if (occupantByCell.TryGetValue(cell, out var occupantId) &&
                     !string.Equals(
                         occupantId,
@@ -326,6 +364,32 @@ namespace AnimalCafe.Layout
             }
 
             return PlacementResult.Success();
+        }
+
+        private bool IsCellReserved(GridPosition cell)
+        {
+            foreach (var reservation in reservations)
+            {
+                if (reservation.Contains(cell))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool ReservationIntersectsFurniture(LayoutReservation reservation)
+        {
+            foreach (var occupiedCell in occupantByCell.Keys)
+            {
+                if (reservation.Contains(occupiedCell))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void ValidateInstanceId(string instanceId)

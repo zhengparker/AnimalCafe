@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-namespace AnimalCafe.Tests.PlayMode.AssetReadability
+namespace AnimalCafe.EditorTools.AssetPipeline
 {
     public static class AssetPipelineReadabilityBuildSettingsScope
     {
@@ -13,6 +13,7 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
         private static readonly string DefaultBackupPath = Path.Combine(
             Directory.GetParent(Application.dataPath).FullName,
             "Library", "AssetPipelineReadabilityTests", "BuildSettingsBackup.json");
+
         internal static string BackupPathOverrideForTests { get; set; }
 
         private static string BackupPath =>
@@ -33,7 +34,10 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
             var existing = Array.FindIndex(temporary, scene => scene.path == ScenePath);
             if (existing < 0)
             {
-                temporary = temporary.Concat(new[] { new EditorBuildSettingsScene(ScenePath, true) }).ToArray();
+                temporary = temporary.Concat(new[]
+                {
+                    new EditorBuildSettingsScene(ScenePath, true)
+                }).ToArray();
             }
             else
             {

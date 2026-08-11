@@ -1,7 +1,9 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using AnimalCafe.Core.Events;
 using AnimalCafe.Core.Time;
+using AnimalCafe.Diagnostics;
 using AnimalCafe.Input;
 using CafeCameraController = AnimalCafe.Camera.CafeCameraController;
 using CameraSettings = AnimalCafe.Camera.CameraSettings;
@@ -12,6 +14,7 @@ using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -294,14 +297,55 @@ namespace AnimalCafe.Tests.PlayMode
         public void ColorSelectable_SelectAndDeselectUpdateState()
         {
             var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var material = AssignPortableTestMaterial(cube);
+            try
+            {
+                var selectable = cube.AddComponent<ColorSelectable>();
+
+                selectable.Select();
+                Assert.That(selectable.IsSelected, Is.True);
+
+                selectable.Deselect();
+                Assert.That(selectable.IsSelected, Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(cube);
+            }
+        }
+
+        [Test]
+        public void ColorSelectable_ConfigureBindsRendererAndSupportsSelection()
+        {
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var renderer = cube.GetComponent<MeshRenderer>();
+            var material = AssignPortableTestMaterial(cube);
             var selectable = cube.AddComponent<ColorSelectable>();
 
-            selectable.Select();
-            Assert.That(selectable.IsSelected, Is.True);
+            try
+            {
+                selectable.Configure(renderer);
 
-            selectable.Deselect();
-            Assert.That(selectable.IsSelected, Is.False);
-            Object.DestroyImmediate(cube);
+                var targetRendererField = typeof(ColorSelectable).GetField(
+                    "targetRenderer",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(targetRendererField, Is.Not.Null);
+                Assert.That(
+                    targetRendererField.GetValue(selectable),
+                    Is.SameAs(renderer));
+
+                selectable.Select();
+                Assert.That(selectable.IsSelected, Is.True);
+                selectable.Deselect();
+                Assert.That(selectable.IsSelected, Is.False);
+                LogAssert.NoUnexpectedReceived();
+            }
+            finally
+            {
+                Object.DestroyImmediate(material);
+                Object.DestroyImmediate(cube);
+            }
         }
 
         [UnityTest]
@@ -350,9 +394,11 @@ namespace AnimalCafe.Tests.PlayMode
             interaction.Configure(unityCamera, null);
 
             var cubeA = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var materialA = AssignPortableTestMaterial(cubeA);
             cubeA.transform.position = new Vector3(-1f, 0f, 0f);
             var selectableA = cubeA.AddComponent<ColorSelectable>();
             var cubeB = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var materialB = AssignPortableTestMaterial(cubeB);
             cubeB.transform.position = new Vector3(1f, 0f, 0f);
             var selectableB = cubeB.AddComponent<ColorSelectable>();
             Physics.SyncTransforms();
@@ -371,6 +417,8 @@ namespace AnimalCafe.Tests.PlayMode
 
             Object.DestroyImmediate(cubeA);
             Object.DestroyImmediate(cubeB);
+            Object.DestroyImmediate(materialA);
+            Object.DestroyImmediate(materialB);
             Object.DestroyImmediate(interactionObject);
             Object.DestroyImmediate(cameraObject);
         }
@@ -626,8 +674,106 @@ namespace AnimalCafe.Tests.PlayMode
 
             var runtimeRoot = GameObject.Find("Phase0_Runtime");
             var canvas = GameObject.Find("Phase0_TimeControls");
+            var reviewRoot = GameObject.Find(
+                "TEMP_P4_ManualReviewFixtures_DELETE_LATER");
 
             Assert.That(CountLoadedSceneObjects("Phase0_Runtime"), Is.EqualTo(1));
+            Assert.That(
+                CountLoadedSceneObjects(
+                    "TEMP_P4_ManualReviewFixtures_DELETE_LATER"),
+                Is.EqualTo(1));
+            Assert.That(reviewRoot, Is.Not.Null);
+            Assert.That(
+                reviewRoot.scene,
+                Is.EqualTo(SceneManager.GetSceneByName("MainCafe")));
+            Assert.That(reviewRoot.transform.childCount, Is.EqualTo(2));
+            Assert.That(
+                reviewRoot.transform.position,
+                Is.EqualTo(Vector3.zero));
+            Assert.That(
+                reviewRoot.transform.rotation,
+                Is.EqualTo(Quaternion.identity));
+            Assert.That(
+                reviewRoot.transform.localScale,
+                Is.EqualTo(Vector3.one));
+
+            var moving = reviewRoot.transform.Find("ReviewCube_Moving");
+            var stationary = reviewRoot.transform.Find("ReviewCube_Static");
+            Assert.That(moving, Is.Not.Null);
+            Assert.That(stationary, Is.Not.Null);
+            Assert.That(
+                stationary.localPosition,
+                Is.EqualTo(new Vector3(0.5f, 0.5f, 2f)));
+
+            var mover = moving.GetComponent<ManualReviewPingPongMover>();
+            Assert.That(mover, Is.Not.Null);
+            mover.ResetToStart();
+            Assert.That(
+                moving.localPosition,
+                Is.EqualTo(new Vector3(-2f, 0.5f, -1f)));
+            Assert.That(
+                mover.LocalPointA,
+                Is.EqualTo(new Vector3(-2f, 0.5f, -1f)));
+            Assert.That(
+                mover.LocalPointB,
+                Is.EqualTo(new Vector3(2f, 0.5f, -1f)));
+            Assert.That(mover.UnitsPerSecond, Is.EqualTo(1.5f));
+            Assert.That(
+                stationary.GetComponent<ManualReviewPingPongMover>(),
+                Is.Null);
+
+            foreach (var cube in new[] { moving, stationary })
+            {
+                Assert.That(cube.GetComponent<MeshRenderer>(), Is.Not.Null);
+                Assert.That(cube.GetComponent<BoxCollider>(), Is.Not.Null);
+                Assert.That(cube.GetComponent<ColorSelectable>(), Is.Not.Null);
+            }
+
+            var targetRendererField = typeof(ColorSelectable).GetField(
+                "targetRenderer",
+                BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(targetRendererField, Is.Not.Null);
+            foreach (var cube in new[] { moving, stationary })
+            {
+                var selectable = cube.GetComponent<ColorSelectable>();
+                var assignedRenderer = targetRendererField.GetValue(selectable)
+                    as Renderer;
+
+                Assert.That(
+                    assignedRenderer,
+                    Is.SameAs(cube.GetComponent<MeshRenderer>()),
+                    $"{cube.name} must serialize its own MeshRenderer in "
+                    + "ColorSelectable.targetRenderer.");
+            }
+
+            var movingMaterial =
+                moving.GetComponent<MeshRenderer>().sharedMaterial;
+            var staticMaterial =
+                stationary.GetComponent<MeshRenderer>().sharedMaterial;
+            Assert.That(movingMaterial, Is.Not.Null);
+            Assert.That(staticMaterial, Is.Not.Null);
+            Assert.That(movingMaterial, Is.Not.SameAs(staticMaterial));
+            Assert.That(
+                movingMaterial.name,
+                Is.EqualTo("M_TEMP_ManualReviewCube_Moving"));
+            Assert.That(
+                staticMaterial.name,
+                Is.EqualTo("M_TEMP_ManualReviewCube_Static"));
+            Assert.That(
+                movingMaterial.shader.name,
+                Is.EqualTo("Universal Render Pipeline/Lit"));
+            Assert.That(
+                staticMaterial.shader.name,
+                Is.EqualTo("Universal Render Pipeline/Lit"));
+            Assert.That(movingMaterial.HasProperty("_BaseColor"), Is.True);
+            Assert.That(staticMaterial.HasProperty("_BaseColor"), Is.True);
+            AssertColorWithinTolerance(
+                movingMaterial.GetColor("_BaseColor"),
+                new Color(0.92f, 0.36f, 0.20f, 1f));
+            AssertColorWithinTolerance(
+                staticMaterial.GetColor("_BaseColor"),
+                new Color(0.32f, 0.62f, 0.42f, 1f));
+
             Assert.That(runtimeRoot, Is.Not.Null);
             Assert.That(runtimeRoot.GetComponent<GameTimeService>(), Is.Not.Null);
             Assert.That(runtimeRoot.GetComponent<MouseCameraInput>(), Is.Not.Null);
@@ -676,6 +822,7 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(mainCamera.transform.position.z, Is.EqualTo(-8f).Within(0.001f));
 
             var selectableObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var material = AssignPortableTestMaterial(selectableObject);
             try
             {
                 var selectable = selectableObject.AddComponent<ColorSelectable>();
@@ -686,8 +833,29 @@ namespace AnimalCafe.Tests.PlayMode
             }
             finally
             {
+                Object.DestroyImmediate(material);
                 Object.DestroyImmediate(selectableObject);
             }
+        }
+
+        private static Material AssignPortableTestMaterial(GameObject gameObject)
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            Assert.That(shader, Is.Not.Null);
+            var material = new Material(shader);
+            gameObject.GetComponent<Renderer>().sharedMaterial = material;
+            return material;
+        }
+
+        private static void AssertColorWithinTolerance(
+            Color actual,
+            Color expected)
+        {
+            const float tolerance = 0.001f;
+            Assert.That(actual.r, Is.EqualTo(expected.r).Within(tolerance));
+            Assert.That(actual.g, Is.EqualTo(expected.g).Within(tolerance));
+            Assert.That(actual.b, Is.EqualTo(expected.b).Within(tolerance));
+            Assert.That(actual.a, Is.EqualTo(expected.a).Within(tolerance));
         }
 
         private static int CountLoadedSceneObjects(string objectName)
@@ -722,6 +890,7 @@ namespace AnimalCafe.Tests.PlayMode
             var selectableObject =
                 GameObject.CreatePrimitive(PrimitiveType.Cube);
             selectableObject.name = "InteractionFixtureSelectable";
+            var material = AssignPortableTestMaterial(selectableObject);
             var selectable =
                 selectableObject.AddComponent<ColorSelectable>();
             Physics.SyncTransforms();
@@ -733,7 +902,8 @@ namespace AnimalCafe.Tests.PlayMode
                 interaction,
                 inputSource,
                 selectableObject,
-                selectable);
+                selectable,
+                material);
         }
 
         private static bool SceneContainsExactNamedObject(
@@ -776,6 +946,7 @@ namespace AnimalCafe.Tests.PlayMode
             private readonly GameObject cameraObject;
             private readonly GameObject interactionObject;
             private readonly GameObject selectableObject;
+            private readonly Material selectableMaterial;
 
             public InteractionFixture(
                 GameObject cameraObject,
@@ -784,7 +955,8 @@ namespace AnimalCafe.Tests.PlayMode
                 SceneInteractionController interaction,
                 CameraInputTestFixture input,
                 GameObject selectableObject,
-                ColorSelectable selectable)
+                ColorSelectable selectable,
+                Material selectableMaterial)
             {
                 this.cameraObject = cameraObject;
                 Camera = camera;
@@ -793,6 +965,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Input = input;
                 this.selectableObject = selectableObject;
                 Selectable = selectable;
+                this.selectableMaterial = selectableMaterial;
             }
 
             public UnityEngine.Camera Camera { get; }
@@ -806,6 +979,7 @@ namespace AnimalCafe.Tests.PlayMode
             public void Dispose()
             {
                 Object.DestroyImmediate(selectableObject);
+                Object.DestroyImmediate(selectableMaterial);
                 Object.DestroyImmediate(interactionObject);
                 Object.DestroyImmediate(cameraObject);
             }
@@ -813,13 +987,65 @@ namespace AnimalCafe.Tests.PlayMode
 
     }
 
-    public sealed class RealUiSceneInteractionTests : InputTestFixture
+    public sealed class RealUiSceneInteractionTests
     {
+        [UnityTest]
+        public IEnumerator QueueMousePosition_ProcessesAbsoluteStateImmediately()
+        {
+            using var focusScope = new InputFocusIsolationScope();
+            var mouse = AddEnabledMouse();
+
+            try
+            {
+                Assert.That(mouse.added, Is.True);
+                Assert.That(mouse.enabled, Is.True);
+                Assert.That(Mouse.current, Is.SameAs(mouse));
+
+                var priorPosition = new Vector2(700f, 500f);
+                InputSystem.QueueStateEvent(
+                    mouse,
+                    new MouseState
+                    {
+                        position = priorPosition
+                    });
+                Assert.That(
+                    mouse.position.ReadValue(),
+                    Is.Not.EqualTo(priorPosition));
+                InputSystem.Update();
+                Assert.That(
+                    mouse.position.ReadValue(),
+                    Is.EqualTo(priorPosition));
+                yield return null;
+                Assert.That(
+                    mouse.position.ReadValue(),
+                    Is.EqualTo(priorPosition));
+
+                var expectedPosition = new Vector2(20f, 30f);
+                QueueMousePosition(mouse, expectedPosition);
+                Assert.That(
+                    mouse.position.ReadValue(),
+                    Is.EqualTo(expectedPosition));
+                yield return null;
+
+                Assert.That(
+                    mouse.position.ReadValue(),
+                    Is.EqualTo(expectedPosition));
+            }
+            finally
+            {
+                if (mouse.added)
+                {
+                    InputSystem.RemoveDevice(mouse);
+                }
+            }
+        }
+
         [UnityTest]
         public IEnumerator RealUiTapAtEmptyWorldPreservesSelection()
         {
+            using var focusScope = new InputFocusIsolationScope();
             var fixture = CreateInteractionFixture();
-            var mouse = InputSystem.AddDevice<Mouse>();
+            var mouse = AddEnabledMouse();
             RealUiPointerTestScope uiScope = null;
             var events = new List<SelectionChangedEvent>();
             GameEventBus.SelectionChanged += events.Add;
@@ -840,7 +1066,7 @@ namespace AnimalCafe.Tests.PlayMode
                     Screen.width * 0.5f,
                     Screen.height * 0.5f);
                 uiScope.PlaceUiAt(uiPosition);
-                Set(mouse.position, uiPosition);
+                QueueMousePosition(mouse, uiPosition);
                 yield return null;
                 yield return null;
 
@@ -874,8 +1100,9 @@ namespace AnimalCafe.Tests.PlayMode
         [UnityTest]
         public IEnumerator RealUiTapDoesNotSelectWorldObjectBehindUi()
         {
+            using var focusScope = new InputFocusIsolationScope();
             var fixture = CreateInteractionFixture();
-            var mouse = InputSystem.AddDevice<Mouse>();
+            var mouse = AddEnabledMouse();
             RealUiPointerTestScope uiScope = null;
 
             try
@@ -884,7 +1111,7 @@ namespace AnimalCafe.Tests.PlayMode
                 var selectablePosition = fixture.Camera.WorldToScreenPoint(
                     fixture.Selectable.transform.position);
                 uiScope.PlaceUiAt(selectablePosition);
-                Set(mouse.position, selectablePosition);
+                QueueMousePosition(mouse, selectablePosition);
                 yield return null;
                 yield return null;
 
@@ -914,8 +1141,9 @@ namespace AnimalCafe.Tests.PlayMode
         [UnityTest]
         public IEnumerator EventSystemTapOutsideUiStillSelectsWorldObject()
         {
+            using var focusScope = new InputFocusIsolationScope();
             var fixture = CreateInteractionFixture();
-            var mouse = InputSystem.AddDevice<Mouse>();
+            var mouse = AddEnabledMouse();
             RealUiPointerTestScope uiScope = null;
 
             try
@@ -924,7 +1152,7 @@ namespace AnimalCafe.Tests.PlayMode
                 var selectablePosition = fixture.Camera.WorldToScreenPoint(
                     fixture.Selectable.transform.position);
                 uiScope.PlaceUiAt(new Vector2(40f, 40f));
-                Set(mouse.position, selectablePosition);
+                QueueMousePosition(mouse, selectablePosition);
                 yield return null;
                 yield return null;
 
@@ -1001,6 +1229,7 @@ namespace AnimalCafe.Tests.PlayMode
             var selectableObject =
                 GameObject.CreatePrimitive(PrimitiveType.Cube);
             selectableObject.name = "RealUiInteractionFixtureSelectable";
+            var material = AssignPortableTestMaterial(selectableObject);
             var selectable =
                 selectableObject.AddComponent<ColorSelectable>();
             Physics.SyncTransforms();
@@ -1012,7 +1241,74 @@ namespace AnimalCafe.Tests.PlayMode
                 interaction,
                 inputSource,
                 selectableObject,
-                selectable);
+                selectable,
+                material);
+        }
+
+        private static Material AssignPortableTestMaterial(GameObject gameObject)
+        {
+            var shader = Shader.Find("Universal Render Pipeline/Lit");
+            Assert.That(shader, Is.Not.Null);
+            var material = new Material(shader);
+            gameObject.GetComponent<Renderer>().sharedMaterial = material;
+            return material;
+        }
+
+        private static void QueueMousePosition(
+            Mouse mouse,
+            Vector2 position)
+        {
+            InputSystem.QueueStateEvent(
+                mouse,
+                new MouseState
+                {
+                    position = position
+                });
+            InputSystem.Update();
+        }
+
+        private static Mouse AddEnabledMouse()
+        {
+            var mouse = InputSystem.AddDevice<Mouse>();
+            if (!mouse.enabled)
+            {
+                InputSystem.EnableDevice(mouse);
+            }
+
+            return mouse;
+        }
+
+        private sealed class InputFocusIsolationScope : System.IDisposable
+        {
+            private readonly InputSettings.BackgroundBehavior
+                originalBackgroundBehavior;
+            private readonly InputSettings.EditorInputBehaviorInPlayMode
+                originalEditorInputBehavior;
+            private readonly bool originalRunInBackground;
+
+            public InputFocusIsolationScope()
+            {
+                originalBackgroundBehavior =
+                    InputSystem.settings.backgroundBehavior;
+                originalEditorInputBehavior =
+                    InputSystem.settings.editorInputBehaviorInPlayMode;
+                originalRunInBackground = Application.runInBackground;
+                Application.runInBackground = true;
+                InputSystem.settings.backgroundBehavior =
+                    InputSettings.BackgroundBehavior.IgnoreFocus;
+                InputSystem.settings.editorInputBehaviorInPlayMode =
+                    InputSettings.EditorInputBehaviorInPlayMode
+                        .AllDeviceInputAlwaysGoesToGameView;
+            }
+
+            public void Dispose()
+            {
+                InputSystem.settings.backgroundBehavior =
+                    originalBackgroundBehavior;
+                InputSystem.settings.editorInputBehaviorInPlayMode =
+                    originalEditorInputBehavior;
+                Application.runInBackground = originalRunInBackground;
+            }
         }
 
         private sealed class InteractionFixture : System.IDisposable
@@ -1020,6 +1316,7 @@ namespace AnimalCafe.Tests.PlayMode
             private readonly GameObject cameraObject;
             private readonly GameObject interactionObject;
             private readonly GameObject selectableObject;
+            private readonly Material selectableMaterial;
 
             public InteractionFixture(
                 GameObject cameraObject,
@@ -1028,7 +1325,8 @@ namespace AnimalCafe.Tests.PlayMode
                 SceneInteractionController interaction,
                 CameraInputTestFixture input,
                 GameObject selectableObject,
-                ColorSelectable selectable)
+                ColorSelectable selectable,
+                Material selectableMaterial)
             {
                 this.cameraObject = cameraObject;
                 Camera = camera;
@@ -1037,6 +1335,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Input = input;
                 this.selectableObject = selectableObject;
                 Selectable = selectable;
+                this.selectableMaterial = selectableMaterial;
             }
 
             public UnityEngine.Camera Camera { get; }
@@ -1050,6 +1349,7 @@ namespace AnimalCafe.Tests.PlayMode
             public void Dispose()
             {
                 Object.DestroyImmediate(selectableObject);
+                Object.DestroyImmediate(selectableMaterial);
                 Object.DestroyImmediate(interactionObject);
                 Object.DestroyImmediate(cameraObject);
             }
