@@ -18,16 +18,22 @@ namespace AnimalCafe.UI.Foundation
     /// </summary>
     public sealed class UiPauseCoordinator
     {
+        private const string PauseRequestRejectedMessage =
+            "UI pause request was rejected by the game time service.";
+
         private readonly IGameTimeService gameTimeService;
         private readonly List<PauseReason> activePauseReasons = new List<PauseReason>();
         private GameSpeed speedBeforeFirstPause;
         private bool hasSavedSpeed;
+        private bool hasPendingRestore;
 
         public UiPauseCoordinator(IGameTimeService gameTimeService)
         {
             this.gameTimeService = gameTimeService
                 ?? throw new ArgumentNullException(nameof(gameTimeService));
         }
+
+        public bool HasPendingRestore => hasPendingRestore;
 
         /// <summary>
         /// Acquires a lifecycle handle for a UI view. ContinueGame views receive a no-op handle.
@@ -52,14 +58,49 @@ namespace AnimalCafe.UI.Foundation
 
             if (activePauseReasons.Count == 0)
             {
-                speedBeforeFirstPause = gameTimeService.CurrentSpeed;
-                hasSavedSpeed = true;
-                gameTimeService.TrySetSpeed(GameSpeed.Paused);
+                var capturedSpeedForThisRequest = false;
+                if (!hasSavedSpeed)
+                {
+                    speedBeforeFirstPause = gameTimeService.CurrentSpeed;
+                    hasSavedSpeed = true;
+                    capturedSpeedForThisRequest = true;
+                }
+
+                if (!gameTimeService.TrySetSpeed(GameSpeed.Paused))
+                {
+                    if (capturedSpeedForThisRequest)
+                    {
+                        hasSavedSpeed = false;
+                    }
+
+                    throw new InvalidOperationException(PauseRequestRejectedMessage);
+                }
             }
 
             var reason = new PauseReason(owner);
             activePauseReasons.Add(reason);
             return new UiPauseHandle(this, reason);
+        }
+
+        /// <summary>
+        /// Retries a failed final restore after the game-time service is available again.
+        /// 当 game-time service 再次可用时，重试失败的最终恢复。
+        /// </summary>
+        public bool TryRestorePendingSpeed()
+        {
+            if (!hasPendingRestore || activePauseReasons.Count != 0)
+            {
+                return false;
+            }
+
+            if (!gameTimeService.TrySetSpeed(speedBeforeFirstPause))
+            {
+                return false;
+            }
+
+            hasSavedSpeed = false;
+            hasPendingRestore = false;
+            return true;
         }
 
         /// <summary>
@@ -106,8 +147,14 @@ namespace AnimalCafe.UI.Foundation
                 return;
             }
 
-            gameTimeService.TrySetSpeed(speedBeforeFirstPause);
-            hasSavedSpeed = false;
+            if (gameTimeService.TrySetSpeed(speedBeforeFirstPause))
+            {
+                hasSavedSpeed = false;
+                hasPendingRestore = false;
+                return;
+            }
+
+            hasPendingRestore = true;
         }
 
         private sealed class PauseReason
