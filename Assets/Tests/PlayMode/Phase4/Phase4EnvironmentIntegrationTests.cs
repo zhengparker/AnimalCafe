@@ -1,10 +1,9 @@
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using AnimalCafe.Content;
 using AnimalCafe.Layout;
+using AnimalCafe.Tests.PlayMode;
 using NUnit.Framework;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -13,21 +12,20 @@ namespace AnimalCafe.Tests.PlayMode.Phase4
 {
     public sealed class Phase4EnvironmentIntegrationTests : IPrebuildSetup, IPostBuildCleanup
     {
+        private const string BuildSettingsScopeType =
+            "AnimalCafe.EditorTools.Phase4.Phase4BuildSettingsScope";
         private const string ScenePath =
             "Assets/Scenes/Validation/Phase4CoreArchitecture.unity";
         private const string FallbackSceneName =
             "Phase4EnvironmentIntegrationTests_ColliderFreeFallback";
-        private const string CatalogPath =
-            "Assets/Art/Phase4/Catalogues/FC_Phase4Production.asset";
-
         public void Setup()
         {
-            Phase4BuildSettingsScope.Setup();
+            EditorPrebuildScopeBridge.Setup(BuildSettingsScopeType);
         }
 
         public void Cleanup()
         {
-            Phase4BuildSettingsScope.Cleanup();
+            EditorPrebuildScopeBridge.Cleanup(BuildSettingsScopeType);
         }
 
         [TearDown]
@@ -77,39 +75,6 @@ namespace AnimalCafe.Tests.PlayMode.Phase4
                 FindObjectsInactive.Include), Has.Length.EqualTo(2));
             Assert.That(Object.FindObjectsByType<UnityEngine.Camera>(FindObjectsInactive.Include),
                 Has.Length.EqualTo(1));
-            LogAssert.NoUnexpectedReceived();
-        }
-
-        [UnityTest]
-        public IEnumerator Phase4Scene_ProductionCatalogResolvesEveryApprovedPrefab()
-        {
-            yield return LoadPhase4ValidationScene();
-
-            var catalog = AssetDatabase.LoadAssetAtPath<FurnitureContentCatalog>(CatalogPath);
-            Assert.That(catalog, Is.Not.Null);
-            var runtime = catalog.BuildRuntimeCatalog();
-            var expectedPrefabs = new Dictionary<string, string>
-            {
-                ["furniture.counter.module.01"] =
-                    "Assets/Art/Phase4/Prefabs/PF_Furniture_CounterModule_01.prefab",
-                ["equipment.coffee-machine.01"] =
-                    "Assets/Art/Phase4/Prefabs/PF_Equipment_CoffeeMachine_01.prefab",
-                ["equipment.cash-register.01"] =
-                    "Assets/Art/Phase4/Prefabs/PF_Equipment_CashRegister_01.prefab",
-                ["furniture.work-table.01"] =
-                    "Assets/Art/Phase4/Prefabs/PF_Furniture_WorkTable_01.prefab"
-            };
-
-            Assert.That(runtime.Definitions.Select(definition => definition.Id),
-                Is.EquivalentTo(expectedPrefabs.Keys));
-            foreach (var expected in expectedPrefabs)
-            {
-                Assert.That(catalog.TryGetPrefab(expected.Key, out var prefab), Is.True,
-                    $"Production catalogue did not resolve '{expected.Key}'.");
-                Assert.That(prefab, Is.Not.Null);
-                Assert.That(AssetDatabase.GetAssetPath(prefab), Is.EqualTo(expected.Value));
-            }
-
             LogAssert.NoUnexpectedReceived();
         }
 

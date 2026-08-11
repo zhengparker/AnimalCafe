@@ -1,6 +1,7 @@
 using System.Collections;
 using System.IO;
 using System.Linq;
+using AnimalCafe.Tests.PlayMode;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
@@ -11,6 +12,8 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
 {
     public sealed class AssetPipelineReadabilityTests : IPrebuildSetup, IPostBuildCleanup
     {
+        private const string BuildSettingsScopeType =
+            "AnimalCafe.EditorTools.AssetPipeline.AssetPipelineReadabilityBuildSettingsScope";
         private const string ScenePath =
             "Assets/Scenes/Validation/AssetPipelineReadability.unity";
         private const string FallbackSceneName =
@@ -19,12 +22,12 @@ namespace AnimalCafe.Tests.PlayMode.AssetReadability
 
         public void Setup()
         {
-            AssetPipelineReadabilityBuildSettingsScope.Setup();
+            EditorPrebuildScopeBridge.Setup(BuildSettingsScopeType);
         }
 
         public void Cleanup()
         {
-            AssetPipelineReadabilityBuildSettingsScope.Cleanup();
+            EditorPrebuildScopeBridge.Cleanup(BuildSettingsScopeType);
         }
 
         [OneTimeSetUp]
