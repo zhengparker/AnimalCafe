@@ -4,9 +4,9 @@
 >
 > 类型：Phase-neutral Game Design
 >
-> 当前开发环境：Windows / Unity
+> 当前开发环境：Windows / Unity（Editor 与开发验证环境，不是 release target）
 >
-> 目标兼容平台：iOS
+> 正式目标平台：Android 与 iOS
 
 ## 文档用途与协作规则
 
@@ -63,8 +63,8 @@ AnimalCafe 是一款以动物经营咖啡厅为主题的经营游戏。玩家管
 
 - 游戏没有可移动的玩家角色。
 - 玩家使用点击和 UI 下达管理指令。
-- Windows 以鼠标操作为主。
-- 交互设计应兼容未来的 iOS 触控操作。
+- 正式玩家操作以 Android / iOS Touch 为主，不依赖 Hover、精细 Mouse 或 Keyboard。
+- Windows Mouse 只用于 Unity Editor 开发、自动化 fixture 和人工验证，不形成独立的 Windows UX 或 release requirement。
 
 ### 2.2 Camera
 
@@ -72,8 +72,8 @@ AnimalCafe 是一款以动物经营咖啡厅为主题的经营游戏。玩家管
 
 - Camera 不能旋转。
 - 支持放大和缩小。
-- Windows 使用按住鼠标拖动的方式平移。
-- iOS 使用单指拖动平移。
+- Android / iOS 使用单指拖动平移，并使用 pinch 控制连续缩放。
+- Unity Editor 可以保留 Mouse drag / wheel 作为开发测试映射，但必须复用同一 Camera rules，不能形成第二套 gameplay behavior。
 - Camera 移动边界和缩放上下限根据场景布局设置。
 
 ### 2.3 游戏速度
@@ -457,6 +457,14 @@ Coffee Beans 可以具有：
 
 系统不需要模拟复杂的现实咖啡知识，应保持“品质 + 少量风味 traits”的可读结构。
 
+### 7.3 Coffee Machine 配置方向
+
+- 每台已摆放的 Coffee Machine 独立保存当前选择的 Coffee Bean。
+- 正常经营中点击 Coffee Machine，通过 Bottom Sheet 查看和更换 Coffee Bean，并显示该 Coffee Bean 的剩余库存；不显示“今日已使用”。
+- Coffee Machine 配置面板打开时，经营与 NPC 行为继续运行，不进入 Decoration Mode。
+- Coffee Machine 正在制作饮品时修改配置，当前饮品继续使用旧配置，新配置从下一杯开始生效。
+- 本节记录未来 Coffee Bean gameplay 的已确认 UX 方向，不要求 Phase 5 提前实现 Coffee Bean inventory、selection 或 Save logic。
+
 ---
 
 ## 8. Syrup 与 Add-on 系统
@@ -486,6 +494,11 @@ Syrup System
 - 已装备 Add-on 会启用对应风味。
 - 正常制作时，玩家从已装备 Add-on 中选择一种风味。
 - Add-on 是永久配置资源，不需要水果或糖等额外材料。
+- 每台 Coffee Machine 独立保存自己的 Syrup Add-on Slot 配置。
+- 已解锁的 Slot 可以留空；未解锁的 Slot 保持锁定并清楚显示解锁状态。
+- Coffee Machine Bottom Sheet 显示全店共享的 Syrup 剩余库存，例如 `24 / 30`，不显示“今日 Syrup 用量”。
+- Coffee Machine 正在制作饮品时更换 Add-on，当前饮品不变，新配置从下一杯开始生效。
+- 本节记录未来 Syrup & Add-on gameplay 的已确认 UX 方向；正式 inventory、slot equip / replace、Save / Load 和 flavored drink behavior 仍由对应 gameplay Phase 实现。
 
 ### 8.3 特殊融合饮品
 
@@ -729,12 +742,20 @@ Pick-up Point 是当前需要玩家主动决定的主要 Interaction Point。
 
 玩家可以随时进入 Decoration Mode：
 
+- 正常经营 HUD 提供独立的 Decoration 入口；Coffee Machine 的经营配置面板不提供移动、旋转或收起家具操作。
 - 进入 Decoration Mode 时自动 Pause。
 - 玩家可以移动、旋转、放置或收起家具。
+- Decoration Mode 统一承载 Floor Furniture、Wall Decoration 和兼容 Surface Slot 上的 Pick-up Point 编辑；各能力仍按对应 development Phase 分阶段实现。
 - 编辑过程中暂停 NPC 行为，避免 Pathfinding 状态不断变化。
 - 退出前重新验证布局、Interaction Anchors 和路径。
 - 玩家可以保留尚未完成的装修，但在必需服务路径无效时不能开始或恢复营业。
 - 非必需功能的布局无效时，对应功能明确标记为不可用，不阻塞其他有效区域。
+
+### 10.9.1 Phase Scope Discipline
+
+- 当前 development Phase 只设计、批准和实现该 Phase 明确列出的 scope。
+- 探索中提前确认的未来 UX 或 gameplay 方向可以记录为 Future Feature Concept，但不自动成为当前 Phase deliverable，也不授权提前实现。
+- Phase 5 只提取通用 Design System、Bottom Sheet、input boundary 和 reusable interaction patterns；Coffee Bean、Syrup Add-on、Decoration placement、Wall Decoration、Pick-up Point 与正式 mobile adaptation 仍由各自 Roadmap Phase 负责。
 
 ### 10.10 Atmosphere 方向
 

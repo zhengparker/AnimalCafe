@@ -4,11 +4,11 @@
 >
 > 类型：Dependency-driven, milestone-based development roadmap
 >
-> 当前开发环境：Windows / Unity `6000.5.5f1`
+> 当前开发环境：Windows / Unity `6000.5.5f1`（Editor 与开发验证环境，不是 release target）
 >
-> 目标兼容平台：iOS
+> 正式目标平台：Android 与 iOS
 >
-> 更新日期：2026-08-01
+> 更新日期：2026-08-11
 
 ## 1. 文档用途
 
@@ -106,8 +106,9 @@ Layout Data
 → Signature Visual Assets / Signature Gameplay
 → Offline Progression
 → UI / VFX / Asset Optimization
-→ Windows Release
-→ Mobile UI / iOS Adaptation
+→ Mobile UI Adaptation
+→ Android / iOS Platform Adaptation
+→ Mobile Release Preparation
 ```
 
 ---
@@ -178,9 +179,9 @@ Layout Data
 | 47 | UI/UX Integration & Accessibility | UI/UX + Unity | Release Preparation |
 | 48 | VFX Production & Integration | Unity + Model | Release Preparation |
 | 49 | Final Model Replacement & Asset Optimization | Unity + Model | Release Preparation |
-| 50 | Windows Release Preparation | Platform + Unity | Windows Release Candidate |
-| 51 | Mobile UI Adaptation | UI/UX + Unity | Mobile Release Preparation |
-| 52 | iOS Adaptation | Platform + Unity | iOS Release Candidate |
+| 50 | Mobile UI Adaptation | UI/UX + Unity | Mobile UI Ready |
+| 51 | Android & iOS Platform Adaptation | Platform + Unity | Device-ready Builds |
+| 52 | Mobile Release Preparation | Platform + Unity | Android & iOS Release Candidate |
 
 ---
 
@@ -437,18 +438,19 @@ integration.
 
 - Formal gameplay framing is **Portrait-first**.
 - Gameplay zoom is one continuous factor from `1.0x` through `3.0x`, not three
-  preset Camera sizes. Windows uses smooth mouse-wheel zoom; a future iPhone
-  build uses pinch zoom over the same logical range.
+  preset Camera sizes. Android / iOS runtime uses pinch zoom over the same
+  logical range; Unity Editor mouse wheel remains a development test mapping only.
 - Exact base orthographic size, Portrait framing and adaptive aspect behavior
   remain deliberately open until formal Portrait/mobile Camera work. The P3
   size `4` / `7` / `12` readability checks are visual proxies, not final zoom
   stops and not approval of an exact gameplay base.
-- Phase 49 owns Portrait/mobile presentation, Safe Area and UI-versus-Camera
-  gesture priority, including selection of the exact base framing. Phase 50
-  owns iPhone pinch/device integration and platform validation; it must reuse
+- Phase 50 owns Portrait/mobile presentation, Safe Area and UI-versus-Camera
+  gesture priority, including selection of the exact base framing. Phase 51
+  owns Android / iOS pinch and device integration; both platforms must reuse
   the same `1.0x`–`3.0x` logical envelope rather than fork gameplay Camera rules.
-- Any formal Camera change must preserve Phase 0 pan, smooth mouse-wheel zoom,
-  Camera bounds and existing input/UI regressions through fresh Phase 0 tests.
+- Any formal Camera change must preserve Phase 0 pan / zoom semantics、Camera
+  bounds and existing input / UI regressions through fresh Phase 0 tests；Editor
+  mouse fixtures remain regression tools rather than player-facing requirements.
 
 ### Scope
 
@@ -482,7 +484,7 @@ Grid cell、footprint 和 rotation 已稳定，Model standards 才能使用真�
 - Material / texture references 完整。
 - Naming 与 folder validator。
 - Collider 和 LOD policy checks。
-- Windows shader compatibility。
+- Unity Editor / URP development compatibility，以及 Android / iOS shader compatibility expansion gate。
 - Mobile budget baseline。
 - Source → export → import → prefab 流程可重复。
 
@@ -576,9 +578,25 @@ Basic Decoration 和 Functional Furniture 必须用真实或生产级尺寸验�
 - Typography、color 和 spacing tokens
 - Notification、tooltip 和 validation-message patterns
 - Resolution scaling
-- Mouse / touch-compatible interaction
+- Touch-first interaction；Mouse only as Unity Editor development / test mapping
 - UI input blocking 和 Scene input boundary
 - Safe Area、accessibility 和 localization expansion points
+
+### Confirmed Discovery Baseline
+
+以下内容是 Phase 5 design discovery 中已经确认、必须带入正式 design spec 的 foundation baseline；它们不替代独立 spec / implementation plan approval，也不授权提前实现未来 feature UI：
+
+- Runtime 使用 `uGUI`；Phase 5 新建 runtime text components 使用 `TextMeshPro`。Future Unity Editor tools 可以独立使用 `UI Toolkit`，但同一 runtime game screen 不混用两套 UI systems。
+- 一个 `UI Root` 管理三个 Canvas、四个 logical layers：`HUD Canvas / HUD Layer`、`Screen Canvas / Panel Layer + Modal Layer`、`Toast Canvas / Toast Layer`。普通窗口不自行增加 Canvas；只有 profiling evidence 才允许调整拆分。
+- Phase 5 core library 限于 Button、Panel、Modal、Bottom Sheet、Text Style、Icon Container、Input Blocker、Toast、Tooltip、Validation Message 和 Safe Area Container。Future gameplay Phase 按真实需求增加 Tab、List、Slot、Resource Row 等 feature components。
+- 一次 pointer interaction 只能属于 UI 或 Scene；用于关闭 UI 的同一次点击不得继续传给 Scene。Modal 阻止下层 UI 与 Scene，Toast 默认不接收点击。
+- Figma 负责视觉目标，approved design spec 负责设计合同，Unity Prefab / Material / Shader / animation / C# 负责 runtime；统一 `AnimalCafeUiTheme` 对照 Figma Variables。
+- Phase 5 reference baseline 为 portrait `1080 × 1920`，Landscape 必须功能可用且无裁切；正式 mobile presentation 仍由 Phase 50 finalization。
+- 视觉 baseline 为 cream、warm wood、sage；常驻 UI 使用 Light Frost，重要大型面板可使用单一 Strong Frost，低性能配置必须回退到可读的 Light Frost。
+- Minimum touch target baseline 为 `48 × 48` logical pixels；正文 / 小标签 baseline 分别不小于 `16 / 14`；主要字体 baseline 为 `Noto Sans SC`。
+- Toast queue / duplicate merge、Touch-safe Tooltip、specific Validation Message、Reduced Motion expansion point 和 long-localized-label fixtures 属于 foundation contract。
+
+完整 decision ledger 与 Provisional / Future Finalization ownership 记录在 `Docs/Phase5_UI_Decision_Log.md`。任何 provisional baseline 调整都必须同步 Figma、approved spec、Unity Theme / Prefabs 和 tests。
 
 ### Why Before Decoration UI
 
@@ -593,7 +611,7 @@ Decoration Mode 是第一个 UI-heavy system。先建立 reusable system，避�
 - UI click 穿透到 Scene。
 - Modal 打开后底层 UI 仍可操作。
 - Text overflow 或不同 resolution 下重叠。
-- Mouse 与未来 touch rules 冲突。
+- Editor Mouse fixture 与正式 Touch rules 意外形成两套 behavior。
 
 ### Tests
 
@@ -1334,7 +1352,7 @@ Phase 9–14 可用 Capsule 验证逻辑；在 Staff identity 和 Species 差异
 - Collider / Agent bounds。
 - Held-item anchor。
 - Missing bones、materials 和 clips scan。
-- Windows performance baseline。
+- Unity Editor development profiling baseline，并为 Phase 51 Android / iOS device budgets 保留可测量指标。
 
 ### Not Included
 
@@ -1538,7 +1556,7 @@ Events 会读取 Order、Economy、Character、Mood 和 Relationships，必须�
 - Table / chair anchor compatibility。
 - Material / texture / reference scan。
 - Modular combination fixtures。
-- Windows performance baseline。
+- Unity Editor development profiling baseline，并为 Phase 51 Android / iOS device budgets 保留可测量指标。
 
 ---
 
@@ -2317,9 +2335,10 @@ Cloud synchronization 必须建立在稳定 Save schema、versioning、migration
 - Error-message consistency
 - Accessibility settings
 - Localization-ready layouts
-- Keyboard / controller considerations
+- Mobile accessibility input、screen reader labels 和 platform Back behavior
 - UI sounds
 - User-testing fixes
+- Finalize Phase 5 provisional typography hierarchy、Display Font need、formal icons、localization behavior、Reduced Motion 和 global feedback consistency；结果同步回 Phase 5 Design System contract。
 
 ### Why After Feature Complete
 
@@ -2397,7 +2416,7 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 - LOD、texture compression 和 material consolidation
 - Collider cleanup
 - Definition / Prefab reference validation
-- Windows / mobile memory budgets
+- Android / iOS memory budgets；Windows Editor 只保留 development profiling baseline
 - Final art consistency pass
 
 ### Why Before Release Preparation
@@ -2423,58 +2442,11 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 
 ---
 
-## Phase 50 — Windows Release Preparation
+## Phase 50 — Mobile UI Adaptation
 
 ### Goal
 
-把 Feature-complete Alpha 整理为稳定、易理解和性能合格的 Windows Release Candidate。
-
-### Scope
-
-- Tutorial / onboarding
-- UI / UX polish
-- Audio / animation / feedback
-- Content pass
-- Economy / progression balance
-- Accessibility basics
-- Performance profiling
-- Save migrations
-- Windows builds
-- Bug triage
-
-### Why After Feature Complete
-
-避免为之后会重写的 systems 过早制作正式 UI、animation 或大量 content。
-
-### Risks / Likely Bugs
-
-- Late polish 引入 regression。
-- Tutorial 与真实 rules 不一致。
-- Long-session memory / state leaks。
-- Upgrade installation 破坏 Save。
-
-### Tests
-
-- Full automated regression。
-- New-player first-day usability test。
-- Long-session soak test。
-- Fresh install / upgrade install。
-- Save migration / corruption recovery。
-- Multiple resolutions / aspect ratios。
-- Performance profile。
-- Release build smoke test。
-
-### Milestone Gate
-
-产生通过 release checklist 的 Windows Release Candidate。
-
----
-
-## Phase 51 — Mobile UI Adaptation
-
-### Goal
-
-将已完成的 UI system 适配为可用、可读的 mobile presentation。
+将完整 UI system 和 Camera presentation 适配为可用、可读、Touch-first 的 Android / iOS presentation。
 
 ### Scope
 
@@ -2487,72 +2459,128 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 - Gesture / UI conflict handling
 - Mobile text scale
 - Virtual keyboard flows
-- Background / foreground UI state
+- Platform Back behavior
+- Background / foreground UI state restoration contract
+- Finalize Phase 5 provisional portrait layout、Safe Area、touch targets、mobile aspect behavior、gesture priority 和 mobile Strong Frost performance / fallback budget。
 
-### Why Before iOS Platform Adaptation
+### Why Before Platform Adaptation
 
-先验证 UI 和 interaction presentation，再处理 build、device lifecycle 和 platform integration，避免同时调试 layout 与 native issues。
+先验证共享 mobile UI 与 interaction presentation，再分别处理 Android / iOS lifecycle、build 和 native integration，避免同时调试 layout 与 platform issues。
 
 ### Risks / Likely Bugs
 
 - Touch gesture 与 ScrollView / Camera 冲突。
-- Notch / home indicator 遮挡 controls。
-- Small screen modal 无法关闭。
-- Background 后恢复错误 panel state。
+- Notch、camera cutout 或 home indicator 遮挡 controls。
+- Small-screen Modal 无法关闭。
+- Landscape 或 foldable aspect ratio 发生裁切。
+- Strong Frost 在目标设备超出 frame / battery budget。
 
 ### Tests
 
-- Target device resolutions 和 Safe Areas。
+- Target mobile resolutions、aspect ratios 和 Safe Areas。
 - Minimum touch targets。
 - Gesture priority。
-- Long text / keyboard。
-- Background / foreground UI restoration。
+- Long text / virtual keyboard。
+- Platform Back contract fixtures。
+- Background / foreground UI state contract。
 - No-hover complete workflows。
+- Strong Frost quality / fallback profiling fixture。
 - Mobile UI manual usability test。
-
----
-
-## Phase 52 — iOS Adaptation
-
-### Goal
-
-在不分叉核心 gameplay rules 的情况下适配 iOS。
-
-### Scope
-
-- Touch pan / pinch zoom / tap
-- Map iPhone pinch to the shared continuous `1.0x`–`3.0x` zoom envelope
-- Mobile-safe UI
-- Safe Area
-- Background / foreground lifecycle
-- Mobile performance / memory / battery
-- iOS Save path
-- Device builds
-
-### Why Last
-
-Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，不建立第二套游戏 architecture。
-
-### Risks / Likely Bugs
-
-- UI 依赖 hover 或精细 mouse input。
-- Background 时丢失 state。
-- Touch 与 UI event 冲突。
-- Mobile memory 和 battery 超出目标。
-
-### Tests
-
-- 所有核心操作可通过 touch 完成。
-- No-hover usability。
-- UI Safe Area 与常见 aspect ratios。
-- Background / foreground persistence。
-- Touch / UI conflict tests。
-- Device performance、memory 和 battery。
-- Windows 与 iOS 使用相同 gameplay data rules。
 
 ### Milestone Gate
 
-产生通过 device checklist 的 iOS Release Candidate。
+所有 core workflows 都有不依赖 Hover / Mouse / Keyboard 的可用 mobile presentation，并通过 UI / Camera gesture 与 Safe Area checklist。
+
+---
+
+## Phase 51 — Android & iOS Platform Adaptation
+
+### Goal
+
+在不分叉 core gameplay rules 的情况下，把共享 mobile presentation 接入 Android 与 iOS platform lifecycle 和 device builds。
+
+### Scope
+
+- Android / iOS touch pan、pinch zoom 和 tap integration
+- Map both platforms to the shared continuous `1.0x`–`3.0x` zoom envelope
+- Android system Back and iOS in-app Back contract
+- Background / foreground lifecycle
+- Suspend / resume state recovery
+- Android / iOS local Save paths and permissions
+- Platform-specific Safe Area integration
+- Device build configuration and signing placeholders
+- Android and iOS development builds
+- Platform-specific crash / log collection path
+
+### Why After Mobile UI Adaptation
+
+Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platform integration，不为 Android 与 iOS 建立两套 gameplay architecture。
+
+### Risks / Likely Bugs
+
+- Android Back 与 Panel / Modal stack 不一致。
+- iOS background / resume 丢失 UI state。
+- 不同平台 Save path 或 permission behavior 分叉。
+- Touch 与 native gesture / system area 冲突。
+- 两个平台使用不同 gameplay data rules。
+
+### Tests
+
+- Android / iOS core touch workflows。
+- Android system Back 与 shared Back contract。
+- Platform Safe Area integration。
+- Background / foreground persistence。
+- Save path、permission 和 corrupted-data recovery。
+- Development build smoke tests on both platforms。
+- Android 与 iOS 使用相同 gameplay data rules。
+
+---
+
+## Phase 52 — Mobile Release Preparation
+
+### Goal
+
+把 Android 与 iOS development builds 整理为稳定、易理解、性能合格并可提交商店审核的 Mobile Release Candidates。
+
+### Scope
+
+- Tutorial / onboarding final pass
+- UI / UX、audio、animation 和 feedback polish
+- Content、economy 和 progression balance pass
+- Accessibility and localization release checks
+- Mobile performance、memory、thermal 和 battery profiling
+- Strong Frost final device quality / fallback matrix
+- Save migrations、fresh install 和 upgrade install
+- Android App Bundle / iOS archive release builds
+- Store metadata、privacy declarations 和 permission review
+- Device matrix、OS-version compatibility 和 bug triage
+
+### Why Last
+
+共享 gameplay、mobile UI、Android 和 iOS integration 都已验证后，才冻结 release behavior、performance budgets、store configuration 和 compatibility matrix。
+
+### Risks / Likely Bugs
+
+- Late polish 引入 regression。
+- Android / iOS release configuration 不一致。
+- Long-session memory、thermal 或 battery 超出预算。
+- Upgrade installation 或 migration 破坏 Save。
+- Store permission / privacy declaration 与实际 behavior 不一致。
+
+### Tests
+
+- Full automated regression。
+- New-player first-day mobile usability test。
+- Long-session soak、thermal、memory 和 battery profile。
+- Android / iOS device matrix and OS-version coverage。
+- Fresh install / upgrade install / Save migration recovery。
+- Background / foreground and interruption recovery。
+- Release build smoke test and store preflight checklist。
+- Android 与 iOS gameplay data parity。
+
+### Milestone Gate
+
+产生通过 release、device、performance、privacy 和 store checklist 的 Android 与 iOS Release Candidates。
 
 ---
 
@@ -2572,9 +2600,9 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 | Feature-complete Alpha | 45 | 所有核心 rules 是否支持 Offline summary |
 | Optional Online Services | 46 | 如启用，Cloud conflicts、offline fallback 和账号安全是否可靠 |
 | Release Visual & UX Integration | 49 | UI、VFX、Models 和 performance 是否达到 release preparation 标准 |
-| Windows Release Candidate | 50 | Stability、usability、balance 和 performance |
-| Mobile UI Ready | 51 | Touch layout、Safe Area 和 mobile workflows 是否完整 |
-| iOS Release Candidate | 52 | Platform lifecycle、device performance 和 build checklist |
+| Mobile UI Ready | 50 | Touch layout、Safe Area、gesture priority 和 mobile workflows 是否完整 |
+| Android / iOS Device-ready Builds | 51 | Platform lifecycle、Save paths、Back behavior 和 development builds 是否一致 |
+| Android & iOS Release Candidate | 52 | Stability、store readiness、device performance、battery 和 release checklist |
 
 每个 Milestone 完成后：
 
