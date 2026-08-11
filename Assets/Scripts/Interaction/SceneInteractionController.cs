@@ -1,5 +1,6 @@
 using AnimalCafe.Core.Events;
 using AnimalCafe.Input;
+using AnimalCafe.UI.Foundation;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -21,6 +22,7 @@ namespace AnimalCafe.Interaction
         private LayerMask selectableLayers = ~0;
 
         private ICameraInputSource inputSource;
+        private IUiPointerBoundary uiPointerBoundary;
 
         public ISelectable CurrentSelection { get; private set; }
 
@@ -45,12 +47,23 @@ namespace AnimalCafe.Interaction
             }
 
             var inputFrame = inputSource.ReadFrame();
-            if (inputFrame.TapReleased
-                && (EventSystem.current == null
-                    || !EventSystem.current.IsPointerOverGameObject()))
+            if (!inputFrame.TapReleased)
+            {
+                return;
+            }
+
+            const int mousePointerId = PointerInputModule.kMouseLeftId;
+            var canProcessScenePointer = uiPointerBoundary != null
+                ? uiPointerBoundary.CanProcessScenePointer(mousePointerId)
+                : EventSystem.current == null
+                  || !EventSystem.current.IsPointerOverGameObject();
+            if (canProcessScenePointer)
             {
                 TrySelectAt(inputFrame.PointerPosition);
             }
+
+            // Clear only after Scene has made its release decision.
+            uiPointerBoundary?.ReleasePointer(mousePointerId);
         }
 
         private void OnDisable()
@@ -64,6 +77,17 @@ namespace AnimalCafe.Interaction
         {
             targetCamera = camera;
             inputSource = cameraInputSource;
+            uiPointerBoundary = null;
+        }
+
+        public void Configure(
+            UnityEngine.Camera camera,
+            ICameraInputSource cameraInputSource,
+            IUiPointerBoundary pointerBoundary)
+        {
+            targetCamera = camera;
+            inputSource = cameraInputSource;
+            uiPointerBoundary = pointerBoundary;
         }
 
         public bool TrySelectAt(Vector2 screenPosition)
