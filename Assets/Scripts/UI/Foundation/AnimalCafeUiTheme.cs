@@ -9,6 +9,12 @@ namespace AnimalCafe.UI.Foundation
         public const float MinimumBodyFontSize = 16f;
         public const float MinimumLabelFontSize = 14f;
         public const float MinimumTouchTargetSize = 48f;
+        public const float MinimumButtonPressDuration = 0.08f;
+        public const float MaximumButtonPressDuration = 0.12f;
+        public const float BottomSheetOpenDuration = 0.22f;
+        public const float ModalOpenDuration = 0.18f;
+        public const float ToastFadeInDuration = 0.16f;
+        public const float ToastDefaultStayDuration = 2.5f;
 
         [SerializeField] private UiSemanticColorTokens colors;
         [SerializeField] private UiTypographyTokens typography;
@@ -58,11 +64,7 @@ namespace AnimalCafe.UI.Foundation
             ValidateMaterial(materials.StrongFrost, "STRONG_FROST", issues);
             ValidateMaterial(materials.StrongFrostFallback, "STRONG_FROST_FALLBACK", issues);
 
-            ValidatePositive(motion.ButtonPressDuration, "BUTTON_PRESS_DURATION", issues);
-            ValidatePositive(motion.BottomSheetOpenDuration, "BOTTOM_SHEET_OPEN_DURATION", issues);
-            ValidatePositive(motion.ModalOpenDuration, "MODAL_OPEN_DURATION", issues);
-            ValidatePositive(motion.ToastFadeInDuration, "TOAST_FADE_IN_DURATION", issues);
-            ValidatePositive(motion.ToastDefaultStayDuration, "TOAST_DEFAULT_STAY_DURATION", issues);
+            ValidateMotion(issues);
 
             if (sizes.MinimumTouchTargetWidth < MinimumTouchTargetSize ||
                 sizes.MinimumTouchTargetHeight < MinimumTouchTargetSize)
@@ -110,6 +112,53 @@ namespace AnimalCafe.UI.Foundation
             if (material == null)
             {
                 AddIssue(issues, "MISSING_MATERIAL_" + tokenName, "Materials/" + tokenName);
+            }
+        }
+
+        private void ValidateMotion(List<string> issues)
+        {
+            if (motion.ButtonPressDuration < MinimumButtonPressDuration ||
+                motion.ButtonPressDuration > MaximumButtonPressDuration)
+            {
+                AddIssue(issues, "BUTTON_PRESS_DURATION_OUT_OF_RANGE", "Motion/ButtonPressDuration");
+            }
+
+            ValidateMotionDuration(
+                motion.BottomSheetOpenDuration,
+                BottomSheetOpenDuration,
+                "BOTTOM_SHEET_OPEN_DURATION_OUT_OF_RANGE",
+                "Motion/BottomSheetOpenDuration",
+                issues);
+            ValidateMotionDuration(
+                motion.ModalOpenDuration,
+                ModalOpenDuration,
+                "MODAL_OPEN_DURATION_OUT_OF_RANGE",
+                "Motion/ModalOpenDuration",
+                issues);
+            ValidateMotionDuration(
+                motion.ToastFadeInDuration,
+                ToastFadeInDuration,
+                "TOAST_FADE_IN_DURATION_OUT_OF_RANGE",
+                "Motion/ToastFadeInDuration",
+                issues);
+            ValidateMotionDuration(
+                motion.ToastDefaultStayDuration,
+                ToastDefaultStayDuration,
+                "TOAST_DEFAULT_STAY_DURATION_OUT_OF_RANGE",
+                "Motion/ToastDefaultStayDuration",
+                issues);
+        }
+
+        private void ValidateMotionDuration(
+            float duration,
+            float expectedDuration,
+            string issueCode,
+            string tokenPath,
+            List<string> issues)
+        {
+            if (!Mathf.Approximately(duration, expectedDuration))
+            {
+                AddIssue(issues, issueCode, tokenPath);
             }
         }
 

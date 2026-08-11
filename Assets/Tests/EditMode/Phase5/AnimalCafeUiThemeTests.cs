@@ -110,15 +110,42 @@ namespace AnimalCafe.Tests.Phase5
         }
 
         [Test]
-        public void MotionTokens_UseApprovedProvisionalDurations()
+        public void Validate_ApprovedProvisionalMotionTokens_ReturnsNoIssues()
         {
             var theme = CreateCompleteTheme();
+            var issues = new List<string>();
 
-            Assert.That(theme.Motion.ButtonPressDuration, Is.InRange(0.08f, 0.12f));
-            Assert.That(theme.Motion.BottomSheetOpenDuration, Is.EqualTo(0.22f));
-            Assert.That(theme.Motion.ModalOpenDuration, Is.EqualTo(0.18f));
-            Assert.That(theme.Motion.ToastFadeInDuration, Is.EqualTo(0.16f));
-            Assert.That(theme.Motion.ToastDefaultStayDuration, Is.EqualTo(2.5f));
+            theme.Validate(issues);
+
+            Assert.That(issues, Is.Empty);
+        }
+
+        [TestCase(0f, 0.22f, 0.18f, 0.16f, 2.5f,
+            "BUTTON_PRESS_DURATION_OUT_OF_RANGE: ThemeFixture/Motion/ButtonPressDuration")]
+        [TestCase(0.13f, 0.22f, 0.18f, 0.16f, 2.5f,
+            "BUTTON_PRESS_DURATION_OUT_OF_RANGE: ThemeFixture/Motion/ButtonPressDuration")]
+        [TestCase(0.1f, 0.21f, 0.18f, 0.16f, 2.5f,
+            "BOTTOM_SHEET_OPEN_DURATION_OUT_OF_RANGE: ThemeFixture/Motion/BottomSheetOpenDuration")]
+        public void Validate_MotionOutsideApprovedContract_ReturnsStableIssue(
+            float buttonPressDuration,
+            float bottomSheetOpenDuration,
+            float modalOpenDuration,
+            float toastFadeInDuration,
+            float toastDefaultStayDuration,
+            string expectedIssue)
+        {
+            var theme = CreateCompleteTheme();
+            theme.Motion = new UiMotionTokens(
+                buttonPressDuration,
+                bottomSheetOpenDuration,
+                modalOpenDuration,
+                toastFadeInDuration,
+                toastDefaultStayDuration);
+            var issues = new List<string>();
+
+            theme.Validate(issues);
+
+            Assert.That(issues, Does.Contain(expectedIssue));
         }
 
         private AnimalCafeUiTheme CreateCompleteTheme()
