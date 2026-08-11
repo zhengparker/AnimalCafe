@@ -285,7 +285,7 @@ namespace AnimalCafe.Tests.Phase4
         }
 
         [Test]
-        public void BeginnerGuide_TimeControlsAndRuntimeSelectableUseMainCafe()
+        public void BeginnerGuide_TimeControlsAndCommittedReviewFixturesUseMainCafe()
         {
             var guidePath = Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName,
@@ -294,7 +294,13 @@ namespace AnimalCafe.Tests.Phase4
 
             Assert.That(guide, Does.Contain("M76–M78 必须在 MainCafe 完成"));
             Assert.That(guide, Does.Contain("ColorSelectable"));
-            Assert.That(guide, Does.Contain("退出 Play Mode 后自动消失"));
+            Assert.That(
+                guide,
+                Does.Contain("TEMP_P4_ManualReviewFixtures_DELETE_LATER"));
+            Assert.That(guide, Does.Contain("ReviewCube_Moving"));
+            Assert.That(guide, Does.Contain("ReviewCube_Static"));
+            Assert.That(guide, Does.Contain("committed review cubes"));
+            Assert.That(guide, Does.Not.Contain("Create > 3D Object > Cube"));
             Assert.That(guide, Does.Contain("返回 Phase4CoreArchitecture"));
         }
 

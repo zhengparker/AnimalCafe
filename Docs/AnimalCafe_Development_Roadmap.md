@@ -496,7 +496,7 @@ Grid cell、footprint 和 rotation 已稳定，Model standards 才能使用真�
 
 ### Status
 
-`Completed` — 2026-08-08。Approved spec、TDD implementation、code review、Studio Owner `M01–M88` manual acceptance 与 final regression gates 均已完成。Fresh Unity `6000.5.5f1` evidence：Full EditMode `557 / 557`、Full PlayMode `74 / 74` passed；failed、skipped、inconclusive 均为 `0`；P3 benchmark validator `3 / 3 valid`、P4 production validator `5 / 5 valid`，issues `0`。临时 `TEMP_P4_ManualReviewFixtures_DELETE_LATER` cubes 会保留到 MainCafe 有正式画面时再删除，并同步更新对应 regression tests。
+`Completed` — 2026-08-08。Approved spec、TDD implementation、code review、Studio Owner `M01–M88` manual acceptance 与 final regression gates 均已完成。Merge-preparation fresh Unity `6000.5.5f1` evidence（2026-08-11）：Full EditMode `570 / 570`、Editor PlayMode `62 / 62`、Windows standalone PlayMode `62 / 62` passed；failed、skipped、inconclusive 均为 `0`；PlayMode assembly 不引用 `UnityEditor`；P3 benchmark validator `3 / 3 valid`、P4 production validator `5 / 5 valid`，issues `0`。临时 `TEMP_P4_ManualReviewFixtures_DELETE_LATER` cubes 会保留到 MainCafe 有正式画面时再删除，并同步删除两个 temporary materials、setup utility、mover 与对应 regression tests。
 
 ### Goal
 
@@ -2596,7 +2596,7 @@ Windows 版本先验证 gameplay 和 Save model；iOS 是 platform adaptation，
 
 - merged-main post-merge evidence（2026-08-03）：EditMode `312 / 312`、PlayMode `55 / 55` passed，failed、skipped、inconclusive 均为 `0`；production validator 为 `3 / 3` valid、`0 issues`；Build Settings/MainCafe isolation 继续由 automated suites 覆盖。
 - Studio Owner 已确认全部三件 user-provided / Tripo-generated benchmark assets 具备用于开发与商业发布所需的使用权，license/use-right gate 为 `Passed`；Camera/readability manual acceptance 为 `Passed`。
-- **Phase 4 — Core Architecture & Functional Furniture Models** 已完成 approved design、TDD implementation、review、Studio Owner `M01–M88` manual acceptance 与 final regression，状态为 `Completed`。Final evidence（2026-08-08）：EditMode `557 / 557`、PlayMode `74 / 74` passed；P3 validator `3 / 3 valid`、P4 validator `5 / 5 valid`，issues `0`。
+- **Phase 4 — Core Architecture & Functional Furniture Models** 已完成 approved design、TDD implementation、review、Studio Owner `M01–M88` manual acceptance 与 final regression，状态为 `Completed`。Merge-preparation evidence（2026-08-11）：EditMode `570 / 570`、Editor PlayMode `62 / 62`、Windows standalone PlayMode `62 / 62` passed；PlayMode assembly 不引用 `UnityEditor`；P3 validator `3 / 3 valid`、P4 validator `5 / 5 valid`，issues `0`。
 - Phase 5 仍需独立 design/spec/plan approval；本次 Phase 4 closeout 不自动开始 Phase 5。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Decoration UI 或 Customer AI。

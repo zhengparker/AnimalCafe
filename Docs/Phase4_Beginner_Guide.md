@@ -2,7 +2,7 @@
 
 > **用途：** 这是 Phase 4（Core Architecture & Functional Furniture Models）的 Studio Owner 手动验收 runbook 和记录表。它不执行验收，也不把自动化结果当成人工验收。
 >
-> **当前状态（2026-08-08）：** Studio Owner 已完成并接受 `M01–M88`；Cash Register development 与 future commercial-release rights 均为 `Yes`。最终 fresh Unity 验证为 Full EditMode `557 / 557`、Full PlayMode `74 / 74`、P3 validator `3 / 3 valid`、P4 validator `5 / 5 valid`，failed、skipped、inconclusive 与 validator issues 均为 `0`。Phase 4 状态为 **Completed**；本记录不自动开始 Phase 5。
+> **当前状态（2026-08-11）：** Studio Owner 已完成并接受 `M01–M88`；Cash Register development 与 future commercial-release rights 均为 `Yes`。Merge-preparation fresh Unity 验证为 Full EditMode `570 / 570`、Editor PlayMode `62 / 62`、Windows standalone PlayMode `62 / 62`、P3 validator `3 / 3 valid`、P4 validator `5 / 5 valid`，failed、skipped、inconclusive 与 validator issues 均为 `0`；PlayMode assembly 不引用 `UnityEditor`。Phase 4 状态为 **Completed**；本记录不自动开始 Phase 5。
 
 ## 先理解这次要看什么
 
@@ -24,8 +24,9 @@ Phase 4 建立了以后家具会共用的“资料卡 + Prefab + 空间标记”
 
 | 自动化 gate | 已记录结果 | 证据位置 |
 |---|---:|---|
-| Full EditMode | `557 / 557` passed | `outputs/phase4-manual-review/final-editmode.xml` |
-| Full PlayMode | `74 / 74` passed | `outputs/phase4-manual-review/final-playmode-green.xml` |
+| Full EditMode | `570 / 570` passed | `outputs/phase4-manual-review/final-editmode.xml` |
+| Full Editor PlayMode | `62 / 62` passed | `outputs/phase4-manual-review/final-playmode-green.xml` |
+| Windows standalone PlayMode | `62 / 62` passed | `outputs/phase4-manual-review/final-standalone-playmode.xml` |
 | RealUi focused PlayMode | `5 / 5` passed | `outputs/phase4-manual-review/focused-realui-round2.xml` |
 | P4 production validator | `5 / 5 valid`, `0 issues` | Full EditMode XML：`ProductionContent_AllApprovedDefinitionsPassPhase4Validation` |
 | P3 benchmark validator regression | `3 / 3 valid`, `0 issues` | Full EditMode XML：`ProductionBenchmarks_NonReadableImportedMeshesCompleteValidation` |
@@ -228,13 +229,19 @@ Pause / `1x` / `2x` 按钮：
 
 1. 保存当前 Scene，打开 `Assets/Scenes/MainCafe.unity` 并进入 Play Mode。
 2. 依次检查 Pause、`1x`、`2x`；每一步都查看 Console 是否出现新的 P4 error。
-3. 在 Play Mode 中，从 Hierarchy 使用 **Create > 3D Object > Cube** 创建临时 Cube。
-4. 保留 Cube 的 `BoxCollider`，在 Inspector 使用 **Add Component** 添加
-   `ColorSelectable`。这个对象只用于 M83/M84 regression，不要退出 Play Mode 前保存 Scene。
-5. 把 Cube 放在 Camera 看得到的位置；用鼠标 drag/scroll 检查 pan/zoom，然后点击
-   Cube 和空白处检查 select/deselect。
-6. 退出 Play Mode；临时 Cube 和 `ColorSelectable` 应在退出 Play Mode 后自动消失。
+3. 在 Hierarchy 展开 `TEMP_P4_ManualReviewFixtures_DELETE_LATER`；使用已配置好的
+   `ReviewCube_Moving` 和 `ReviewCube_Static`，不要再创建额外 Cube。
+4. 用 `ReviewCube_Moving` 检查 Pause、`1x`、`2x` 的移动速度；用两个 cubes 作为
+   Camera drag/scroll 的视觉参照。
+5. 分别点击两个 cubes，再点击空白处，检查 select/deselect；两者已经包含
+   `BoxCollider`、`ColorSelectable` 和各自的 URP Lit material。
+6. 退出 Play Mode；确认没有新增 runtime-only object，也没有把测试期间的 Transform
+   或 Component 修改写回 Scene。两个 committed review cubes 会继续存在，这是预期结果。
 7. 确认 `MainCafe.unity` 没有未保存修改，再返回 Phase4CoreArchitecture Validation Scene。
+
+这两个 committed review cubes 会保留到 MainCafe 有正式视觉参照物时再删除。届时必须同时删除
+Scene root、两个 `M_TEMP_ManualReviewCube_*` materials、setup utility、无剩余引用的 mover，
+并同步更新对应 PlayMode regression tests。
 
 | ID | 亲自执行/观察的检查 | Status | Evidence |
 |---|---|---|---|
@@ -248,9 +255,9 @@ Pause / `1x` / `2x` 按钮：
 | M80 | 在第二个不同 Aspect/分辨率下重复 M79。 | Passed | 分辨率/Aspect；截图。 |
 | M81 | 退出 Play Mode 前后查看 Console，确认没有新增未解释的 P4 error。 | Passed | Console 截图；error count。 |
 | M82 | 打开 `Assets/Scenes/MainCafe.unity`，确认旧场景仍能启动；然后返回 Validation Scene。 | Passed | MainCafe Play Mode 截图；操作记录。 |
-| M83 | 在 `MainCafe` Play Mode 使用上述临时 Cube 作为视觉参照，检查 Camera pan/zoom 仍可工作。 | Passed | drag/scroll 操作、Camera Transform/Size 与结果。 |
-| M84 | 点击已添加 `ColorSelectable` 的临时 Cube，再点击空白处，确认 select/deselect 没有被 P4 干扰。 | Passed | Cube 选中颜色变化及取消选择结果。 |
-| M85 | 退出 MainCafe Play Mode，确认临时 Play Mode 内容已清理，未写回 Scene。 | Passed | 退出后 Hierarchy/Scene 证据。 |
+| M83 | 在 `MainCafe` Play Mode 使用 `ReviewCube_Moving` 和 `ReviewCube_Static` 作为视觉参照，检查 Camera pan/zoom 仍可工作。 | Passed | drag/scroll 操作、Camera Transform/Size 与结果。 |
+| M84 | 分别点击两个已配置 `ColorSelectable` 的 review cubes，再点击空白处，确认 select/deselect 没有被 P4 干扰。 | Passed | Cube 选中颜色变化及取消选择结果。 |
+| M85 | 退出 MainCafe Play Mode，确认没有额外 runtime-only object 或测试修改写回 Scene；两个 committed review cubes 仍存在。 | Passed | 退出后 Hierarchy、Scene dirty 状态与无未保存修改证据。 |
 | M86 | 退出 Play Mode 后重跑 P3 benchmark validator，记录 `3 / 3 valid, 0 issues` 或完整实际 issue。 | Passed | Console 输出/报告路径。 |
 | M87 | 退出 Play Mode 后重跑 P4 production validator，记录 `5 / 5 valid, 0 issues` 或完整实际 issue。 | Passed | Console 输出/报告路径。 |
 | M88 | 汇总实际 M01–M87、Cash Register rights、自动化证据、已知限制；只有全部 required gates 已接受时，才提交是否更新 Roadmap 的 Studio Owner 决定。 | Passed | 2026-08-08；Studio Owner 明确要求其他项目完成后将 M88 标为完成；Roadmap 更新为 Phase 4 `Completed`。 |
