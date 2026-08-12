@@ -78,8 +78,14 @@ namespace AnimalCafe.Tests.PlayMode
         public IEnumerator IT006_OutsideDismiss_ClosesUiWithoutSelectingWorldOnSameRelease()
         {
             using var fixture = new PointerBoundaryFixture();
+            fixture.PlaceButtonAt(fixture.SelectablePosition);
             fixture.ShowDismissibleSheet(new Vector2(30f, 30f));
             fixture.ShowOutsideDismissTarget();
+            yield return null;
+
+            Assert.That(
+                fixture.TopRaycastTargetAt(fixture.SelectablePosition),
+                Is.SameAs(fixture.OutsideDismissObject));
 
             fixture.QueueMouseState(fixture.SelectablePosition, true);
             yield return null;
@@ -92,6 +98,65 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(fixture.SheetObject.activeSelf, Is.False);
             Assert.That(fixture.ButtonClickCount, Is.EqualTo(0));
             Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator DisableThenReleaseUiGesture_SuppressesWorldSelectionUntilFreshTap()
+        {
+            using var fixture = new PointerBoundaryFixture();
+            fixture.PlaceButtonAt(fixture.SelectablePosition);
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            yield return null;
+            fixture.Interaction.gameObject.SetActive(false);
+            fixture.Interaction.gameObject.SetActive(true);
+
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
+            yield return null;
+
+            Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
+
+            fixture.PlaceButtonAt(new Vector2(30f, 30f));
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
+            yield return null;
+
+            Assert.That(fixture.Interaction.CurrentSelection, Is.SameAs(fixture.Selectable));
+        }
+
+        [UnityTest]
+        public IEnumerator ReconfigureThenReleaseSceneGesture_SuppressesWorldSelectionUntilFreshTap()
+        {
+            using var fixture = new PointerBoundaryFixture();
+            fixture.PlaceButtonAt(new Vector2(30f, 30f));
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            yield return null;
+            yield return null;
+            var replacementBoundary = new UiPointerBoundary();
+            fixture.Interaction.Configure(
+                fixture.Camera,
+                fixture.Input,
+                replacementBoundary);
+
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
+            yield return null;
+
+            Assert.That(fixture.Interaction.CurrentSelection, Is.Null);
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
+            yield return null;
+
+            Assert.That(fixture.Interaction.CurrentSelection, Is.SameAs(fixture.Selectable));
         }
 
         [UnityTest]
@@ -260,14 +325,14 @@ namespace AnimalCafe.Tests.PlayMode
                 DisableExistingEventSystems();
 
                 cameraObject = new GameObject("Phase5PointerCamera");
-                var camera = cameraObject.AddComponent<UnityEngine.Camera>();
+                Camera = cameraObject.AddComponent<UnityEngine.Camera>();
                 cameraObject.transform.position = new Vector3(0f, 0f, -10f);
 
                 controllerObject = new GameObject("Phase5PointerController");
                 Interaction = controllerObject.AddComponent<SceneInteractionController>();
                 Input = controllerObject.AddComponent<MouseCameraInput>();
                 Boundary = new UiPointerBoundary();
-                Interaction.Configure(camera, Input, Boundary);
+                Interaction.Configure(Camera, Input, Boundary);
 
                 selectableObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 var shader = Shader.Find("Universal Render Pipeline/Lit");
@@ -276,7 +341,7 @@ namespace AnimalCafe.Tests.PlayMode
                 selectableObject.GetComponent<Renderer>().sharedMaterial = selectableMaterial;
                 Selectable = selectableObject.AddComponent<ColorSelectable>();
                 Physics.SyncTransforms();
-                SelectablePosition = camera.WorldToScreenPoint(selectableObject.transform.position);
+                SelectablePosition = Camera.WorldToScreenPoint(selectableObject.transform.position);
 
                 canvasObject = new GameObject(
                     "Phase5PointerCanvas",
@@ -337,10 +402,12 @@ namespace AnimalCafe.Tests.PlayMode
             public UiPointerBoundary Boundary { get; }
             public SceneInteractionController Interaction { get; }
             public MouseCameraInput Input { get; }
+            public UnityEngine.Camera Camera { get; }
             public ColorSelectable Selectable { get; }
             public Vector2 SelectablePosition { get; }
             public GameObject ButtonObject { get; }
             public GameObject SheetObject { get; }
+            public GameObject OutsideDismissObject => outsideDismissButton.gameObject;
             public EventSystem EventSystem { get; }
             public InputSystemUIInputModule InputModule { get; }
             public Mouse Mouse { get; }
@@ -363,6 +430,16 @@ namespace AnimalCafe.Tests.PlayMode
             public void ShowOutsideDismissTarget()
             {
                 outsideDismissButton.gameObject.SetActive(true);
+                Canvas.ForceUpdateCanvases();
+            }
+
+            public GameObject TopRaycastTargetAt(Vector2 screenPosition)
+            {
+                var results = new List<RaycastResult>();
+                EventSystem.RaycastAll(
+                    new PointerEventData(EventSystem) { position = screenPosition },
+                    results);
+                return results.Count > 0 ? results[0].gameObject : null;
             }
 
             public void ShowModalOverlayAt(Vector2 screenPosition)

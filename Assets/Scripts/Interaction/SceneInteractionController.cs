@@ -26,6 +26,7 @@ namespace AnimalCafe.Interaction
         private IUiPointerBoundary uiPointerBoundary;
         private readonly HashSet<int> pendingScenePointerPresses = new();
         private readonly HashSet<int> activePointerIds = new();
+        private readonly HashSet<int> suppressedPointerIds = new();
 
         public ISelectable CurrentSelection { get; private set; }
 
@@ -65,14 +66,17 @@ namespace AnimalCafe.Interaction
 
             if (inputFrame.TapReleased)
             {
-                var canProcessScenePointer = uiPointerBoundary != null
-                    ? uiPointerBoundary.CanProcessScenePointer(
-                        inputFrame.PointerId)
-                    : EventSystem.current == null
-                      || !EventSystem.current.IsPointerOverGameObject();
-                if (canProcessScenePointer)
+                if (!suppressedPointerIds.Contains(inputFrame.PointerId))
                 {
-                    TrySelectAt(inputFrame.PointerPosition);
+                    var canProcessScenePointer = uiPointerBoundary != null
+                        ? uiPointerBoundary.CanProcessScenePointer(
+                            inputFrame.PointerId)
+                        : EventSystem.current == null
+                          || !EventSystem.current.IsPointerOverGameObject();
+                    if (canProcessScenePointer)
+                    {
+                        TrySelectAt(inputFrame.PointerPosition);
+                    }
                 }
             }
 
@@ -82,6 +86,7 @@ namespace AnimalCafe.Interaction
                 uiPointerBoundary?.ReleasePointer(inputFrame.PointerId);
                 pendingScenePointerPresses.Remove(inputFrame.PointerId);
                 activePointerIds.Remove(inputFrame.PointerId);
+                suppressedPointerIds.Remove(inputFrame.PointerId);
             }
         }
 
@@ -134,6 +139,15 @@ namespace AnimalCafe.Interaction
                 foreach (var pointerId in activePointerIds)
                 {
                     uiPointerBoundary.ReleasePointer(pointerId);
+                    suppressedPointerIds.Add(pointerId);
+                }
+            }
+
+            if (uiPointerBoundary == null)
+            {
+                foreach (var pointerId in activePointerIds)
+                {
+                    suppressedPointerIds.Add(pointerId);
                 }
             }
 
