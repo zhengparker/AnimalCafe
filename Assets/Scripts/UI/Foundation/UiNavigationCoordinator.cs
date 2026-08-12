@@ -31,6 +31,14 @@ namespace AnimalCafe.UI.Foundation
             }
         }
 
+        public bool IsTopModal(UiView view)
+        {
+            RemoveStaleViews();
+            return view != null
+                && modalStack.Count > 0
+                && ReferenceEquals(modalStack[modalStack.Count - 1], view);
+        }
+
         public UiViewHandle OpenMainPanel(UiView view)
         {
             EnsureKind(view, UiViewKind.MainPanel);

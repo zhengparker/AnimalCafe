@@ -153,6 +153,77 @@ namespace AnimalCafe.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator Fix1_StrongPanel_LeaseFollowsActiveLifecycleAndReResolvesMaterial()
+        {
+            var theme = ScriptableObject.CreateInstance<AnimalCafeUiTheme>();
+            var solid = CreateMaterial();
+            var light = CreateMaterial();
+            var strong = CreateMaterial();
+            var fallback = CreateMaterial();
+            theme.Materials = new UiMaterialTokens(solid, light, strong, fallback);
+            var leases = new StrongFrostLease(isStrongFrostSupported: true);
+            var first = CreatePanel("LifecycleStrongFirst");
+            var second = CreatePanel("LifecycleStrongSecond");
+
+            try
+            {
+                first.Root.SetActive(false);
+                second.Root.SetActive(false);
+                first.View.Configure(theme, UiPanelStyle.StrongFrost, leases);
+
+                var externalOwner = leases.Acquire(new object());
+                Assert.That(
+                    externalOwner.ResolvedStyle,
+                    Is.EqualTo(UiPanelStyle.StrongFrost),
+                    "Inactive Configure must not hold the Strong lease.");
+
+                first.Root.SetActive(true);
+                yield return null;
+                Assert.That(first.View.ResolvedStyle, Is.EqualTo(UiPanelStyle.LightFrost));
+                Assert.That(first.Image.material, Is.SameAs(fallback));
+
+                externalOwner.Dispose();
+                first.Root.SetActive(false);
+                first.Root.SetActive(true);
+                yield return null;
+                Assert.That(first.View.ResolvedStyle, Is.EqualTo(UiPanelStyle.StrongFrost));
+                Assert.That(first.Image.material, Is.SameAs(strong));
+
+                second.View.Configure(theme, UiPanelStyle.StrongFrost, leases);
+                second.Root.SetActive(true);
+                yield return null;
+                Assert.That(second.View.ResolvedStyle, Is.EqualTo(UiPanelStyle.LightFrost));
+                Assert.That(second.Image.material, Is.SameAs(fallback));
+
+                first.Root.SetActive(false);
+                var releasedProbe = leases.Acquire(new object());
+                Assert.That(releasedProbe.ResolvedStyle, Is.EqualTo(UiPanelStyle.StrongFrost));
+                releasedProbe.Dispose();
+
+                second.Root.SetActive(false);
+                second.Root.SetActive(true);
+                yield return null;
+                Assert.That(second.View.ResolvedStyle, Is.EqualTo(UiPanelStyle.StrongFrost));
+                Assert.That(second.Image.material, Is.SameAs(strong));
+
+                first.Root.SetActive(true);
+                yield return null;
+                Assert.That(first.View.ResolvedStyle, Is.EqualTo(UiPanelStyle.LightFrost));
+                Assert.That(first.Image.material, Is.SameAs(fallback));
+            }
+            finally
+            {
+                Object.DestroyImmediate(first.Root);
+                Object.DestroyImmediate(second.Root);
+                Object.DestroyImmediate(theme);
+                Object.DestroyImmediate(solid);
+                Object.DestroyImmediate(light);
+                Object.DestroyImmediate(strong);
+                Object.DestroyImmediate(fallback);
+            }
+        }
+
         private static PanelFixture CreatePanel(string name)
         {
             var root = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer));

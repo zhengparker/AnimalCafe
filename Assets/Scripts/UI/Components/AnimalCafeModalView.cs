@@ -41,7 +41,9 @@ namespace AnimalCafe.UI.Components
             Button outside,
             bool isBackDismissible)
         {
+            Close();
             RemoveListeners();
+            Confirmed = null;
             navigation = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
             view = modalView ?? throw new ArgumentNullException(nameof(modalView));
             if (view.Kind != UiViewKind.Modal)
@@ -62,6 +64,7 @@ namespace AnimalCafe.UI.Components
         {
             navigationHandle?.Close();
             navigationHandle = navigation.PushModal(view);
+            GetComponent<AnimalCafePanelView>()?.AcquireForOpenView();
             AcquireLifecycleResources();
         }
 
@@ -72,6 +75,7 @@ namespace AnimalCafe.UI.Components
             UiTransitionRunner runner,
             float transitionDuration)
         {
+            Close();
             pauseCoordinator = pause ?? throw new ArgumentNullException(nameof(pause));
             pointerBoundary = boundary ?? throw new ArgumentNullException(nameof(boundary));
             canvasGroup = group ?? throw new ArgumentNullException(nameof(group));
@@ -99,12 +103,22 @@ namespace AnimalCafe.UI.Components
 
         public bool TryHandleBack()
         {
-            return allowBack && navigation.TryHandleBack();
+            if (!allowBack || !navigation.IsTopModal(view) || !navigation.TryHandleBack())
+            {
+                return false;
+            }
+
+            if (view != null && !view.IsOpen)
+            {
+                Close();
+            }
+
+            return true;
         }
 
         private void HandleConfirm()
         {
-            if (view == null || !view.IsOpen)
+            if (view == null || !view.IsOpen || !navigation.IsTopModal(view))
             {
                 return;
             }
@@ -115,20 +129,32 @@ namespace AnimalCafe.UI.Components
 
         private void HandleCancel()
         {
+            if (view == null || !navigation.IsTopModal(view))
+            {
+                return;
+            }
+
             Close();
         }
 
         private void HandleOutside()
         {
-            if (view != null && view.OutsideDismissPolicy == UiOutsideDismissPolicy.Dismissible)
+            if (view != null
+                && navigation.IsTopModal(view)
+                && view.OutsideDismissPolicy == UiOutsideDismissPolicy.Dismissible)
             {
                 navigation.RequestOutsideDismiss();
+                if (!view.IsOpen)
+                {
+                    Close();
+                }
             }
         }
 
         private void Close()
         {
             ReleaseLifecycleResources();
+            GetComponent<AnimalCafePanelView>()?.ReleaseForClosedView();
             navigationHandle?.Close();
             navigationHandle = null;
         }

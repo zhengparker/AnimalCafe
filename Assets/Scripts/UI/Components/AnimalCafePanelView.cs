@@ -13,6 +13,10 @@ namespace AnimalCafe.UI.Components
     public sealed class AnimalCafePanelView : MonoBehaviour
     {
         private StrongFrostLease.StrongFrostLeaseHandle frostHandle;
+        private AnimalCafeUiTheme configuredTheme;
+        private UiPanelStyle requestedStyle;
+        private StrongFrostLease configuredLease;
+        private bool isConfigured;
 
         public UiPanelStyle ResolvedStyle { get; private set; }
 
@@ -32,24 +36,19 @@ namespace AnimalCafe.UI.Components
             }
 
             ReleaseFrost();
-            ResolvedStyle = requestedStyle;
-            if (requestedStyle == UiPanelStyle.StrongFrost)
-            {
-                frostHandle = frostLease.Acquire(this);
-                ResolvedStyle = frostHandle.ResolvedStyle;
-            }
+            configuredTheme = theme;
+            this.requestedStyle = requestedStyle;
+            configuredLease = frostLease;
+            isConfigured = true;
+            ResolveStyle(isActiveAndEnabled);
+        }
 
-            var materials = theme.Materials;
-            GetComponent<Image>().material = requestedStyle == UiPanelStyle.StrongFrost
-                && ResolvedStyle == UiPanelStyle.LightFrost
-                    ? materials.StrongFrostFallback
-                    : ResolvedStyle switch
-                    {
-                        UiPanelStyle.Solid => materials.Solid,
-                        UiPanelStyle.LightFrost => materials.LightFrost,
-                        UiPanelStyle.StrongFrost => materials.StrongFrost,
-                        _ => materials.Solid
-                    };
+        private void OnEnable()
+        {
+            if (isConfigured)
+            {
+                ResolveStyle(acquireStrongLease: true);
+            }
         }
 
         private void OnDisable()
@@ -60,6 +59,49 @@ namespace AnimalCafe.UI.Components
         private void OnDestroy()
         {
             ReleaseFrost();
+        }
+
+        internal void ReleaseForClosedView()
+        {
+            ReleaseFrost();
+        }
+
+        internal void AcquireForOpenView()
+        {
+            if (isConfigured && isActiveAndEnabled)
+            {
+                ResolveStyle(acquireStrongLease: true);
+            }
+        }
+
+        private void ResolveStyle(bool acquireStrongLease)
+        {
+            ReleaseFrost();
+            ResolvedStyle = requestedStyle;
+            if (requestedStyle == UiPanelStyle.StrongFrost)
+            {
+                if (acquireStrongLease)
+                {
+                    frostHandle = configuredLease.Acquire(this);
+                    ResolvedStyle = frostHandle.ResolvedStyle;
+                }
+                else
+                {
+                    ResolvedStyle = UiPanelStyle.LightFrost;
+                }
+            }
+
+            var materials = configuredTheme.Materials;
+            GetComponent<Image>().material = requestedStyle == UiPanelStyle.StrongFrost
+                && ResolvedStyle == UiPanelStyle.LightFrost
+                    ? materials.StrongFrostFallback
+                    : ResolvedStyle switch
+                    {
+                        UiPanelStyle.Solid => materials.Solid,
+                        UiPanelStyle.LightFrost => materials.LightFrost,
+                        UiPanelStyle.StrongFrost => materials.StrongFrost,
+                        _ => materials.Solid
+                    };
         }
 
         private void ReleaseFrost()

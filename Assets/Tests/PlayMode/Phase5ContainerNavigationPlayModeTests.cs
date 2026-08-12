@@ -149,6 +149,359 @@ namespace AnimalCafe.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator Fix1_FullyConfiguredModal_EveryClosePathReleasesAllOwnedResources()
+        {
+            using (var fixture = new ContainerTouchFixture())
+            {
+                foreach (var closePath in new[]
+                         {
+                             ModalClosePath.Back,
+                             ModalClosePath.Outside,
+                             ModalClosePath.Confirm,
+                             ModalClosePath.Cancel
+                         })
+                {
+                    var navigation = new UiNavigationCoordinator();
+                    var pointerBoundary = new UiPointerBoundary();
+                    var gameTime = new FakeGameTimeService(GameSpeed.Normal);
+                    var pause = new UiPauseCoordinator(gameTime);
+                    var frost = new StrongFrostLease(isStrongFrostSupported: true);
+                    var state = new UiView(
+                        "Lifecycle-" + closePath,
+                        UiViewKind.Modal,
+                        UiPausePolicy.PauseGame,
+                        UiOutsideDismissPolicy.Dismissible);
+                    var modal = fixture.CreateModal("Lifecycle-" + closePath, Vector2.zero);
+                    modal.Panel.Configure(fixture.Theme, UiPanelStyle.StrongFrost, frost);
+                    modal.View.Configure(
+                        navigation, state, modal.Confirm, modal.Cancel, modal.Outside, true);
+                    modal.View.ConfigureLifecycle(
+                        pause, pointerBoundary, modal.Group, new UiTransitionRunner(() => false), 1f);
+                    modal.View.Open();
+                    yield return null;
+
+                    fixture.QueueTap(modal.ContentPosition);
+                    yield return null;
+                    yield return null;
+                    var ownedPointerId = fixture.PointerId;
+
+                    Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+                    Assert.That(modal.Group.blocksRaycasts, Is.True);
+                    Assert.That(pointerBoundary.GetOwnership(ownedPointerId), Is.EqualTo(UiPointerOwnership.Ui));
+                    Assert.That(pointerBoundary.CanProcessScenePointer(9876), Is.False);
+                    Assert.That(state.IsOpen, Is.True);
+                    Assert.That(modal.Group.alpha, Is.GreaterThan(0f).And.LessThan(1f));
+                    var competingOwner = frost.Acquire(new object());
+                    Assert.That(competingOwner.ResolvedStyle, Is.EqualTo(UiPanelStyle.LightFrost));
+                    competingOwner.Dispose();
+
+                    switch (closePath)
+                    {
+                        case ModalClosePath.Back:
+                            Assert.That(modal.View.TryHandleBack(), Is.True);
+                            break;
+                        case ModalClosePath.Outside:
+                            fixture.QueueTap(modal.OutsidePosition);
+                            yield return null;
+                            yield return null;
+                            break;
+                        case ModalClosePath.Confirm:
+                            fixture.QueueTap(modal.ConfirmPosition);
+                            yield return null;
+                            yield return null;
+                            break;
+                        case ModalClosePath.Cancel:
+                            fixture.QueueTap(modal.CancelPosition);
+                            yield return null;
+                            yield return null;
+                            break;
+                    }
+
+                    Assert.That(state.IsOpen, Is.False, closePath + " must close navigation state.");
+                    Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Normal), closePath.ToString());
+                    Assert.That(modal.Group.blocksRaycasts, Is.False, closePath.ToString());
+                    Assert.That(modal.Group.interactable, Is.False, closePath.ToString());
+                    Assert.That(modal.Group.alpha, Is.Zero, closePath.ToString());
+                    Assert.That(pointerBoundary.GetOwnership(ownedPointerId), Is.EqualTo(UiPointerOwnership.None));
+                    Assert.That(pointerBoundary.CanProcessScenePointer(9876), Is.True);
+                    var nextOwner = frost.Acquire(new object());
+                    Assert.That(nextOwner.ResolvedStyle, Is.EqualTo(UiPanelStyle.StrongFrost));
+                    nextOwner.Dispose();
+                    Object.DestroyImmediate(modal.Root);
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Fix1_BottomSheet_TransitionsAndEveryLifecycleExitCleanAndReopenSafely()
+        {
+            var originalTimeScale = Time.timeScale;
+            using (var fixture = new ContainerTouchFixture())
+            {
+                try
+                {
+                    Time.timeScale = 0f;
+                    var navigation = new UiNavigationCoordinator();
+                    var pointerBoundary = new UiPointerBoundary();
+                    var gameTime = new FakeGameTimeService(GameSpeed.Normal);
+                    var pause = new UiPauseCoordinator(gameTime);
+                    var state = OrdinarySheetState("LifecycleSheet");
+                    var sheet = fixture.CreateBottomSheet();
+                    sheet.View.Configure(navigation, state, sheet.Outside);
+                    sheet.View.ConfigureLifecycle(
+                        pause, pointerBoundary, sheet.Group,
+                        new UiTransitionRunner(() => false), 0.03f);
+
+                    sheet.View.Open();
+                    Assert.That(sheet.Group.blocksRaycasts, Is.True);
+                    yield return new WaitForSecondsRealtime(0.06f);
+                    Assert.That(sheet.Group.alpha, Is.EqualTo(1f));
+                    Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+
+                    fixture.QueueTap(sheet.ContentPosition);
+                    yield return null;
+                    yield return null;
+                    var outsidePointerId = fixture.PointerId;
+                    Assert.That(
+                        pointerBoundary.GetOwnership(outsidePointerId),
+                        Is.EqualTo(UiPointerOwnership.Ui));
+
+                    fixture.QueueTap(sheet.OutsidePosition);
+                    yield return new WaitForSecondsRealtime(0.06f);
+                    AssertSheetClosed(sheet, state, navigation, pointerBoundary, outsidePointerId);
+
+                    sheet.View.Open();
+                    yield return new WaitForSecondsRealtime(0.06f);
+                    Assert.That(state.IsOpen, Is.True);
+                    Assert.That(sheet.Group.alpha, Is.EqualTo(1f));
+                    Assert.That(sheet.View.TryHandleBack(), Is.True);
+                    yield return new WaitForSecondsRealtime(0.06f);
+                    AssertSheetClosed(sheet, state, navigation, pointerBoundary, outsidePointerId);
+
+                    sheet.View.Open();
+                    yield return null;
+                    fixture.QueueTap(sheet.ContentPosition);
+                    yield return null;
+                    yield return null;
+                    var disablePointerId = fixture.PointerId;
+                    sheet.Root.SetActive(false);
+                    sheet.Root.SetActive(false);
+                    AssertSheetClosed(sheet, state, navigation, pointerBoundary, disablePointerId);
+
+                    sheet.Root.SetActive(true);
+                    sheet.View.Open();
+                    yield return new WaitForSecondsRealtime(0.06f);
+                    Assert.That(state.IsOpen, Is.True);
+                    Assert.That(sheet.Group.alpha, Is.EqualTo(1f));
+
+                    var replacementState = OrdinarySheetState("ReplacementSheet");
+                    var replacementOutside = fixture.CreateActionButton(
+                        "ReplacementOutside", new Vector2(200f, 120f));
+                    sheet.View.Configure(navigation, replacementState, replacementOutside.Button);
+                    sheet.View.ConfigureLifecycle(
+                        pause, pointerBoundary, sheet.Group,
+                        new UiTransitionRunner(() => false), 0.03f);
+                    sheet.View.Open();
+                    yield return new WaitForSecondsRealtime(0.06f);
+
+                    fixture.QueueTap(sheet.OutsidePosition);
+                    yield return null;
+                    yield return null;
+                    Assert.That(replacementState.IsOpen, Is.True, "Old outside listener must be removed.");
+
+                    fixture.QueueTap(replacementOutside.Position);
+                    yield return new WaitForSecondsRealtime(0.06f);
+                    Assert.That(replacementState.IsOpen, Is.False);
+                    Assert.That(sheet.Group.blocksRaycasts, Is.False);
+
+                    var destroyState = OrdinarySheetState("DestroySheet");
+                    var destroySheet = fixture.CreateBottomSheet();
+                    destroySheet.View.Configure(navigation, destroyState, destroySheet.Outside);
+                    destroySheet.View.ConfigureLifecycle(
+                        pause, pointerBoundary, destroySheet.Group,
+                        new UiTransitionRunner(() => false), 1f);
+                    destroySheet.View.Open();
+                    yield return null;
+                    fixture.QueueTap(destroySheet.ContentPosition);
+                    yield return null;
+                    yield return null;
+                    var destroyPointerId = fixture.PointerId;
+                    Object.DestroyImmediate(destroySheet.Root);
+
+                    Assert.That(destroyState.IsOpen, Is.False);
+                    Assert.That(navigation.ActiveBottomSheet, Is.Null);
+                    Assert.That(
+                        pointerBoundary.GetOwnership(destroyPointerId),
+                        Is.EqualTo(UiPointerOwnership.None));
+                    Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+                }
+                finally
+                {
+                    Time.timeScale = originalTimeScale;
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Fix1_NonTopModalActions_CannotCloseOrConfirmEitherModal()
+        {
+            using (var fixture = new ContainerTouchFixture())
+            {
+                var navigation = new UiNavigationCoordinator();
+                var lowerState = DismissibleModalState("GuardedLower");
+                var topState = DismissibleModalState("GuardedTop");
+                var lower = fixture.CreateModal("GuardedLower", new Vector2(-200f, 0f));
+                var top = fixture.CreateModal("GuardedTop", new Vector2(200f, 0f));
+                var lowerConfirmCount = 0;
+                lower.View.Configure(
+                    navigation, lowerState, lower.Confirm, lower.Cancel, lower.Outside, true);
+                top.View.Configure(
+                    navigation, topState, top.Confirm, top.Cancel, top.Outside, true);
+                lower.View.Confirmed += () => lowerConfirmCount++;
+                lower.View.Open();
+                top.View.Open();
+
+                // Put the lower actions above the fixture blocker to prove the component's own
+                // top-of-stack guard, while retaining the real EventSystem/Button route.
+                lower.Confirm.transform.SetAsLastSibling();
+                fixture.QueueTap(lower.ConfirmPosition);
+                yield return null;
+                yield return null;
+                Assert.That(lowerConfirmCount, Is.Zero);
+                Assert.That(lowerState.IsOpen, Is.True);
+                Assert.That(topState.IsOpen, Is.True);
+
+                lower.Outside.transform.SetAsLastSibling();
+                fixture.QueueTap(lower.OutsidePosition);
+                yield return null;
+                yield return null;
+                Assert.That(lowerState.IsOpen, Is.True);
+                Assert.That(topState.IsOpen, Is.True);
+
+                Assert.That(lower.View.TryHandleBack(), Is.False);
+                Assert.That(lowerState.IsOpen, Is.True);
+                Assert.That(topState.IsOpen, Is.True);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Fix1_Modal_DestroyReopenDisableAndReconfigure_AreIdempotentAndReleaseOldState()
+        {
+            using (var fixture = new ContainerTouchFixture())
+            {
+                var navigation = new UiNavigationCoordinator();
+                var pointerBoundary = new UiPointerBoundary();
+                var gameTime = new FakeGameTimeService(GameSpeed.Normal);
+                var pause = new UiPauseCoordinator(gameTime);
+                var frost = new StrongFrostLease(isStrongFrostSupported: true);
+                var state = CriticalModalState("ReopenModal");
+                var modal = fixture.CreateModal("ReopenModal", Vector2.zero);
+                modal.Panel.Configure(fixture.Theme, UiPanelStyle.StrongFrost, frost);
+                modal.View.Configure(
+                    navigation, state, modal.Confirm, modal.Cancel, modal.Outside, false);
+                modal.View.ConfigureLifecycle(
+                    pause, pointerBoundary, modal.Group,
+                    new UiTransitionRunner(() => false), 0.03f);
+                modal.View.Open();
+                yield return new WaitForSecondsRealtime(0.06f);
+
+                fixture.QueueTap(modal.CancelPosition);
+                yield return new WaitForSecondsRealtime(0.06f);
+                Assert.That(state.IsOpen, Is.False);
+                Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+
+                modal.View.Open();
+                yield return new WaitForSecondsRealtime(0.06f);
+                Assert.That(state.IsOpen, Is.True);
+                Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+                Assert.That(modal.Panel.ResolvedStyle, Is.EqualTo(UiPanelStyle.StrongFrost));
+                var reopenCompetitor = frost.Acquire(new object());
+                Assert.That(reopenCompetitor.ResolvedStyle, Is.EqualTo(UiPanelStyle.LightFrost));
+                reopenCompetitor.Dispose();
+
+                modal.Root.SetActive(false);
+                modal.Root.SetActive(false);
+                Assert.That(state.IsOpen, Is.False);
+                Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+                Assert.That(modal.Group.blocksRaycasts, Is.False);
+
+                modal.Root.SetActive(true);
+                modal.View.Open();
+                yield return null;
+                fixture.QueueTap(modal.ContentPosition);
+                yield return null;
+                yield return null;
+                var oldPointerId = fixture.PointerId;
+
+                var replacementNavigation = new UiNavigationCoordinator();
+                var replacementState = CriticalModalState("ReplacementModal");
+                var replacementConfirm = fixture.CreateActionButton(
+                    "ReplacementConfirm", new Vector2(200f, 0f));
+                var replacementCancel = fixture.CreateActionButton(
+                    "ReplacementCancel", new Vector2(200f, -120f));
+                var replacementOutside = fixture.CreateActionButton(
+                    "ReplacementOutside", new Vector2(200f, 120f));
+                var replacementConfirmCount = 0;
+                modal.View.Configure(
+                    replacementNavigation,
+                    replacementState,
+                    replacementConfirm.Button,
+                    replacementCancel.Button,
+                    replacementOutside.Button,
+                    false);
+                modal.View.Confirmed += () => replacementConfirmCount++;
+
+                Assert.That(state.IsOpen, Is.False, "Reconfigure must close the old navigation state.");
+                Assert.That(navigation.TryHandleBack(), Is.False);
+                Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+                Assert.That(pointerBoundary.GetOwnership(oldPointerId), Is.EqualTo(UiPointerOwnership.None));
+                Assert.That(modal.Group.blocksRaycasts, Is.False);
+
+                modal.View.ConfigureLifecycle(
+                    pause, pointerBoundary, modal.Group,
+                    new UiTransitionRunner(() => false), 0.03f);
+                modal.View.Open();
+                yield return new WaitForSecondsRealtime(0.06f);
+
+                fixture.QueueTap(modal.ConfirmPosition);
+                yield return null;
+                yield return null;
+                Assert.That(replacementState.IsOpen, Is.True, "Old Confirm listener must be removed.");
+                Assert.That(replacementConfirmCount, Is.Zero);
+
+                fixture.QueueTap(replacementConfirm.Position);
+                yield return new WaitForSecondsRealtime(0.06f);
+                Assert.That(replacementState.IsOpen, Is.False);
+                Assert.That(replacementConfirmCount, Is.EqualTo(1));
+
+                var destroyNavigation = new UiNavigationCoordinator();
+                var destroyState = CriticalModalState("DestroyModal");
+                var destroyModal = fixture.CreateModal("DestroyModal", Vector2.zero);
+                destroyModal.View.Configure(
+                    destroyNavigation, destroyState,
+                    destroyModal.Confirm, destroyModal.Cancel, destroyModal.Outside, false);
+                destroyModal.View.ConfigureLifecycle(
+                    pause, pointerBoundary, destroyModal.Group,
+                    new UiTransitionRunner(() => false), 1f);
+                destroyModal.View.Open();
+                yield return null;
+                fixture.QueueTap(destroyModal.ContentPosition);
+                yield return null;
+                yield return null;
+                var destroyPointerId = fixture.PointerId;
+                Object.DestroyImmediate(destroyModal.Root);
+
+                Assert.That(destroyState.IsOpen, Is.False);
+                Assert.That(destroyNavigation.TryHandleBack(), Is.False);
+                Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+                Assert.That(
+                    pointerBoundary.GetOwnership(destroyPointerId),
+                    Is.EqualTo(UiPointerOwnership.None));
+                Assert.That(pointerBoundary.CanProcessScenePointer(1234), Is.True);
+            }
+        }
+
         private static UiView CriticalModalState(string id)
         {
             return new UiView(
@@ -156,9 +509,46 @@ namespace AnimalCafe.Tests.PlayMode
                 UiOutsideDismissPolicy.NotDismissible);
         }
 
+        private static UiView OrdinarySheetState(string id)
+        {
+            return new UiView(
+                id, UiViewKind.BottomSheet, UiPausePolicy.ContinueGame,
+                UiOutsideDismissPolicy.Dismissible);
+        }
+
+        private static UiView DismissibleModalState(string id)
+        {
+            return new UiView(
+                id, UiViewKind.Modal, UiPausePolicy.ContinueGame,
+                UiOutsideDismissPolicy.Dismissible);
+        }
+
+        private static void AssertSheetClosed(
+            BottomSheetFixture sheet,
+            UiView state,
+            UiNavigationCoordinator navigation,
+            UiPointerBoundary pointerBoundary,
+            int pointerId)
+        {
+            Assert.That(state.IsOpen, Is.False);
+            Assert.That(navigation.ActiveBottomSheet, Is.Null);
+            Assert.That(sheet.Group.alpha, Is.Zero);
+            Assert.That(sheet.Group.blocksRaycasts, Is.False);
+            Assert.That(sheet.Group.interactable, Is.False);
+            Assert.That(pointerBoundary.GetOwnership(pointerId), Is.EqualTo(UiPointerOwnership.None));
+        }
+
         private static Material CreateMaterial()
         {
             return new Material(Shader.Find("Hidden/InternalErrorShader"));
+        }
+
+        private enum ModalClosePath
+        {
+            Back,
+            Outside,
+            Confirm,
+            Cancel
         }
 
         private sealed class ContainerTouchFixture : System.IDisposable
@@ -232,7 +622,14 @@ namespace AnimalCafe.Tests.PlayMode
                 var root = CreateRoot("BottomSheet");
                 var outside = CreateButton("SheetOutside", Vector2.zero);
                 return new BottomSheetFixture(
-                    root.AddComponent<AnimalCafeBottomSheetView>(), outside.Button, outside.Position);
+                    root.AddComponent<AnimalCafeBottomSheetView>(), outside.Button, outside.Position,
+                    root, root.GetComponent<CanvasGroup>(),
+                    new Vector2(Screen.width * 0.5f + 200f, Screen.height * 0.5f));
+            }
+
+            public ButtonFixture CreateActionButton(string name, Vector2 offset)
+            {
+                return CreateButton(name, offset);
             }
 
             public void QueueTap(Vector2 position)
@@ -326,7 +723,7 @@ namespace AnimalCafe.Tests.PlayMode
             }
         }
 
-        private readonly struct ButtonFixture
+        public readonly struct ButtonFixture
         {
             public ButtonFixture(Button button, Vector2 position) { Button = button; Position = position; }
             public Button Button { get; }
@@ -366,11 +763,19 @@ namespace AnimalCafe.Tests.PlayMode
 
         private readonly struct BottomSheetFixture
         {
-            public BottomSheetFixture(AnimalCafeBottomSheetView view, Button outside, Vector2 position)
-            { View = view; Outside = outside; OutsidePosition = position; }
+            public BottomSheetFixture(
+                AnimalCafeBottomSheetView view, Button outside, Vector2 position,
+                GameObject root, CanvasGroup group, Vector2 contentPosition)
+            {
+                View = view; Outside = outside; OutsidePosition = position;
+                Root = root; Group = group; ContentPosition = contentPosition;
+            }
             public AnimalCafeBottomSheetView View { get; }
             public Button Outside { get; }
             public Vector2 OutsidePosition { get; }
+            public GameObject Root { get; }
+            public CanvasGroup Group { get; }
+            public Vector2 ContentPosition { get; }
         }
     }
 }
