@@ -31,6 +31,7 @@ namespace AnimalCafe.Tests.PlayMode
 
             Assert.That(fixture.SafeRect.offsetMin, Is.EqualTo(Vector2.zero));
             Assert.That(fixture.SafeRect.offsetMax, Is.EqualTo(Vector2.zero));
+            fixture.AssertViewportAndSafeGeometry(new Rect(24f, 96f, 1032f, 1740f));
             fixture.AssertCriticalButtonsInsideSafeAreaAndSeparate();
         }
 
@@ -52,6 +53,8 @@ namespace AnimalCafe.Tests.PlayMode
 
                 yield return fixture.UpdateLayout();
 
+                fixture.AssertViewportAndSafeGeometry(
+                    new Rect(18f, 64f, size.x - 36f, size.y - 128f));
                 fixture.AssertCriticalButtonsInsideSafeAreaAndSeparate();
             }
         }
@@ -65,6 +68,7 @@ namespace AnimalCafe.Tests.PlayMode
                 new Vector2(2400f, 1080f));
 
             yield return fixture.UpdateLayout();
+            fixture.AssertViewportAndSafeGeometry(new Rect(96f, 48f, 2208f, 984f));
             Assert.That(fixture.TopRaycastTargetAtClose(), Is.SameAs(fixture.Close.gameObject));
 
             fixture.QueueTouchAtClose(InputTouchPhase.Began);
@@ -94,11 +98,12 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(fixture.SafeRect.anchorMax.y, Is.EqualTo(1008f / 1080f).Within(0.0001f));
             Assert.That(fixture.SafeRect.offsetMin, Is.EqualTo(Vector2.zero));
             Assert.That(fixture.SafeRect.offsetMax, Is.EqualTo(Vector2.zero));
+            fixture.AssertViewportAndSafeGeometry(new Rect(120f, 72f, 2160f, 936f));
             fixture.AssertCriticalButtonsInsideSafeAreaAndSeparate();
         }
 
         [UnityTest]
-        public IEnumerator LongMixedCjkLatinLabels_RenderAllGlyphsWithoutOverflowOverlapOrFontShrink()
+        public IEnumerator LongMixedCjkLatinLabels_HaveApprovedLengthWrapPreferredHeightAndNoLayoutOverlap()
         {
             using var fixture = new LocalizedTextFixture();
 
@@ -165,9 +170,11 @@ namespace AnimalCafe.Tests.PlayMode
             private readonly InputSystemUIInputModule inputModule;
             private readonly Touchscreen touchscreen;
             private readonly Button[] controls;
+            private readonly Vector2 viewportSize;
 
             public ResponsiveFixture(Vector2 referenceResolution)
             {
+                viewportSize = referenceResolution;
                 DisableExistingEventSystems();
 
                 Root = new GameObject(
@@ -178,14 +185,22 @@ namespace AnimalCafe.Tests.PlayMode
                     typeof(GraphicRaycaster));
                 Root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
                 var scaler = Root.GetComponent<CanvasScaler>();
-                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                scaler.referenceResolution = referenceResolution;
-                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-                scaler.matchWidthOrHeight = referenceResolution.x > referenceResolution.y ? 1f : 0f;
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+
+                var viewportObject = new GameObject("DeterministicViewport", typeof(RectTransform));
+                Viewport = viewportObject.GetComponent<RectTransform>();
+                Viewport.SetParent(Root.transform, false);
+                Viewport.anchorMin = Viewport.anchorMax = new Vector2(0.5f, 0.5f);
+                Viewport.pivot = new Vector2(0.5f, 0.5f);
+                Viewport.sizeDelta = referenceResolution;
+                var fitScale = Mathf.Min(
+                    Screen.width / referenceResolution.x,
+                    Screen.height / referenceResolution.y);
+                Viewport.localScale = Vector3.one * Mathf.Min(1f, fitScale);
 
                 var safeObject = new GameObject("SafeArea", typeof(RectTransform), typeof(SafeAreaContainer));
                 SafeRect = safeObject.GetComponent<RectTransform>();
-                SafeRect.SetParent(Root.transform, false);
+                SafeRect.SetParent(Viewport, false);
                 SafeRect.anchorMin = Vector2.zero;
                 SafeRect.anchorMax = Vector2.one;
                 SafeRect.offsetMin = Vector2.zero;
@@ -212,6 +227,7 @@ namespace AnimalCafe.Tests.PlayMode
             }
 
             public GameObject Root { get; }
+            public RectTransform Viewport { get; }
             public RectTransform SafeRect { get; }
             public SafeAreaContainer Container { get; }
             public Button Close { get; }
@@ -278,6 +294,27 @@ namespace AnimalCafe.Tests.PlayMode
                             controls[index].name + " overlaps " + controls[other].name);
                     }
                 }
+            }
+
+            public void AssertViewportAndSafeGeometry(Rect expectedSafeArea)
+            {
+                Assert.That(Viewport.rect.width, Is.EqualTo(viewportSize.x).Within(0.01f));
+                Assert.That(Viewport.rect.height, Is.EqualTo(viewportSize.y).Within(0.01f));
+                Assert.That(
+                    Viewport.rect.width / Viewport.rect.height,
+                    Is.EqualTo(viewportSize.x / viewportSize.y).Within(0.0001f));
+
+                var safeBounds = RectTransformUtility.CalculateRelativeRectTransformBounds(Viewport, SafeRect);
+                var viewportBottomLeft = Viewport.rect.min;
+                var actualSafeArea = Rect.MinMaxRect(
+                    safeBounds.min.x - viewportBottomLeft.x,
+                    safeBounds.min.y - viewportBottomLeft.y,
+                    safeBounds.max.x - viewportBottomLeft.x,
+                    safeBounds.max.y - viewportBottomLeft.y);
+                Assert.That(actualSafeArea.x, Is.EqualTo(expectedSafeArea.x).Within(0.05f));
+                Assert.That(actualSafeArea.y, Is.EqualTo(expectedSafeArea.y).Within(0.05f));
+                Assert.That(actualSafeArea.width, Is.EqualTo(expectedSafeArea.width).Within(0.05f));
+                Assert.That(actualSafeArea.height, Is.EqualTo(expectedSafeArea.height).Within(0.05f));
             }
 
             public void Dispose()
