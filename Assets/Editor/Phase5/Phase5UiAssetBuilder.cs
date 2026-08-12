@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Collections.Generic;
+using System.Linq;
 using AnimalCafe.UI.Components;
 using AnimalCafe.UI.Feedback;
 using AnimalCafe.UI.Foundation;
@@ -145,33 +146,44 @@ namespace AnimalCafe.EditorTools.Phase5
 
         private static void RepairTmpFontInPlace(TMP_FontAsset font, Font source)
         {
+            var shader = Shader.Find("TextMeshPro/Mobile/Distance Field")
+                ?? throw new InvalidOperationException("Canonical TMP mobile SDF shader missing.");
+            var subassets = AssetDatabase.LoadAllAssetsAtPath(Phase5UiAssetPaths.TmpFontAssetPath);
+            var atlas = subassets.OfType<Texture2D>().FirstOrDefault()
+                ?? throw new InvalidOperationException("Canonical TMP font atlas subasset is missing.");
+            var material = subassets.OfType<Material>().FirstOrDefault();
+            if (material == null)
+            {
+                material = new Material(shader) { name = "Noto Sans SC - Regular Material" };
+                AssetDatabase.AddObjectToAsset(material, font);
+            }
+
             var serialized = new SerializedObject(font);
-            font.atlasPopulationMode = AtlasPopulationMode.Dynamic;
             serialized.Update();
             serialized.FindProperty("m_SourceFontFile").objectReferenceValue = source;
+            serialized.FindProperty("m_SourceFontFileGUID").stringValue =
+                AssetDatabase.AssetPathToGUID(Phase5UiAssetPaths.FontSourcePath);
+            serialized.FindProperty("m_Material").objectReferenceValue = material;
+            var atlasTextures = serialized.FindProperty("m_AtlasTextures");
+            if (atlasTextures.arraySize == 0) atlasTextures.arraySize = 1;
+            atlasTextures.GetArrayElementAtIndex(0).objectReferenceValue = atlas;
+            serialized.FindProperty("m_AtlasTextureIndex").intValue = 0;
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            font.atlasPopulationMode = AtlasPopulationMode.Dynamic;
+            material.shader = shader;
+            material.mainTexture = atlas;
+            EditorUtility.SetDirty(material);
             if (Phase5UiFontCoverage.FindMissingUnicodeScalars(font, RequiredUiCharacters).Count > 0)
                 PopulateRequiredFontCharacters(font);
             else
                 font.atlasPopulationMode = AtlasPopulationMode.Static;
 
-            var shader = Shader.Find("TextMeshPro/Mobile/Distance Field")
-                ?? throw new InvalidOperationException("Canonical TMP mobile SDF shader missing.");
-            if (font.material == null)
-            {
-                var material = new Material(shader) { name = "Noto Sans SC - Regular Material" };
-                material.mainTexture = font.atlasTexture;
-                AssetDatabase.AddObjectToAsset(material, font);
-                serialized = new SerializedObject(font);
-                serialized.FindProperty("m_Material").objectReferenceValue = material;
-                serialized.ApplyModifiedPropertiesWithoutUndo();
-            }
-            else
-            {
-                font.material.shader = shader;
-                font.material.mainTexture = font.atlasTexture;
-                EditorUtility.SetDirty(font.material);
-            }
+            serialized = new SerializedObject(font);
+            serialized.Update();
+            serialized.FindProperty("m_SourceFontFileGUID").stringValue =
+                AssetDatabase.AssetPathToGUID(Phase5UiAssetPaths.FontSourcePath);
+            serialized.FindProperty("m_Material").objectReferenceValue = material;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(font);
         }
 

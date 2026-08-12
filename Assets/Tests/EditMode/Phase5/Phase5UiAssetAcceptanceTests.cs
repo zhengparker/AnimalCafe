@@ -207,10 +207,26 @@ namespace AnimalCafe.Tests.Phase5
                 Phase5UiAssetPaths.SolidMaterialPath, Phase5UiAssetPaths.UiRootPrefabPath };
             var guids = paths.ToDictionary(path => path, AssetDatabase.AssetPathToGUID);
             var font = Load<TMP_FontAsset>(Phase5UiAssetPaths.TmpFontAssetPath);
+            var canonicalSourceGuid = AssetDatabase.AssetPathToGUID(Phase5UiAssetPaths.FontSourcePath);
+            var canonicalMaterial = font.material;
+            var canonicalAtlas = font.atlasTexture;
+            Assert.That(canonicalSourceGuid, Is.Not.Empty);
+            Assert.That(canonicalMaterial, Is.Not.Null);
+            Assert.That(canonicalAtlas, Is.Not.Null);
             font.atlasPopulationMode = AtlasPopulationMode.Dynamic;
             font.ClearFontAssetData();
+            var serializedFont = new SerializedObject(font);
+            serializedFont.FindProperty("m_SourceFontFileGUID").stringValue =
+                "00000000000000000000000000000000";
+            serializedFont.FindProperty("m_Material").objectReferenceValue = null;
+            serializedFont.FindProperty("m_AtlasTextures")
+                .GetArrayElementAtIndex(0).objectReferenceValue = null;
+            serializedFont.ApplyModifiedPropertiesWithoutUndo();
             var settings = Load<TMP_Settings>(Phase5UiAssetPaths.TmpSettingsPath);
             var serializedSettings = new SerializedObject(settings);
+            serializedSettings.FindProperty("assetVersion").stringValue = "damaged";
+            serializedSettings.FindProperty("m_defaultFontAsset").objectReferenceValue = null;
+            serializedSettings.FindProperty("m_defaultFontAssetPath").stringValue = "Damaged/Font/Path";
             serializedSettings.FindProperty("m_leadingCharacters").objectReferenceValue = null;
             serializedSettings.FindProperty("m_followingCharacters").objectReferenceValue = null;
             serializedSettings.ApplyModifiedPropertiesWithoutUndo();
@@ -228,8 +244,24 @@ namespace AnimalCafe.Tests.Phase5
             Assert.That(font.atlasPopulationMode, Is.EqualTo(AtlasPopulationMode.Static));
             Assert.That(Phase5UiFontCoverage.FindMissingUnicodeScalars(font,
                 "咖啡豆库存 Coffee Beans 糖浆口味 Syrup Flavor"), Is.Empty);
-            Assert.That(TMP_Settings.leadingCharacters, Is.Not.Null);
-            Assert.That(TMP_Settings.followingCharacters, Is.Not.Null);
+            var repairedFont = new SerializedObject(font);
+            Assert.That(repairedFont.FindProperty("m_SourceFontFileGUID").stringValue,
+                Is.EqualTo(canonicalSourceGuid));
+            Assert.That(font.material, Is.EqualTo(canonicalMaterial));
+            Assert.That(font.material.shader.name, Is.EqualTo("TextMeshPro/Mobile/Distance Field"));
+            Assert.That(font.atlasTexture, Is.EqualTo(canonicalAtlas));
+            Assert.That(font.material.mainTexture, Is.EqualTo(canonicalAtlas));
+            settings = Load<TMP_Settings>(Phase5UiAssetPaths.TmpSettingsPath);
+            serializedSettings = new SerializedObject(settings);
+            Assert.That(serializedSettings.FindProperty("assetVersion").stringValue, Is.EqualTo("2"));
+            Assert.That(serializedSettings.FindProperty("m_defaultFontAsset").objectReferenceValue,
+                Is.EqualTo(font));
+            Assert.That(serializedSettings.FindProperty("m_defaultFontAssetPath").stringValue,
+                Is.Empty);
+            Assert.That(serializedSettings.FindProperty("m_leadingCharacters").objectReferenceValue,
+                Is.EqualTo(Load<TextAsset>(Phase5UiAssetPaths.LeadingCharactersPath)));
+            Assert.That(serializedSettings.FindProperty("m_followingCharacters").objectReferenceValue,
+                Is.EqualTo(Load<TextAsset>(Phase5UiAssetPaths.FollowingCharactersPath)));
             Assert.That(Load<Material>(Phase5UiAssetPaths.SolidMaterialPath).shader.name,
                 Is.EqualTo("UI/Default"));
             Assert.That(Load<GameObject>(Phase5UiAssetPaths.UiRootPrefabPath)
