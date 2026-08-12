@@ -61,6 +61,11 @@ namespace AnimalCafe.UI.Components
                 throw new ArgumentNullException(nameof(text));
             }
 
+            if (style != UiTextStyle.Body && style != UiTextStyle.Label)
+            {
+                return;
+            }
+
             var minimumFontSize = style switch
             {
                 UiTextStyle.Body => AnimalCafeUiTheme.MinimumBodyFontSize,

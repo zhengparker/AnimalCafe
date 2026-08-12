@@ -77,5 +77,32 @@ namespace AnimalCafe.Tests.Phase5
                 Object.DestroyImmediate(gameObject);
             }
         }
+
+        [Test]
+        public void ConfigureLocalizedText_Heading_PreservesThemeControlledLayoutBehavior()
+        {
+            var gameObject = new GameObject("Heading", typeof(RectTransform), typeof(TextMeshProUGUI));
+            try
+            {
+                var heading = gameObject.GetComponent<TextMeshProUGUI>();
+                heading.fontSize = 28f;
+                heading.enableAutoSizing = true;
+                heading.fontSizeMin = 22f;
+                heading.textWrappingMode = TextWrappingModes.NoWrap;
+                heading.overflowMode = TextOverflowModes.Ellipsis;
+
+                SafeAreaContainer.ConfigureLocalizedText(heading, UiTextStyle.Heading);
+
+                Assert.That(heading.fontSize, Is.EqualTo(28f));
+                Assert.That(heading.enableAutoSizing, Is.True);
+                Assert.That(heading.fontSizeMin, Is.EqualTo(22f));
+                Assert.That(heading.textWrappingMode, Is.EqualTo(TextWrappingModes.NoWrap));
+                Assert.That(heading.overflowMode, Is.EqualTo(TextOverflowModes.Ellipsis));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
     }
 }
