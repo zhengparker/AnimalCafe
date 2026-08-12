@@ -63,7 +63,11 @@ namespace AnimalCafe.UI.Components
         public void Open()
         {
             navigationHandle?.Close();
-            navigationHandle = navigation.PushModal(view);
+            navigationHandle = navigation.PushModal(
+                view,
+                HandleNavigationClosed,
+                allowBack,
+                view.OutsideDismissPolicy == UiOutsideDismissPolicy.Dismissible);
             GetComponent<AnimalCafePanelView>()?.AcquireForOpenView();
             AcquireLifecycleResources();
         }
@@ -103,17 +107,7 @@ namespace AnimalCafe.UI.Components
 
         public bool TryHandleBack()
         {
-            if (!allowBack || !navigation.IsTopModal(view) || !navigation.TryHandleBack())
-            {
-                return false;
-            }
-
-            if (view != null && !view.IsOpen)
-            {
-                Close();
-            }
-
-            return true;
+            return allowBack && navigation.TryHandleBack(view);
         }
 
         private void HandleConfirm()
@@ -143,20 +137,33 @@ namespace AnimalCafe.UI.Components
                 && navigation.IsTopModal(view)
                 && view.OutsideDismissPolicy == UiOutsideDismissPolicy.Dismissible)
             {
-                navigation.RequestOutsideDismiss();
-                if (!view.IsOpen)
-                {
-                    Close();
-                }
+                navigation.RequestOutsideDismiss(view);
             }
         }
 
         private void Close()
         {
+            var handle = navigationHandle;
+            navigationHandle = null;
+            if (handle != null)
+            {
+                handle.Close();
+                return;
+            }
+
+            CleanupPresentation();
+        }
+
+        private void HandleNavigationClosed()
+        {
+            navigationHandle = null;
+            CleanupPresentation();
+        }
+
+        private void CleanupPresentation()
+        {
             ReleaseLifecycleResources();
             GetComponent<AnimalCafePanelView>()?.ReleaseForClosedView();
-            navigationHandle?.Close();
-            navigationHandle = null;
         }
 
         private void AcquireLifecycleResources()

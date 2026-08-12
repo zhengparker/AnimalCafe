@@ -10,8 +10,11 @@ namespace AnimalCafe.UI.Foundation
     public sealed class UiNavigationCoordinator
     {
         private readonly List<UiView> modalStack = new List<UiView>();
+        private readonly Dictionary<UiView, PresentationRegistration> registrations =
+            new Dictionary<UiView, PresentationRegistration>();
         private UiView activeMainPanel;
         private UiView activeBottomSheet;
+        private int nextRegistrationToken;
 
         public UiView ActiveMainPanel
         {
@@ -46,37 +49,55 @@ namespace AnimalCafe.UI.Foundation
 
             if (!ReferenceEquals(activeMainPanel, view))
             {
-                CloseView(activeMainPanel);
+                CloseRegisteredView(activeMainPanel);
                 activeMainPanel = view;
             }
 
             view.Open();
-            return new UiViewHandle(this, view);
+            return Register(view, null, allowBack: true, allowOutside: false);
         }
 
         public UiViewHandle PushModal(UiView view)
+        {
+            return PushModal(view, null, allowBack: true, allowOutside: true);
+        }
+
+        public UiViewHandle PushModal(
+            UiView view,
+            Action onClosed,
+            bool allowBack,
+            bool allowOutside)
         {
             EnsureKind(view, UiViewKind.Modal);
             RemoveStaleViews();
 
             modalStack.Add(view);
             view.Open();
-            return new UiViewHandle(this, view);
+            return Register(view, onClosed, allowBack, allowOutside);
         }
 
         public UiViewHandle OpenBottomSheet(UiView view)
+        {
+            return OpenBottomSheet(view, null, allowBack: true, allowOutside: true);
+        }
+
+        public UiViewHandle OpenBottomSheet(
+            UiView view,
+            Action onClosed,
+            bool allowBack,
+            bool allowOutside)
         {
             EnsureKind(view, UiViewKind.BottomSheet);
             RemoveStaleViews();
 
             if (!ReferenceEquals(activeBottomSheet, view))
             {
-                CloseView(activeBottomSheet);
+                CloseRegisteredView(activeBottomSheet);
                 activeBottomSheet = view;
             }
 
             view.Open();
-            return new UiViewHandle(this, view);
+            return Register(view, onClosed, allowBack, allowOutside);
         }
 
         public bool TryHandleBack()
@@ -85,12 +106,23 @@ namespace AnimalCafe.UI.Foundation
 
             if (modalStack.Count > 0)
             {
-                CloseRegisteredView(modalStack[modalStack.Count - 1]);
+                var modal = modalStack[modalStack.Count - 1];
+                if (!AllowsBack(modal))
+                {
+                    return false;
+                }
+
+                CloseRegisteredView(modal);
                 return true;
             }
 
             if (activeBottomSheet != null)
             {
+                if (!AllowsBack(activeBottomSheet))
+                {
+                    return false;
+                }
+
                 CloseRegisteredView(activeBottomSheet);
                 return true;
             }
@@ -104,6 +136,18 @@ namespace AnimalCafe.UI.Foundation
             return false;
         }
 
+        public bool TryHandleBack(UiView expectedTopView)
+        {
+            RemoveStaleViews();
+            if (!ReferenceEquals(GetTopContainer(), expectedTopView) || !AllowsBack(expectedTopView))
+            {
+                return false;
+            }
+
+            CloseRegisteredView(expectedTopView);
+            return true;
+        }
+
         public bool RequestOutsideDismiss()
         {
             RemoveStaleViews();
@@ -112,7 +156,9 @@ namespace AnimalCafe.UI.Foundation
                 ? modalStack[modalStack.Count - 1]
                 : activeBottomSheet;
 
-            if (topView == null || topView.OutsideDismissPolicy != UiOutsideDismissPolicy.Dismissible)
+            if (topView == null
+                || topView.OutsideDismissPolicy != UiOutsideDismissPolicy.Dismissible
+                || !AllowsOutside(topView))
             {
                 return false;
             }
@@ -121,13 +167,42 @@ namespace AnimalCafe.UI.Foundation
             return true;
         }
 
+        public bool RequestOutsideDismiss(UiView expectedTopView)
+        {
+            RemoveStaleViews();
+            if (!ReferenceEquals(GetTopContainer(), expectedTopView)
+                || expectedTopView == null
+                || expectedTopView.OutsideDismissPolicy != UiOutsideDismissPolicy.Dismissible
+                || !AllowsOutside(expectedTopView))
+            {
+                return false;
+            }
+
+            CloseRegisteredView(expectedTopView);
+            return true;
+        }
+
         internal void CloseRegisteredView(UiView view)
+        {
+            CloseRegisteredView(view, null);
+        }
+
+        internal void CloseRegisteredView(UiView view, int? expectedToken)
         {
             if (view == null)
             {
                 return;
             }
 
+            if (expectedToken.HasValue
+                && (!registrations.TryGetValue(view, out var current)
+                    || current.Token != expectedToken.Value))
+            {
+                return;
+            }
+
+            registrations.TryGetValue(view, out var registration);
+            registrations.Remove(view);
             modalStack.Remove(view);
 
             if (ReferenceEquals(activeBottomSheet, view))
@@ -141,22 +216,62 @@ namespace AnimalCafe.UI.Foundation
             }
 
             CloseView(view);
-            RemoveStaleViews();
+            registration?.OnClosed?.Invoke();
         }
 
         private void RemoveStaleViews()
         {
-            modalStack.RemoveAll(IsStale);
+            for (var index = modalStack.Count - 1; index >= 0; index--)
+            {
+                if (IsStale(modalStack[index]))
+                {
+                    CloseRegisteredView(modalStack[index]);
+                }
+            }
 
             if (IsStale(activeBottomSheet))
             {
-                activeBottomSheet = null;
+                CloseRegisteredView(activeBottomSheet);
             }
 
             if (IsStale(activeMainPanel))
             {
-                activeMainPanel = null;
+                CloseRegisteredView(activeMainPanel);
             }
+        }
+
+        private UiViewHandle Register(
+            UiView view,
+            Action onClosed,
+            bool allowBack,
+            bool allowOutside)
+        {
+            var token = ++nextRegistrationToken;
+            registrations[view] = new PresentationRegistration(
+                token, onClosed, allowBack, allowOutside);
+            return new UiViewHandle(this, view, token);
+        }
+
+        private UiView GetTopContainer()
+        {
+            if (modalStack.Count > 0)
+            {
+                return modalStack[modalStack.Count - 1];
+            }
+
+            return activeBottomSheet ?? activeMainPanel;
+        }
+
+        private bool AllowsBack(UiView view)
+        {
+            return !registrations.TryGetValue(view, out var registration)
+                || registration.AllowBack;
+        }
+
+        private bool AllowsOutside(UiView view)
+        {
+            return !registrations.TryGetValue(view, out var registration)
+                || registration.AllowOutside;
         }
 
         private void EnsureKind(UiView view, UiViewKind expectedKind)
@@ -186,6 +301,26 @@ namespace AnimalCafe.UI.Foundation
                 view.Close();
             }
         }
+
+        private sealed class PresentationRegistration
+        {
+            public PresentationRegistration(
+                int token,
+                Action onClosed,
+                bool allowBack,
+                bool allowOutside)
+            {
+                Token = token;
+                OnClosed = onClosed;
+                AllowBack = allowBack;
+                AllowOutside = allowOutside;
+            }
+
+            public int Token { get; }
+            public Action OnClosed { get; }
+            public bool AllowBack { get; }
+            public bool AllowOutside { get; }
+        }
     }
 
     /// <summary>
@@ -196,16 +331,18 @@ namespace AnimalCafe.UI.Foundation
     {
         private readonly UiNavigationCoordinator coordinator;
         private readonly UiView view;
+        private readonly int registrationToken;
 
-        internal UiViewHandle(UiNavigationCoordinator coordinator, UiView view)
+        internal UiViewHandle(UiNavigationCoordinator coordinator, UiView view, int registrationToken)
         {
             this.coordinator = coordinator;
             this.view = view;
+            this.registrationToken = registrationToken;
         }
 
         public void Close()
         {
-            coordinator.CloseRegisteredView(view);
+            coordinator.CloseRegisteredView(view, registrationToken);
         }
     }
 }

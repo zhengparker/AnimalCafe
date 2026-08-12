@@ -502,6 +502,135 @@ namespace AnimalCafe.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator Fix2_SharedNavigationEntry_RoutesTopLifecycleAndHonorsContainerPolicies()
+        {
+            using (var fixture = new ContainerTouchFixture())
+            {
+                var navigation = new UiNavigationCoordinator();
+                var pointerBoundary = new UiPointerBoundary();
+                var gameTime = new FakeGameTimeService(GameSpeed.Normal);
+                var pause = new UiPauseCoordinator(gameTime);
+                var frost = new StrongFrostLease(isStrongFrostSupported: true);
+
+                var sheetState = PauseGameSheetState("UnderlyingPauseSheet");
+                var sheet = fixture.CreateBottomSheet();
+                sheet.View.Configure(navigation, sheetState, sheet.Outside);
+                sheet.View.ConfigureLifecycle(
+                    pause, pointerBoundary, sheet.Group,
+                    new UiTransitionRunner(() => false), 0.03f);
+                sheet.View.Open();
+                yield return new WaitForSecondsRealtime(0.06f);
+                fixture.QueueTap(sheet.ContentPosition);
+                yield return null;
+                yield return null;
+                var sheetPointerId = fixture.PointerId;
+
+                var modalState = DismissiblePauseModalState("TopLifecycleModal");
+                var modal = fixture.CreateModal("TopLifecycleModal", Vector2.zero);
+                modal.Panel.Configure(fixture.Theme, UiPanelStyle.StrongFrost, frost);
+                modal.View.Configure(
+                    navigation, modalState,
+                    modal.Confirm, modal.Cancel, modal.Outside, true);
+                modal.View.ConfigureLifecycle(
+                    pause, pointerBoundary, modal.Group,
+                    new UiTransitionRunner(() => false), 0.03f);
+                modal.View.Open();
+                yield return new WaitForSecondsRealtime(0.06f);
+                fixture.QueueTap(modal.ContentPosition);
+                yield return null;
+                yield return null;
+                var modalPointerId = fixture.PointerId;
+
+                Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+                Assert.That(pointerBoundary.CanProcessScenePointer(404), Is.False);
+                Assert.That(navigation.TryHandleBack(), Is.True);
+                yield return new WaitForSecondsRealtime(0.06f);
+
+                Assert.That(modalState.IsOpen, Is.False);
+                Assert.That(modal.Group.alpha, Is.Zero);
+                Assert.That(modal.Group.blocksRaycasts, Is.False);
+                Assert.That(
+                    pointerBoundary.GetOwnership(modalPointerId),
+                    Is.EqualTo(UiPointerOwnership.None));
+                Assert.That(pointerBoundary.CanProcessScenePointer(404), Is.True);
+                var releasedFrost = frost.Acquire(new object());
+                Assert.That(releasedFrost.ResolvedStyle, Is.EqualTo(UiPanelStyle.StrongFrost));
+                releasedFrost.Dispose();
+
+                Assert.That(sheetState.IsOpen, Is.True);
+                Assert.That(navigation.ActiveBottomSheet, Is.SameAs(sheetState));
+                Assert.That(sheet.Group.alpha, Is.EqualTo(1f));
+                Assert.That(sheet.Group.blocksRaycasts, Is.True);
+                Assert.That(
+                    pointerBoundary.GetOwnership(sheetPointerId),
+                    Is.EqualTo(UiPointerOwnership.Ui));
+                Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+
+                modal.View.Open();
+                yield return new WaitForSecondsRealtime(0.06f);
+                sheet.Outside.transform.SetAsLastSibling();
+                fixture.QueueTap(sheet.OutsidePosition);
+                yield return null;
+                yield return null;
+                Assert.That(modalState.IsOpen, Is.True, "Lower Sheet action cannot dismiss upward.");
+                Assert.That(sheetState.IsOpen, Is.True);
+                Assert.That(modal.Group.blocksRaycasts, Is.True);
+                Assert.That(sheet.Group.blocksRaycasts, Is.True);
+
+                modal.Cancel.transform.SetAsLastSibling();
+                fixture.QueueTap(modal.CancelPosition);
+                yield return new WaitForSecondsRealtime(0.06f);
+                Assert.That(modalState.IsOpen, Is.False);
+
+                var criticalState = CriticalModalState("SharedBackBlockedCritical");
+                var critical = fixture.CreateModal("SharedBackBlockedCritical", Vector2.zero);
+                critical.View.Configure(
+                    navigation, criticalState,
+                    critical.Confirm, critical.Cancel, critical.Outside, false);
+                critical.View.ConfigureLifecycle(
+                    pause, pointerBoundary, critical.Group,
+                    new UiTransitionRunner(() => false), 0.03f);
+                critical.View.Open();
+                yield return new WaitForSecondsRealtime(0.06f);
+
+                Assert.That(navigation.TryHandleBack(), Is.False);
+                Assert.That(criticalState.IsOpen, Is.True);
+                Assert.That(critical.Group.blocksRaycasts, Is.True);
+
+                critical.Cancel.transform.SetAsLastSibling();
+                fixture.QueueTap(critical.CancelPosition);
+                yield return new WaitForSecondsRealtime(0.06f);
+                Assert.That(criticalState.IsOpen, Is.False);
+
+                Assert.That(navigation.TryHandleBack(), Is.True);
+                yield return new WaitForSecondsRealtime(0.06f);
+                Assert.That(sheetState.IsOpen, Is.False);
+                Assert.That(sheet.Group.alpha, Is.Zero);
+                Assert.That(sheet.Group.blocksRaycasts, Is.False);
+                Assert.That(
+                    pointerBoundary.GetOwnership(sheetPointerId),
+                    Is.EqualTo(UiPointerOwnership.None));
+                Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+
+                var disableState = PauseGameSheetState("DisablePauseSheet");
+                var disableSheet = fixture.CreateBottomSheet();
+                disableSheet.View.Configure(navigation, disableState, disableSheet.Outside);
+                disableSheet.View.ConfigureLifecycle(
+                    pause, pointerBoundary, disableSheet.Group,
+                    new UiTransitionRunner(() => false), 1f);
+                disableSheet.View.Open();
+                yield return null;
+                Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+
+                disableSheet.Root.SetActive(false);
+                disableSheet.Root.SetActive(false);
+                Assert.That(disableState.IsOpen, Is.False);
+                Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+                Assert.That(disableSheet.Group.blocksRaycasts, Is.False);
+            }
+        }
+
         private static UiView CriticalModalState(string id)
         {
             return new UiView(
@@ -520,6 +649,20 @@ namespace AnimalCafe.Tests.PlayMode
         {
             return new UiView(
                 id, UiViewKind.Modal, UiPausePolicy.ContinueGame,
+                UiOutsideDismissPolicy.Dismissible);
+        }
+
+        private static UiView DismissiblePauseModalState(string id)
+        {
+            return new UiView(
+                id, UiViewKind.Modal, UiPausePolicy.PauseGame,
+                UiOutsideDismissPolicy.Dismissible);
+        }
+
+        private static UiView PauseGameSheetState(string id)
+        {
+            return new UiView(
+                id, UiViewKind.BottomSheet, UiPausePolicy.PauseGame,
                 UiOutsideDismissPolicy.Dismissible);
         }
 

@@ -25,6 +25,7 @@ namespace AnimalCafe.UI.Components
         private float transitionDuration;
         private IUiPauseHandle pauseHandle;
         private Coroutine transitionCoroutine;
+        private bool immediateCloseRequested;
         private readonly HashSet<int> ownedPointerIds = new HashSet<int>();
 
         public void Configure(
@@ -70,7 +71,11 @@ namespace AnimalCafe.UI.Components
         public void Open()
         {
             CloseImmediate();
-            navigationHandle = navigation.OpenBottomSheet(view);
+            navigationHandle = navigation.OpenBottomSheet(
+                view,
+                HandleNavigationClosed,
+                allowBack: true,
+                allowOutside: view.OutsideDismissPolicy == UiOutsideDismissPolicy.Dismissible);
             pauseHandle = pauseCoordinator?.Acquire(view);
             if (canvasGroup != null)
             {
@@ -83,17 +88,7 @@ namespace AnimalCafe.UI.Components
 
         public bool TryHandleBack()
         {
-            if (!navigation.TryHandleBack())
-            {
-                return false;
-            }
-
-            if (view != null && !view.IsOpen)
-            {
-                BeginClose();
-            }
-
-            return true;
+            return navigation.TryHandleBack(view);
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -109,11 +104,7 @@ namespace AnimalCafe.UI.Components
 
         private void HandleOutside()
         {
-            navigation.RequestOutsideDismiss();
-            if (view != null && !view.IsOpen)
-            {
-                BeginClose();
-            }
+            navigation.RequestOutsideDismiss(view);
         }
 
         private void BeginClose()
@@ -144,8 +135,22 @@ namespace AnimalCafe.UI.Components
         private void CloseImmediate()
         {
             StopTransition();
+            immediateCloseRequested = true;
+            var handle = navigationHandle;
+            navigationHandle = null;
+            handle?.Close();
+            immediateCloseRequested = false;
             ReleaseOwnedResources();
             SetClosedVisualState();
+        }
+
+        private void HandleNavigationClosed()
+        {
+            navigationHandle = null;
+            if (!immediateCloseRequested)
+            {
+                BeginClose();
+            }
         }
 
         private void ReleaseOwnedResources()
@@ -161,8 +166,6 @@ namespace AnimalCafe.UI.Components
             }
 
             ownedPointerIds.Clear();
-            navigationHandle?.Close();
-            navigationHandle = null;
         }
 
         private void StopTransition()
