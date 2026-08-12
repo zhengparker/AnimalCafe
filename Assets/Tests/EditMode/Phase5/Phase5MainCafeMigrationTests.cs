@@ -67,6 +67,13 @@ namespace AnimalCafe.Tests.Phase5
             Assert.That(FindAll<EventSystem>(second), Has.Length.EqualTo(1));
         }
 
+        [Test]
+        public void MainCafe_IsTheSoleEnabledProductionBuildSettingsScene()
+        {
+            Assert.That(EditorBuildSettings.scenes.Where(scene => scene.enabled)
+                .Select(scene => scene.path), Is.EquivalentTo(new[] { MainCafePath }));
+        }
+
         private static string[] CaptureSingletonInventory(Scene scene) => new[]
         {
             "UI Root=" + FindAll(scene, "UI Root").Length,

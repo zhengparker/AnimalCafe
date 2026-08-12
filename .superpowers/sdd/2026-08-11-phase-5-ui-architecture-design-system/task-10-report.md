@@ -38,3 +38,29 @@
 - Consecutive setup runs are covered by the EditMode migration test, which
   asserts stable singleton inventory. No manual case is claimed: MT-030,
   MT-031, and MT-034 remain prepared for Studio Owner review.
+
+## Fix Round 1 review coverage
+
+- Runtime reload coverage (RT-004): `MainCafe` is loaded after a paused,
+  in-progress pointer gesture. The first physical release on the new scene
+  cannot complete a stale selection, a fresh UI click works, time returns to
+  Normal, and there remains exactly one UI Root, EventSystem, Game Time,
+  MouseCameraInput, and SceneInteractionController.
+- Real-input selection coverage (RT-005): a virtual Mouse selects and clears a
+  world object at EventSystem-confirmed UI-clear points. The test asserts both
+  `SelectionChanged` payloads and count; a migrated Pause-button click does
+  not select or deselect that world object.
+- Time contract coverage (IT-029): virtual Mouse Pause, Normal, and Fast
+  clicks assert one ordered `GameSpeedChanged` event per speed change, proving
+  no duplicate listener delivery.
+- Build Settings hardening: EditMode asserts `MainCafe` is the sole enabled
+  production scene.
+
+## Fix Round 1 evidence
+
+- Migration EditMode: `3/3` passed.
+- Original MainCafe real-input PlayMode: `2/2` passed.
+- Reload, selection/event isolation, and Game Time event PlayMode: `3/3`
+  passed.
+- Complete Phase 0 PlayMode regression: `26/26` passed.
+- All listed suites report zero failed, skipped, and inconclusive tests.
