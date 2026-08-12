@@ -25,30 +25,31 @@ namespace AnimalCafe.EditorTools.Phase5
             var issues = new List<Phase5UiFoundationValidationIssue>();
             var scenePath = scene.path ?? string.Empty;
             var roots = scene.GetRootGameObjects();
+            var transforms = roots.SelectMany(root => root.GetComponentsInChildren<Transform>(true)).ToArray();
             ValidateDuplicates(
-                roots.Where(root => root.name == "UI Root").Select(root => root.transform),
+                transforms.Where(transform => transform.name == "UI Root"),
                 Phase5UiFoundationIssueCode.DuplicateUiRoot,
                 scenePath,
                 issues);
             ValidateDuplicates(
-                roots.SelectMany(root => root.GetComponentsInChildren<Canvas>(true)).Select(canvas => canvas.transform)
+                transforms.Select(transform => transform.GetComponent<Canvas>()).Where(canvas => canvas != null).Select(canvas => canvas.transform)
                     .Where(canvas => canvas.name is "HUD Canvas" or "Screen Canvas" or "Toast Canvas"),
                 Phase5UiFoundationIssueCode.DuplicateCanvas,
                 scenePath,
                 issues);
             ValidateDuplicates(
-                roots.SelectMany(root => root.GetComponentsInChildren<EventSystem>(true)).Select(system => system.transform),
+                transforms.Select(transform => transform.GetComponent<EventSystem>()).Where(system => system != null).Select(system => system.transform),
                 Phase5UiFoundationIssueCode.DuplicateEventSystem,
                 scenePath,
                 issues);
 
-            var primaryRoot = roots.FirstOrDefault(root => root.name == "UI Root");
-            if (primaryRoot != null)
+            var uiRoots = transforms.Where(transform => transform.name == "UI Root").ToArray();
+            if (uiRoots.Length > 0)
             {
-                ValidateRequiredLayer(primaryRoot.transform, "HUD Canvas/HUD Layer", scenePath, issues);
-                ValidateRequiredLayer(primaryRoot.transform, "Screen Canvas/Panel Layer", scenePath, issues);
-                ValidateRequiredLayer(primaryRoot.transform, "Screen Canvas/Modal Layer", scenePath, issues);
-                ValidateRequiredLayer(primaryRoot.transform, "Toast Canvas/Toast Layer", scenePath, issues);
+                ValidateRequiredLayer(uiRoots[0], "HUD Canvas/HUD Layer", scenePath, issues);
+                ValidateRequiredLayer(uiRoots[0], "Screen Canvas/Panel Layer", scenePath, issues);
+                ValidateRequiredLayer(uiRoots[0], "Screen Canvas/Modal Layer", scenePath, issues);
+                ValidateRequiredLayer(uiRoots[0], "Toast Canvas/Toast Layer", scenePath, issues);
             }
 
             ValidateTheme(theme, issues);
@@ -89,7 +90,7 @@ namespace AnimalCafe.EditorTools.Phase5
             issues.Add(new Phase5UiFoundationValidationIssue(
                 Phase5UiFoundationIssueCode.MissingLogicalLayer,
                 scenePath,
-                root.name + "/" + relativePath,
+                HierarchyPath(root) + "/" + relativePath,
                 "Required logical UI layer is missing."));
         }
 
@@ -194,10 +195,13 @@ namespace AnimalCafe.EditorTools.Phase5
 
         private static string TokenObjectPath(string tokenIssue)
         {
-            if (tokenIssue.Contains("HEADING")) return "Typography/Heading";
-            if (tokenIssue.Contains("BODY")) return "Typography/Body";
-            if (tokenIssue.Contains("LABEL")) return "Typography/Label";
-            return "Theme";
+            var separator = tokenIssue.IndexOf(": ", StringComparison.Ordinal);
+            if (separator < 0) return "Theme";
+
+            var segments = tokenIssue[(separator + 2)..].Trim().Split('/').Skip(1).ToArray();
+            if (segments.Length == 1 && segments[0] is "Heading" or "Body" or "Label")
+                return "Typography/" + segments[0];
+            return segments.Length > 0 ? string.Join("/", segments) : "Theme";
         }
 
         private static string HierarchyPath(Transform transform, int duplicateIndex = -1)

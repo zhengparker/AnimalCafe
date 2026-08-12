@@ -32,6 +32,8 @@ namespace AnimalCafe.EditorTools.Phase5
         public const string TooltipPrefabPath = Root + "/Prefabs/PF_UI_Tooltip.prefab";
         public const string ValidationMessagePrefabPath = Root + "/Prefabs/PF_UI_ValidationMessage.prefab";
         public const string SafeAreaPrefabPath = Root + "/Prefabs/PF_UI_SafeArea.prefab";
+        public const string ValidationScenePath = "Assets/Scenes/Validation/Phase5UiFoundation.unity";
+        public const string ValidationInputActionsPath = Root + "/Resources/Phase5UiFoundationInputActions.inputactions";
 
         public static IReadOnlyList<string> ButtonPrefabPaths { get; } =
             (from UiButtonRole role in Enum.GetValues(typeof(UiButtonRole))
@@ -46,7 +48,7 @@ namespace AnimalCafe.EditorTools.Phase5
             SolidMaterialPath, LightFrostMaterialPath, StrongFrostMaterialPath, UiRootPrefabPath,
             SolidPanelPrefabPath, LightFrostPanelPrefabPath, StrongFrostPanelPrefabPath,
             ModalPrefabPath, BottomSheetPrefabPath, ToastPrefabPath, TooltipPrefabPath,
-            ValidationMessagePrefabPath, SafeAreaPrefabPath
+            ValidationMessagePrefabPath, SafeAreaPrefabPath, ValidationInputActionsPath, ValidationScenePath
         };
 
         public static IReadOnlyList<string> PrefabPaths { get; } = ButtonPrefabPaths.Concat(new[]

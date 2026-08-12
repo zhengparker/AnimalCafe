@@ -59,3 +59,40 @@
 The scene is ready for Studio Owner validation using the manual cases in
 `Docs/superpowers/specs/2026-08-11-phase-5-ui-test-cases.md` (especially
 MT-001 through MT-029). No manual review has been claimed or performed here.
+
+## Fix Round 1 — review remediation complete
+
+- The validator now traverses nested generated scene hierarchy and reports full
+  stable object paths for duplicate UI Root and missing logical layers.
+- The validation-scene canonical asset contract now includes the scene plus its
+  scene-owned Input System action asset; BuildScene removes every Build Settings
+  entry for the validation scene, including disabled entries.
+- The generated scene now contains a persisted real selection chain and a
+  scene-owned `InputSystemUIInputModule` action asset. The virtual-Touch test
+  exercises `Touchscreen` → Input System → EventSystem → GraphicRaycaster →
+  actual Button listener → ToastView, without direct `onClick.Invoke`.
+- A generated-hierarchy UI registration lifecycle hook refreshes graphics one
+  frame after scene load; the real-input test observes registration and does not
+  mutate UI to make it pass.
+
+## Fix Round 1 final automated evidence
+
+- Review contract: `4/4` passed (`Phase5Task9Fix1-Review-Green18.xml`).
+- Destroyed Strong Frost owner regression: `1/1` passed
+  (`Phase5Task9Fix1-StrongOwner-Green.xml`).
+- Validator token-path regression: `5/5` passed
+  (`Phase5Task9Fix1-ValidatorRegressionGreen.xml`).
+- Virtual Touch to Input System to EventSystem to GraphicRaycaster to Button to
+  Toast: `1/1` passed (`Phase5Task9Fix1-Touch-Green7.xml`).
+- Cumulative Phase 5 EditMode: `81/81` passed; PlayMode: `42/42` passed.
+- Real UI regression: `5/5` passed; pointer-boundary and real world selection
+  regression: `14/14` passed. Every final suite reported zero failed, skipped,
+  or inconclusive tests.
+
+`StrongFrostLease` now safely reclaims destroyed `Behaviour` owners. Theme
+issue paths preserve `Typography/*`, `Colors/*`, and `Materials/*`; issue
+`ToString()` includes code, asset path, object path, and message.
+
+Generated test noise was removed before staging: `EditorBuildSettings.asset`,
+the canonical TMP font, and the worktree `.slnx` are restored or removed and
+are not part of this change.

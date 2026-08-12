@@ -44,14 +44,17 @@ namespace AnimalCafe.Tests.Phase5
                 "Assets/UI/Phase5/Prefabs/PF_UI_Toast.prefab",
                 "Assets/UI/Phase5/Prefabs/PF_UI_Tooltip.prefab",
                 "Assets/UI/Phase5/Prefabs/PF_UI_ValidationMessage.prefab",
-                "Assets/UI/Phase5/Prefabs/PF_UI_SafeArea.prefab"
+                "Assets/UI/Phase5/Prefabs/PF_UI_SafeArea.prefab",
+                "Assets/UI/Phase5/Resources/Phase5UiFoundationInputActions.inputactions",
+                "Assets/Scenes/Validation/Phase5UiFoundation.unity"
             };
 
             CollectionAssert.AreEquivalent(expectedPaths, Phase5UiAssetPaths.RequiredAssetPaths);
             Assert.That(Phase5UiAssetPaths.RequiredAssetPaths.Distinct().Count(),
                 Is.EqualTo(Phase5UiAssetPaths.RequiredAssetPaths.Count));
             Assert.That(Phase5UiAssetPaths.RequiredAssetPaths.All(path =>
-                path.StartsWith("Assets/UI/Phase5/", StringComparison.Ordinal)), Is.True);
+                path.StartsWith("Assets/UI/Phase5/", StringComparison.Ordinal) ||
+                path == "Assets/Scenes/Validation/Phase5UiFoundation.unity"), Is.True);
             Assert.That(Phase5UiAssetPaths.ButtonPrefabPaths.Count, Is.EqualTo(9));
             Assert.That(Phase5UiAssetPaths.ButtonPrefabPaths.Distinct().Count(), Is.EqualTo(9));
         }

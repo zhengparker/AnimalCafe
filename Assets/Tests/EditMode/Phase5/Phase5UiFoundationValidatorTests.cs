@@ -88,6 +88,32 @@ namespace AnimalCafe.Tests.Phase5
         }
 
         [Test]
+        public void Validate_ColorAndMaterialThemeFailures_PreserveFullStableTokenPaths()
+        {
+            CreateCanonicalHierarchy();
+            var colors = theme.Colors;
+            colors.Text = Color.clear;
+            theme.Colors = colors;
+            var materials = theme.Materials;
+            materials.StrongFrost = null;
+            theme.Materials = materials;
+            SaveFixtureScene();
+
+            var report = Phase5UiFoundationValidator.Validate(scene, theme);
+
+            AssertIssue(
+                report,
+                Phase5UiFoundationIssueCode.MissingThemeToken,
+                "Colors/TEXT",
+                Phase5UiAssetPaths.ThemePath);
+            AssertIssue(
+                report,
+                Phase5UiFoundationIssueCode.MissingThemeToken,
+                "Materials/STRONG_FROST",
+                Phase5UiAssetPaths.ThemePath);
+        }
+
+        [Test]
         public void Validate_SmallTouchTargetAndIncorrectRaycastPolicies_ReportStableCodes()
         {
             CreateCanonicalHierarchy();

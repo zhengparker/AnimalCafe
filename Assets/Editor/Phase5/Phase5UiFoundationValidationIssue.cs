@@ -38,5 +38,7 @@ namespace AnimalCafe.EditorTools.Phase5
         public string ObjectPath { get; }
 
         public string Message { get; }
+
+        public override string ToString() => $"{Code}|{AssetPath}|{ObjectPath}|{Message}";
     }
 }

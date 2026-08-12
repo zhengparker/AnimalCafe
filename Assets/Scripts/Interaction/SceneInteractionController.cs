@@ -108,6 +108,7 @@ namespace AnimalCafe.Interaction
             ReleaseActivePointerOwnership();
             targetCamera = camera;
             inputSource = cameraInputSource;
+            inputSourceBehaviour = cameraInputSource as MonoBehaviour;
             uiPointerBoundary = null;
         }
 
@@ -119,6 +120,7 @@ namespace AnimalCafe.Interaction
             ReleaseActivePointerOwnership();
             targetCamera = camera;
             inputSource = cameraInputSource;
+            inputSourceBehaviour = cameraInputSource as MonoBehaviour;
             uiPointerBoundary = pointerBoundary;
         }
 

@@ -24,7 +24,7 @@ namespace AnimalCafe.UI.Foundation
             }
 
             if (strongOwner is UnityEngine.Behaviour staleBehaviour
-                && !staleBehaviour.isActiveAndEnabled)
+                && (!staleBehaviour || !staleBehaviour.isActiveAndEnabled))
             {
                 strongOwner = null;
             }
