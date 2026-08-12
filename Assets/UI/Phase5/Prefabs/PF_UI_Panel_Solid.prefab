@@ -88,3 +88,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e44e2f9ddf925b4e9b4d2e96e5e3f22, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Components.AnimalCafePanelView
+  configuredTheme: {fileID: 11400000, guid: c38d96a83d625a8469ffba1c58d533b0, type: 2}
+  requestedStyle: 0
+  isConfigured: 1

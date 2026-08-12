@@ -23,6 +23,12 @@ namespace AnimalCafe.UI.Foundation
                 throw new ArgumentNullException(nameof(owner));
             }
 
+            if (strongOwner is UnityEngine.Behaviour staleBehaviour
+                && !staleBehaviour.isActiveAndEnabled)
+            {
+                strongOwner = null;
+            }
+
             if (isStrongFrostSupported && strongOwner == null)
             {
                 strongOwner = owner;

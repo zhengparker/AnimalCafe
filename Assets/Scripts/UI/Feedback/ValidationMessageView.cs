@@ -10,7 +10,7 @@ namespace AnimalCafe.UI.Feedback
     /// </summary>
     public sealed class ValidationMessageView : MonoBehaviour
     {
-        private TMP_Text messageLabel;
+        [SerializeField] private TMP_Text messageLabel;
 
         public bool IsVisible { get; private set; }
 

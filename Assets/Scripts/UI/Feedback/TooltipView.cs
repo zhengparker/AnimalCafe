@@ -11,8 +11,8 @@ namespace AnimalCafe.UI.Feedback
     /// </summary>
     public sealed class TooltipView : MonoBehaviour, IPointerClickHandler
     {
-        private TMP_Text messageLabel;
-        private GameObject contentRoot;
+        [SerializeField] private TMP_Text messageLabel;
+        [SerializeField] private GameObject contentRoot;
         private string message = string.Empty;
 
         public void Configure(TMP_Text label, GameObject content)

@@ -15,11 +15,11 @@ MonoBehaviour:
   colors:
     Background: {r: 0.94, g: 0.88, b: 0.78, a: 1}
     Surface: {r: 1, g: 0.97, b: 0.9, a: 1}
-    Text: {r: 0.2, g: 0.15, b: 0.12, a: 1}
-    Accent: {r: 0.36, g: 0.53, b: 0.39, a: 1}
+    Text: {r: 0.12, g: 0.08, b: 0.06, a: 1}
+    Accent: {r: 0.28, g: 0.43, b: 0.31, a: 1}
     Disabled: {r: 0.58, g: 0.58, b: 0.53, a: 1}
     Warning: {r: 0.92, g: 0.62, b: 0.2, a: 1}
-    Destructive: {r: 0.72, g: 0.25, b: 0.22, a: 1}
+    Destructive: {r: 0.62, g: 0.18, b: 0.16, a: 1}
   typography:
     Heading:
       FontAsset: {fileID: 11400000, guid: bf84fc8f0faa3be49b8ee2a0bf159334, type: 2}

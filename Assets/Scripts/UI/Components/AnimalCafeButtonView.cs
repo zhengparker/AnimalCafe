@@ -14,10 +14,10 @@ namespace AnimalCafe.UI.Components
         IPointerDownHandler,
         IPointerUpHandler
     {
-        private AnimalCafeUiTheme theme;
-        private UiButtonRole role;
-        private Button button;
-        private Image background;
+        [SerializeField] private AnimalCafeUiTheme theme;
+        [SerializeField] private UiButtonRole role;
+        [SerializeField] private Button button;
+        [SerializeField] private Image background;
         private bool isPointerDown;
 
         public UiButtonState CurrentState { get; private set; }
@@ -41,8 +41,9 @@ namespace AnimalCafe.UI.Components
             if (button != null && button.IsInteractable())
             {
                 isPointerDown = true;
-                RefreshState();
             }
+
+            RefreshState();
         }
 
         public void OnPointerUp(PointerEventData eventData)
@@ -53,6 +54,13 @@ namespace AnimalCafe.UI.Components
 
         private void Update()
         {
+            RefreshState();
+        }
+
+        private void Awake()
+        {
+            button ??= GetComponent<Button>();
+            background ??= GetComponent<Image>();
             RefreshState();
         }
 

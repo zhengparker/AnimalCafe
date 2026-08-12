@@ -13,8 +13,8 @@ namespace AnimalCafe.UI.Feedback
     public sealed class ToastView : MonoBehaviour
     {
         private ToastQueue queue;
-        private TMP_Text messageLabel;
-        private Graphic[] graphics = Array.Empty<Graphic>();
+        [SerializeField] private TMP_Text messageLabel;
+        [SerializeField] private Graphic[] graphics = Array.Empty<Graphic>();
 
         public bool IsVisible { get; private set; }
 

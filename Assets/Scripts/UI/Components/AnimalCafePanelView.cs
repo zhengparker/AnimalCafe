@@ -13,12 +13,31 @@ namespace AnimalCafe.UI.Components
     public sealed class AnimalCafePanelView : MonoBehaviour
     {
         private StrongFrostLease.StrongFrostLeaseHandle frostHandle;
-        private AnimalCafeUiTheme configuredTheme;
-        private UiPanelStyle requestedStyle;
+        [SerializeField] private AnimalCafeUiTheme configuredTheme;
+        [SerializeField] private UiPanelStyle requestedStyle;
         private StrongFrostLease configuredLease;
-        private bool isConfigured;
+        [SerializeField] private bool isConfigured;
+        private static readonly StrongFrostLease SharedRuntimeLease = new StrongFrostLease(true);
 
-        public UiPanelStyle ResolvedStyle { get; private set; }
+        private UiPanelStyle resolvedStyle;
+
+        public UiPanelStyle ResolvedStyle
+        {
+            get
+            {
+                if (isConfigured && isActiveAndEnabled
+                    && (configuredLease == null
+                        || requestedStyle == UiPanelStyle.StrongFrost
+                            && resolvedStyle == UiPanelStyle.LightFrost))
+                {
+                    configuredLease ??= SharedRuntimeLease;
+                    ResolveStyle(acquireStrongLease: true);
+                }
+
+                return resolvedStyle;
+            }
+            private set => resolvedStyle = value;
+        }
 
         public void Configure(
             AnimalCafeUiTheme theme,
@@ -47,6 +66,7 @@ namespace AnimalCafe.UI.Components
         {
             if (isConfigured)
             {
+                configuredLease ??= SharedRuntimeLease;
                 ResolveStyle(acquireStrongLease: true);
             }
         }
@@ -77,25 +97,25 @@ namespace AnimalCafe.UI.Components
         private void ResolveStyle(bool acquireStrongLease)
         {
             ReleaseFrost();
-            ResolvedStyle = requestedStyle;
+            resolvedStyle = requestedStyle;
             if (requestedStyle == UiPanelStyle.StrongFrost)
             {
                 if (acquireStrongLease)
                 {
                     frostHandle = configuredLease.Acquire(this);
-                    ResolvedStyle = frostHandle.ResolvedStyle;
+                    resolvedStyle = frostHandle.ResolvedStyle;
                 }
                 else
                 {
-                    ResolvedStyle = UiPanelStyle.LightFrost;
+                    resolvedStyle = UiPanelStyle.LightFrost;
                 }
             }
 
             var materials = configuredTheme.Materials;
             GetComponent<Image>().material = requestedStyle == UiPanelStyle.StrongFrost
-                && ResolvedStyle == UiPanelStyle.LightFrost
+                && resolvedStyle == UiPanelStyle.LightFrost
                     ? materials.StrongFrostFallback
-                    : ResolvedStyle switch
+                    : resolvedStyle switch
                     {
                         UiPanelStyle.Solid => materials.Solid,
                         UiPanelStyle.LightFrost => materials.LightFrost,

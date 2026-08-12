@@ -16,17 +16,23 @@ namespace AnimalCafe.UI.Components
     {
         private UiNavigationCoordinator navigation;
         private UiView view;
-        private Button outsideButton;
+        [SerializeField] private Button outsideButton;
         private UiViewHandle navigationHandle;
         private UiPauseCoordinator pauseCoordinator;
         private UiPointerBoundary pointerBoundary;
-        private CanvasGroup canvasGroup;
+        [SerializeField] private CanvasGroup canvasGroup;
         private UiTransitionRunner transitionRunner;
         private float transitionDuration;
         private IUiPauseHandle pauseHandle;
         private Coroutine transitionCoroutine;
         private bool immediateCloseRequested;
         private readonly HashSet<int> ownedPointerIds = new HashSet<int>();
+
+        public void BindPrefabReferences(Button outside, CanvasGroup group)
+        {
+            outsideButton = outside ?? throw new ArgumentNullException(nameof(outside));
+            canvasGroup = group ?? throw new ArgumentNullException(nameof(group));
+        }
 
         public void Configure(
             UiNavigationCoordinator coordinator,

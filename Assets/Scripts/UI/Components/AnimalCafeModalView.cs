@@ -16,14 +16,14 @@ namespace AnimalCafe.UI.Components
     {
         private UiNavigationCoordinator navigation;
         private UiView view;
-        private Button confirmButton;
-        private Button cancelButton;
-        private Button outsideButton;
+        [SerializeField] private Button confirmButton;
+        [SerializeField] private Button cancelButton;
+        [SerializeField] private Button outsideButton;
         private bool allowBack;
         private UiViewHandle navigationHandle;
         private UiPauseCoordinator pauseCoordinator;
         private UiPointerBoundary pointerBoundary;
-        private CanvasGroup canvasGroup;
+        [SerializeField] private CanvasGroup canvasGroup;
         private UiTransitionRunner transitionRunner;
         private float openDuration;
         private IUiPauseHandle pauseHandle;
@@ -32,6 +32,14 @@ namespace AnimalCafe.UI.Components
         private readonly HashSet<int> ownedPointerIds = new HashSet<int>();
 
         public event Action Confirmed;
+
+        public void BindPrefabReferences(Button confirm, Button cancel, Button outside, CanvasGroup group)
+        {
+            confirmButton = confirm ?? throw new ArgumentNullException(nameof(confirm));
+            cancelButton = cancel ?? throw new ArgumentNullException(nameof(cancel));
+            outsideButton = outside ?? throw new ArgumentNullException(nameof(outside));
+            canvasGroup = group ?? throw new ArgumentNullException(nameof(group));
+        }
 
         public void Configure(
             UiNavigationCoordinator coordinator,
