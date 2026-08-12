@@ -125,19 +125,26 @@ namespace AnimalCafe.Tests.PlayMode
         [UnityTest]
         public IEnumerator HeadingThemeLayoutBehavior_IsNotRewrittenByLocalizedBodyLabelPolicy()
         {
-            var gameObject = new GameObject(
+            var canvasObject = new GameObject(
                 "HeadingCanvas",
                 typeof(RectTransform),
-                typeof(Canvas),
+                typeof(Canvas));
+            var gameObject = new GameObject(
+                "Heading",
+                typeof(RectTransform),
                 typeof(TextMeshProUGUI),
                 typeof(AnimalCafeTextStyle));
+            gameObject.transform.SetParent(canvasObject.transform, false);
             var theme = ScriptableObject.CreateInstance<AnimalCafeUiTheme>();
             try
             {
-                gameObject.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+                canvasObject.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
+                gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2(800f, 200f);
                 var heading = gameObject.GetComponent<TextMeshProUGUI>();
+                heading.text = "Animal Cafe UI Foundation";
                 heading.enableAutoSizing = true;
                 heading.fontSizeMin = 22f;
+                heading.fontSizeMax = 34f;
                 heading.textWrappingMode = TextWrappingModes.NoWrap;
                 heading.overflowMode = TextOverflowModes.Ellipsis;
                 theme.Typography = new UiTypographyTokens
@@ -146,18 +153,20 @@ namespace AnimalCafe.Tests.PlayMode
                 };
 
                 gameObject.GetComponent<AnimalCafeTextStyle>().Configure(theme, UiTextStyle.Heading, heading);
-                Canvas.ForceUpdateCanvases();
-                yield return null;
-
                 Assert.That(heading.fontSize, Is.EqualTo(28f));
                 Assert.That(heading.enableAutoSizing, Is.True);
                 Assert.That(heading.fontSizeMin, Is.EqualTo(22f));
+                Assert.That(heading.fontSizeMax, Is.EqualTo(34f));
                 Assert.That(heading.textWrappingMode, Is.EqualTo(TextWrappingModes.NoWrap));
                 Assert.That(heading.overflowMode, Is.EqualTo(TextOverflowModes.Ellipsis));
+                Canvas.ForceUpdateCanvases();
+                yield return null;
+
+                Assert.That(heading.preferredWidth, Is.GreaterThan(0f));
             }
             finally
             {
-                UnityEngine.Object.Destroy(gameObject);
+                UnityEngine.Object.Destroy(canvasObject);
                 UnityEngine.Object.Destroy(theme);
             }
         }

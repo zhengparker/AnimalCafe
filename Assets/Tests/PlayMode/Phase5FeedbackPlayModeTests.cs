@@ -30,9 +30,9 @@ namespace AnimalCafe.Tests.PlayMode
             try
             {
                 view.Configure(queue, label, new Graphic[] { background, label });
-                queue.Enqueue(new ToastMessage(ToastType.Info, "Saved", ToastPriority.Normal, 0.05f));
-                queue.Enqueue(new ToastMessage(ToastType.Info, "Saved", ToastPriority.Normal, 0.05f));
-                queue.Enqueue(new ToastMessage(ToastType.Success, "Ready", ToastPriority.Normal, 0.2f));
+                queue.Enqueue(new ToastMessage(ToastType.Info, "Saved", ToastPriority.Normal, 1f));
+                queue.Enqueue(new ToastMessage(ToastType.Info, "Saved", ToastPriority.Normal, 1f));
+                queue.Enqueue(new ToastMessage(ToastType.Success, "Ready", ToastPriority.Normal, 2f));
                 Time.timeScale = 0f;
 
                 yield return null;
@@ -43,7 +43,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(background.raycastTarget, Is.False);
                 Assert.That(label.raycastTarget, Is.False);
 
-                yield return new WaitForSecondsRealtime(0.08f);
+                yield return new WaitForSecondsRealtime(1.1f);
                 yield return null;
 
                 Assert.That(view.IsVisible, Is.True);

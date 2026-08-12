@@ -1,0 +1,13 @@
+AnimalCafe Phase 5 font provenance
+
+Font: Noto Sans SC Regular (official static Simplified Chinese subset OTF)
+Official repository: https://github.com/notofonts/noto-cjk
+Exact source URL: https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/SubsetOTF/SC/NotoSansSC-Regular.otf
+Retrieved: 2026-08-12
+Size: 8,331,336 bytes
+SHA-256: faa6c9df652116dde789d351359f3d7e5d2285a2b2a1f04a2d7244df706d5ea9
+License: SIL Open Font License, Version 1.1; see OFL-1.1.txt beside this file.
+
+The static SC subset was selected instead of the full variable CJK font because this
+mobile UI targets Simplified Chinese and Latin and does not require all regional glyph
+variants or every variable weight in one source file.
