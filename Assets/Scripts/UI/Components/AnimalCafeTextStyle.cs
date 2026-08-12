@@ -35,6 +35,7 @@ namespace AnimalCafe.UI.Components
             target.fontSize = token.FontSize;
             target.fontStyle = token.FontStyle;
             target.lineSpacing = token.LineSpacing;
+            SafeAreaContainer.ConfigureLocalizedText(target, style);
         }
     }
 }
