@@ -46,6 +46,11 @@ namespace AnimalCafe.Tests.Phase5
                 "Assets/UI/Phase5/Prefabs/PF_UI_ValidationMessage.prefab",
                 "Assets/UI/Phase5/Prefabs/PF_UI_SafeArea.prefab",
                 "Assets/UI/Phase5/Resources/Phase5UiFoundationInputActions.inputactions",
+                "Assets/UI/Phase5/Resources/Phase5UiFoundationPointReference.asset",
+                "Assets/UI/Phase5/Resources/Phase5UiFoundationClickReference.asset",
+                "Assets/UI/Phase5/Resources/Phase5UiFoundationScrollWheelReference.asset",
+                "Assets/UI/Phase5/Resources/Phase5UiFoundationSubmitReference.asset",
+                "Assets/UI/Phase5/Resources/Phase5UiFoundationCancelReference.asset",
                 "Assets/Scenes/Validation/Phase5UiFoundation.unity"
             };
 

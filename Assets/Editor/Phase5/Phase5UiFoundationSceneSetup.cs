@@ -25,6 +25,7 @@ namespace AnimalCafe.EditorTools.Phase5
     /// </summary>
     public static class Phase5UiFoundationSceneSetup
     {
+        private const int RecipeVersion = 8;
         public const string ScenePath = Phase5UiAssetPaths.ValidationScenePath;
 
         [MenuItem("AnimalCafe/Phase 5/Build UI Foundation Validation Scene")]
@@ -40,15 +41,18 @@ namespace AnimalCafe.EditorTools.Phase5
                 .Where(entry => entry.path != ScenePath).ToArray();
             EnsureFolder(Path.GetDirectoryName(ScenePath)?.Replace('\\', '/'));
 
+            if (HasCurrentRecipe()) return;
+
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             scene.name = "Phase5UiFoundation";
             var root = new GameObject("Phase5UiFoundationRoot");
+            root.AddComponent<Phase5UiFoundationSceneMarker>().Configure(RecipeVersion);
             var camera = CreateWorldFixtures(root.transform);
             var uiRoot = InstantiatePrefab(Phase5UiAssetPaths.UiRootPrefabPath, root.transform, "UI Root");
             uiRoot.AddComponent<UiGraphicRegistration>();
             CreateEventSystem(uiRoot.transform);
-            CreateUiFixtures(uiRoot.transform);
-            CreateSceneInteraction(root.transform, camera);
+            var sceneInteraction = CreateSceneInteraction(root.transform, camera);
+            CreateUiFixtures(uiRoot.transform, root.transform, camera, sceneInteraction.input, sceneInteraction.controller);
 
             var theme = AssetDatabase.LoadAssetAtPath<AnimalCafeUiTheme>(Phase5UiAssetPaths.ThemePath);
             var report = Phase5UiFoundationValidator.Validate(scene, theme);
@@ -86,15 +90,19 @@ namespace AnimalCafe.EditorTools.Phase5
             return camera.GetComponent<UnityEngine.Camera>();
         }
 
-        private static void CreateSceneInteraction(Transform parent, UnityEngine.Camera camera)
+        private static (MouseCameraInput input, SceneInteractionController controller) CreateSceneInteraction(
+            Transform parent,
+            UnityEngine.Camera camera)
         {
             var controllerObject = new GameObject("Scene Interaction Controller");
             controllerObject.transform.SetParent(parent, false);
             var input = controllerObject.AddComponent<MouseCameraInput>();
-            controllerObject.AddComponent<SceneInteractionController>().Configure(
+            var controller = controllerObject.AddComponent<SceneInteractionController>();
+            controller.Configure(
                 camera,
                 input,
                 new UiPointerBoundary());
+            return (input, controller);
         }
 
         private static void CreateEventSystem(Transform parent)
@@ -160,9 +168,38 @@ namespace AnimalCafe.EditorTools.Phase5
         }
 
         private static string InputReferencePath(string actionName) =>
-            Phase5UiAssetPaths.Root + "/Resources/Phase5UiFoundation" + actionName + "Reference.asset";
+            actionName switch
+            {
+                "Point" => Phase5UiAssetPaths.ValidationPointReferencePath,
+                "Click" => Phase5UiAssetPaths.ValidationClickReferencePath,
+                "ScrollWheel" => Phase5UiAssetPaths.ValidationScrollWheelReferencePath,
+                "Submit" => Phase5UiAssetPaths.ValidationSubmitReferencePath,
+                "Cancel" => Phase5UiAssetPaths.ValidationCancelReferencePath,
+                _ => throw new ArgumentOutOfRangeException(nameof(actionName), actionName, null)
+            };
 
-        private static void CreateUiFixtures(Transform uiRoot)
+        private static bool HasCurrentRecipe()
+        {
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null
+                || Phase5UiAssetPaths.ValidationInputReferencePaths.Any(path =>
+                    AssetDatabase.LoadAssetAtPath<InputActionReference>(path) == null))
+                return false;
+
+            var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            var marker = scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<Phase5UiFoundationSceneMarker>(true))
+                .SingleOrDefault();
+            if (marker == null || marker.RecipeVersion != RecipeVersion) return false;
+            var theme = AssetDatabase.LoadAssetAtPath<AnimalCafeUiTheme>(Phase5UiAssetPaths.ThemePath);
+            return Phase5UiFoundationValidator.Validate(scene, theme).IsValid;
+        }
+
+        private static void CreateUiFixtures(
+            Transform uiRoot,
+            Transform sceneRoot,
+            UnityEngine.Camera camera,
+            MouseCameraInput sceneInput,
+            SceneInteractionController sceneInteraction)
         {
             var theme = AssetDatabase.LoadAssetAtPath<AnimalCafeUiTheme>(Phase5UiAssetPaths.ThemePath)
                 ?? throw new InvalidOperationException("Phase 5 UI theme is missing.");
@@ -201,13 +238,18 @@ namespace AnimalCafe.EditorTools.Phase5
                 Phase5UiAssetPaths.BottomSheetPrefabPath,
                 panel,
                 "Bottom Sheet Fixture");
-            CreateFeedbackControls(
+            ConfigureBottomSheetEvidenceLayout(bottomSheet);
+            var feedbackButtons = CreateFeedbackControls(
                 panel,
                 toastFixture,
                 tooltip,
                 validation,
                 bottomSheet);
-            CreateReviewFixtures(panel, hud);
+            CreateReviewFixtures(
+                uiRoot, sceneRoot, panel, hud, safeArea.transform, theme,
+                camera, sceneInput, sceneInteraction, validation.GetComponent<ValidationMessageView>(),
+                feedbackButtons.bottomSheet, bottomSheet.GetComponent<AnimalCafeBottomSheetView>(),
+                feedbackButtons.controller, tooltip.GetComponent<TooltipView>());
             foreach (var graphic in uiRoot.GetComponentsInChildren<Graphic>(true))
             {
                 graphic.SetAllDirty();
@@ -215,21 +257,135 @@ namespace AnimalCafe.EditorTools.Phase5
             Canvas.ForceUpdateCanvases();
         }
 
-        private static void CreateReviewFixtures(Transform panel, Transform hud)
+        private static void CreateReviewFixtures(
+            Transform uiRoot,
+            Transform sceneRoot,
+            Transform panel,
+            Transform hud,
+            Transform safeArea,
+            AnimalCafeUiTheme theme,
+            UnityEngine.Camera camera,
+            MouseCameraInput sceneInput,
+            SceneInteractionController sceneInteraction,
+            ValidationMessageView validation,
+            Button openBottomSheet,
+            AnimalCafeBottomSheetView bottomSheet,
+            Phase5UiFoundationFeedbackController feedback,
+            TooltipView tooltip)
         {
-            InstantiatePrefab(Phase5UiAssetPaths.SolidPanelPrefabPath, panel, "Solid Panel Fixture");
-            InstantiatePrefab(Phase5UiAssetPaths.LightFrostPanelPrefabPath, panel, "Light Frost Panel Fixture");
-            InstantiatePrefab(Phase5UiAssetPaths.StrongFrostPanelPrefabPath, panel, "Strong Frost Panel Fixture");
-            InstantiatePrefab(Phase5UiAssetPaths.ModalPrefabPath, panel, "Modal Fixture");
-            CreateEvidenceButton(panel, "Pause Game Button", -360f);
-            CreateEvidenceButton(panel, "Continue Game Button", -180f);
-            CreateEvidenceButton(panel, "Reduced Motion Toggle", 0f);
-            CreateEvidenceButton(panel, "Open Second Strong Frost Button", 180f);
-            CreateEvidenceButton(hud, "Safe Area Confirm Button", 0f);
-            CreateEvidenceButton(panel, "Validation Repair Button", 360f);
+            var solidPanel = InstantiatePrefab(Phase5UiAssetPaths.SolidPanelPrefabPath, panel, "Solid Panel Fixture");
+            var lightPanel = InstantiatePrefab(Phase5UiAssetPaths.LightFrostPanelPrefabPath, panel, "Light Frost Panel Fixture");
+            var strongPanel = InstantiatePrefab(Phase5UiAssetPaths.StrongFrostPanelPrefabPath, panel, "Strong Frost Panel Fixture");
+            var modalObject = InstantiatePrefab(Phase5UiAssetPaths.ModalPrefabPath, panel, "Modal Fixture");
+            var secondModalObject = InstantiatePrefab(Phase5UiAssetPaths.ModalPrefabPath, panel, "Second Modal Fixture");
+            var pause = CreateEvidenceButton(panel, "Pause Game Button", -360f);
+            var resume = CreateEvidenceButton(panel, "Continue Game Button", -180f);
+            var reduced = CreateEvidenceButton(panel, "Reduced Motion Toggle", 0f);
+            var secondStrong = CreateEvidenceButton(panel, "Open Second Strong Frost Button", 180f);
+            var repair = CreateEvidenceButton(panel, "Validation Repair Button", 360f);
+            var openModal = CreateEvidenceButton(panel, "Open Modal Button", 0f);
+            openModal.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -100f);
+            var safeConfirm = CreateEvidenceButton(safeArea, "Safe Area Confirm Button", 0f);
+            safeConfirm.GetComponent<RectTransform>().anchorMin =
+                safeConfirm.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.88f);
+
+            var reducedStatus = AddLabel(panel, theme, "Reduced Motion Status", "Reduced Motion: Off", 16f);
+            reducedStatus.rectTransform.anchoredPosition = new Vector2(0f, -165f);
+            var safeStatus = AddLabel(safeArea, theme, "Safe Area Status", "Safe Area: Ready", 16f);
+            safeStatus.rectTransform.anchorMin = safeStatus.rectTransform.anchorMax = new Vector2(0.5f, 0.82f);
+            safeStatus.rectTransform.anchoredPosition = Vector2.zero;
+
+            var secondStrongObject = InstantiatePrefab(
+                Phase5UiAssetPaths.StrongFrostPanelPrefabPath, panel, "Second Strong Frost Fixture");
+            secondStrongObject.SetActive(false);
+            var occlusion = CreateEvidenceButton(hud, "World Occlusion Test Button", 0f);
+            var showSolid = CreateReviewButton(panel, "Show Solid Panel Button", -360f, -260f);
+            var showLight = CreateReviewButton(panel, "Show Light Frost Panel Button", -180f, -260f);
+            var showStrong = CreateReviewButton(panel, "Show Strong Frost Panel Button", 0f, -260f);
+            var forceFallback = CreateReviewButton(panel, "Force Frost Fallback Button", 180f, -260f);
+            var handleBack = CreateReviewButton(panel, "Handle Back Button", 360f, -260f);
+            var openSecondModal = CreateReviewButton(
+                modalObject.transform.Find("Content"), "Open Second Modal Button", 0f, 180f);
+            var toastBurst = CreateReviewButton(panel, "Show Toast Burst Button", -180f, -360f);
+            var longPressTooltip = CreateReviewButton(panel, "Long Press Tooltip Button", 0f, -360f);
+            var closeTooltip = CreateReviewButton(panel, "Close Tooltip Button", 180f, -360f);
+            var interruptReopen = CreateReviewButton(panel, "Interrupt And Reopen Button", 360f, -360f);
+            var toastBurstStatus = AddLabel(panel, theme, "Toast Burst Status", "Toast burst: Ready", 16f);
+            toastBurstStatus.rectTransform.anchoredPosition = new Vector2(0f, -430f);
+            var reviewController = sceneRoot.gameObject.AddComponent<Phase5UiFoundationReviewController>();
+            reviewController.Configure(
+                camera,
+                sceneInput,
+                sceneInteraction,
+                sceneRoot.Find("Selectable Coffee Machine"),
+                occlusion,
+                uiRoot.GetComponentsInChildren<Button>(true),
+                pause,
+                resume,
+                reduced,
+                reducedStatus,
+                secondStrong,
+                secondStrongObject,
+                openModal,
+                modalObject.GetComponent<AnimalCafeModalView>(),
+                openBottomSheet,
+                bottomSheet,
+                repair,
+                validation,
+                safeConfirm,
+                safeStatus,
+                showSolid,
+                showLight,
+                showStrong,
+                forceFallback,
+                solidPanel,
+                lightPanel,
+                strongPanel,
+                handleBack,
+                openSecondModal,
+                secondModalObject.GetComponent<AnimalCafeModalView>(),
+                toastBurst,
+                toastBurstStatus,
+                feedback,
+                longPressTooltip,
+                closeTooltip,
+                tooltip,
+                interruptReopen);
         }
 
-        private static void CreateFeedbackControls(
+        private static Button CreateReviewButton(Transform parent, string name, float x, float y)
+        {
+            var button = CreateEvidenceButton(parent, name, x);
+            button.GetComponent<RectTransform>().anchoredPosition = new Vector2(x, y);
+            return button;
+        }
+
+        private static void ConfigureBottomSheetEvidenceLayout(GameObject bottomSheet)
+        {
+            Stretch(bottomSheet.GetComponent<RectTransform>());
+            var outside = bottomSheet.transform.Find("OutsideButton") as RectTransform
+                ?? throw new InvalidOperationException("Bottom Sheet fixture requires OutsideButton.");
+            Stretch(outside);
+            outside.SetAsFirstSibling();
+            var outsideGraphic = outside.GetComponent<Image>()
+                ?? throw new InvalidOperationException("Bottom Sheet OutsideButton requires an Image.");
+            outsideGraphic.raycastTarget = true;
+
+            var content = bottomSheet.transform.Find("Content") as RectTransform
+                ?? throw new InvalidOperationException("Bottom Sheet fixture requires Content.");
+            content.anchorMin = Vector2.zero;
+            content.anchorMax = new Vector2(1f, 0.55f);
+            content.offsetMin = Vector2.zero;
+            content.offsetMax = Vector2.zero;
+            content.SetAsLastSibling();
+            PrefabUtility.RecordPrefabInstancePropertyModifications(bottomSheet.GetComponent<RectTransform>());
+            PrefabUtility.RecordPrefabInstancePropertyModifications(outside);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(outsideGraphic);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(content);
+        }
+
+        private static (Button toast, Button tooltip, Button validation, Button bottomSheet,
+            Phase5UiFoundationFeedbackController controller) CreateFeedbackControls(
             Transform parent,
             GameObject toast,
             GameObject tooltip,
@@ -242,7 +398,8 @@ namespace AnimalCafe.EditorTools.Phase5
             var tooltipButton = CreateNormalizedEvidenceButton(controls.transform, "Show Tooltip Button", 0.38f);
             var validationButton = CreateNormalizedEvidenceButton(controls.transform, "Show Validation Error Button", 0.62f);
             var bottomSheetButton = CreateNormalizedEvidenceButton(controls.transform, "Open Bottom Sheet Button", 0.85f);
-            controls.AddComponent<Phase5UiFoundationFeedbackController>().Configure(
+            var controller = controls.AddComponent<Phase5UiFoundationFeedbackController>();
+            controller.Configure(
                 toastButton,
                 tooltipButton,
                 validationButton,
@@ -251,6 +408,7 @@ namespace AnimalCafe.EditorTools.Phase5
                 tooltip.GetComponent<TooltipView>(),
                 validation.GetComponent<ValidationMessageView>(),
                 bottomSheet);
+            return (toastButton, tooltipButton, validationButton, bottomSheetButton, controller);
         }
 
         private static Button CreateEvidenceButton(Transform parent, string name, float x)

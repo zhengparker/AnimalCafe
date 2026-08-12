@@ -224,6 +224,8 @@ namespace AnimalCafe.Tests.PlayMode
                     false,
                     true);
                 yield return null;
+                replacementInput.NextFrame = default;
+                yield return null;
 
                 Assert.That(
                     fixture.Interaction.CurrentSelection,
@@ -252,6 +254,12 @@ namespace AnimalCafe.Tests.PlayMode
             {
                 fixture.Interaction.Configure(fixture.Camera, replacementInput);
 
+                fixture.QueueMouseState(fixture.SelectablePosition, false);
+                yield return null;
+                yield return null;
+                Assert.That(EventSystem.current.IsPointerOverGameObject(fixture.Mouse.deviceId), Is.False);
+                Assert.That(EventSystem.current.IsPointerOverGameObject(), Is.False);
+
                 replacementInput.NextFrame = new CameraInputFrame(
                     Vector2.zero,
                     0f,
@@ -259,6 +267,8 @@ namespace AnimalCafe.Tests.PlayMode
                     fixture.SelectablePosition,
                     fixture.Mouse.deviceId,
                     true);
+                yield return null;
+                replacementInput.NextFrame = default;
                 yield return null;
                 replacementInput.NextFrame = new CameraInputFrame(
                     Vector2.zero,
@@ -432,6 +442,7 @@ namespace AnimalCafe.Tests.PlayMode
             private readonly GameObject canvasObject;
             private readonly GameObject eventSystemObject;
             private readonly List<GameObject> disabledEventSystems = new();
+            private readonly List<GraphicRaycaster> disabledGraphicRaycasters = new();
             private readonly RectTransform buttonRect;
             private readonly Button button;
             private readonly Image modalOverlay;
@@ -444,6 +455,7 @@ namespace AnimalCafe.Tests.PlayMode
             {
                 inputFocusScope = new InputFocusIsolationScope();
                 DisableExistingEventSystems();
+                DisableExistingGraphicRaycasters();
 
                 cameraObject = new GameObject("Phase5PointerCamera");
                 Camera = cameraObject.AddComponent<UnityEngine.Camera>();
@@ -456,6 +468,9 @@ namespace AnimalCafe.Tests.PlayMode
                 Interaction.Configure(Camera, Input, Boundary);
 
                 selectableObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                // Keep this fixture's target in front of any collider left by a loaded
+                // integration scene; selection tests must not depend on suite order.
+                selectableObject.transform.position = new Vector3(0f, 0f, -8f);
                 var shader = Shader.Find("Universal Render Pipeline/Lit");
                 Assert.That(shader, Is.Not.Null);
                 selectableMaterial = new Material(shader);
@@ -463,6 +478,10 @@ namespace AnimalCafe.Tests.PlayMode
                 Selectable = selectableObject.AddComponent<ColorSelectable>();
                 Physics.SyncTransforms();
                 SelectablePosition = Camera.WorldToScreenPoint(selectableObject.transform.position);
+                Assert.That(Physics.Raycast(
+                    Camera.ScreenPointToRay(SelectablePosition), out var firstHit), Is.True);
+                Assert.That(firstHit.collider, Is.SameAs(selectableObject.GetComponent<Collider>()),
+                    "Pointer fixture must own the first world hit even after another scene test.");
 
                 canvasObject = new GameObject(
                     "Phase5PointerCanvas",
@@ -606,6 +625,11 @@ namespace AnimalCafe.Tests.PlayMode
                     }
                 }
 
+                foreach (var raycaster in disabledGraphicRaycasters)
+                {
+                    if (raycaster != null) raycaster.enabled = true;
+                }
+
                 inputFocusScope.Dispose();
             }
 
@@ -642,6 +666,20 @@ namespace AnimalCafe.Tests.PlayMode
                     {
                         disabledEventSystems.Add(eventSystem.gameObject);
                         eventSystem.gameObject.SetActive(false);
+                    }
+                }
+            }
+
+            private void DisableExistingGraphicRaycasters()
+            {
+                foreach (var raycaster in Resources.FindObjectsOfTypeAll<GraphicRaycaster>())
+                {
+                    if (raycaster.gameObject.scene.IsValid()
+                        && raycaster.gameObject.scene.isLoaded
+                        && raycaster.enabled)
+                    {
+                        disabledGraphicRaycasters.Add(raycaster);
+                        raycaster.enabled = false;
                     }
                 }
             }

@@ -34,6 +34,20 @@ namespace AnimalCafe.EditorTools.Phase5
         public const string SafeAreaPrefabPath = Root + "/Prefabs/PF_UI_SafeArea.prefab";
         public const string ValidationScenePath = "Assets/Scenes/Validation/Phase5UiFoundation.unity";
         public const string ValidationInputActionsPath = Root + "/Resources/Phase5UiFoundationInputActions.inputactions";
+        public const string ValidationPointReferencePath = Root + "/Resources/Phase5UiFoundationPointReference.asset";
+        public const string ValidationClickReferencePath = Root + "/Resources/Phase5UiFoundationClickReference.asset";
+        public const string ValidationScrollWheelReferencePath = Root + "/Resources/Phase5UiFoundationScrollWheelReference.asset";
+        public const string ValidationSubmitReferencePath = Root + "/Resources/Phase5UiFoundationSubmitReference.asset";
+        public const string ValidationCancelReferencePath = Root + "/Resources/Phase5UiFoundationCancelReference.asset";
+
+        public static IReadOnlyList<string> ValidationInputReferencePaths { get; } = new[]
+        {
+            ValidationPointReferencePath,
+            ValidationClickReferencePath,
+            ValidationScrollWheelReferencePath,
+            ValidationSubmitReferencePath,
+            ValidationCancelReferencePath
+        };
 
         public static IReadOnlyList<string> ButtonPrefabPaths { get; } =
             (from UiButtonRole role in Enum.GetValues(typeof(UiButtonRole))
@@ -49,7 +63,7 @@ namespace AnimalCafe.EditorTools.Phase5
             SolidPanelPrefabPath, LightFrostPanelPrefabPath, StrongFrostPanelPrefabPath,
             ModalPrefabPath, BottomSheetPrefabPath, ToastPrefabPath, TooltipPrefabPath,
             ValidationMessagePrefabPath, SafeAreaPrefabPath, ValidationInputActionsPath, ValidationScenePath
-        };
+        }.Concat(ValidationInputReferencePaths).ToArray();
 
         public static IReadOnlyList<string> PrefabPaths { get; } = ButtonPrefabPaths.Concat(new[]
         {

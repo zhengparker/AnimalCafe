@@ -7,9 +7,17 @@ namespace AnimalCafe.EditorTools.Phase5
     public enum Phase5UiFoundationIssueCode
     {
         DuplicateUiRoot,
+        MissingUiRoot,
         DuplicateCanvas,
+        MissingCanvas,
+        UnexpectedCanvas,
         DuplicateEventSystem,
+        MissingEventSystem,
         MissingLogicalLayer,
+        DuplicateLogicalLayer,
+        UnexpectedLogicalLayer,
+        MissingCanonicalAsset,
+        DuplicateCanonicalAsset,
         MissingThemeToken,
         MissingFont,
         TouchTargetBelowMinimum,

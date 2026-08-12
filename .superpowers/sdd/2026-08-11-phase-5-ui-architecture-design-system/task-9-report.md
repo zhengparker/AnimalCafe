@@ -96,3 +96,75 @@ issue paths preserve `Typography/*`, `Colors/*`, and `Materials/*`; issue
 Generated test noise was removed before staging: `EditorBuildSettings.asset`,
 the canonical TMP font, and the worktree `.slnx` are restored or removed and
 are not part of this change.
+
+## Fix Round 2 — strict production-scene remediation
+
+- Exact scene inventory validation now reports stable missing, duplicate, and
+  unexpected codes for UI Root, the three approved Canvases, the four approved
+  logical layers, and EventSystem.
+- Canonical asset validation is non-mutating, has deliberately broken negative
+  fixtures, and includes the generated validation Scene, Input Actions, and all
+  five InputActionReference assets.
+- A recipe marker makes an unchanged validation-scene build byte-stable. The
+  scene plus its owned input assets are fingerprinted after two builds.
+- One runtime review controller creates the shared `UiPointerBoundary` used by
+  Scene selection, all real uGUI Button hooks, Modal, and Bottom Sheet. Virtual
+  Mouse evidence proves world selection, UI click-through suppression, and
+  UI-to-world drag suppression against an intentionally occluded selectable.
+- All four feedback controls are exercised through Input System → EventSystem →
+  GraphicRaycaster → real Button listeners. No callback shortcut is used by
+  the Round 2 suite.
+- Pause/Continue, Reduced Motion status, second Strong Frost fallback, Modal,
+  Bottom Sheet outside-close, validation repair, and Safe Area critical-control
+  fixtures are executable. Disabling the review controller releases its Pause
+  lifecycle and refreshes pointer ownership.
+
+## Fix Round 2 TDD evidence
+
+- Strict inventory/canonical/hash RED: `Phase5Task9Fix2-Contract-Red.xml`,
+  `0/8` passed. GREEN: `Phase5Task9Fix2-Contract-Green2.xml`, `8/8` passed.
+- Shared-boundary/real-input RED: `Phase5Task9Fix2-RealInput-Red.xml`, `1/3`
+  passed. GREEN: `Phase5Task9Fix2-RealInput-Green.xml`, `3/3` passed.
+- Self-review lifecycle/canonical RED: Edit `8/9`, Play `3/5`. Final focused
+  GREEN: `Phase5Task9Fix2-SelfReview-EditGreen2.xml`, `9/9`; and
+  `Phase5Task9Fix2-SelfReview-PlayGreen2.xml`, `5/5`. All final focused suites
+  report zero failed, skipped, or inconclusive tests.
+
+Fresh cumulative Phase 5, integration, regression, and Phase 0 evidence is
+intentionally deferred until Task 10 stops writing the shared worktree. This
+report does not claim cumulative readiness yet.
+
+## Fix Round 2 final validation-scene coverage (recipe v8)
+
+- Added executable validation-only controls for the remaining manual matrix:
+  Solid/Light/Strong switching, forced Strong fallback, shared Back, critical
+  Modal outside blocking, two-Modal stack order, three-Toast burst with
+  duplicate merge evidence, tap/long-press/close Tooltip paths, transition
+  interruption/reopen, and reload-state cleanup.
+- Back input uses one shared edge-latched entry, so one physical Back closes
+  exactly one top container. The second-Modal entry is a real raycastable
+  control inside the first Modal while the second Modal remains its sibling in
+  the shared Modal layer.
+- Bottom Sheet outside input waits for the unscaled open transition and actual
+  Canvas registration; the test then raycasts and clicks a genuinely uncovered
+  outside region. No test-time UI repair is performed.
+
+Fresh final focused evidence:
+
+- Round 2 EditMode contract and generated-scene rebuild:
+  `Phase5Task9Fix2-v8-EditGreen.xml`, `9/9` passed.
+- Extended remaining-manual-fixture real input:
+  `Phase5Task9Fix2-v8-ExtendedGreen.xml`, `1/1` passed.
+- Full Round 2 generated-scene PlayMode:
+  `Phase5Task9Fix2-v8-PlayGreen.xml`, `7/7` passed.
+- Updated canonical-path regression:
+  `Phase5Task9Fix2-AssetPathsGreen.xml`, `1/1` passed.
+- Cumulative Phase 5 EditMode after the canonical-path update:
+  `Phase5Task9Fix2-CumulativeEdit2.xml`, `93/93` passed.
+- Final cumulative Phase 5 PlayMode after fixture isolation:
+  `Phase5Task9Fix2-CumulativePlay7.xml`, `54/54` passed.
+- Pointer-boundary class regression with loaded-scene isolation:
+  `Phase5Task9Fix2-PointerClass4.xml`, `14/14` passed (the Unity filter's
+  runnable count).
+- Every listed final focused suite reports zero failed, skipped, or
+  inconclusive tests.

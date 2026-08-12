@@ -91,6 +91,18 @@ namespace AnimalCafe.UI.Foundation
             ToastPriority.Normal,
             2.5f));
 
+        public int ShowThreeToastBurstWithDuplicate()
+        {
+            ShowToast();
+            ShowToast();
+            toastQueue.Enqueue(new ToastMessage(
+                ToastType.Info,
+                "Queue continues / 队列继续",
+                ToastPriority.Normal,
+                2.5f));
+            return toastQueue.TryGetCurrent(out var current) ? current.MergeCount : 0;
+        }
+
         private void ShowTooltip()
         {
             tooltip.SetMessage("Tap controls to inspect their Touch-safe behavior.");
