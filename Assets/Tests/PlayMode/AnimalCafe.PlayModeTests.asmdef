@@ -3,6 +3,7 @@
   "rootNamespace": "AnimalCafe.Tests",
   "references": [
     "AnimalCafe.Runtime",
+    "Unity.TextMeshPro",
     "UnityEngine.UI",
     "Unity.InputSystem",
     "Unity.InputSystem.TestFramework",
