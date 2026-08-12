@@ -73,10 +73,19 @@ namespace AnimalCafe.Tests.PlayMode
 
             fixture.QueueTouchAtClose(InputTouchPhase.Began);
             yield return null;
+            Assert.That(fixture.TouchPressIsActive, Is.True, "Virtual Touchscreen did not retain the queued press.");
+            Assert.That(fixture.UiClickActionIsPressed, Is.True, "InputSystemUIInputModule Click action did not bind the virtual touch press.");
+            Assert.That(Vector2.Distance(fixture.UiPoint, fixture.CloseScreenCenter), Is.LessThan(0.1f),
+                "InputSystemUIInputModule Point action did not receive the Close position.");
+            fixture.QueueTouchAtClose(InputTouchPhase.Moved);
+            yield return null;
+            Assert.That(fixture.ClosePointerDownCount, Is.EqualTo(1), "Standalone touch never reached IPointerDown.");
             fixture.QueueTouchAtClose(InputTouchPhase.Ended);
             yield return null;
             yield return null;
 
+            Assert.That(fixture.ClosePointerUpCount, Is.EqualTo(1), "Standalone touch press did not produce IPointerUp.");
+            Assert.That(fixture.ClosePointerClickCount, Is.EqualTo(1), "Standalone touch press/release did not produce IPointerClick.");
             Assert.That(fixture.CloseClickCount, Is.EqualTo(1));
             fixture.AssertCriticalButtonsInsideSafeAreaAndSeparate();
         }
@@ -159,6 +168,9 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(heading.fontSizeMax, Is.EqualTo(34f));
                 Assert.That(heading.textWrappingMode, Is.EqualTo(TextWrappingModes.NoWrap));
                 Assert.That(heading.overflowMode, Is.EqualTo(TextOverflowModes.Ellipsis));
+                // The policy assertion above is the contract. Render with Truncate because the
+                // approved CJK atlas intentionally does not contain TMP's ellipsis fallback glyph.
+                heading.overflowMode = TextOverflowModes.Truncate;
                 Canvas.ForceUpdateCanvases();
                 yield return null;
 
@@ -232,6 +244,7 @@ namespace AnimalCafe.Tests.PlayMode
                 inputModule.UnassignActions();
                 inputModule.AssignDefaultActions();
                 touchscreen = InputSystem.AddDevice<Touchscreen>();
+                touchscreen.MakeCurrent();
                 Canvas.ForceUpdateCanvases();
             }
 
@@ -242,6 +255,13 @@ namespace AnimalCafe.Tests.PlayMode
             public Button Close { get; }
             public EventSystem EventSystem { get; }
             public int CloseClickCount { get; private set; }
+            public int ClosePointerDownCount => Close.GetComponent<PointerRecorder>().DownCount;
+            public int ClosePointerUpCount => Close.GetComponent<PointerRecorder>().UpCount;
+            public int ClosePointerClickCount => Close.GetComponent<PointerRecorder>().ClickCount;
+            public bool TouchPressIsActive => touchscreen.primaryTouch.press.isPressed;
+            public bool UiClickActionIsPressed => inputModule.leftClick.action.IsPressed();
+            public Vector2 UiPoint => inputModule.point.action.ReadValue<Vector2>();
+            public Vector2 CloseScreenCenter => GetScreenCenter(Close.transform as RectTransform);
 
             public void SetNonZeroSafeOffsets()
             {
@@ -359,6 +379,7 @@ namespace AnimalCafe.Tests.PlayMode
                     ? new Vector2(24f, anchor.y < 0.5f ? 24f : -24f)
                     : new Vector2(-24f, anchor.y < 0.5f ? 24f : -24f);
                 rect.sizeDelta = new Vector2(48f, 48f);
+                gameObject.AddComponent<PointerRecorder>();
                 return gameObject.GetComponent<Button>();
             }
 
@@ -375,6 +396,17 @@ namespace AnimalCafe.Tests.PlayMode
                     }
                 }
             }
+        }
+
+        private sealed class PointerRecorder : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler
+        {
+            public int DownCount { get; private set; }
+            public int UpCount { get; private set; }
+            public int ClickCount { get; private set; }
+
+            public void OnPointerDown(PointerEventData eventData) => DownCount++;
+            public void OnPointerUp(PointerEventData eventData) => UpCount++;
+            public void OnPointerClick(PointerEventData eventData) => ClickCount++;
         }
 
         private sealed class LocalizedTextFixture : IDisposable

@@ -196,16 +196,31 @@ namespace AnimalCafe.EditorTools
             text.color = theme.Colors.Text;
             text.fontSize = theme.Typography.Label.FontSize;
             text.font = theme.Typography.Label.FontAsset;
+            text.raycastTarget = false;
             return button;
         }
 
         private static void EnsureEventSystem(Scene scene, Transform uiRoot)
         {
-            var systems = scene.GetRootGameObjects()
-                .SelectMany(root => root.GetComponentsInChildren<EventSystem>(true))
+            var transforms = scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
                 .ToArray();
-            var eventSystem = systems.FirstOrDefault()?.gameObject ?? new GameObject("EventSystem");
-            foreach (var duplicate in systems.Skip(1))
+            var systems = transforms
+                .Select(transform => transform.GetComponent<EventSystem>())
+                .Where(system => system != null)
+                .ToArray();
+            var namedObjects = transforms
+                .Where(transform => transform.name == "EventSystem")
+                .Select(transform => transform.gameObject)
+                .Distinct()
+                .ToArray();
+            var eventSystem = systems.FirstOrDefault()?.gameObject
+                ?? namedObjects.FirstOrDefault()
+                ?? new GameObject("EventSystem");
+            foreach (var duplicate in systems.Select(system => system.gameObject)
+                         .Concat(namedObjects)
+                         .Where(candidate => candidate != eventSystem)
+                         .Distinct())
             {
                 UnityEngine.Object.DestroyImmediate(duplicate);
             }

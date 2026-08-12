@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections;
 using System.Linq;
 using AnimalCafe.UI.Feedback;
@@ -119,3 +120,4 @@ namespace AnimalCafe.Tests.PlayMode
         }
     }
 }
+#endif

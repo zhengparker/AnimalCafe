@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections;
 using System.Linq;
 using AnimalCafe.Interaction;
@@ -107,8 +108,11 @@ namespace AnimalCafe.Tests.PlayMode
                 Find(scene, "Safe Area").transform), Is.True);
 
             var mouse = InputSystem.AddDevice<Mouse>();
+            mouse.MakeCurrent();
             try
             {
+                QueueMouseState(mouse, Vector2.zero, false);
+                yield return null;
                 var mover = Find(scene, "Scaled Time Mover").transform;
                 yield return Click(mouse, Find<Button>(scene, "Pause Game Button"));
                 var pausedPosition = mover.position;
@@ -120,6 +124,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(mover.position, Is.Not.EqualTo(pausedPosition));
 
                 yield return Click(mouse, Find<Button>(scene, "Reduced Motion Toggle"));
+                yield return null;
                 Assert.That(Find(scene, "Reduced Motion Status").GetComponent<TMPro.TMP_Text>().text,
                     Does.Contain("On"));
 
@@ -337,15 +342,29 @@ namespace AnimalCafe.Tests.PlayMode
             yield return null;
         }
 
-        private static IEnumerator Click(Mouse mouse, Button button) => Click(mouse, Center(button));
+        private static IEnumerator Click(Mouse mouse, Button button)
+        {
+            var position = Center(button);
+            var results = new System.Collections.Generic.List<RaycastResult>();
+            EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = position }, results);
+            Assert.That(results, Is.Not.Empty, button.name + " must be raycastable.");
+            Assert.That(
+                results[0].gameObject == button.gameObject
+                || results[0].gameObject.transform.IsChildOf(button.transform),
+                Is.True,
+                button.name + " must be the top raycast target.");
+            yield return Click(mouse, position);
+        }
 
         private static IEnumerator Click(Mouse mouse, Vector2 position)
         {
             QueueMouseState(mouse, position, true);
             InputSystem.Update();
             yield return null;
+            yield return null;
             QueueMouseState(mouse, position, false);
             InputSystem.Update();
+            yield return null;
             yield return null;
         }
 
@@ -425,3 +444,4 @@ namespace AnimalCafe.Tests.PlayMode
             .SelectMany(root => root.GetComponentsInChildren<T>(true)).ToArray();
     }
 }
+#endif

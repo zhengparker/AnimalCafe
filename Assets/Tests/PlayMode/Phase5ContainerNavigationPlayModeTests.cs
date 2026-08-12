@@ -33,8 +33,9 @@ namespace AnimalCafe.Tests.PlayMode
                 top.View.Confirmed += () => confirmCount++;
                 lower.View.Open();
                 top.View.Open();
+                yield return null;
 
-                fixture.QueueTap(top.ConfirmPosition);
+                yield return fixture.QueueTap(top.ConfirmPosition);
                 yield return null;
                 yield return null;
 
@@ -42,7 +43,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(topState.IsOpen, Is.False);
                 Assert.That(lowerState.IsOpen, Is.True);
 
-                fixture.QueueTap(top.ConfirmPosition);
+                yield return fixture.QueueTap(top.ConfirmPosition);
                 yield return null;
                 yield return null;
 
@@ -63,8 +64,9 @@ namespace AnimalCafe.Tests.PlayMode
                 var sheet = fixture.CreateBottomSheet();
                 sheet.View.Configure(navigation, state, sheet.Outside);
                 sheet.View.Open();
+                yield return null;
 
-                fixture.QueueTap(sheet.OutsidePosition);
+                yield return fixture.QueueTap(sheet.OutsidePosition);
                 yield return null;
                 yield return null;
                 Assert.That(state.IsOpen, Is.False);
@@ -86,14 +88,14 @@ namespace AnimalCafe.Tests.PlayMode
                 modal.View.Configure(navigation, state, modal.Confirm, modal.Cancel, modal.Outside, false);
                 modal.View.Open();
 
-                fixture.QueueTap(modal.OutsidePosition);
+                yield return fixture.QueueTap(modal.OutsidePosition);
                 yield return null;
                 yield return null;
                 Assert.That(state.IsOpen, Is.True);
                 Assert.That(modal.View.TryHandleBack(), Is.False);
                 Assert.That(state.IsOpen, Is.True);
 
-                fixture.QueueTap(modal.CancelPosition);
+                yield return fixture.QueueTap(modal.CancelPosition);
                 yield return null;
                 yield return null;
                 Assert.That(state.IsOpen, Is.False);
@@ -130,6 +132,8 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(modal.Group.blocksRaycasts, Is.True);
 
                 fixture.QueueTouchBegan(modal.ContentPosition);
+                yield return null;
+                fixture.QueueTouchMoved(modal.ContentPosition);
                 yield return null;
                 Assert.That(
                     pointerBoundary.GetOwnership(fixture.PointerId),
@@ -181,7 +185,7 @@ namespace AnimalCafe.Tests.PlayMode
                     modal.View.Open();
                     yield return null;
 
-                    fixture.QueueTap(modal.ContentPosition);
+                    yield return fixture.QueueTap(modal.ContentPosition);
                     yield return null;
                     yield return null;
                     var ownedPointerId = fixture.PointerId;
@@ -202,17 +206,17 @@ namespace AnimalCafe.Tests.PlayMode
                             Assert.That(modal.View.TryHandleBack(), Is.True);
                             break;
                         case ModalClosePath.Outside:
-                            fixture.QueueTap(modal.OutsidePosition);
+                            yield return fixture.QueueTap(modal.OutsidePosition);
                             yield return null;
                             yield return null;
                             break;
                         case ModalClosePath.Confirm:
-                            fixture.QueueTap(modal.ConfirmPosition);
+                            yield return fixture.QueueTap(modal.ConfirmPosition);
                             yield return null;
                             yield return null;
                             break;
                         case ModalClosePath.Cancel:
-                            fixture.QueueTap(modal.CancelPosition);
+                            yield return fixture.QueueTap(modal.CancelPosition);
                             yield return null;
                             yield return null;
                             break;
@@ -259,7 +263,7 @@ namespace AnimalCafe.Tests.PlayMode
                     Assert.That(sheet.Group.alpha, Is.EqualTo(1f));
                     Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
 
-                    fixture.QueueTap(sheet.ContentPosition);
+                    yield return fixture.QueueTap(sheet.ContentPosition);
                     yield return null;
                     yield return null;
                     var outsidePointerId = fixture.PointerId;
@@ -267,7 +271,7 @@ namespace AnimalCafe.Tests.PlayMode
                         pointerBoundary.GetOwnership(outsidePointerId),
                         Is.EqualTo(UiPointerOwnership.Ui));
 
-                    fixture.QueueTap(sheet.OutsidePosition);
+                    yield return fixture.QueueTap(sheet.OutsidePosition);
                     yield return new WaitForSecondsRealtime(0.06f);
                     AssertSheetClosed(sheet, state, navigation, pointerBoundary, outsidePointerId);
 
@@ -281,7 +285,7 @@ namespace AnimalCafe.Tests.PlayMode
 
                     sheet.View.Open();
                     yield return null;
-                    fixture.QueueTap(sheet.ContentPosition);
+                    yield return fixture.QueueTap(sheet.ContentPosition);
                     yield return null;
                     yield return null;
                     var disablePointerId = fixture.PointerId;
@@ -305,12 +309,12 @@ namespace AnimalCafe.Tests.PlayMode
                     sheet.View.Open();
                     yield return new WaitForSecondsRealtime(0.06f);
 
-                    fixture.QueueTap(sheet.OutsidePosition);
+                    yield return fixture.QueueTap(sheet.OutsidePosition);
                     yield return null;
                     yield return null;
                     Assert.That(replacementState.IsOpen, Is.True, "Old outside listener must be removed.");
 
-                    fixture.QueueTap(replacementOutside.Position);
+                    yield return fixture.QueueTap(replacementOutside.Position);
                     yield return new WaitForSecondsRealtime(0.06f);
                     Assert.That(replacementState.IsOpen, Is.False);
                     Assert.That(sheet.Group.blocksRaycasts, Is.False);
@@ -323,7 +327,7 @@ namespace AnimalCafe.Tests.PlayMode
                         new UiTransitionRunner(() => false), 1f);
                     destroySheet.View.Open();
                     yield return null;
-                    fixture.QueueTap(destroySheet.ContentPosition);
+                    yield return fixture.QueueTap(destroySheet.ContentPosition);
                     yield return null;
                     yield return null;
                     var destroyPointerId = fixture.PointerId;
@@ -365,7 +369,7 @@ namespace AnimalCafe.Tests.PlayMode
                 // Put the lower actions above the fixture blocker to prove the component's own
                 // top-of-stack guard, while retaining the real EventSystem/Button route.
                 lower.Confirm.transform.SetAsLastSibling();
-                fixture.QueueTap(lower.ConfirmPosition);
+                yield return fixture.QueueTap(lower.ConfirmPosition);
                 yield return null;
                 yield return null;
                 Assert.That(lowerConfirmCount, Is.Zero);
@@ -373,7 +377,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(topState.IsOpen, Is.True);
 
                 lower.Outside.transform.SetAsLastSibling();
-                fixture.QueueTap(lower.OutsidePosition);
+                yield return fixture.QueueTap(lower.OutsidePosition);
                 yield return null;
                 yield return null;
                 Assert.That(lowerState.IsOpen, Is.True);
@@ -406,7 +410,7 @@ namespace AnimalCafe.Tests.PlayMode
                 modal.View.Open();
                 yield return new WaitForSecondsRealtime(0.06f);
 
-                fixture.QueueTap(modal.CancelPosition);
+                yield return fixture.QueueTap(modal.CancelPosition);
                 yield return new WaitForSecondsRealtime(0.06f);
                 Assert.That(state.IsOpen, Is.False);
                 Assert.That(gameTime.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
@@ -429,7 +433,7 @@ namespace AnimalCafe.Tests.PlayMode
                 modal.Root.SetActive(true);
                 modal.View.Open();
                 yield return null;
-                fixture.QueueTap(modal.ContentPosition);
+                yield return fixture.QueueTap(modal.ContentPosition);
                 yield return null;
                 yield return null;
                 var oldPointerId = fixture.PointerId;
@@ -464,13 +468,13 @@ namespace AnimalCafe.Tests.PlayMode
                 modal.View.Open();
                 yield return new WaitForSecondsRealtime(0.06f);
 
-                fixture.QueueTap(modal.ConfirmPosition);
+                yield return fixture.QueueTap(modal.ConfirmPosition);
                 yield return null;
                 yield return null;
                 Assert.That(replacementState.IsOpen, Is.True, "Old Confirm listener must be removed.");
                 Assert.That(replacementConfirmCount, Is.Zero);
 
-                fixture.QueueTap(replacementConfirm.Position);
+                yield return fixture.QueueTap(replacementConfirm.Position);
                 yield return new WaitForSecondsRealtime(0.06f);
                 Assert.That(replacementState.IsOpen, Is.False);
                 Assert.That(replacementConfirmCount, Is.EqualTo(1));
@@ -486,7 +490,7 @@ namespace AnimalCafe.Tests.PlayMode
                     new UiTransitionRunner(() => false), 1f);
                 destroyModal.View.Open();
                 yield return null;
-                fixture.QueueTap(destroyModal.ContentPosition);
+                yield return fixture.QueueTap(destroyModal.ContentPosition);
                 yield return null;
                 yield return null;
                 var destroyPointerId = fixture.PointerId;
@@ -521,7 +525,7 @@ namespace AnimalCafe.Tests.PlayMode
                     new UiTransitionRunner(() => false), 0.03f);
                 sheet.View.Open();
                 yield return new WaitForSecondsRealtime(0.06f);
-                fixture.QueueTap(sheet.ContentPosition);
+                yield return fixture.QueueTap(sheet.ContentPosition);
                 yield return null;
                 yield return null;
                 var sheetPointerId = fixture.PointerId;
@@ -537,7 +541,7 @@ namespace AnimalCafe.Tests.PlayMode
                     new UiTransitionRunner(() => false), 0.03f);
                 modal.View.Open();
                 yield return new WaitForSecondsRealtime(0.06f);
-                fixture.QueueTap(modal.ContentPosition);
+                yield return fixture.QueueTap(modal.ContentPosition);
                 yield return null;
                 yield return null;
                 var modalPointerId = fixture.PointerId;
@@ -570,7 +574,7 @@ namespace AnimalCafe.Tests.PlayMode
                 modal.View.Open();
                 yield return new WaitForSecondsRealtime(0.06f);
                 sheet.Outside.transform.SetAsLastSibling();
-                fixture.QueueTap(sheet.OutsidePosition);
+                yield return fixture.QueueTap(sheet.OutsidePosition);
                 yield return null;
                 yield return null;
                 Assert.That(modalState.IsOpen, Is.True, "Lower Sheet action cannot dismiss upward.");
@@ -579,7 +583,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(sheet.Group.blocksRaycasts, Is.True);
 
                 modal.Cancel.transform.SetAsLastSibling();
-                fixture.QueueTap(modal.CancelPosition);
+                yield return fixture.QueueTap(modal.CancelPosition);
                 yield return new WaitForSecondsRealtime(0.06f);
                 Assert.That(modalState.IsOpen, Is.False);
 
@@ -599,7 +603,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(critical.Group.blocksRaycasts, Is.True);
 
                 critical.Cancel.transform.SetAsLastSibling();
-                fixture.QueueTap(critical.CancelPosition);
+                yield return fixture.QueueTap(critical.CancelPosition);
                 yield return new WaitForSecondsRealtime(0.06f);
                 Assert.That(criticalState.IsOpen, Is.False);
 
@@ -744,6 +748,7 @@ namespace AnimalCafe.Tests.PlayMode
                 inputModule.UnassignActions();
                 inputModule.AssignDefaultActions();
                 touchscreen = InputSystem.AddDevice<Touchscreen>();
+                touchscreen.MakeCurrent();
                 Canvas.ForceUpdateCanvases();
             }
 
@@ -775,18 +780,26 @@ namespace AnimalCafe.Tests.PlayMode
                 return CreateButton(name, offset);
             }
 
-            public void QueueTap(Vector2 position)
+            public IEnumerator QueueTap(Vector2 position)
             {
                 touchId++;
                 QueueTouch(position, InputTouchPhase.Began);
-                InputSystem.Update();
+                yield return null;
+                QueueTouch(position, InputTouchPhase.Stationary);
+                yield return null;
                 QueueTouch(position, InputTouchPhase.Ended);
+                yield return null;
             }
 
             public void QueueTouchBegan(Vector2 position)
             {
                 touchId++;
                 QueueTouch(position, InputTouchPhase.Began);
+            }
+
+            public void QueueTouchMoved(Vector2 position)
+            {
+                QueueTouch(position, InputTouchPhase.Stationary);
             }
 
             private GameObject CreateRoot(string name)

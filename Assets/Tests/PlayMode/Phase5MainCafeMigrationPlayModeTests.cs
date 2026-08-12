@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,8 +30,11 @@ namespace AnimalCafe.Tests.PlayMode
                 "Migrated MainCafe must persist Input System UI actions for real pointer input.");
 
             var mouse = InputSystem.AddDevice<Mouse>();
+            mouse.MakeCurrent();
             try
             {
+                QueueMouseState(mouse, Vector2.zero, false);
+                yield return null;
                 yield return Click(mouse, Find<Button>(scene, "PauseButton"));
                 Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
 
@@ -116,9 +120,19 @@ namespace AnimalCafe.Tests.PlayMode
             var corners = new Vector3[4];
             rect.GetWorldCorners(corners);
             var position = RectTransformUtility.WorldToScreenPoint(null, (corners[0] + corners[2]) * 0.5f);
+            var results = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = position }, results);
+            Assert.That(results, Is.Not.Empty);
+            Assert.That(
+                results[0].gameObject == button.gameObject
+                || results[0].gameObject.transform.IsChildOf(button.transform),
+                Is.True,
+                "The pointer must hit the Button or one of its visual children.");
             QueueMouseState(mouse, position, true);
             yield return null;
+            yield return null;
             QueueMouseState(mouse, position, false);
+            yield return null;
             yield return null;
         }
 
@@ -156,3 +170,4 @@ namespace AnimalCafe.Tests.PlayMode
                 .GetComponent<T>();
     }
 }
+#endif

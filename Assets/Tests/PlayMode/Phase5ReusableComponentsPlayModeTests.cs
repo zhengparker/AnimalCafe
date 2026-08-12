@@ -33,6 +33,8 @@ namespace AnimalCafe.Tests.PlayMode
 
                     fixture.QueueTouch(InputTouchPhase.Began);
                     yield return null;
+                    fixture.QueueTouch(InputTouchPhase.Stationary);
+                    yield return null;
                     Assert.That(fixture.View.CurrentState, Is.EqualTo(UiButtonState.Pressed));
 
                     fixture.QueueTouch(InputTouchPhase.Ended);
@@ -45,6 +47,8 @@ namespace AnimalCafe.Tests.PlayMode
                     Assert.That(fixture.View.CurrentState, Is.EqualTo(UiButtonState.Disabled));
 
                     fixture.QueueTouch(InputTouchPhase.Began);
+                    yield return null;
+                    fixture.QueueTouch(InputTouchPhase.Stationary);
                     yield return null;
                     fixture.QueueTouch(InputTouchPhase.Ended);
                     yield return null;
@@ -108,8 +112,11 @@ namespace AnimalCafe.Tests.PlayMode
                 fixture.View.Configure(
                     fixture.Theme, UiButtonRole.Primary, fixture.Button, fixture.Background);
                 var buttonTransform = fixture.Button.transform;
+                yield return null;
 
                 fixture.QueueTouch(InputTouchPhase.Began);
+                yield return null;
+                fixture.QueueTouch(InputTouchPhase.Stationary);
                 yield return null;
                 fixture.QueueTouch(InputTouchPhase.Ended);
                 yield return null;
@@ -333,6 +340,7 @@ namespace AnimalCafe.Tests.PlayMode
                 inputModule.UnassignActions();
                 inputModule.AssignDefaultActions();
                 touchscreen = InputSystem.AddDevice<Touchscreen>();
+                touchscreen.MakeCurrent();
                 Canvas.ForceUpdateCanvases();
             }
 

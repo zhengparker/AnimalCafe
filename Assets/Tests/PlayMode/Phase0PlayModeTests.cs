@@ -1360,6 +1360,7 @@ namespace AnimalCafe.Tests.PlayMode
         {
             private readonly GameObject canvasObject;
             private readonly GameObject eventSystemObject;
+            private readonly List<GraphicRaycaster> disabledGraphicRaycasters = new();
             private readonly ExistingEventSystemIsolationScope
                 eventSystemIsolation;
             private readonly Mouse mouse;
@@ -1370,6 +1371,7 @@ namespace AnimalCafe.Tests.PlayMode
                 mouse = virtualMouse;
                 eventSystemIsolation =
                     new ExistingEventSystemIsolationScope();
+                DisableExistingGraphicRaycasters();
 
                 canvasObject = new GameObject(
                     "RealUiPointerCanvasFixture",
@@ -1476,7 +1478,32 @@ namespace AnimalCafe.Tests.PlayMode
 
                 Object.DestroyImmediate(eventSystemObject);
                 Object.DestroyImmediate(canvasObject);
+                foreach (var raycaster in disabledGraphicRaycasters)
+                {
+                    if (raycaster != null)
+                    {
+                        raycaster.enabled = true;
+                    }
+                }
                 eventSystemIsolation.Dispose();
+            }
+
+            private void DisableExistingGraphicRaycasters()
+            {
+                foreach (var raycaster in
+                    Resources.FindObjectsOfTypeAll<GraphicRaycaster>())
+                {
+                    if (raycaster == null
+                        || !raycaster.gameObject.scene.IsValid()
+                        || !raycaster.gameObject.scene.isLoaded
+                        || !raycaster.enabled)
+                    {
+                        continue;
+                    }
+
+                    disabledGraphicRaycasters.Add(raycaster);
+                    raycaster.enabled = false;
+                }
             }
         }
 

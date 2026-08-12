@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System.Collections;
 using System.Linq;
 using AnimalCafe.Diagnostics;
@@ -78,3 +79,4 @@ namespace AnimalCafe.Tests.PlayMode
             scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<T>(true)).ToArray();
     }
 }
+#endif
