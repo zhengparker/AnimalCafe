@@ -129,6 +129,32 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator DisableThenMissRelease_FreshWorldTapWithSameIdSelectsNormally()
+        {
+            using var fixture = new PointerBoundaryFixture();
+            fixture.PlaceButtonAt(fixture.SelectablePosition);
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            yield return null;
+            fixture.Interaction.gameObject.SetActive(false);
+
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
+            yield return null;
+
+            fixture.Interaction.gameObject.SetActive(true);
+            fixture.PlaceButtonAt(new Vector2(30f, 30f));
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            fixture.QueueMouseState(fixture.SelectablePosition, false);
+            yield return null;
+            yield return null;
+
+            Assert.That(fixture.Interaction.CurrentSelection, Is.SameAs(fixture.Selectable));
+        }
+
+        [UnityTest]
         public IEnumerator ReconfigureThenReleaseSceneGesture_SuppressesWorldSelectionUntilFreshTap()
         {
             using var fixture = new PointerBoundaryFixture();
@@ -157,6 +183,56 @@ namespace AnimalCafe.Tests.PlayMode
             yield return null;
 
             Assert.That(fixture.Interaction.CurrentSelection, Is.SameAs(fixture.Selectable));
+        }
+
+        [UnityTest]
+        public IEnumerator ReconfigureThenMissRelease_FreshNewSourceTapWithSameIdSelectsNormally()
+        {
+            using var fixture = new PointerBoundaryFixture();
+            fixture.PlaceButtonAt(new Vector2(30f, 30f));
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            yield return null;
+            yield return null;
+
+            var replacementObject = new GameObject("Phase5ReplacementInput");
+            var replacementInput = replacementObject.AddComponent<CameraInputTestFixture>();
+            try
+            {
+                fixture.Interaction.Configure(
+                    fixture.Camera,
+                    replacementInput,
+                    new UiPointerBoundary());
+
+                replacementInput.NextFrame = new CameraInputFrame(
+                    Vector2.zero,
+                    0f,
+                    false,
+                    fixture.SelectablePosition,
+                    fixture.Mouse.deviceId,
+                    true);
+                yield return null;
+                replacementInput.NextFrame = default;
+                yield return null;
+                replacementInput.NextFrame = new CameraInputFrame(
+                    Vector2.zero,
+                    0f,
+                    true,
+                    fixture.SelectablePosition,
+                    fixture.Mouse.deviceId,
+                    false,
+                    true);
+                yield return null;
+
+                Assert.That(
+                    fixture.Interaction.CurrentSelection,
+                    Is.SameAs(fixture.Selectable));
+            }
+            finally
+            {
+                Object.DestroyImmediate(replacementObject);
+            }
         }
 
         [UnityTest]
