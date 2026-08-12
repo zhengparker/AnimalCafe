@@ -673,7 +673,7 @@ namespace AnimalCafe.Tests.PlayMode
             yield return null;
 
             var runtimeRoot = GameObject.Find("Phase0_Runtime");
-            var canvas = GameObject.Find("Phase0_TimeControls");
+            var uiRoot = GameObject.Find("UI Root");
             var reviewRoot = GameObject.Find(
                 "TEMP_P4_ManualReviewFixtures_DELETE_LATER");
 
@@ -786,10 +786,11 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(GameObject.Find("Selectable_Green"), Is.Null);
             Assert.That(GameObject.Find("Time_Test_Mover"), Is.Null);
             Assert.That(GameObject.Find("CafeFloor"), Is.Null);
-            Assert.That(CountLoadedSceneObjects("Phase0_TimeControls"), Is.EqualTo(1));
-            Assert.That(canvas, Is.Not.Null);
+            Assert.That(CountLoadedSceneObjects("Phase0_TimeControls"), Is.Zero);
+            Assert.That(CountLoadedSceneObjects("UI Root"), Is.EqualTo(1));
+            Assert.That(uiRoot, Is.Not.Null);
             Assert.That(
-                canvas.GetComponentInChildren<TimeControlPanel>(true),
+                uiRoot.GetComponentInChildren<TimeControlPanel>(true),
                 Is.Not.Null);
             Assert.That(CountLoadedSceneObjects("EventSystem"), Is.EqualTo(1));
 
