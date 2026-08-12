@@ -236,6 +236,51 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator ReconfigureWithoutBoundaryThenMissRelease_FreshNewSourceTapSelectsNormally()
+        {
+            using var fixture = new PointerBoundaryFixture();
+            fixture.PlaceButtonAt(new Vector2(30f, 30f));
+
+            fixture.QueueMouseState(fixture.SelectablePosition, true);
+            yield return null;
+            yield return null;
+            yield return null;
+
+            var replacementObject = new GameObject("Phase5NullBoundaryReplacementInput");
+            var replacementInput = replacementObject.AddComponent<CameraInputTestFixture>();
+            try
+            {
+                fixture.Interaction.Configure(fixture.Camera, replacementInput);
+
+                replacementInput.NextFrame = new CameraInputFrame(
+                    Vector2.zero,
+                    0f,
+                    false,
+                    fixture.SelectablePosition,
+                    fixture.Mouse.deviceId,
+                    true);
+                yield return null;
+                replacementInput.NextFrame = new CameraInputFrame(
+                    Vector2.zero,
+                    0f,
+                    true,
+                    fixture.SelectablePosition,
+                    fixture.Mouse.deviceId,
+                    false,
+                    true);
+                yield return null;
+
+                Assert.That(
+                    fixture.Interaction.CurrentSelection,
+                    Is.SameAs(fixture.Selectable));
+            }
+            finally
+            {
+                Object.DestroyImmediate(replacementObject);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Disable_ReleasesActiveUiOwnershipAndAllowsNextUiPress()
         {
             using var fixture = new PointerBoundaryFixture();

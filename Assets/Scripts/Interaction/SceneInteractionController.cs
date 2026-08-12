@@ -52,9 +52,13 @@ namespace AnimalCafe.Interaction
 
             RegisterPendingScenePointerPresses();
             var inputFrame = inputSource.ReadFrame();
-            if (uiPointerBoundary != null && inputFrame.PointerPressed)
+            if (inputFrame.PointerPressed)
             {
                 suppressedPointerIds.Remove(inputFrame.PointerId);
+            }
+
+            if (uiPointerBoundary != null && inputFrame.PointerPressed)
+            {
                 activePointerIds.Add(inputFrame.PointerId);
                 var pointerOverUi = EventSystem.current != null
                     && EventSystem.current.IsPointerOverGameObject(
