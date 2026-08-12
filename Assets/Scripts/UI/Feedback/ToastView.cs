@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,7 +22,22 @@ namespace AnimalCafe.UI.Feedback
         {
             queue = toastQueue ?? throw new ArgumentNullException(nameof(toastQueue));
             messageLabel = label ?? throw new ArgumentNullException(nameof(label));
-            graphics = toastGraphics ?? throw new ArgumentNullException(nameof(toastGraphics));
+            if (toastGraphics == null)
+            {
+                throw new ArgumentNullException(nameof(toastGraphics));
+            }
+
+            // Do not trust a manually maintained list alone: a later-added or inactive child
+            // must also remain Touch-through. 不能只依赖手动列表，后来新增或 inactive 的
+            // descendant Graphic 也必须保持 Touch-through。
+            var allGraphics = new HashSet<Graphic>(toastGraphics);
+            foreach (var descendant in GetComponentsInChildren<Graphic>(true))
+            {
+                allGraphics.Add(descendant);
+            }
+
+            graphics = new Graphic[allGraphics.Count];
+            allGraphics.CopyTo(graphics);
 
             foreach (var graphic in graphics)
             {
@@ -38,7 +54,9 @@ namespace AnimalCafe.UI.Feedback
 
         private void Update()
         {
-            if (queue == null || !queue.TryGetCurrent(out var current))
+            if (messageLabel == null
+                || queue == null
+                || !queue.TryGetCurrent(out var current))
             {
                 SetVisible(false);
                 return;
