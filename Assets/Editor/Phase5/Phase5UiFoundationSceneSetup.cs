@@ -25,7 +25,7 @@ namespace AnimalCafe.EditorTools.Phase5
     /// </summary>
     public static class Phase5UiFoundationSceneSetup
     {
-        private const int RecipeVersion = 8;
+        private const int RecipeVersion = 34;
         public const string ScenePath = Phase5UiAssetPaths.ValidationScenePath;
 
         [MenuItem("AnimalCafe/Phase 5/Build UI Foundation Validation Scene")]
@@ -76,7 +76,9 @@ namespace AnimalCafe.EditorTools.Phase5
             var coffeeMachine = GameObject.CreatePrimitive(PrimitiveType.Cube);
             coffeeMachine.name = "Selectable Coffee Machine";
             coffeeMachine.transform.SetParent(parent, false);
-            coffeeMachine.transform.localPosition = new Vector3(-1.5f, 0.5f, 0f);
+            // Keep the world-selection fixture in the left reserved review area so
+            // the visual-only Component Gallery does not cover an otherwise clear tap.
+            coffeeMachine.transform.localPosition = new Vector3(-1.7f, 0.5f, 0f);
             coffeeMachine.transform.localScale = new Vector3(1.5f, 1f, 1f);
             coffeeMachine.AddComponent<ColorSelectable>().Configure(
                 coffeeMachine.GetComponent<Renderer>());
@@ -84,9 +86,9 @@ namespace AnimalCafe.EditorTools.Phase5
             var mover = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             mover.name = "Scaled Time Mover";
             mover.transform.SetParent(parent, false);
-            mover.transform.localPosition = new Vector3(-2f, 0.5f, -1f);
+            mover.transform.localPosition = new Vector3(-2f, 3f, -1f);
             mover.AddComponent<ManualReviewPingPongMover>().Configure(
-                new Vector3(-2f, 0.5f, -1f), new Vector3(2f, 0.5f, -1f), 1f);
+                new Vector3(-2f, 3f, -1f), new Vector3(2f, 3f, -1f), 1f);
             return camera.GetComponent<UnityEngine.Camera>();
         }
 
@@ -205,51 +207,72 @@ namespace AnimalCafe.EditorTools.Phase5
                 ?? throw new InvalidOperationException("Phase 5 UI theme is missing.");
             var hud = Find(uiRoot, "HUD Canvas/HUD Layer");
             var panel = Find(uiRoot, "Screen Canvas/Panel Layer");
+            var modalLayer = Find(uiRoot, "Screen Canvas/Modal Layer");
             var toast = Find(uiRoot, "Toast Canvas/Toast Layer");
             Stretch((RectTransform)hud);
             Stretch((RectTransform)panel);
+            Stretch((RectTransform)modalLayer);
             Stretch((RectTransform)toast);
 
             var safeArea = InstantiatePrefab(Phase5UiAssetPaths.SafeAreaPrefabPath, hud, "Safe Area");
             Stretch(safeArea.GetComponent<RectTransform>());
-            var gallery = CreateUiObject("Component Gallery", panel);
+            var pages = CreateReviewPages(panel, theme);
+            var responsiveCard = CreateResponsiveInfoCard(pages.responsive.transform);
+            var gallery = CreateUiObject("Component Gallery", pages.buttons.transform);
             gallery.GetComponent<RectTransform>().sizeDelta = new Vector2(900f, 880f);
-            AddLabel(gallery.transform, theme, "Gallery Title", "Component Gallery / UI Components", 28f);
-            CreateButtonGallery(gallery.transform);
+            CreateButtonGallery(gallery.transform, theme);
             var longLabel = AddLabel(
-                gallery.transform,
+                responsiveCard.transform,
                 theme,
                 "Long Localized Label",
                 "Coffee Bean 库存与 syrup 插孔设置以及口味确认并保存，Confirm Coffee Machine 咖啡机 Flavor 口味选择",
                 16f);
-            longLabel.rectTransform.anchoredPosition = new Vector2(0f, -240f);
-            longLabel.rectTransform.sizeDelta = new Vector2(760f, 160f);
+            longLabel.rectTransform.anchoredPosition = new Vector2(0f, -30f);
+            longLabel.rectTransform.sizeDelta = new Vector2(720f, 150f);
 
-            var tooltip = InstantiatePrefab(Phase5UiAssetPaths.TooltipPrefabPath, panel, "Tooltip Fixture");
-            tooltip.GetComponent<RectTransform>().anchoredPosition = new Vector2(-180f, -560f);
+            var coffeeMachineHint = AddLabel(
+                pages.navigation.transform,
+                theme,
+                "Coffee Machine Hint",
+                "Coffee Machine — Tap to select",
+                16f);
+            coffeeMachineHint.alignment = TextAlignmentOptions.Center;
+            coffeeMachineHint.rectTransform.anchoredPosition = new Vector2(-285f, 40f);
+            coffeeMachineHint.rectTransform.sizeDelta = new Vector2(320f, 54f);
+            coffeeMachineHint.textWrappingMode = TextWrappingModes.NoWrap;
+            coffeeMachineHint.raycastTarget = false;
+
+            var tooltip = InstantiatePrefab(Phase5UiAssetPaths.TooltipPrefabPath, pages.feedback.transform, "Tooltip Fixture");
+            var tooltipRect = tooltip.GetComponent<RectTransform>();
+            CenterFeedbackMessage(tooltipRect);
+            tooltip.GetComponent<TooltipView>().SetBackgroundVisible(false);
             var validation = InstantiatePrefab(
                 Phase5UiAssetPaths.ValidationMessagePrefabPath,
-                panel,
+                pages.feedback.transform,
                 "Validation Message Fixture");
-            validation.GetComponent<RectTransform>().anchoredPosition = new Vector2(180f, -560f);
+            CenterFeedbackMessage(validation.GetComponent<RectTransform>());
             var toastFixture = InstantiatePrefab(Phase5UiAssetPaths.ToastPrefabPath, toast, "Toast Fixture");
-            toastFixture.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -120f);
+            var toastRect = toastFixture.GetComponent<RectTransform>();
+            toastRect.anchorMin = toastRect.anchorMax = new Vector2(0.5f, 1f);
+            toastRect.pivot = new Vector2(0.5f, 1f);
+            toastRect.anchoredPosition = new Vector2(0f, -320f);
             var bottomSheet = InstantiatePrefab(
                 Phase5UiAssetPaths.BottomSheetPrefabPath,
-                panel,
+                modalLayer,
                 "Bottom Sheet Fixture");
             ConfigureBottomSheetEvidenceLayout(bottomSheet);
             var feedbackButtons = CreateFeedbackControls(
-                panel,
+                pages.feedback.transform,
                 toastFixture,
                 tooltip,
                 validation,
                 bottomSheet);
             CreateReviewFixtures(
-                uiRoot, sceneRoot, panel, hud, safeArea.transform, theme,
+                uiRoot, sceneRoot, pages, modalLayer, hud, safeArea.transform, theme,
                 camera, sceneInput, sceneInteraction, validation.GetComponent<ValidationMessageView>(),
                 feedbackButtons.bottomSheet, bottomSheet.GetComponent<AnimalCafeBottomSheetView>(),
                 feedbackButtons.controller, tooltip.GetComponent<TooltipView>());
+            Find(pages.feedback.transform, "Feedback Controls").SetAsLastSibling();
             foreach (var graphic in uiRoot.GetComponentsInChildren<Graphic>(true))
             {
                 graphic.SetAllDirty();
@@ -257,10 +280,78 @@ namespace AnimalCafe.EditorTools.Phase5
             Canvas.ForceUpdateCanvases();
         }
 
+        private static void CenterFeedbackMessage(RectTransform rect)
+        {
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            // Review pages reserve 360 px above and 72 px below. Offset by half
+            // their difference so the message lands at the full Game View center.
+            rect.anchoredPosition = new Vector2(0f, 144f);
+        }
+
+        private static GameObject CreateResponsiveInfoCard(Transform parent)
+        {
+            var card = CreateUiObject("Responsive Info Card", parent);
+            var rect = card.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = new Vector2(0f, 144f);
+            rect.sizeDelta = new Vector2(820f, 520f);
+            var image = card.AddComponent<Image>();
+            image.color = new Color(0.96f, 0.91f, 0.80f, 0.96f);
+            image.raycastTarget = false;
+            return card;
+        }
+
+        private static (GameObject buttons, GameObject panels, GameObject navigation, GameObject feedback,
+            GameObject responsive, Button[] selectors) CreateReviewPages(Transform parent, AnimalCafeUiTheme theme)
+        {
+            var header = CreateUiObject("Review Header", parent);
+            var headerRect = header.GetComponent<RectTransform>();
+            headerRect.anchorMin = new Vector2(0f, 1f);
+            headerRect.anchorMax = Vector2.one;
+            headerRect.pivot = new Vector2(0.5f, 1f);
+            headerRect.sizeDelta = new Vector2(0f, 280f);
+            var buttons = CreatePage(parent, "Buttons Page");
+            var panels = CreatePage(parent, "Panels Page");
+            var navigation = CreatePage(parent, "Navigation Page");
+            var feedback = CreatePage(parent, "Feedback Page");
+            var responsive = CreatePage(parent, "Responsive Motion Page");
+            var selectorNames = new[] { "Buttons", "Panels", "Navigation", "Feedback", "Responsive Motion" };
+            var pageLabels = new[] { "Buttons", "Panels", "Navigation", "Feedback", "Responsive & Motion" };
+            var pages = new[] { buttons, panels, navigation, feedback, responsive };
+            var selectors = new Button[selectorNames.Length];
+            for (var index = 0; index < selectorNames.Length; index++)
+            {
+                selectors[index] = CreateEvidenceButton(header.transform, selectorNames[index] + " Page Selector", 0f);
+                SetButtonLabel(selectors[index], pageLabels[index]);
+                var rect = (RectTransform)selectors[index].transform;
+                rect.anchorMin = rect.anchorMax = new Vector2(0.1f + 0.2f * index, 0.25f);
+                rect.sizeDelta = new Vector2(190f, 56f);
+                rect.anchoredPosition = Vector2.zero;
+                pages[index].SetActive(index == 0);
+            }
+            header.transform.SetAsLastSibling();
+            return (buttons, panels, navigation, feedback, responsive, selectors);
+        }
+
+        private static GameObject CreatePage(Transform parent, string name)
+        {
+            var page = CreateUiObject(name, parent);
+            var rect = page.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = new Vector2(56f, 72f);
+            rect.offsetMax = new Vector2(-56f, -360f);
+            return page;
+        }
+
         private static void CreateReviewFixtures(
             Transform uiRoot,
             Transform sceneRoot,
-            Transform panel,
+            (GameObject buttons, GameObject panels, GameObject navigation, GameObject feedback,
+                GameObject responsive, Button[] selectors) pages,
+            Transform modalLayer,
             Transform hud,
             Transform safeArea,
             AnimalCafeUiTheme theme,
@@ -273,45 +364,100 @@ namespace AnimalCafe.EditorTools.Phase5
             Phase5UiFoundationFeedbackController feedback,
             TooltipView tooltip)
         {
-            var solidPanel = InstantiatePrefab(Phase5UiAssetPaths.SolidPanelPrefabPath, panel, "Solid Panel Fixture");
-            var lightPanel = InstantiatePrefab(Phase5UiAssetPaths.LightFrostPanelPrefabPath, panel, "Light Frost Panel Fixture");
-            var strongPanel = InstantiatePrefab(Phase5UiAssetPaths.StrongFrostPanelPrefabPath, panel, "Strong Frost Panel Fixture");
-            var modalObject = InstantiatePrefab(Phase5UiAssetPaths.ModalPrefabPath, panel, "Modal Fixture");
-            var secondModalObject = InstantiatePrefab(Phase5UiAssetPaths.ModalPrefabPath, panel, "Second Modal Fixture");
-            var pause = CreateEvidenceButton(panel, "Pause Game Button", -360f);
-            var resume = CreateEvidenceButton(panel, "Continue Game Button", -180f);
-            var reduced = CreateEvidenceButton(panel, "Reduced Motion Toggle", 0f);
-            var secondStrong = CreateEvidenceButton(panel, "Open Second Strong Frost Button", 180f);
-            var repair = CreateEvidenceButton(panel, "Validation Repair Button", 360f);
-            var openModal = CreateEvidenceButton(panel, "Open Modal Button", 0f);
-            openModal.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -100f);
+            var panelStage = CreatePanelPreviewStage(pages.panels.transform, theme);
+            var solidPanel = InstantiatePrefab(Phase5UiAssetPaths.SolidPanelPrefabPath, panelStage.transform, "Solid Panel Fixture");
+            var lightPanel = InstantiatePrefab(Phase5UiAssetPaths.LightFrostPanelPrefabPath, panelStage.transform, "Light Frost Panel Fixture");
+            var strongPanel = InstantiatePrefab(Phase5UiAssetPaths.StrongFrostPanelPrefabPath, panelStage.transform, "Strong Frost Panel Fixture");
+            foreach (var panel in new[] { solidPanel, lightPanel, strongPanel })
+            {
+                var rect = panel.GetComponent<RectTransform>();
+                rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+                rect.anchoredPosition = new Vector2(0f, -20f);
+                rect.sizeDelta = new Vector2(480f, 250f);
+            }
+            lightPanel.SetActive(false);
+            strongPanel.SetActive(false);
+            var panelTitle = AddLabel(panelStage.transform, theme, "Panel Preview Title", "Solid Panel", 22f);
+            panelTitle.alignment = TextAlignmentOptions.Center;
+            panelTitle.rectTransform.anchoredPosition = new Vector2(0f, 130f);
+            panelTitle.rectTransform.sizeDelta = new Vector2(520f, 42f);
+            var panelStatus = AddLabel(panelStage.transform, theme, "Panel Preview Status", "Current: Solid", 16f);
+            panelStatus.alignment = TextAlignmentOptions.Center;
+            panelStatus.rectTransform.anchoredPosition = new Vector2(0f, -145f);
+            panelStatus.rectTransform.sizeDelta = new Vector2(520f, 36f);
+            var modalObject = InstantiatePrefab(Phase5UiAssetPaths.ModalPrefabPath, modalLayer, "Modal Fixture");
+            var secondModalObject = InstantiatePrefab(Phase5UiAssetPaths.ModalPrefabPath, modalLayer, "Second Modal Fixture");
+            Stretch(modalObject.GetComponent<RectTransform>());
+            Stretch(secondModalObject.GetComponent<RectTransform>());
+            secondModalObject.transform.Find("Content/Title").GetComponent<TMP_Text>().text =
+                "Confirm second action?";
+            secondModalObject.transform.Find("Content/Body").GetComponent<TMP_Text>().text =
+                "Close this dialog to return to the first confirmation.";
+            var pause = CreateReviewButton(pages.navigation.transform, "Pause Game Button", -220f, -140f);
+            var resume = CreateReviewButton(pages.navigation.transform, "Continue Game Button", 0f, -140f);
+            var reduced = CreateEvidenceButton(pages.responsive.transform, "Reduced Motion Toggle", 0f);
+            reduced.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, 340f);
+            var secondStrong = CreateEvidenceButton(pages.panels.transform, "Open Second Strong Frost Button", 180f);
+            secondStrong.gameObject.SetActive(false);
+            var repair = CreateReviewButton(pages.feedback.transform, "Validation Repair Button", -330f, -360f);
+            var openModal = CreateReviewButton(pages.navigation.transform, "Open Modal Button", 220f, -140f);
             var safeConfirm = CreateEvidenceButton(safeArea, "Safe Area Confirm Button", 0f);
             safeConfirm.GetComponent<RectTransform>().anchorMin =
-                safeConfirm.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.88f);
+                safeConfirm.GetComponent<RectTransform>().anchorMax = new Vector2(0.5f, 0.5f);
+            safeConfirm.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -390f);
+            safeConfirm.gameObject.SetActive(false);
 
-            var reducedStatus = AddLabel(panel, theme, "Reduced Motion Status", "Reduced Motion: Off", 16f);
-            reducedStatus.rectTransform.anchoredPosition = new Vector2(0f, -165f);
+            var responsiveCard = Find(pages.responsive.transform, "Responsive Info Card");
+            var reducedStatus = AddLabel(responsiveCard, theme, "Reduced Motion Status", "Reduced Motion: Off", 18f);
+            reducedStatus.fontStyle = FontStyles.Bold;
+            reducedStatus.alignment = TextAlignmentOptions.Center;
+            reducedStatus.rectTransform.anchoredPosition = new Vector2(0f, 150f);
+            reducedStatus.rectTransform.sizeDelta = new Vector2(720f, 48f);
+            reducedStatus.textWrappingMode = TextWrappingModes.NoWrap;
             var safeStatus = AddLabel(safeArea, theme, "Safe Area Status", "Safe Area: Ready", 16f);
-            safeStatus.rectTransform.anchorMin = safeStatus.rectTransform.anchorMax = new Vector2(0.5f, 0.82f);
-            safeStatus.rectTransform.anchoredPosition = Vector2.zero;
+            safeStatus.rectTransform.anchorMin = safeStatus.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
+            safeStatus.rectTransform.anchoredPosition = new Vector2(0f, -300f);
+            safeStatus.rectTransform.sizeDelta = new Vector2(720f, 48f);
+            safeStatus.textWrappingMode = TextWrappingModes.NoWrap;
+            safeStatus.gameObject.SetActive(false);
 
+            var frostDiagnostics = CreateUiObject("Frost Lease Diagnostics", pages.panels.transform);
+            Stretch(frostDiagnostics.GetComponent<RectTransform>());
+            var diagnosticsGroup = frostDiagnostics.AddComponent<CanvasGroup>();
+            diagnosticsGroup.alpha = 0f;
+            diagnosticsGroup.blocksRaycasts = false;
+            diagnosticsGroup.interactable = false;
             var secondStrongObject = InstantiatePrefab(
-                Phase5UiAssetPaths.StrongFrostPanelPrefabPath, panel, "Second Strong Frost Fixture");
+                Phase5UiAssetPaths.StrongFrostPanelPrefabPath, frostDiagnostics.transform, "Second Strong Frost Fixture");
             secondStrongObject.SetActive(false);
-            var occlusion = CreateEvidenceButton(hud, "World Occlusion Test Button", 0f);
-            var showSolid = CreateReviewButton(panel, "Show Solid Panel Button", -360f, -260f);
-            var showLight = CreateReviewButton(panel, "Show Light Frost Panel Button", -180f, -260f);
-            var showStrong = CreateReviewButton(panel, "Show Strong Frost Panel Button", 0f, -260f);
-            var forceFallback = CreateReviewButton(panel, "Force Frost Fallback Button", 180f, -260f);
-            var handleBack = CreateReviewButton(panel, "Handle Back Button", 360f, -260f);
+            var occlusion = CreateEvidenceButton(pages.navigation.transform, "World Occlusion Test Button", 0f);
+            occlusion.gameObject.SetActive(false);
+            var showSolid = CreateReviewButton(pages.panels.transform, "Show Solid Panel Button", -330f, -260f);
+            var showLight = CreateReviewButton(pages.panels.transform, "Show Light Frost Panel Button", -110f, -260f);
+            var showStrong = CreateReviewButton(pages.panels.transform, "Show Strong Frost Panel Button", 110f, -260f);
+            var forceFallback = CreateReviewButton(pages.panels.transform, "Force Frost Fallback Button", 330f, -260f);
+            var handleBack = CreateReviewButton(
+                modalObject.transform.Find("Content"), "Handle Back Button", -110f, -120f);
             var openSecondModal = CreateReviewButton(
-                modalObject.transform.Find("Content"), "Open Second Modal Button", 0f, 180f);
-            var toastBurst = CreateReviewButton(panel, "Show Toast Burst Button", -180f, -360f);
-            var longPressTooltip = CreateReviewButton(panel, "Long Press Tooltip Button", 0f, -360f);
-            var closeTooltip = CreateReviewButton(panel, "Close Tooltip Button", 180f, -360f);
-            var interruptReopen = CreateReviewButton(panel, "Interrupt And Reopen Button", 360f, -360f);
-            var toastBurstStatus = AddLabel(panel, theme, "Toast Burst Status", "Toast burst: Ready", 16f);
-            toastBurstStatus.rectTransform.anchoredPosition = new Vector2(0f, -430f);
+                modalObject.transform.Find("Content"), "Open Second Modal Button", 0f, -40f);
+            var toastBurst = CreateReviewButton(pages.feedback.transform, "Show Toast Burst Button", -110f, -360f);
+            var longPressTooltip = CreateReviewButton(pages.feedback.transform, "Long Press Tooltip Button", 110f, -360f);
+            var closeTooltip = CreateReviewButton(pages.feedback.transform, "Close Tooltip Button", 330f, -360f);
+            PlaceViewportButton(repair, 0.15f, 0.22f);
+            PlaceViewportButton(toastBurst, 0.38f, 0.22f);
+            PlaceViewportButton(longPressTooltip, 0.62f, 0.22f);
+            PlaceViewportButton(closeTooltip, 0.85f, 0.22f);
+            var interruptReopen = CreateReviewButton(
+                modalObject.transform.Find("Content"), "Interrupt And Reopen Button", 110f, -120f);
+            var toastBurstStatus = AddLabel(pages.feedback.transform, theme, "Toast Burst Status", "Toast burst: Ready", 16f);
+            toastBurstStatus.rectTransform.anchorMin = toastBurstStatus.rectTransform.anchorMax =
+                new Vector2(0.5f, 0.32f);
+            toastBurstStatus.rectTransform.anchoredPosition = Vector2.zero;
+            toastBurstStatus.rectTransform.sizeDelta = new Vector2(720f, 48f);
+            toastBurstStatus.textWrappingMode = TextWrappingModes.NoWrap;
+            toastBurstStatus.fontSize = 18f;
+            toastBurstStatus.fontStyle = FontStyles.Bold;
+            toastBurstStatus.color = theme.Colors.Surface;
             var reviewController = sceneRoot.gameObject.AddComponent<Phase5UiFoundationReviewController>();
             reviewController.Configure(
                 camera,
@@ -341,6 +487,8 @@ namespace AnimalCafe.EditorTools.Phase5
                 solidPanel,
                 lightPanel,
                 strongPanel,
+                panelTitle,
+                panelStatus,
                 handleBack,
                 openSecondModal,
                 secondModalObject.GetComponent<AnimalCafeModalView>(),
@@ -350,7 +498,38 @@ namespace AnimalCafe.EditorTools.Phase5
                 longPressTooltip,
                 closeTooltip,
                 tooltip,
-                interruptReopen);
+                interruptReopen,
+                pages.selectors,
+                new[] { pages.buttons, pages.panels, pages.navigation, pages.feedback, pages.responsive });
+        }
+
+        private static GameObject CreatePanelPreviewStage(Transform parent, AnimalCafeUiTheme theme)
+        {
+            var stage = CreateUiObject("Panel Preview Stage", parent);
+            var stageRect = stage.GetComponent<RectTransform>();
+            stageRect.anchorMin = stageRect.anchorMax = new Vector2(0.5f, 0.5f);
+            stageRect.anchoredPosition = new Vector2(0f, 70f);
+            stageRect.sizeDelta = new Vector2(600f, 400f);
+
+            CreateBackdrop(stage.transform, "Panel Backdrop Wood", new Color(0.30f, 0.20f, 0.10f, 1f),
+                new Vector2(-200f, 0f), new Vector2(200f, 400f));
+            CreateBackdrop(stage.transform, "Panel Backdrop Sage", theme.Colors.Accent,
+                new Vector2(0f, 0f), new Vector2(200f, 400f));
+            CreateBackdrop(stage.transform, "Panel Backdrop Cream", theme.Colors.Surface,
+                new Vector2(200f, 0f), new Vector2(200f, 400f));
+            return stage;
+        }
+
+        private static void CreateBackdrop(Transform parent, string name, Color color, Vector2 position, Vector2 size)
+        {
+            var backdrop = CreateUiObject(name, parent);
+            var rect = backdrop.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            var image = backdrop.AddComponent<Image>();
+            image.color = color;
+            image.raycastTarget = false;
         }
 
         private static Button CreateReviewButton(Transform parent, string name, float x, float y)
@@ -358,6 +537,13 @@ namespace AnimalCafe.EditorTools.Phase5
             var button = CreateEvidenceButton(parent, name, x);
             button.GetComponent<RectTransform>().anchoredPosition = new Vector2(x, y);
             return button;
+        }
+
+        private static void PlaceViewportButton(Button button, float anchorX, float anchorY)
+        {
+            var rect = (RectTransform)button.transform;
+            rect.anchorMin = rect.anchorMax = new Vector2(anchorX, anchorY);
+            rect.anchoredPosition = Vector2.zero;
         }
 
         private static void ConfigureBottomSheetEvidenceLayout(GameObject bottomSheet)
@@ -393,7 +579,11 @@ namespace AnimalCafe.EditorTools.Phase5
             GameObject bottomSheet)
         {
             var controls = CreateUiObject("Feedback Controls", parent);
-            Stretch(controls.GetComponent<RectTransform>());
+            var controlsRect = controls.GetComponent<RectTransform>();
+            controlsRect.anchorMin = new Vector2(0f, 1f);
+            controlsRect.anchorMax = Vector2.one;
+            controlsRect.pivot = new Vector2(0.5f, 1f);
+            controlsRect.sizeDelta = new Vector2(0f, 160f);
             var toastButton = CreateNormalizedEvidenceButton(controls.transform, "Show Toast Button", 0.15f);
             var tooltipButton = CreateNormalizedEvidenceButton(controls.transform, "Show Tooltip Button", 0.38f);
             var validationButton = CreateNormalizedEvidenceButton(controls.transform, "Show Validation Error Button", 0.62f);
@@ -418,20 +608,66 @@ namespace AnimalCafe.EditorTools.Phase5
                 parent,
                 name);
             button.GetComponent<RectTransform>().anchoredPosition = new Vector2(x, 0f);
-            return button.GetComponent<Button>();
+            var component = button.GetComponent<Button>();
+            var actionLabel = ActionLabel(name);
+            if (actionLabel != null) SetButtonLabel(component, actionLabel);
+            return component;
         }
+
+        private static void SetButtonLabel(Button button, string label)
+        {
+            var text = button.GetComponentInChildren<TMP_Text>(true)
+                ?? throw new InvalidOperationException("Validation button requires a TMP label: " + button.name);
+            text.text = label;
+        }
+
+        private static string ActionLabel(string name) => name switch
+        {
+            "Show Toast Button" => "Show Toast",
+            "Show Tooltip Button" => "Show Tooltip",
+            "Show Validation Error Button" => "Show Validation Error",
+            "Open Bottom Sheet Button" => "Open Bottom Sheet",
+            "Pause Game Button" => "Pause Game",
+            "Continue Game Button" => "Continue Game",
+            "Reduced Motion Toggle" => "Toggle Reduced Motion",
+            "Open Second Strong Frost Button" => "Open Second Strong Frost",
+            "Validation Repair Button" => "Repair Validation",
+            "Open Modal Button" => "Open Modal",
+            "Safe Area Confirm Button" => "Confirm Safe Area",
+            "World Occlusion Test Button" => "Test World Occlusion",
+            "Show Solid Panel Button" => "Show Solid Panel",
+            "Show Light Frost Panel Button" => "Show Light Frost Panel",
+            "Show Strong Frost Panel Button" => "Show Strong Frost Panel",
+            "Force Frost Fallback Button" => "Force Frost Fallback",
+            "Handle Back Button" => "Handle Back",
+            "Open Second Modal Button" => "Open Second Modal",
+            "Show Toast Burst Button" => "Show Toast Burst",
+            "Long Press Tooltip Button" => "Long Press Tooltip",
+            "Close Tooltip Button" => "Close Tooltip",
+            "Interrupt And Reopen Button" => "Interrupt And Reopen",
+            _ => null
+        };
 
         private static Button CreateNormalizedEvidenceButton(Transform parent, string name, float anchorX)
         {
             var button = CreateEvidenceButton(parent, name, 0f);
             var rect = (RectTransform)button.transform;
-            rect.anchorMin = rect.anchorMax = new Vector2(anchorX, 0.12f);
+            rect.anchorMin = rect.anchorMax = new Vector2(anchorX, 0.5f);
             rect.anchoredPosition = Vector2.zero;
             return button;
         }
 
-        private static void CreateButtonGallery(Transform parent)
+        private static void CreateButtonGallery(Transform parent, AnimalCafeUiTheme theme)
         {
+            var headings = new[] { "Default", "Pressed Preview", "Disabled" };
+            for (var column = 0; column < headings.Length; column++)
+            {
+                var heading = AddLabel(parent, theme,
+                    headings[column] + " Column Heading", headings[column], 16f);
+                heading.alignment = TextAlignmentOptions.Center;
+                heading.rectTransform.anchoredPosition = new Vector2(-240f + column * 240f, 150f);
+                heading.rectTransform.sizeDelta = new Vector2(200f, 40f);
+            }
             var index = 0;
             foreach (var prefabPath in Phase5UiAssetPaths.ButtonPrefabPaths)
             {

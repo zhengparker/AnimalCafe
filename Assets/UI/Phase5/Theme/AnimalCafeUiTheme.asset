@@ -43,7 +43,7 @@ MonoBehaviour:
     Large: 24
     ExtraLarge: 32
   shape:
-    CornerRadius: 16
+    CornerRadius: 12
     BorderWidth: 2
   materials:
     Solid: {fileID: 2100000, guid: 6f056e416e96868488d747ea1566412d, type: 2}

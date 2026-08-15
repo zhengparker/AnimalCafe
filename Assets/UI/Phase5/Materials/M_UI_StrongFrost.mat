@@ -38,6 +38,6 @@ Material:
     - _UseUIAlphaClip: 0
     - _XRMotionVectorsPass: 0
     m_Colors:
-    - _Color: {r: 0.86, g: 0.92, b: 0.86, a: 0.94}
+    - _Color: {r: 0.7, g: 0.84, b: 0.73, a: 0.96}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

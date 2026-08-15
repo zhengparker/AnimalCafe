@@ -31,6 +31,13 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(inputModule, Is.Not.Null);
             Assert.That(inputModule.actionsAsset, Is.Not.Null,
                 "Generated validation scene must configure its own InputSystem UI actions.");
+            var touch = InputSystem.AddDevice<Touchscreen>();
+            try
+            {
+                var feedbackSelector = Find<Button>(scene, "Feedback Page Selector");
+                yield return Tap(touch, Center(feedbackSelector));
+                Assert.That(VisiblePageNames(scene), Is.EqualTo(new[] { "Feedback Page" }),
+                    "The real InputSystem route must select Feedback before using its controls.");
             var button = Find<Button>(scene, "Show Toast Button");
             Canvas.ForceUpdateCanvases();
             var rectTransform = button.transform as RectTransform;
@@ -74,10 +81,7 @@ namespace AnimalCafe.Tests.PlayMode
                 "Actual button center must be the EventSystem's top raycast target.");
             Assert.That(inputModule.point.action.enabled, Is.True);
             Assert.That(inputModule.leftClick.action.enabled, Is.True);
-            var recorder = button.gameObject.AddComponent<PointerRecorder>();
-            var touch = InputSystem.AddDevice<Touchscreen>();
-            try
-            {
+                var recorder = button.gameObject.AddComponent<PointerRecorder>();
                 QueueTouch(touch, 1, InputTouchPhase.Began, position);
                 InputSystem.Update();
                 yield return null;
@@ -97,6 +101,29 @@ namespace AnimalCafe.Tests.PlayMode
             }
             finally { InputSystem.RemoveDevice(touch); }
         }
+
+        private static IEnumerator Tap(Touchscreen device, Vector2 position)
+        {
+            QueueTouch(device, 1, InputTouchPhase.Began, position);
+            InputSystem.Update();
+            yield return null;
+            QueueTouch(device, 1, InputTouchPhase.Ended, position);
+            InputSystem.Update();
+            yield return null;
+        }
+
+        private static Vector2 Center(Button button)
+        {
+            var rectTransform = (RectTransform)button.transform;
+            var corners = new Vector3[4];
+            rectTransform.GetWorldCorners(corners);
+            return RectTransformUtility.WorldToScreenPoint(null, (corners[0] + corners[2]) * 0.5f);
+        }
+
+        private static string[] VisiblePageNames(Scene scene) => new[]
+            { "Buttons Page", "Panels Page", "Navigation Page", "Feedback Page", "Responsive Motion Page" }
+            .Where(name => Find<Transform>(scene, name).gameObject.activeInHierarchy)
+            .ToArray();
 
         private static void QueueTouch(Touchscreen device, int id, InputTouchPhase phase, Vector2 position) =>
             InputSystem.QueueStateEvent(device, new TouchState

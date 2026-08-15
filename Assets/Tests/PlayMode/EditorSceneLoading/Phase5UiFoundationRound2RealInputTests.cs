@@ -11,6 +11,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -31,6 +32,11 @@ namespace AnimalCafe.Tests.PlayMode
             foreach (var device in InputSystem.devices.ToArray())
                 if (device is Mouse or Keyboard or Touchscreen)
                     InputSystem.RemoveDevice(device);
+            var cleanupScene = SceneManager.CreateScene("Phase5UiFoundationRound2TestCleanup");
+            SceneManager.SetActiveScene(cleanupScene);
+            var unload = SceneManager.UnloadSceneAsync(activeScene);
+            while (!unload.isDone)
+                yield return null;
             yield return null;
             Assert.That(Time.timeScale, Is.EqualTo(1f));
         }
@@ -43,6 +49,7 @@ namespace AnimalCafe.Tests.PlayMode
             var mouse = InputSystem.AddDevice<Mouse>();
             try
             {
+                yield return SelectPage(mouse, scene, "Feedback Page Selector", "Feedback Page");
                 yield return Click(mouse, Find<Button>(scene, "Show Toast Button"));
                 Assert.That(Find<ToastView>(scene, "Toast Fixture")
                     .GetComponentInChildren<TMPro.TMP_Text>(true).text, Does.Contain("Saved"));
@@ -60,6 +67,49 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator VirtualMouse_PageSelectorsShowExactlyOneMatchingPage()
+        {
+            yield return LoadScene();
+            var scene = SceneManager.GetActiveScene();
+            Assert.That(Find<EventSystem>(scene, "EventSystem").GetComponent<InputSystemUIInputModule>(), Is.Not.Null,
+                "Page selector clicks must use the validation scene's real InputSystem UI module.");
+
+            var pages = new[]
+            {
+                ("Buttons Page Selector", "Buttons Page"),
+                ("Panels Page Selector", "Panels Page"),
+                ("Navigation Page Selector", "Navigation Page"),
+                ("Feedback Page Selector", "Feedback Page"),
+                ("Responsive Motion Page Selector", "Responsive Motion Page")
+            };
+            foreach (var (selectorName, pageName) in pages)
+            {
+                Assert.That(TryFind(scene, selectorName), Is.Not.Null, selectorName);
+                Assert.That(TryFind(scene, pageName), Is.Not.Null, pageName);
+            }
+            var mouse = InputSystem.AddDevice<Mouse>();
+            try
+            {
+                foreach (var (selectorName, expectedPageName) in pages)
+                {
+                    yield return Click(mouse, Find<Button>(scene, selectorName));
+                    var visiblePages = pages
+                        .Where(page => Find(scene, page.Item2).activeInHierarchy)
+                        .Select(page => page.Item2)
+                        .ToArray();
+                    Assert.That(visiblePages, Is.EqualTo(new[] { expectedPageName }), selectorName);
+                    Assert.That(Find(scene, "World Occlusion Test Button").activeInHierarchy,
+                        Is.EqualTo(expectedPageName == "Navigation Page"), selectorName);
+                    Assert.That(Find(scene, "Safe Area Confirm Button").activeInHierarchy,
+                        Is.EqualTo(expectedPageName == "Responsive Motion Page"), selectorName);
+                    Assert.That(Find(scene, "Safe Area Status").activeInHierarchy,
+                        Is.EqualTo(expectedPageName == "Responsive Motion Page"), selectorName);
+                }
+            }
+            finally { InputSystem.RemoveDevice(mouse); }
+        }
+
+        [UnityTest]
         public IEnumerator VirtualMouse_SharedBoundary_AllowsWorldSelectionButBlocksUiClickThrough()
         {
             yield return LoadScene();
@@ -70,12 +120,13 @@ namespace AnimalCafe.Tests.PlayMode
             var occludingButton = Find<Button>(scene, "World Occlusion Test Button");
             var worldPosition = camera.WorldToScreenPoint(world.transform.position);
             var buttonPosition = Center(occludingButton);
-            Assert.That(Vector2.Distance(worldPosition, buttonPosition), Is.LessThan(20f),
-                "The fixed validation button must intentionally cover the selectable world object.");
-
             var mouse = InputSystem.AddDevice<Mouse>();
             try
             {
+                yield return SelectPage(mouse, scene, "Navigation Page Selector", "Navigation Page");
+            Assert.That(Vector2.Distance(worldPosition, buttonPosition), Is.LessThan(20f),
+                "The fixed validation button must intentionally cover the selectable world object.");
+
                 occludingButton.gameObject.SetActive(false);
                 yield return Click(mouse, worldPosition);
                 Assert.That(controller.CurrentSelection, Is.Not.Null,
@@ -111,6 +162,40 @@ namespace AnimalCafe.Tests.PlayMode
             mouse.MakeCurrent();
             try
             {
+                yield return SelectPage(mouse, scene, "Responsive Motion Page Selector", "Responsive Motion Page");
+                yield return Click(mouse, Find<Button>(scene, "Reduced Motion Toggle"));
+                yield return null;
+                Assert.That(Find(scene, "Reduced Motion Status").GetComponent<TMPro.TMP_Text>().text,
+                    Does.Contain("On"));
+
+                yield return SelectPage(mouse, scene, "Panels Page Selector", "Panels Page");
+                yield return Click(mouse, Find<Button>(scene, "Show Light Frost Panel Button"));
+                Assert.That(Find(scene, "Light Frost Panel Fixture").activeSelf, Is.True);
+                Assert.That(Find(scene, "Solid Panel Fixture").activeSelf, Is.False);
+                Assert.That(Find(scene, "Panel Preview Title").GetComponent<TMPro.TMP_Text>().text,
+                    Is.EqualTo("Light Frost Panel"));
+                Assert.That(Find(scene, "Panel Preview Status").GetComponent<TMPro.TMP_Text>().text,
+                    Is.EqualTo("Current: Light Frost"));
+
+                yield return Click(mouse, Find<Button>(scene, "Show Strong Frost Panel Button"));
+                Assert.That(Find(scene, "Strong Frost Panel Fixture").activeSelf, Is.True);
+                Assert.That(Find(scene, "Panel Preview Status").GetComponent<TMPro.TMP_Text>().text,
+                    Is.EqualTo("Current: Strong Frost"));
+
+                yield return Click(mouse, Find<Button>(scene, "Show Solid Panel Button"));
+                Assert.That(Find(scene, "Solid Panel Fixture").activeSelf, Is.True);
+                Assert.That(Find(scene, "Panel Preview Status").GetComponent<TMPro.TMP_Text>().text,
+                    Is.EqualTo("Current: Solid"));
+
+                yield return Click(mouse, Find<Button>(scene, "Force Frost Fallback Button"));
+                Assert.That(Find(scene, "Light Frost Panel Fixture").activeSelf, Is.True);
+                Assert.That(Find(scene, "Panel Preview Status").GetComponent<TMPro.TMP_Text>().text,
+                    Is.EqualTo("Current: Light Frost Fallback"));
+
+                yield return SelectPage(mouse, scene, "Navigation Page Selector", "Navigation Page");
+                yield return Click(mouse, Find<Button>(scene, "Open Modal Button"));
+                Assert.That(Find(scene, "Modal Fixture").GetComponent<CanvasGroup>().blocksRaycasts, Is.True);
+                Find(scene, "Modal Fixture").SetActive(false);
                 QueueMouseState(mouse, Vector2.zero, false);
                 yield return null;
                 var mover = Find(scene, "Scaled Time Mover").transform;
@@ -123,17 +208,6 @@ namespace AnimalCafe.Tests.PlayMode
                 yield return new WaitForSecondsRealtime(0.1f);
                 Assert.That(mover.position, Is.Not.EqualTo(pausedPosition));
 
-                yield return Click(mouse, Find<Button>(scene, "Reduced Motion Toggle"));
-                yield return null;
-                Assert.That(Find(scene, "Reduced Motion Status").GetComponent<TMPro.TMP_Text>().text,
-                    Does.Contain("On"));
-
-                yield return Click(mouse, Find<Button>(scene, "Open Second Strong Frost Button"));
-                Assert.That(Find<AnimalCafePanelView>(scene, "Second Strong Frost Fixture").ResolvedStyle,
-                    Is.EqualTo(AnimalCafe.UI.Foundation.UiPanelStyle.LightFrost));
-
-                yield return Click(mouse, Find<Button>(scene, "Open Modal Button"));
-                Assert.That(Find(scene, "Modal Fixture").GetComponent<CanvasGroup>().blocksRaycasts, Is.True);
             }
             finally { InputSystem.RemoveDevice(mouse); }
         }
@@ -146,6 +220,7 @@ namespace AnimalCafe.Tests.PlayMode
             var mouse = InputSystem.AddDevice<Mouse>();
             try
             {
+                yield return SelectPage(mouse, scene, "Feedback Page Selector", "Feedback Page");
                 yield return Click(mouse, Find<Button>(scene, "Show Validation Error Button"));
                 var validation = Find<ValidationMessageView>(scene, "Validation Message Fixture");
                 Assert.That(validation.IsVisible, Is.True);
@@ -212,6 +287,58 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator VirtualMouse_BottomSheetCancel_ClosesAndReopensCleanly()
+        {
+            yield return LoadScene();
+            var scene = SceneManager.GetActiveScene();
+            var mouse = InputSystem.AddDevice<Mouse>();
+            try
+            {
+                yield return SelectPage(mouse, scene, "Feedback Page Selector", "Feedback Page");
+                var sheet = Find(scene, "Bottom Sheet Fixture");
+                var group = sheet.GetComponent<CanvasGroup>();
+                var open = Find<Button>(scene, "Open Bottom Sheet Button");
+                var cancel = sheet.GetComponentsInChildren<Button>(true)
+                    .Single(button => button.name == "CancelButton");
+                yield return Click(mouse, open);
+                yield return WaitForGroup(group, true);
+                Assert.That(group.blocksRaycasts, Is.True);
+                yield return Click(mouse, cancel);
+                yield return WaitForGroup(group, false);
+                Assert.That(group.blocksRaycasts, Is.False, "Cancel closes and releases the sheet.");
+                yield return Move(mouse, Center(open));
+
+                yield return Click(mouse, open);
+                yield return WaitForGroup(group, true);
+                Assert.That(group.blocksRaycasts, Is.True, "Sheet can reopen after Cancel.");
+            }
+            finally { InputSystem.RemoveDevice(mouse); }
+        }
+
+        [UnityTest]
+        public IEnumerator VirtualMouse_BottomSheetConfirm_ClosesCleanly()
+        {
+            yield return LoadScene();
+            var scene = SceneManager.GetActiveScene();
+            var mouse = InputSystem.AddDevice<Mouse>();
+            try
+            {
+                yield return SelectPage(mouse, scene, "Feedback Page Selector", "Feedback Page");
+                var sheet = Find(scene, "Bottom Sheet Fixture");
+                var group = sheet.GetComponent<CanvasGroup>();
+                var confirm = sheet.GetComponentsInChildren<Button>(true)
+                    .Single(button => button.name == "ConfirmButton");
+                yield return Click(mouse, Find<Button>(scene, "Open Bottom Sheet Button"));
+                yield return WaitForGroup(group, true);
+                yield return Click(mouse, confirm);
+                yield return WaitForGroup(group, false);
+                Assert.That(group.blocksRaycasts, Is.False,
+                    "Confirm closes and releases the sheet.");
+            }
+            finally { InputSystem.RemoveDevice(mouse); }
+        }
+
+        [UnityTest]
         public IEnumerator DisablingReviewController_ReleasesOwnedPauseLifecycle()
         {
             yield return LoadScene();
@@ -219,6 +346,7 @@ namespace AnimalCafe.Tests.PlayMode
             var mouse = InputSystem.AddDevice<Mouse>();
             try
             {
+                yield return SelectPage(mouse, scene, "Navigation Page Selector", "Navigation Page");
                 yield return Click(mouse, Find<Button>(scene, "Pause Game Button"));
                 Assert.That(Time.timeScale, Is.Zero);
                 var review = scene.GetRootGameObjects()
@@ -248,27 +376,36 @@ namespace AnimalCafe.Tests.PlayMode
             var keyboard = InputSystem.AddDevice<Keyboard>();
             try
             {
+                yield return SelectPage(mouse, scene, "Panels Page Selector", "Panels Page");
                 yield return Click(mouse, Find<Button>(scene, "Show Solid Panel Button"));
                 Assert.That(Find(scene, "Solid Panel Fixture").activeSelf, Is.True);
                 Assert.That(Find(scene, "Light Frost Panel Fixture").activeSelf, Is.False);
                 yield return Click(mouse, Find<Button>(scene, "Show Light Frost Panel Button"));
                 Assert.That(Find(scene, "Light Frost Panel Fixture").activeSelf, Is.True);
 
+                yield return SelectPage(mouse, scene, "Feedback Page Selector", "Feedback Page");
+                yield return Click(mouse, Find<Button>(scene, "Show Toast Burst Button"));
+                yield return Click(mouse, Find<Button>(scene, "Show Toast Burst Button"));
                 yield return Click(mouse, Find<Button>(scene, "Show Toast Burst Button"));
                 Assert.That(Find(scene, "Toast Burst Status").GetComponent<TMPro.TMP_Text>().text,
-                    Does.Contain("3").And.Contain("merged"));
+                    Is.EqualTo("3 requests -> 2 Toasts shown; Saved merged x2"));
 
                 var longPress = Find<Button>(scene, "Long Press Tooltip Button");
-                QueueMouseState(mouse, Center(longPress), true);
-                InputSystem.Update();
+                yield return Move(mouse, Center(longPress));
+                Press(mouse.leftButton);
                 yield return new WaitForSecondsRealtime(0.65f);
-                QueueMouseState(mouse, Center(longPress), false);
-                InputSystem.Update();
-                yield return null;
-                Assert.That(Find(scene, "Tooltip Fixture").transform.Find("Content").gameObject.activeSelf, Is.True);
+                Release(mouse.leftButton);
+                var tooltipContent = Find(scene, "Tooltip Fixture").transform.Find("Content").gameObject;
+                var tooltipDeadline = Time.realtimeSinceStartup + 1f;
+                while (!tooltipContent.activeSelf && Time.realtimeSinceStartup < tooltipDeadline)
+                    yield return null;
+                Assert.That(tooltipContent.activeSelf, Is.True);
                 yield return Click(mouse, Find<Button>(scene, "Close Tooltip Button"));
                 Assert.That(Find(scene, "Tooltip Fixture").transform.Find("Content").gameObject.activeSelf, Is.False);
+                Assert.That(Find(scene, "Tooltip Fixture").GetComponent<Image>().enabled, Is.False,
+                    "Close Tooltip must remove the complete panel background, not only its text content.");
 
+                yield return SelectPage(mouse, scene, "Navigation Page Selector", "Navigation Page");
                 yield return Click(mouse, Find<Button>(scene, "Open Modal Button"));
                 var modalGroup = Find(scene, "Modal Fixture").GetComponent<CanvasGroup>();
                 yield return WaitForGroup(modalGroup, true);
@@ -279,6 +416,24 @@ namespace AnimalCafe.Tests.PlayMode
                 yield return Click(mouse, blockerPoint.Value);
                 Assert.That(modalGroup.blocksRaycasts, Is.True,
                     "Critical Modal outside press must not dismiss it.");
+
+                var interrupt = Find<Button>(scene, "Interrupt And Reopen Button");
+                var interruptPoint = FindTopRaycastPoint(interrupt);
+                Assert.That(interruptPoint.HasValue, Is.True,
+                    "Primary Modal must expose a clickable interruption/reopen action.");
+                Set(mouse.position, interruptPoint.Value);
+                Press(mouse.leftButton);
+                yield return null;
+                yield return null;
+                Release(mouse.leftButton);
+                yield return null;
+                Assert.That(modalGroup.gameObject.activeSelf, Is.False,
+                    "Interruption must visibly disable and clean the in-flight Modal.");
+                yield return null;
+                Assert.That(modalGroup.gameObject.activeSelf, Is.True,
+                    "Interruption must reopen the Modal on the following frame.");
+                yield return WaitForGroup(modalGroup, true);
+                Assert.That(modalGroup.alpha, Is.GreaterThanOrEqualTo(0.99f));
 
                 var openSecond = Find<Button>(scene, "Open Second Modal Button");
                 var openSecondPoint = FindTopRaycastPoint(openSecond);
@@ -298,13 +453,13 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(modalGroup.blocksRaycasts, Is.True,
                     "Back closes only the top Modal in a two-Modal stack. " +
                     reviewController.LastBackTrace);
-                yield return PressBack(keyboard);
+                var handleBack = Find<Button>(scene, "Handle Back Button");
+                var handleBackPoint = FindTopRaycastPoint(handleBack);
+                Assert.That(handleBackPoint.HasValue, Is.True,
+                    "Primary Modal must expose a clickable Back action.");
+                yield return Click(mouse, handleBackPoint.Value);
                 yield return WaitForGroup(modalGroup, false);
                 Assert.That(modalGroup.blocksRaycasts, Is.False);
-
-                yield return Click(mouse, Find<Button>(scene, "Interrupt And Reopen Button"));
-                yield return WaitForGroup(modalGroup, true);
-                Assert.That(modalGroup.blocksRaycasts, Is.True);
             }
             finally
             {
@@ -321,6 +476,7 @@ namespace AnimalCafe.Tests.PlayMode
             var mouse = InputSystem.AddDevice<Mouse>();
             try
             {
+                yield return SelectPage(mouse, scene, "Navigation Page Selector", "Navigation Page");
                 yield return Click(mouse, Find<Button>(scene, "Pause Game Button"));
                 yield return Click(mouse, Find<Button>(scene, "Open Modal Button"));
                 Assert.That(Time.timeScale, Is.Zero);
@@ -342,7 +498,7 @@ namespace AnimalCafe.Tests.PlayMode
             yield return null;
         }
 
-        private static IEnumerator Click(Mouse mouse, Button button)
+        private IEnumerator Click(Mouse mouse, Button button)
         {
             var position = Center(button);
             var results = new System.Collections.Generic.List<RaycastResult>();
@@ -353,31 +509,66 @@ namespace AnimalCafe.Tests.PlayMode
                 || results[0].gameObject.transform.IsChildOf(button.transform),
                 Is.True,
                 button.name + " must be the top raycast target.");
-            yield return Click(mouse, position);
+            var observation = button.gameObject.AddComponent<PointerObservation>();
+            try
+            {
+                yield return Click(mouse, position);
+            }
+            finally
+            {
+                Object.Destroy(observation);
+            }
+            Assert.That(observation.ClickCount, Is.EqualTo(1),
+                button.name + " must receive exactly one real InputSystem click. " + observation + " " +
+                DescribeInputState(button, mouse));
         }
 
-        private static IEnumerator Click(Mouse mouse, Vector2 position)
+        private IEnumerator SelectPage(
+            Mouse mouse,
+            Scene scene,
+            string selectorName,
+            string expectedPageName)
         {
-            QueueMouseState(mouse, position, true);
-            InputSystem.Update();
+            var selector = Find<Button>(scene, selectorName);
+            yield return Click(mouse, selector);
+            var visiblePages = new[]
+                {
+                    "Buttons Page", "Panels Page", "Navigation Page", "Feedback Page", "Responsive Motion Page"
+                }
+                .Where(pageName => Find(scene, pageName).activeInHierarchy)
+                .ToArray();
+            Assert.That(visiblePages, Is.EqualTo(new[] { expectedPageName }), selectorName);
+        }
+
+        private IEnumerator Click(Mouse mouse, Vector2 position)
+        {
+            Set(mouse.position, position);
             yield return null;
             yield return null;
-            QueueMouseState(mouse, position, false);
-            InputSystem.Update();
+            Press(mouse.leftButton);
+            yield return null;
+            yield return null;
+            Release(mouse.leftButton);
             yield return null;
             yield return null;
         }
 
-        private static IEnumerator PressMoveRelease(Mouse mouse, Vector2 start, Vector2 end)
+        private IEnumerator Move(Mouse mouse, Vector2 position)
         {
-            QueueMouseState(mouse, start, true);
-            InputSystem.Update();
+            Set(mouse.position, position);
             yield return null;
-            QueueMouseState(mouse, end, true);
-            InputSystem.Update();
             yield return null;
-            QueueMouseState(mouse, end, false);
-            InputSystem.Update();
+            Assert.That(Vector2.Distance(mouse.position.ReadValue(), position), Is.LessThan(0.5f));
+        }
+
+        private IEnumerator PressMoveRelease(Mouse mouse, Vector2 start, Vector2 end)
+        {
+            Set(mouse.position, start);
+            Press(mouse.leftButton);
+            yield return null;
+            Set(mouse.position, end);
+            yield return null;
+            Release(mouse.leftButton);
             yield return null;
         }
 
@@ -437,11 +628,50 @@ namespace AnimalCafe.Tests.PlayMode
             .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
             .Single(transform => transform.name == name).gameObject;
 
+        private static GameObject TryFind(Scene scene, string name) => scene.GetRootGameObjects()
+            .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+            .SingleOrDefault(transform => transform.name == name)?.gameObject;
+
         private static T Find<T>(Scene scene, string name) where T : Component =>
             Find(scene, name).GetComponent<T>();
 
         private static T[] FindAll<T>(Scene scene) where T : Component => scene.GetRootGameObjects()
             .SelectMany(root => root.GetComponentsInChildren<T>(true)).ToArray();
+
+        private sealed class PointerObservation : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerClickHandler
+        {
+            public int DownCount { get; private set; }
+            public int UpCount { get; private set; }
+            public int ClickCount { get; private set; }
+
+            public void OnPointerDown(PointerEventData eventData) => DownCount++;
+            public void OnPointerUp(PointerEventData eventData) => UpCount++;
+            public void OnPointerClick(PointerEventData eventData) => ClickCount++;
+
+            public override string ToString() =>
+                "down=" + DownCount + " up=" + UpCount + " click=" + ClickCount;
+        }
+
+        private static string DescribeInputState(Button button, Mouse mouse)
+        {
+            var module = EventSystem.current?.GetComponent<InputSystemUIInputModule>();
+            var groups = button.GetComponentsInParent<CanvasGroup>(true);
+            return "active=" + button.gameObject.activeInHierarchy +
+                " interactable=" + button.interactable +
+                " targetActive=" + button.targetGraphic.gameObject.activeInHierarchy +
+                " targetEnabled=" + button.targetGraphic.enabled +
+                " groups=" + string.Join(",", groups.Select(group =>
+                    group.enabled + "/" + group.interactable + "/" + group.blocksRaycasts)) +
+                " currentMouse=" + ReferenceEquals(Mouse.current, mouse) +
+                " leftPressed=" + mouse.leftButton.isPressed +
+                " mousePosition=" + mouse.position.ReadValue() +
+                " expectedPosition=" + Center(button) +
+                " pointerOver=" + (EventSystem.current != null
+                    && EventSystem.current.IsPointerOverGameObject(mouse.deviceId)) +
+                " moduleEnabled=" + (module != null && module.enabled) +
+                " pointEnabled=" + (module != null && module.point.action.enabled) +
+                " clickEnabled=" + (module != null && module.leftClick.action.enabled);
+        }
     }
 }
 #endif

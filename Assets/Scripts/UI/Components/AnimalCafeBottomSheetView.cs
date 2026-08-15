@@ -17,21 +17,43 @@ namespace AnimalCafe.UI.Components
         private UiNavigationCoordinator navigation;
         private UiView view;
         [SerializeField] private Button outsideButton;
+        [SerializeField] private Button cancelButton;
+        [SerializeField] private Button confirmButton;
+        private Action onConfirm;
         private UiViewHandle navigationHandle;
         private UiPauseCoordinator pauseCoordinator;
         private UiPointerBoundary pointerBoundary;
         [SerializeField] private CanvasGroup canvasGroup;
+        [SerializeField] private RectTransform content;
         private UiTransitionRunner transitionRunner;
         private float transitionDuration;
         private IUiPauseHandle pauseHandle;
         private Coroutine transitionCoroutine;
         private bool immediateCloseRequested;
+        private bool contentPositionCaptured;
+        private Vector2 openContentPosition;
+        private Vector2 closedContentPosition;
         private readonly HashSet<int> ownedPointerIds = new HashSet<int>();
 
         public void BindPrefabReferences(Button outside, CanvasGroup group)
         {
             outsideButton = outside ?? throw new ArgumentNullException(nameof(outside));
             canvasGroup = group ?? throw new ArgumentNullException(nameof(group));
+        }
+
+        public void BindActionReferences(Button cancel, Button confirm)
+        {
+            cancelButton = cancel ?? throw new ArgumentNullException(nameof(cancel));
+            confirmButton = confirm ?? throw new ArgumentNullException(nameof(confirm));
+        }
+
+        public void ConfigureActions(Button cancel, Button confirm, Action confirmed)
+        {
+            RemoveActionListeners();
+            BindActionReferences(cancel, confirm);
+            onConfirm = confirmed;
+            cancelButton.onClick.AddListener(HandleCancel);
+            confirmButton.onClick.AddListener(HandleConfirm);
         }
 
         public void Configure(
@@ -71,6 +93,7 @@ namespace AnimalCafe.UI.Components
             }
 
             transitionDuration = duration;
+            ResolveContentPositions();
             SetClosedVisualState();
         }
 
@@ -113,6 +136,23 @@ namespace AnimalCafe.UI.Components
             navigation.RequestOutsideDismiss(view);
         }
 
+        private void HandleCancel()
+        {
+            navigation.TryHandleBack(view);
+        }
+
+        private void HandleConfirm()
+        {
+            onConfirm?.Invoke();
+            navigation.TryHandleBack(view);
+        }
+
+        private void RemoveActionListeners()
+        {
+            cancelButton?.onClick.RemoveListener(HandleCancel);
+            confirmButton?.onClick.RemoveListener(HandleConfirm);
+        }
+
         private void BeginClose()
         {
             StopTransition();
@@ -129,7 +169,35 @@ namespace AnimalCafe.UI.Components
 
         private IEnumerator RunTransition(bool visible)
         {
-            yield return transitionRunner.Run(canvasGroup, visible, transitionDuration);
+            ResolveContentPositions();
+            var duration = transitionRunner.ResolveDuration(transitionDuration, isEssential: false);
+            var startAlpha = canvasGroup.alpha;
+            var targetAlpha = visible ? 1f : 0f;
+            var startPosition = content != null ? content.anchoredPosition : Vector2.zero;
+            var targetPosition = visible ? openContentPosition : closedContentPosition;
+            if (duration <= 0f)
+            {
+                canvasGroup.alpha = targetAlpha;
+                if (content != null) content.anchoredPosition = targetPosition;
+            }
+            else
+            {
+                var elapsed = 0f;
+                while (elapsed < duration)
+                {
+                    elapsed += Time.unscaledDeltaTime;
+                    var progress = Mathf.Clamp01(elapsed / duration);
+                    var eased = progress * progress * (3f - 2f * progress);
+                    canvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, eased);
+                    if (content != null)
+                        content.anchoredPosition = Vector2.Lerp(startPosition, targetPosition, eased);
+                    yield return null;
+                }
+
+                canvasGroup.alpha = targetAlpha;
+                if (content != null) content.anchoredPosition = targetPosition;
+            }
+
             transitionCoroutine = null;
             if (!visible)
             {
@@ -193,6 +261,21 @@ namespace AnimalCafe.UI.Components
             canvasGroup.alpha = 0f;
             canvasGroup.blocksRaycasts = false;
             canvasGroup.interactable = false;
+            ResolveContentPositions();
+            if (content != null) content.anchoredPosition = closedContentPosition;
+        }
+
+        private void ResolveContentPositions()
+        {
+            if (content == null)
+                content = transform.Find("Content") as RectTransform;
+            if (content == null || contentPositionCaptured)
+                return;
+
+            openContentPosition = content.anchoredPosition;
+            var slideDistance = Mathf.Max(content.rect.height, 1f);
+            closedContentPosition = openContentPosition + Vector2.down * slideDistance;
+            contentPositionCaptured = true;
         }
 
         private void OnDisable()
@@ -204,6 +287,7 @@ namespace AnimalCafe.UI.Components
         {
             CloseImmediate();
             outsideButton?.onClick.RemoveListener(HandleOutside);
+            RemoveActionListeners();
         }
     }
 }

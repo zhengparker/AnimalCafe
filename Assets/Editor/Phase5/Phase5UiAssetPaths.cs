@@ -22,6 +22,7 @@ namespace AnimalCafe.EditorTools.Phase5
         public const string SolidMaterialPath = Root + "/Materials/M_UI_Solid.mat";
         public const string LightFrostMaterialPath = Root + "/Materials/M_UI_LightFrost.mat";
         public const string StrongFrostMaterialPath = Root + "/Materials/M_UI_StrongFrost.mat";
+        public const string RoundedSpritePath = Root + "/Sprites/S_UI_RoundedRect.asset";
         public const string UiRootPrefabPath = Root + "/Prefabs/PF_UI_Root.prefab";
         public const string SolidPanelPrefabPath = Root + "/Prefabs/PF_UI_Panel_Solid.prefab";
         public const string LightFrostPanelPrefabPath = Root + "/Prefabs/PF_UI_Panel_LightFrost.prefab";
@@ -59,7 +60,7 @@ namespace AnimalCafe.EditorTools.Phase5
             ThemePath, FontSourcePath, TmpFontAssetPath, FontLicensePath, FontProvenancePath, TmpSettingsPath,
             LeadingCharactersPath, FollowingCharactersPath,
             TmpShaderPath, TmpShaderIncludePath, TmpShaderProvenancePath,
-            SolidMaterialPath, LightFrostMaterialPath, StrongFrostMaterialPath, UiRootPrefabPath,
+            SolidMaterialPath, LightFrostMaterialPath, StrongFrostMaterialPath, RoundedSpritePath, UiRootPrefabPath,
             SolidPanelPrefabPath, LightFrostPanelPrefabPath, StrongFrostPanelPrefabPath,
             ModalPrefabPath, BottomSheetPrefabPath, ToastPrefabPath, TooltipPrefabPath,
             ValidationMessagePrefabPath, SafeAreaPrefabPath, ValidationInputActionsPath, ValidationScenePath

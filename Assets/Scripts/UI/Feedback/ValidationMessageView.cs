@@ -11,12 +11,14 @@ namespace AnimalCafe.UI.Feedback
     public sealed class ValidationMessageView : MonoBehaviour
     {
         [SerializeField] private TMP_Text messageLabel;
+        [SerializeField] private UnityEngine.UI.Graphic background;
 
         public bool IsVisible { get; private set; }
 
         public void Configure(TMP_Text label)
         {
             messageLabel = label ?? throw new ArgumentNullException(nameof(label));
+            background ??= GetComponent<UnityEngine.UI.Graphic>();
             Clear();
         }
 
@@ -37,6 +39,7 @@ namespace AnimalCafe.UI.Feedback
 
             messageLabel.text = specificReason;
             messageLabel.enabled = true;
+            if (background != null) background.enabled = true;
             IsVisible = true;
         }
 
@@ -47,6 +50,8 @@ namespace AnimalCafe.UI.Feedback
                 messageLabel.text = string.Empty;
                 messageLabel.enabled = false;
             }
+
+            if (background != null) background.enabled = false;
 
             IsVisible = false;
         }

@@ -6,6 +6,7 @@ using AnimalCafe.EditorTools.Phase5;
 using AnimalCafe.Input;
 using AnimalCafe.Interaction;
 using AnimalCafe.UI;
+using AnimalCafe.UI.Components;
 using AnimalCafe.UI.Foundation;
 using NUnit.Framework;
 using TMPro;
@@ -50,6 +51,10 @@ namespace AnimalCafe.Tests.Phase5
             Assert.That(theme, Is.Not.Null);
             Assert.That(panel.GetComponentsInChildren<TMP_Text>(true)
                 .All(label => label.font == theme.Typography.Label.FontAsset), Is.True);
+            Assert.That(panel.GetComponentsInChildren<AnimalCafeButtonView>(true), Has.Length.EqualTo(3),
+                "MainCafe time controls must use the reusable Phase 5 Button presentation.");
+            Assert.That(buttons.All(button => button.GetComponent<Shadow>() != null), Is.True,
+                "MainCafe time controls must keep the Phase 5 elevation cue.");
         }
 
         [Test]

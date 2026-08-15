@@ -348,6 +348,51 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator BottomSheet_OpenSlidesContentUpAndCloseSlidesItDownUsingUnscaledTime()
+        {
+            var originalTimeScale = Time.timeScale;
+            using (var fixture = new ContainerTouchFixture())
+            {
+                try
+                {
+                    Time.timeScale = 0f;
+                    var navigation = new UiNavigationCoordinator();
+                    var pointerBoundary = new UiPointerBoundary();
+                    var pause = new UiPauseCoordinator(new FakeGameTimeService(GameSpeed.Normal));
+                    var state = OrdinarySheetState("SlidingSheet");
+                    var sheet = fixture.CreateBottomSheet();
+                    var content = sheet.Root.transform.Find("Content").GetComponent<RectTransform>();
+                    var openPosition = content.anchoredPosition;
+
+                    sheet.View.Configure(navigation, state, sheet.Outside);
+                    sheet.View.ConfigureLifecycle(
+                        pause, pointerBoundary, sheet.Group,
+                        new UiTransitionRunner(() => false), 0.2f);
+
+                    sheet.View.Open();
+                    Assert.That(content.anchoredPosition.y, Is.LessThan(openPosition.y - 1f),
+                        "Bottom Sheet content must begin below its final position.");
+                    yield return new WaitForSecondsRealtime(0.1f);
+                    Assert.That(content.anchoredPosition.y, Is.GreaterThan(openPosition.y - content.rect.height),
+                        "The content must move upward while opening.");
+                    yield return new WaitForSecondsRealtime(0.15f);
+                    Assert.That(content.anchoredPosition.y, Is.EqualTo(openPosition.y).Within(0.5f));
+
+                    Assert.That(sheet.View.TryHandleBack(), Is.True);
+                    yield return new WaitForSecondsRealtime(0.1f);
+                    Assert.That(content.anchoredPosition.y, Is.LessThan(openPosition.y - 1f),
+                        "The content must move downward while closing.");
+                    yield return new WaitForSecondsRealtime(0.15f);
+                    Assert.That(sheet.Group.blocksRaycasts, Is.False);
+                }
+                finally
+                {
+                    Time.timeScale = originalTimeScale;
+                }
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Fix1_NonTopModalActions_CannotCloseOrConfirmEitherModal()
         {
             using (var fixture = new ContainerTouchFixture())
@@ -768,6 +813,13 @@ namespace AnimalCafe.Tests.PlayMode
             public BottomSheetFixture CreateBottomSheet()
             {
                 var root = CreateRoot("BottomSheet");
+                var contentObject = new GameObject("Content", typeof(RectTransform));
+                contentObject.transform.SetParent(root.transform, false);
+                var content = contentObject.GetComponent<RectTransform>();
+                content.anchorMin = Vector2.zero;
+                content.anchorMax = new Vector2(1f, 0.55f);
+                content.offsetMin = Vector2.zero;
+                content.offsetMax = Vector2.zero;
                 var outside = CreateButton("SheetOutside", Vector2.zero);
                 return new BottomSheetFixture(
                     root.AddComponent<AnimalCafeBottomSheetView>(), outside.Button, outside.Position,

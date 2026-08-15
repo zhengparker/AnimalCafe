@@ -45,6 +45,8 @@ namespace AnimalCafe.UI.Foundation
         [SerializeField] private GameObject solidPanel;
         [SerializeField] private GameObject lightPanel;
         [SerializeField] private GameObject strongPanel;
+        [SerializeField] private TMP_Text panelPreviewTitle;
+        [SerializeField] private TMP_Text panelPreviewStatus;
         [SerializeField] private Button handleBackButton;
         [SerializeField] private Button openSecondModalButton;
         [SerializeField] private AnimalCafeModalView secondModal;
@@ -55,6 +57,8 @@ namespace AnimalCafe.UI.Foundation
         [SerializeField] private Button closeTooltipButton;
         [SerializeField] private TooltipView tooltip;
         [SerializeField] private Button interruptAndReopenButton;
+        [SerializeField] private Button[] pageSelectors;
+        [SerializeField] private GameObject[] pageGroups;
 
         private UiPointerBoundary pointerBoundary;
         private UiPauseCoordinator pauseCoordinator;
@@ -95,6 +99,8 @@ namespace AnimalCafe.UI.Foundation
             GameObject solidFixture,
             GameObject lightFixture,
             GameObject strongFixture,
+            TMP_Text panelTitle,
+            TMP_Text panelStatus,
             Button backButton,
             Button secondModalButton,
             AnimalCafeModalView secondModalView,
@@ -104,7 +110,9 @@ namespace AnimalCafe.UI.Foundation
             Button longPressButton,
             Button tooltipCloseButton,
             TooltipView tooltipView,
-            Button interruptButton)
+            Button interruptButton,
+            Button[] selectors,
+            GameObject[] groups)
         {
             sceneCamera = camera;
             sceneInput = input;
@@ -133,6 +141,8 @@ namespace AnimalCafe.UI.Foundation
             solidPanel = solidFixture;
             lightPanel = lightFixture;
             strongPanel = strongFixture;
+            panelPreviewTitle = panelTitle;
+            panelPreviewStatus = panelStatus;
             handleBackButton = backButton;
             openSecondModalButton = secondModalButton;
             secondModal = secondModalView;
@@ -143,6 +153,8 @@ namespace AnimalCafe.UI.Foundation
             closeTooltipButton = tooltipCloseButton;
             tooltip = tooltipView;
             interruptAndReopenButton = interruptButton;
+            pageSelectors = selectors;
+            pageGroups = groups;
         }
 
         private void Awake()
@@ -156,6 +168,7 @@ namespace AnimalCafe.UI.Foundation
             ConfigureSecondModal();
             ConfigureBottomSheet();
             BindButtons();
+            ShowPage(0);
             UpdateStatuses();
         }
 
@@ -213,10 +226,15 @@ namespace AnimalCafe.UI.Foundation
         {
             if (bottomSheet == null) return;
             var outside = bottomSheet.transform.Find("OutsideButton").GetComponent<Button>();
+            var cancel = bottomSheet.GetComponentsInChildren<Button>(true)
+                .FirstOrDefaultNamed("CancelButton");
+            var confirm = bottomSheet.GetComponentsInChildren<Button>(true)
+                .FirstOrDefaultNamed("ConfirmButton");
             var group = bottomSheet.GetComponent<CanvasGroup>();
             var view = new UiView("validation-sheet", UiViewKind.BottomSheet,
                 UiPausePolicy.ContinueGame, UiOutsideDismissPolicy.Dismissible);
             bottomSheet.Configure(navigation, view, outside);
+            bottomSheet.ConfigureActions(cancel, confirm, null);
             bottomSheet.ConfigureLifecycle(pauseCoordinator, pointerBoundary, group, transitionRunner, 0.15f);
         }
 
@@ -230,10 +248,10 @@ namespace AnimalCafe.UI.Foundation
             openBottomSheetButton.onClick.AddListener(OpenBottomSheet);
             validationRepairButton.onClick.AddListener(RepairValidation);
             safeAreaConfirmButton.onClick.AddListener(ConfirmSafeArea);
-            showSolidButton.onClick.AddListener(() => ShowPanel(solidPanel));
-            showLightButton.onClick.AddListener(() => ShowPanel(lightPanel));
-            showStrongButton.onClick.AddListener(() => ShowPanel(strongPanel));
-            forceFallbackButton.onClick.AddListener(OpenSecondStrong);
+            showSolidButton.onClick.AddListener(ShowSolidPanel);
+            showLightButton.onClick.AddListener(ShowLightPanel);
+            showStrongButton.onClick.AddListener(ShowStrongPanel);
+            forceFallbackButton.onClick.AddListener(ShowFallbackPanel);
             handleBackButton.onClick.AddListener(HandleBack);
             openSecondModalButton.onClick.AddListener(OpenSecondModal);
             toastBurstButton.onClick.AddListener(ShowToastBurst);
@@ -241,6 +259,28 @@ namespace AnimalCafe.UI.Foundation
             interruptAndReopenButton.onClick.AddListener(InterruptAndReopen);
             longPressTooltipButton.gameObject.AddComponent<Phase5UiFoundationLongPressTooltipTrigger>()
                 .Configure(tooltip, 0.5f);
+            for (var index = 0; index < pageSelectors.Length; index++)
+            {
+                var pageIndex = index;
+                pageSelectors[index].onClick.AddListener(() => ShowPage(pageIndex));
+            }
+        }
+
+        private void ShowPage(int index)
+        {
+            if (pageGroups == null || index < 0 || index >= pageGroups.Length) return;
+            for (var pageIndex = 0; pageIndex < pageGroups.Length; pageIndex++)
+            {
+                if (pageGroups[pageIndex] != null)
+                    pageGroups[pageIndex].SetActive(pageIndex == index);
+            }
+
+            if (worldOcclusionButton != null)
+                worldOcclusionButton.gameObject.SetActive(index == 2);
+            if (safeAreaConfirmButton != null)
+                safeAreaConfirmButton.gameObject.SetActive(index == 4);
+            if (safeAreaStatus != null)
+                safeAreaStatus.gameObject.SetActive(index == 4);
         }
 
         private void Pause()
@@ -287,11 +327,24 @@ namespace AnimalCafe.UI.Foundation
             safeAreaStatus.text = "Safe Area: Confirmed";
         }
 
-        private void ShowPanel(GameObject selected)
+        private void ShowSolidPanel() => ShowPanel(solidPanel, "Solid Panel", "Current: Solid");
+
+        private void ShowLightPanel() => ShowPanel(lightPanel, "Light Frost Panel", "Current: Light Frost");
+
+        private void ShowStrongPanel() => ShowPanel(strongPanel, "Strong Frost Panel", "Current: Strong Frost");
+
+        private void ShowFallbackPanel()
+        {
+            ShowPanel(lightPanel, "Light Frost Fallback", "Current: Light Frost Fallback");
+        }
+
+        private void ShowPanel(GameObject selected, string title, string status)
         {
             solidPanel.SetActive(selected == solidPanel);
             lightPanel.SetActive(selected == lightPanel);
             strongPanel.SetActive(selected == strongPanel);
+            panelPreviewTitle.text = title;
+            panelPreviewStatus.text = status;
         }
 
         private void HandleBack()
@@ -311,7 +364,7 @@ namespace AnimalCafe.UI.Foundation
         private void ShowToastBurst()
         {
             var mergedCount = feedback.ShowThreeToastBurstWithDuplicate();
-            toastBurstStatus.text = $"3 Toasts, merged x{mergedCount}";
+            toastBurstStatus.text = $"3 requests -> 2 Toasts shown; Saved merged x{mergedCount}";
         }
 
         private void InterruptAndReopen() => StartCoroutine(InterruptAndReopenModal());

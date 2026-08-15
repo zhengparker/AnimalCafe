@@ -30,16 +30,23 @@ namespace AnimalCafe.Tests.PlayMode
 
                     Assert.That(fixture.View.CurrentState, Is.EqualTo(UiButtonState.Default));
                     Assert.That(fixture.Background.color, Is.EqualTo(fixture.ExpectedColor(role)));
+                    var defaultScale = fixture.Button.transform.localScale;
 
                     fixture.QueueTouch(InputTouchPhase.Began);
                     yield return null;
                     fixture.QueueTouch(InputTouchPhase.Stationary);
                     yield return null;
                     Assert.That(fixture.View.CurrentState, Is.EqualTo(UiButtonState.Pressed));
+                    Assert.That(fixture.Background.color,
+                        Is.EqualTo(Color.Lerp(fixture.ExpectedColor(role), Color.black, 0.25f)));
+                    Assert.That(fixture.Button.transform.localScale,
+                        Is.EqualTo(Vector3.Scale(defaultScale, new Vector3(0.97f, 0.97f, 1f))));
 
                     fixture.QueueTouch(InputTouchPhase.Ended);
                     yield return null;
                     Assert.That(fixture.View.CurrentState, Is.EqualTo(UiButtonState.Default));
+                    Assert.That(fixture.Background.color, Is.EqualTo(fixture.ExpectedColor(role)));
+                    Assert.That(fixture.Button.transform.localScale, Is.EqualTo(defaultScale));
 
                     var invocationsBeforeDisabledTap = fixture.InvocationCount;
                     fixture.Button.interactable = false;

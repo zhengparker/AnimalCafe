@@ -35,6 +35,7 @@ namespace AnimalCafe.Tests.Phase5
                 "Assets/UI/Phase5/Materials/M_UI_Solid.mat",
                 "Assets/UI/Phase5/Materials/M_UI_LightFrost.mat",
                 "Assets/UI/Phase5/Materials/M_UI_StrongFrost.mat",
+                "Assets/UI/Phase5/Sprites/S_UI_RoundedRect.asset",
                 "Assets/UI/Phase5/Prefabs/PF_UI_Root.prefab",
                 "Assets/UI/Phase5/Prefabs/PF_UI_Panel_Solid.prefab",
                 "Assets/UI/Phase5/Prefabs/PF_UI_Panel_LightFrost.prefab",
@@ -139,7 +140,7 @@ namespace AnimalCafe.Tests.Phase5
                 Assert.That(prefab.GetComponent<RectTransform>().sizeDelta.x, Is.GreaterThanOrEqualTo(48f), path);
                 Assert.That(prefab.GetComponent<RectTransform>().sizeDelta.y, Is.GreaterThanOrEqualTo(48f), path);
                 Assert.That(prefab.GetComponent<Button>().interactable,
-                    Is.EqualTo(state != UiButtonState.Disabled), path);
+                    Is.EqualTo(state == UiButtonState.Default), path);
                 Assert.That(prefab.GetComponent<Image>().color,
                     Is.EqualTo(ExpectedButtonColor(theme, role, state)).Using(ColorEqualityComparer.Instance), path);
             }
@@ -205,7 +206,7 @@ namespace AnimalCafe.Tests.Phase5
                 _ => throw new ArgumentOutOfRangeException(nameof(role))
             };
             return state == UiButtonState.Pressed
-                ? Color.Lerp(baseColor, Color.black, 0.15f)
+                ? Color.Lerp(baseColor, Color.black, 0.25f)
                 : baseColor;
         }
 

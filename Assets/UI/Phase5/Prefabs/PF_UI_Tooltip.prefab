@@ -228,6 +228,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Feedback.TooltipView
   messageLabel: {fileID: 7533435744567438737}
   contentRoot: {fileID: 9092722151250923324}
+  background: {fileID: 4409494616865304828}
+  hideBackgroundWhenClosed: 0
 --- !u!1 &9092722151250923324
 GameObject:
   m_ObjectHideFlags: 0

@@ -5,6 +5,7 @@ using AnimalCafe.Core.Time;
 using AnimalCafe.Input;
 using AnimalCafe.Interaction;
 using AnimalCafe.UI;
+using AnimalCafe.UI.Components;
 using AnimalCafe.UI.Foundation;
 using AnimalCafe.EditorTools.Phase5;
 using TMPro;
@@ -175,9 +176,20 @@ namespace AnimalCafe.EditorTools
             rect.sizeDelta = new Vector2(96f, 48f);
             rect.anchoredPosition = new Vector2(x, 0f);
             var image = GetOrAdd<Image>(buttonObject);
-            image.color = theme.Colors.Surface;
+            var roundedSprite = AssetDatabase.LoadAllAssetsAtPath(Phase5UiAssetPaths.RoundedSpritePath)
+                .OfType<Sprite>()
+                .FirstOrDefault();
+            image.sprite = roundedSprite;
+            image.type = roundedSprite != null ? Image.Type.Sliced : Image.Type.Simple;
+            image.color = theme.Colors.Accent;
             var button = GetOrAdd<Button>(buttonObject);
             button.targetGraphic = image;
+            var shadow = GetOrAdd<Shadow>(buttonObject);
+            shadow.effectColor = new Color(0.20f, 0.12f, 0.06f, 0.24f);
+            shadow.effectDistance = new Vector2(0f, -6f);
+            shadow.useGraphicAlpha = true;
+            GetOrAdd<AnimalCafeButtonView>(buttonObject)
+                .Configure(theme, UiButtonRole.Primary, button, image);
 
             var textObject = FindOrCreateUiObject(buttonObject.transform, "Label");
             var textRect = textObject.GetComponent<RectTransform>();
@@ -193,7 +205,7 @@ namespace AnimalCafe.EditorTools
             var text = GetOrAdd<TextMeshProUGUI>(textObject);
             text.text = label;
             text.alignment = TextAlignmentOptions.Center;
-            text.color = theme.Colors.Text;
+            text.color = Color.white;
             text.fontSize = theme.Typography.Label.FontSize;
             text.font = theme.Typography.Label.FontAsset;
             text.raycastTarget = false;

@@ -30,16 +30,76 @@ namespace AnimalCafe.Tests.Phase5
                 var view = instance.GetComponent<AnimalCafeButtonView>();
                 var button = instance.GetComponent<Button>();
                 var image = instance.GetComponent<Image>();
+                var defaultScale = instance.transform.localScale;
                 view.OnPointerDown(new PointerEventData(null));
                 Assert.That(image.color,
-                    Is.EqualTo(Color.Lerp(theme.Colors.Accent, Color.black, 0.15f)));
+                    Is.EqualTo(Color.Lerp(theme.Colors.Accent, Color.black, 0.25f)));
+                Assert.That(instance.transform.localScale,
+                    Is.EqualTo(Vector3.Scale(defaultScale, new Vector3(0.97f, 0.97f, 1f))));
                 view.OnPointerUp(new PointerEventData(null));
                 Assert.That(image.color, Is.EqualTo(theme.Colors.Accent));
+                Assert.That(instance.transform.localScale, Is.EqualTo(defaultScale));
                 button.interactable = false;
                 view.OnPointerDown(new PointerEventData(null));
                 Assert.That(image.color, Is.EqualTo(theme.Colors.Disabled));
             }
             finally { UnityEngine.Object.DestroyImmediate(instance); }
+        }
+
+        [Test]
+        public void CanonicalButtons_UseOneSlicedRoundedSprite()
+        {
+            Sprite canonical = null;
+            foreach (UiButtonRole role in Enum.GetValues(typeof(UiButtonRole)))
+            foreach (UiButtonState state in Enum.GetValues(typeof(UiButtonState)))
+            {
+                var image = Load<GameObject>(ButtonPath(role, state)).GetComponent<Image>();
+                Assert.That(image.sprite, Is.Not.Null, $"{role}/{state} requires the canonical rounded Sprite.");
+                Assert.That(image.type, Is.EqualTo(Image.Type.Sliced), $"{role}/{state}");
+                Assert.That(image.sprite.border.sqrMagnitude, Is.GreaterThan(0f), $"{role}/{state}");
+                canonical ??= image.sprite;
+                Assert.That(image.sprite, Is.SameAs(canonical),
+                    $"{role}/{state} must reuse one deterministic rounded Sprite.");
+            }
+        }
+
+        [Test]
+        public void CanonicalButtonsAndSolidPanel_HaveSoftElevationWithoutChangingInteractionGeometry()
+        {
+            foreach (UiButtonRole role in Enum.GetValues(typeof(UiButtonRole)))
+            foreach (UiButtonState state in Enum.GetValues(typeof(UiButtonState)))
+            {
+                var path = ButtonPath(role, state);
+                var prefab = Load<GameObject>(path);
+                var rect = prefab.GetComponent<RectTransform>();
+                var button = prefab.GetComponent<Button>();
+                var shadow = prefab.GetComponent<Shadow>();
+                var highlight = Find(prefab, "Top Highlight").GetComponent<Image>();
+
+                Assert.That(rect.sizeDelta, Is.EqualTo(new Vector2(180f, 56f)), path);
+                Assert.That(button.targetGraphic, Is.SameAs(prefab.GetComponent<Image>()), path);
+                Assert.That(shadow, Is.Not.Null, $"{path} requires a soft elevation shadow.");
+                Assert.That(shadow.effectDistance.y, Is.LessThan(0f), path);
+                Assert.That(shadow.effectColor.a, Is.InRange(0.15f, 0.35f), path);
+                Assert.That(highlight.raycastTarget, Is.False, path);
+            }
+
+            var solid = Load<GameObject>(Phase5UiAssetPaths.SolidPanelPrefabPath);
+            var solidShadow = solid.GetComponent<Shadow>();
+            var solidHighlight = Find(solid, "Top Highlight").GetComponent<Image>();
+            Assert.That(solidShadow, Is.Not.Null);
+            Assert.That(solidShadow.effectDistance.y, Is.LessThan(0f));
+            Assert.That(solidHighlight.raycastTarget, Is.False);
+
+            foreach (var frostPath in new[]
+            {
+                Phase5UiAssetPaths.LightFrostPanelPrefabPath,
+                Phase5UiAssetPaths.StrongFrostPanelPrefabPath
+            })
+            {
+                Assert.That(Load<GameObject>(frostPath).GetComponent<Shadow>(), Is.Null,
+                    $"{frostPath} stays outside the Soft Elevation scope.");
+            }
         }
 
         [Test]
@@ -98,6 +158,22 @@ namespace AnimalCafe.Tests.Phase5
         }
 
         [Test]
+        public void CanonicalFrostMaterials_HaveClearlyDifferentTintAndOpacity()
+        {
+            Phase5UiAssetBuilder.BuildAll();
+            var light = Load<Material>(Phase5UiAssetPaths.LightFrostMaterialPath).color;
+            var strong = Load<Material>(Phase5UiAssetPaths.StrongFrostMaterialPath).color;
+
+            Assert.That(strong.a - light.a, Is.GreaterThanOrEqualTo(0.2f),
+                "Strong Frost must be materially more opaque than Light Frost.");
+            var tintDistance = Mathf.Abs(strong.r - light.r)
+                + Mathf.Abs(strong.g - light.g)
+                + Mathf.Abs(strong.b - light.b);
+            Assert.That(tintDistance, Is.GreaterThanOrEqualTo(0.25f),
+                "Strong Frost needs a visibly distinct tint, not a near-identical cream overlay.");
+        }
+
+        [Test]
         public void CanonicalContainersAndFeedback_HaveUsableStructuredInternalContracts()
         {
             AssertTouchButton(Phase5UiAssetPaths.ModalPrefabPath, "Blocker");
@@ -123,6 +199,56 @@ namespace AnimalCafe.Tests.Phase5
             var validation = Load<GameObject>(Phase5UiAssetPaths.ValidationMessagePrefabPath);
             AssertReadableLabel(validation, "Label");
             Assert.That(Find(validation, "Label").GetComponent<Graphic>().raycastTarget, Is.False);
+        }
+
+        [Test]
+        public void CanonicalBottomSheet_IsAReadableLowerScreenSurfaceWithExplicitActions()
+        {
+            var prefab = Load<GameObject>(Phase5UiAssetPaths.BottomSheetPrefabPath);
+            var rootRect = prefab.GetComponent<RectTransform>();
+            var outside = Find(prefab, "OutsideButton");
+            var content = Find(prefab, "Content");
+            var contentRect = content.GetComponent<RectTransform>();
+            var outsideImage = outside.GetComponent<Image>();
+
+            Assert.That(rootRect.sizeDelta, Is.EqualTo(new Vector2(1080f, 1920f)));
+            Assert.That(outside.transform.GetSiblingIndex(), Is.EqualTo(0));
+            Assert.That(outsideImage.color.a, Is.InRange(0.25f, 0.45f));
+            Assert.That(contentRect.anchorMin, Is.EqualTo(Vector2.zero));
+            Assert.That(contentRect.anchorMax.x, Is.EqualTo(1f));
+            Assert.That(contentRect.anchorMax.y, Is.InRange(0.45f, 0.6f));
+            Assert.That(content.GetComponent<Shadow>(), Is.Not.Null);
+
+            var handle = Find(content, "Drag Handle").GetComponent<Image>();
+            Assert.That(handle.raycastTarget, Is.False);
+            Assert.That(handle.GetComponent<RectTransform>().sizeDelta.x, Is.GreaterThanOrEqualTo(72f));
+            AssertReadableCopy(content, "Title", "Order details");
+            AssertReadableCopy(content, "Body", "Review your selections before continuing.");
+            AssertActionButton(content, "CancelButton", "Cancel");
+            AssertActionButton(content, "ConfirmButton", "Confirm");
+        }
+
+        [Test]
+        public void CanonicalModal_IsAReadableCriticalSurfaceWithDimmedBlockingScrim()
+        {
+            var prefab = Load<GameObject>(Phase5UiAssetPaths.ModalPrefabPath);
+            var rootRect = prefab.GetComponent<RectTransform>();
+            var blocker = Find(prefab, "Blocker");
+            var blockerImage = blocker.GetComponent<Image>();
+            var content = Find(prefab, "Content");
+            var contentRect = content.GetComponent<RectTransform>();
+
+            Assert.That(rootRect.sizeDelta, Is.EqualTo(new Vector2(1080f, 1920f)));
+            Assert.That(blocker.transform.GetSiblingIndex(), Is.EqualTo(0));
+            Assert.That(blockerImage.color.r, Is.LessThan(0.2f));
+            Assert.That(blockerImage.color.a, Is.InRange(0.5f, 0.6f));
+            Assert.That(contentRect.sizeDelta.x, Is.InRange(620f, 760f));
+            Assert.That(contentRect.sizeDelta.y, Is.InRange(480f, 680f));
+            Assert.That(content.GetComponent<Shadow>(), Is.Not.Null);
+            AssertReadableCopy(content, "Title", "Discard changes?");
+            AssertReadableCopy(content, "Body", "Your current changes will not be saved.");
+            AssertActionButton(content, "CancelButton", "Cancel");
+            AssertActionButton(content, "ConfirmButton", "Discard");
         }
 
         [Test]
@@ -300,6 +426,28 @@ namespace AnimalCafe.Tests.Phase5
             Assert.That(rect.x, Is.GreaterThan(0f));
             Assert.That(rect.y, Is.GreaterThan(0f));
             Assert.That(label.GetComponent<TMP_Text>(), Is.Not.Null);
+        }
+
+        private static void AssertReadableCopy(GameObject root, string name, string expected)
+        {
+            var label = Find(root, name);
+            Assert.That(label, Is.Not.Null, name);
+            var text = label.GetComponent<TMP_Text>();
+            Assert.That(text, Is.Not.Null, name);
+            Assert.That(text.text, Is.EqualTo(expected), name);
+            Assert.That(text.raycastTarget, Is.False, name);
+        }
+
+        private static void AssertActionButton(GameObject root, string name, string expectedLabel)
+        {
+            var buttonObject = Find(root, name);
+            Assert.That(buttonObject, Is.Not.Null, name);
+            Assert.That(buttonObject.GetComponent<Button>(), Is.Not.Null, name);
+            var size = buttonObject.GetComponent<RectTransform>().sizeDelta;
+            Assert.That(size.x, Is.GreaterThanOrEqualTo(160f), name);
+            Assert.That(size.y, Is.GreaterThanOrEqualTo(48f), name);
+            Assert.That(buttonObject.GetComponentInChildren<TMP_Text>(true).text,
+                Is.EqualTo(expectedLabel), name);
         }
 
         private static TextMeshProUGUI CreateCanonicalLabel(

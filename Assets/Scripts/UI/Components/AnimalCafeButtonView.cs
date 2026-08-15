@@ -18,7 +18,10 @@ namespace AnimalCafe.UI.Components
         [SerializeField] private UiButtonRole role;
         [SerializeField] private Button button;
         [SerializeField] private Image background;
+        [SerializeField] private Shadow elevationShadow;
         private bool isPointerDown;
+        private Vector3 defaultLocalScale = Vector3.one;
+        private bool hasDefaultLocalScale;
 
         public UiButtonState CurrentState { get; private set; }
 
@@ -31,7 +34,13 @@ namespace AnimalCafe.UI.Components
             theme = uiTheme ?? throw new ArgumentNullException(nameof(uiTheme));
             button = targetButton ?? throw new ArgumentNullException(nameof(targetButton));
             background = targetBackground ?? throw new ArgumentNullException(nameof(targetBackground));
+            elevationShadow ??= GetComponent<Shadow>();
             role = buttonRole;
+            if (!hasDefaultLocalScale)
+            {
+                defaultLocalScale = transform.localScale;
+                hasDefaultLocalScale = true;
+            }
             isPointerDown = false;
             RefreshState();
         }
@@ -61,12 +70,19 @@ namespace AnimalCafe.UI.Components
         {
             button ??= GetComponent<Button>();
             background ??= GetComponent<Image>();
+            elevationShadow ??= GetComponent<Shadow>();
+            if (!hasDefaultLocalScale)
+            {
+                defaultLocalScale = transform.localScale;
+                hasDefaultLocalScale = true;
+            }
             RefreshState();
         }
 
         private void OnDisable()
         {
             isPointerDown = false;
+            if (hasDefaultLocalScale) transform.localScale = defaultLocalScale;
         }
 
         private void RefreshState()
@@ -93,9 +109,18 @@ namespace AnimalCafe.UI.Components
             background.color = CurrentState switch
             {
                 UiButtonState.Disabled => theme.Colors.Disabled,
-                UiButtonState.Pressed => Color.Lerp(defaultColor, Color.black, 0.15f),
+                UiButtonState.Pressed => Color.Lerp(defaultColor, Color.black, 0.25f),
                 _ => defaultColor
             };
+            transform.localScale = CurrentState == UiButtonState.Pressed
+                ? Vector3.Scale(defaultLocalScale, new Vector3(0.97f, 0.97f, 1f))
+                : defaultLocalScale;
+            if (elevationShadow != null)
+            {
+                elevationShadow.effectDistance = CurrentState == UiButtonState.Pressed
+                    ? new Vector2(0f, -2f)
+                    : new Vector2(0f, -6f);
+            }
         }
     }
 }

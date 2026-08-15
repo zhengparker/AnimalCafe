@@ -28,7 +28,15 @@ namespace AnimalCafe.EditorTools.Phase5
             "Coffee Bean 库存与 syrup 插孔设置以及口味确认并保存" +
             "Confirm Coffee Machine 咖啡机 Flavor 口味选择" +
             "确认取消返回暂停正常快速主要次要删除错误提示信息装修旋转放置保存" +
-            "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" +
+            "Saved / 已保存 Queue continues / 队列继续" +
+            "3 requests -> 2 Toasts shown; Saved merged x2 Coffee Machine — Tap to select" +
+            "Buttons Panels Navigation Feedback Responsive & Motion Show Toast Show Tooltip " +
+            "Show Validation Error Open Bottom Sheet Pause Game Continue Game Toggle Reduced Motion " +
+            "Open Second Strong Frost Repair Validation Open Modal Confirm Safe Area Test World Occlusion " +
+            "Show Solid Panel Show Light Frost Panel Show Strong Frost Panel Force Frost Fallback Handle Back " +
+            "Open Second Modal Show Toast Burst Long Press Tooltip Close Tooltip Interrupt And Reopen " +
+            "Reduced Motion Safe Area Toast burst Ready Confirmed :&" +
+            "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.?" +
             " ，。：；！？-+/()[]%×";
 
         [MenuItem("AnimalCafe/Phase 5/Build UI Assets")]
@@ -48,13 +56,14 @@ namespace AnimalCafe.EditorTools.Phase5
             var font = EnsureTmpFont();
             ConfigureTmpSettings(font);
             var solid = EnsureMaterial(Phase5UiAssetPaths.SolidMaterialPath, new Color(0.96f, 0.91f, 0.82f, 1f));
-            var light = EnsureMaterial(Phase5UiAssetPaths.LightFrostMaterialPath, new Color(0.94f, 0.97f, 0.92f, 0.88f));
-            var strong = EnsureMaterial(Phase5UiAssetPaths.StrongFrostMaterialPath, new Color(0.86f, 0.92f, 0.86f, 0.94f));
+            var light = EnsureMaterial(Phase5UiAssetPaths.LightFrostMaterialPath, new Color(0.96f, 0.99f, 0.94f, 0.68f));
+            var strong = EnsureMaterial(Phase5UiAssetPaths.StrongFrostMaterialPath, new Color(0.70f, 0.84f, 0.73f, 0.96f));
+            var roundedSprite = EnsureRoundedSprite();
             var theme = EnsureTheme(font, solid, light, strong);
             BuildRoot();
             foreach (UiButtonRole role in Enum.GetValues(typeof(UiButtonRole)))
             foreach (UiButtonState state in Enum.GetValues(typeof(UiButtonState)))
-                BuildButton(theme, role, state);
+                BuildButton(theme, roundedSprite, role, state);
             BuildPanel(theme, UiPanelStyle.Solid, Phase5UiAssetPaths.SolidPanelPrefabPath);
             BuildPanel(theme, UiPanelStyle.LightFrost, Phase5UiAssetPaths.LightFrostPanelPrefabPath);
             BuildPanel(theme, UiPanelStyle.StrongFrost, Phase5UiAssetPaths.StrongFrostPanelPrefabPath);
@@ -242,13 +251,63 @@ namespace AnimalCafe.EditorTools.Phase5
             material.shader = shader; material.color = color; EditorUtility.SetDirty(material); return material;
         }
 
+        private static Sprite EnsureRoundedSprite()
+        {
+            var existing = AssetDatabase.LoadAllAssetsAtPath(Phase5UiAssetPaths.RoundedSpritePath)
+                .OfType<Sprite>()
+                .FirstOrDefault(sprite => sprite.border.sqrMagnitude > 0f);
+            if (existing != null) return existing;
+
+            if (AssetDatabase.LoadMainAssetAtPath(Phase5UiAssetPaths.RoundedSpritePath) != null)
+                AssetDatabase.DeleteAsset(Phase5UiAssetPaths.RoundedSpritePath);
+
+            const int size = 32;
+            const float radius = 8f;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                name = "T_UI_RoundedRect",
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp
+            };
+            var pixels = new Color32[size * size];
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var dx = Mathf.Max(radius - x - 0.5f, 0f, x + 0.5f - (size - radius));
+                var dy = Mathf.Max(radius - y - 0.5f, 0f, y + 0.5f - (size - radius));
+                var alpha = Mathf.Clamp01(radius + 0.5f - Mathf.Sqrt(dx * dx + dy * dy));
+                pixels[y * size + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(alpha * 255f));
+            }
+            texture.SetPixels32(pixels);
+            texture.Apply(false, false);
+            AssetDatabase.CreateAsset(texture, Phase5UiAssetPaths.RoundedSpritePath);
+
+            var sprite = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, size, size),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0,
+                SpriteMeshType.FullRect,
+                new Vector4(radius, radius, radius, radius));
+            sprite.name = "S_UI_RoundedRect";
+            AssetDatabase.AddObjectToAsset(sprite, texture);
+            EditorUtility.SetDirty(texture);
+            EditorUtility.SetDirty(sprite);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(Phase5UiAssetPaths.RoundedSpritePath, ImportAssetOptions.ForceSynchronousImport);
+            return AssetDatabase.LoadAllAssetsAtPath(Phase5UiAssetPaths.RoundedSpritePath)
+                .OfType<Sprite>()
+                .Single(item => item.name == "S_UI_RoundedRect");
+        }
+
         private static AnimalCafeUiTheme EnsureTheme(TMP_FontAsset font, Material solid, Material light, Material strong)
         {
             var theme = AssetDatabase.LoadAssetAtPath<AnimalCafeUiTheme>(Phase5UiAssetPaths.ThemePath);
             if (theme == null) { theme = ScriptableObject.CreateInstance<AnimalCafeUiTheme>(); AssetDatabase.CreateAsset(theme, Phase5UiAssetPaths.ThemePath); }
             theme.Colors = new UiSemanticColorTokens { Background = new Color(0.94f,0.88f,0.78f), Surface = new Color(1f,0.97f,0.9f), Text = new Color(0.12f,0.08f,0.06f), Accent = new Color(0.28f,0.43f,0.31f), Disabled = new Color(0.58f,0.58f,0.53f), Warning = new Color(0.92f,0.62f,0.2f), Destructive = new Color(0.62f,0.18f,0.16f) };
             theme.Typography = new UiTypographyTokens { Heading = new UiTextStyleToken(font, 28f, FontStyles.Bold, 0f), Body = new UiTextStyleToken(font, 16f, FontStyles.Normal, 4f), Label = new UiTextStyleToken(font, 14f, FontStyles.Normal, 2f) };
-            theme.Spacing = new UiSpacingTokens(4, 8, 16, 24, 32); theme.Shape = new UiShapeTokens(16, 2);
+            theme.Spacing = new UiSpacingTokens(4, 8, 16, 24, 32); theme.Shape = new UiShapeTokens(12, 2);
             theme.Materials = new UiMaterialTokens(solid, light, strong, light);
             theme.Motion = new UiMotionTokens(0.1f, 0.22f, 0.18f, 0.16f, 2.5f);
             theme.Sizes = new UiSizeTokens(48, 48, 48, 64); EditorUtility.SetDirty(theme); return theme;
@@ -279,24 +338,35 @@ namespace AnimalCafe.EditorTools.Phase5
             go.AddComponent<GraphicRaycaster>(); UiObject(layer, go.transform); return go;
         }
 
-        private static void BuildButton(AnimalCafeUiTheme theme, UiButtonRole role, UiButtonState state)
+        private static void BuildButton(
+            AnimalCafeUiTheme theme,
+            Sprite roundedSprite,
+            UiButtonRole role,
+            UiButtonState state)
         {
             var path = $"{Phase5UiAssetPaths.Root}/Prefabs/PF_UI_Button_{role}_{state}.prefab";
             var root = UiObject($"PF_UI_Button_{role}_{state}");
             try
             {
                 root.GetComponent<RectTransform>().sizeDelta = new Vector2(180, 56);
-                var image = root.AddComponent<Image>(); var button = root.AddComponent<Button>();
-                button.interactable = state != UiButtonState.Disabled;
+                var image = root.AddComponent<Image>();
+                image.sprite = roundedSprite;
+                image.type = Image.Type.Sliced;
+                var shadow = AddSoftElevation(root, theme, new Vector2(0f, -6f));
+                var button = root.AddComponent<Button>();
+                button.interactable = state == UiButtonState.Default;
                 var view = root.AddComponent<AnimalCafeButtonView>(); view.Configure(theme, role, button, image);
                 if (state == UiButtonState.Pressed)
                 {
                     // Pressed Prefabs are deterministic visual samples for the Task 9
                     // 3x3 validation fixture. The ordinary Default Prefab retains the
                     // live pointer-state component used by production screens.
-                    image.color = Color.Lerp(GetButtonRoleColor(theme, role), Color.black, 0.15f);
+                    image.color = Color.Lerp(GetButtonRoleColor(theme, role), Color.black, 0.25f);
+                    root.transform.localScale = new Vector3(0.97f, 0.97f, 1f);
+                    shadow.effectDistance = new Vector2(0f, -2f);
                     view.enabled = false;
                 }
+                AddTopHighlight(root.transform, roundedSprite, 3f);
                 var label = UiObject("Label", root.transform); Stretch(label.GetComponent<RectTransform>(), 8f);
                 var text = label.AddComponent<TextMeshProUGUI>(); text.font = theme.Typography.Label.FontAsset; text.fontSize = 14; text.text = role.ToString(); text.alignment = TextAlignmentOptions.Center; text.raycastTarget = false;
                 text.color = state == UiButtonState.Disabled || role == UiButtonRole.Secondary
@@ -320,8 +390,46 @@ namespace AnimalCafe.EditorTools.Phase5
         private static void BuildPanel(AnimalCafeUiTheme theme, UiPanelStyle style, string path)
         {
             var root = UiObject(Path.GetFileNameWithoutExtension(path));
-            try { root.AddComponent<Image>(); root.AddComponent<AnimalCafePanelView>().Configure(theme, style, new StrongFrostLease(true)); Save(root, path); }
+            try
+            {
+                var image = root.AddComponent<Image>();
+                if (style == UiPanelStyle.Solid)
+                {
+                    AddSoftElevation(root, theme, new Vector2(0f, -10f));
+                    AddTopHighlight(root.transform, image.sprite, 3f);
+                }
+                root.AddComponent<AnimalCafePanelView>().Configure(theme, style, new StrongFrostLease(true));
+                Save(root, path);
+            }
             finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
+        private static Shadow AddSoftElevation(
+            GameObject target,
+            AnimalCafeUiTheme theme,
+            Vector2 distance)
+        {
+            var shadow = target.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0.20f, 0.12f, 0.06f, 0.24f);
+            shadow.effectDistance = distance;
+            shadow.useGraphicAlpha = true;
+            return shadow;
+        }
+
+        private static void AddTopHighlight(Transform parent, Sprite sprite, float height)
+        {
+            var highlight = UiObject("Top Highlight", parent);
+            var rect = highlight.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.offsetMin = new Vector2(2f, -height);
+            rect.offsetMax = new Vector2(-2f, 0f);
+            var image = highlight.AddComponent<Image>();
+            image.sprite = sprite;
+            image.type = sprite != null ? Image.Type.Sliced : Image.Type.Simple;
+            image.color = new Color(1f, 0.97f, 0.88f, 0.32f);
+            image.raycastTarget = false;
         }
 
         private static void BuildModal(AnimalCafeUiTheme theme)
@@ -329,15 +437,36 @@ namespace AnimalCafe.EditorTools.Phase5
             var root = UiObject("PF_UI_Modal");
             try
             {
-                root.GetComponent<RectTransform>().sizeDelta = new Vector2(720f, 720f);
-                root.AddComponent<Image>().color = theme.Colors.Surface;
+                root.GetComponent<RectTransform>().sizeDelta = new Vector2(1080f, 1920f);
                 var group = root.AddComponent<CanvasGroup>();
-                var blocker = CreateButton(root.transform, "Blocker", new Vector2(720f, 720f));
+                var blocker = CreateButton(root.transform, "Blocker", new Vector2(1080f, 1920f));
+                Stretch(blocker.GetComponent<RectTransform>(), 0f);
+                blocker.GetComponent<Image>().color = new Color(0.08f, 0.05f, 0.03f, 0.55f);
+                blocker.transition = Selectable.Transition.None;
                 blocker.transform.SetAsFirstSibling();
-                var content = UiObject("Content", root.transform); content.GetComponent<RectTransform>().sizeDelta = new Vector2(640f, 560f);
-                content.AddComponent<Image>().color = theme.Colors.Surface;
-                var confirm = CreateButton(content.transform, "ConfirmButton", new Vector2(180f, 56f));
-                var cancel = CreateButton(content.transform, "CancelButton", new Vector2(180f, 56f));
+                var content = UiObject("Content", root.transform);
+                var contentRect = content.GetComponent<RectTransform>();
+                contentRect.anchorMin = contentRect.anchorMax = new Vector2(0.5f, 0.5f);
+                contentRect.sizeDelta = new Vector2(700f, 560f);
+                var contentImage = content.AddComponent<Image>();
+                contentImage.color = theme.Colors.Surface;
+                contentImage.sprite = AssetDatabase.LoadAllAssetsAtPath(Phase5UiAssetPaths.RoundedSpritePath)
+                    .OfType<Sprite>().FirstOrDefault();
+                contentImage.type = contentImage.sprite != null ? Image.Type.Sliced : Image.Type.Simple;
+                AddSoftElevation(content, theme, new Vector2(0f, -16f));
+
+                var title = CreateSheetCopy(content.transform, theme, "Title", "Discard changes?",
+                    new Vector2(56f, -132f), new Vector2(-56f, -64f), 28f);
+                title.fontStyle = FontStyles.Bold;
+                CreateSheetCopy(content.transform, theme, "Body",
+                    "Your current changes will not be saved.",
+                    new Vector2(56f, -278f), new Vector2(-56f, -152f), 18f);
+
+                var cancel = CreateSheetAction(content.transform, theme, "CancelButton", "Cancel",
+                    new Vector2(-132f, 64f), false);
+                var confirm = CreateSheetAction(content.transform, theme, "ConfirmButton", "Discard",
+                    new Vector2(132f, 64f), true);
+                confirm.GetComponent<Image>().color = theme.Colors.Destructive;
                 var view = root.AddComponent<AnimalCafeModalView>();
                 view.BindPrefabReferences(confirm, cancel, blocker, group);
                 Save(root, Phase5UiAssetPaths.ModalPrefabPath);
@@ -350,16 +479,124 @@ namespace AnimalCafe.EditorTools.Phase5
             var root = UiObject("PF_UI_BottomSheet");
             try
             {
-                root.GetComponent<RectTransform>().sizeDelta = new Vector2(1080f, 960f);
+                root.GetComponent<RectTransform>().sizeDelta = new Vector2(1080f, 1920f);
                 var group = root.AddComponent<CanvasGroup>();
-                var outside = CreateButton(root.transform, "OutsideButton", new Vector2(1080f, 960f));
-                var content = UiObject("Content", root.transform); content.GetComponent<RectTransform>().sizeDelta = new Vector2(1080f, 640f);
-                content.AddComponent<Image>().color = theme.Colors.Surface;
+                var outside = CreateButton(root.transform, "OutsideButton", new Vector2(1080f, 1920f));
+                Stretch(outside.GetComponent<RectTransform>(), 0f);
+                outside.GetComponent<Image>().color = new Color(0.10f, 0.07f, 0.04f, 0.34f);
+                outside.transition = Selectable.Transition.None;
+
+                var content = UiObject("Content", root.transform);
+                var contentRect = content.GetComponent<RectTransform>();
+                contentRect.anchorMin = Vector2.zero;
+                contentRect.anchorMax = new Vector2(1f, 0.52f);
+                contentRect.offsetMin = new Vector2(28f, 28f);
+                contentRect.offsetMax = new Vector2(-28f, 0f);
+                var contentImage = content.AddComponent<Image>();
+                contentImage.color = theme.Colors.Surface;
+                contentImage.sprite = AssetDatabase.LoadAllAssetsAtPath(Phase5UiAssetPaths.RoundedSpritePath)
+                    .OfType<Sprite>().FirstOrDefault();
+                contentImage.type = contentImage.sprite != null ? Image.Type.Sliced : Image.Type.Simple;
+                AddSoftElevation(content, theme, new Vector2(0f, -14f));
+
+                var handle = UiObject("Drag Handle", content.transform);
+                var handleRect = handle.GetComponent<RectTransform>();
+                handleRect.anchorMin = handleRect.anchorMax = new Vector2(0.5f, 1f);
+                handleRect.pivot = new Vector2(0.5f, 1f);
+                handleRect.anchoredPosition = new Vector2(0f, -22f);
+                handleRect.sizeDelta = new Vector2(96f, 10f);
+                var handleImage = handle.AddComponent<Image>();
+                handleImage.color = new Color(0.32f, 0.25f, 0.18f, 0.45f);
+                handleImage.raycastTarget = false;
+
+                var title = CreateSheetCopy(content.transform, theme, "Title", "Order details",
+                    new Vector2(64f, -142f), new Vector2(-64f, -78f), 24f);
+                title.fontStyle = FontStyles.Bold;
+                CreateSheetCopy(content.transform, theme, "Body",
+                    "Review your selections before continuing.",
+                    new Vector2(64f, -300f), new Vector2(-64f, -158f), 18f);
+                var gameTimeStatus = CreateSheetCopy(content.transform, theme,
+                    "Bottom Sheet Game Time Status",
+                    "Game continues behind this sheet",
+                    new Vector2(64f, -374f), new Vector2(-64f, -318f), 16f);
+                gameTimeStatus.color = theme.Colors.Accent;
+                gameTimeStatus.fontStyle = FontStyles.Italic;
+
+                var cancel = CreateSheetAction(content.transform, theme, "CancelButton", "Cancel",
+                    new Vector2(-132f, 92f), false);
+                var confirm = CreateSheetAction(content.transform, theme, "ConfirmButton", "Confirm",
+                    new Vector2(132f, 92f), true);
                 var view = root.AddComponent<AnimalCafeBottomSheetView>();
                 view.BindPrefabReferences(outside, group);
+                view.BindActionReferences(cancel, confirm);
                 Save(root, Phase5UiAssetPaths.BottomSheetPrefabPath);
             }
             finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
+        private static TextMeshProUGUI CreateSheetCopy(
+            Transform parent,
+            AnimalCafeUiTheme theme,
+            string name,
+            string copy,
+            Vector2 offsetMin,
+            Vector2 offsetMax,
+            float fontSize)
+        {
+            var go = UiObject(name, parent);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = Vector2.one;
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
+            var text = go.AddComponent<TextMeshProUGUI>();
+            text.font = theme.Typography.Body.FontAsset;
+            text.fontSize = fontSize;
+            text.color = theme.Colors.Text;
+            text.text = copy;
+            text.textWrappingMode = TextWrappingModes.Normal;
+            text.raycastTarget = false;
+            return text;
+        }
+
+        private static Button CreateSheetAction(
+            Transform parent,
+            AnimalCafeUiTheme theme,
+            string name,
+            string label,
+            Vector2 position,
+            bool primary)
+        {
+            var button = CreateButton(parent, name, new Vector2(220f, 64f));
+            var rect = button.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0f);
+            rect.pivot = new Vector2(0.5f, 0f);
+            rect.anchoredPosition = position;
+            var image = button.GetComponent<Image>();
+            image.color = primary
+                ? theme.Colors.Accent
+                : new Color(0.93f, 0.89f, 0.79f, 1f);
+            if (!primary)
+            {
+                var outline = button.gameObject.AddComponent<Outline>();
+                outline.effectColor = new Color(
+                    theme.Colors.Accent.r,
+                    theme.Colors.Accent.g,
+                    theme.Colors.Accent.b,
+                    0.8f);
+                outline.effectDistance = new Vector2(2f, -2f);
+            }
+            var copy = UiObject("Label", button.transform);
+            Stretch(copy.GetComponent<RectTransform>(), 8f);
+            var text = copy.AddComponent<TextMeshProUGUI>();
+            text.font = theme.Typography.Label.FontAsset;
+            text.fontSize = 16f;
+            text.text = label;
+            text.alignment = TextAlignmentOptions.Center;
+            text.color = primary ? Color.white : theme.Colors.Accent;
+            text.raycastTarget = false;
+            return button;
         }
 
         private static void BuildSimple<T>(string path, string name, bool image)
@@ -438,7 +675,7 @@ namespace AnimalCafe.EditorTools.Phase5
         }
         private static void EnsureFolders()
         {
-            foreach (var path in new[] { Phase5UiAssetPaths.Root, Phase5UiAssetPaths.Root+"/Theme", Phase5UiAssetPaths.Root+"/Fonts", Phase5UiAssetPaths.Root+"/Materials", Phase5UiAssetPaths.Root+"/Prefabs", Phase5UiAssetPaths.Root+"/Resources", Phase5UiAssetPaths.Root+"/Shaders" })
+            foreach (var path in new[] { Phase5UiAssetPaths.Root, Phase5UiAssetPaths.Root+"/Theme", Phase5UiAssetPaths.Root+"/Fonts", Phase5UiAssetPaths.Root+"/Materials", Phase5UiAssetPaths.Root+"/Sprites", Phase5UiAssetPaths.Root+"/Prefabs", Phase5UiAssetPaths.Root+"/Resources", Phase5UiAssetPaths.Root+"/Shaders" })
             { var parts = path.Split('/'); var current = parts[0]; for (var i=1;i<parts.Length;i++) { var next=current+"/"+parts[i]; if(!AssetDatabase.IsValidFolder(next)) AssetDatabase.CreateFolder(current,parts[i]); current=next; } }
         }
     }
