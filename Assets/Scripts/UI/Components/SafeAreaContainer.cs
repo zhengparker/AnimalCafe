@@ -12,6 +12,57 @@ namespace AnimalCafe.UI.Components
     [RequireComponent(typeof(RectTransform))]
     public sealed class SafeAreaContainer : MonoBehaviour
     {
+        [SerializeField] private bool autoApplyRuntimeSafeArea = true;
+
+        private bool hasAppliedMetrics;
+        private Rect lastSafeArea;
+        private Vector2 lastScreenSize;
+
+        public bool AutoApplyRuntimeSafeArea
+        {
+            get => autoApplyRuntimeSafeArea;
+            set => autoApplyRuntimeSafeArea = value;
+        }
+
+        private void OnEnable()
+        {
+            if (autoApplyRuntimeSafeArea)
+            {
+                RefreshFromScreen();
+            }
+        }
+
+        private void Update()
+        {
+            if (autoApplyRuntimeSafeArea)
+            {
+                RefreshFromScreen();
+            }
+        }
+
+        public void RefreshFromScreen()
+        {
+            RefreshSafeArea(
+                Screen.safeArea,
+                new Vector2(Screen.width, Screen.height));
+        }
+
+        public bool RefreshSafeArea(Rect safeArea, Vector2 screenSize)
+        {
+            if (hasAppliedMetrics
+                && lastSafeArea == safeArea
+                && lastScreenSize == screenSize)
+            {
+                return false;
+            }
+
+            ApplySafeArea(safeArea, screenSize);
+            lastSafeArea = safeArea;
+            lastScreenSize = screenSize;
+            hasAppliedMetrics = true;
+            return true;
+        }
+
         /// <summary>
         /// Applies a supplied Safe Area to this container's anchors.
         /// 将指定的 Safe Area 应用到当前容器的 anchors。

@@ -50,6 +50,37 @@ namespace AnimalCafe.Tests.Phase5
             Assert.That(normalized, Is.EqualTo(new Rect(0f, 0f, 1f, 1f)));
         }
 
+        [Test]
+        public void RefreshSafeArea_ReappliesOnlyWhenSafeAreaOrScreenSizeChanges()
+        {
+            var gameObject = new GameObject("RuntimeSafeArea", typeof(RectTransform));
+            gameObject.SetActive(false);
+            var container = gameObject.AddComponent<SafeAreaContainer>();
+            var rectTransform = gameObject.GetComponent<RectTransform>();
+            try
+            {
+                Assert.That(container.RefreshSafeArea(
+                    new Rect(20f, 40f, 960f, 1840f),
+                    new Vector2(1000f, 1920f)), Is.True);
+
+                rectTransform.anchorMin = new Vector2(0.25f, 0.25f);
+                Assert.That(container.RefreshSafeArea(
+                    new Rect(20f, 40f, 960f, 1840f),
+                    new Vector2(1000f, 1920f)), Is.False);
+                Assert.That(rectTransform.anchorMin, Is.EqualTo(new Vector2(0.25f, 0.25f)));
+
+                Assert.That(container.RefreshSafeArea(
+                    new Rect(40f, 60f, 920f, 1780f),
+                    new Vector2(1000f, 1920f)), Is.True);
+                Assert.That(rectTransform.anchorMin.x, Is.EqualTo(0.04f).Within(0.0001f));
+                Assert.That(rectTransform.anchorMin.y, Is.EqualTo(60f / 1920f).Within(0.0001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
         [TestCase(UiTextStyle.Body, 12f, 16f)]
         [TestCase(UiTextStyle.Label, 10f, 14f)]
         public void ConfigureLocalizedText_LongMixedLabel_WrapsWithoutShrinkingBelowBaseline(

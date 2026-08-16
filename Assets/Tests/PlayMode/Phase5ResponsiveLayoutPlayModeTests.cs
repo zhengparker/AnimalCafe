@@ -19,6 +19,34 @@ namespace AnimalCafe.Tests.PlayMode
     public sealed class Phase5ResponsiveLayoutPlayModeTests
     {
         [UnityTest]
+        public IEnumerator OnEnable_AppliesCurrentRuntimeScreenSafeArea()
+        {
+            var gameObject = new GameObject("RuntimeSafeArea", typeof(RectTransform));
+            gameObject.SetActive(false);
+            var rectTransform = gameObject.GetComponent<RectTransform>();
+            rectTransform.anchorMin = new Vector2(0.25f, 0.25f);
+            rectTransform.anchorMax = new Vector2(0.75f, 0.75f);
+            gameObject.AddComponent<SafeAreaContainer>();
+            try
+            {
+                gameObject.SetActive(true);
+                yield return null;
+
+                var expected = SafeAreaContainer.CalculateNormalizedSafeRect(
+                    Screen.safeArea,
+                    new Vector2(Screen.width, Screen.height));
+                Assert.That(rectTransform.anchorMin.x, Is.EqualTo(expected.xMin).Within(0.0001f));
+                Assert.That(rectTransform.anchorMin.y, Is.EqualTo(expected.yMin).Within(0.0001f));
+                Assert.That(rectTransform.anchorMax.x, Is.EqualTo(expected.xMax).Within(0.0001f));
+                Assert.That(rectTransform.anchorMax.y, Is.EqualTo(expected.yMax).Within(0.0001f));
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(gameObject);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator PortraitReference_RealButtonsStayInsideSafeAreaAndOffsetsAreCleared()
         {
             using var fixture = new ResponsiveFixture(new Vector2(1080f, 1920f));
@@ -227,6 +255,7 @@ namespace AnimalCafe.Tests.PlayMode
                 SafeRect.offsetMin = Vector2.zero;
                 SafeRect.offsetMax = Vector2.zero;
                 Container = safeObject.GetComponent<SafeAreaContainer>();
+                Container.AutoApplyRuntimeSafeArea = false;
 
                 controls = new[]
                 {
