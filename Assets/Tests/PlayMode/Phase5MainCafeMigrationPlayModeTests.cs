@@ -110,6 +110,14 @@ namespace AnimalCafe.Tests.PlayMode
         {
             var operation = SceneManager.LoadSceneAsync("MainCafe", LoadSceneMode.Single);
             while (!operation.isDone) yield return null;
+            var module = SceneManager.GetActiveScene().GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<InputSystemUIInputModule>(true))
+                .Single();
+            Assert.That(module.actionsAsset, Is.Not.Null,
+                "MainCafe must persist its production UI action asset before test-runtime rebinding.");
+            module.UnassignActions();
+            module.AssignDefaultActions();
+            yield return null;
             yield return null;
         }
 
