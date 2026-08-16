@@ -1,0 +1,17 @@
+{
+  "name": "AnimalCafe.EditorSceneLoading.PlayModeTests",
+  "rootNamespace": "AnimalCafe.Tests",
+  "references": [
+    "AnimalCafe.Runtime",
+    "Unity.TextMeshPro",
+    "UnityEngine.UI",
+    "Unity.InputSystem",
+    "Unity.InputSystem.TestFramework",
+    "Unity.RenderPipelines.Universal.Runtime"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "includePlatforms": [],
+  "autoReferenced": false
+}

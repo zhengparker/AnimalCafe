@@ -51,7 +51,9 @@ namespace AnimalCafe.Input
             }
 
             var pointerPosition = mouse.position.ReadValue();
-            if (mouse.leftButton.wasPressedThisFrame)
+            var pointerPressed = mouse.leftButton.wasPressedThisFrame;
+            var pointerReleased = mouse.leftButton.wasReleasedThisFrame;
+            if (pointerPressed)
             {
                 isPointerDown = true;
                 exceededDragThreshold = false;
@@ -75,7 +77,7 @@ namespace AnimalCafe.Input
                 : Vector2.zero;
 
             var tapReleased = false;
-            if (isPointerDown && mouse.leftButton.wasReleasedThisFrame)
+            if (isPointerDown && pointerReleased)
             {
                 tapReleased = !exceededDragThreshold;
                 isPointerDown = false;
@@ -85,7 +87,10 @@ namespace AnimalCafe.Input
                 panDelta,
                 mouse.scroll.ReadValue().y,
                 tapReleased,
-                pointerPosition);
+                pointerPosition,
+                mouse.deviceId,
+                pointerPressed,
+                pointerReleased);
             return cachedFrame;
         }
     }

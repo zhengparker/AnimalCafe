@@ -1,9 +1,14 @@
 using System;
+using System.Linq;
 using AnimalCafe.Camera;
 using AnimalCafe.Core.Time;
 using AnimalCafe.Input;
 using AnimalCafe.Interaction;
 using AnimalCafe.UI;
+using AnimalCafe.UI.Components;
+using AnimalCafe.UI.Foundation;
+using AnimalCafe.EditorTools.Phase5;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -23,7 +28,7 @@ namespace AnimalCafe.EditorTools
         private const string ScenePath = "Assets/Scenes/MainCafe.unity";
         private const string SettingsPath = "Assets/Config/DefaultCameraSettings.asset";
         private const string RuntimeRootName = "Phase0_Runtime";
-        private const string CanvasName = "Phase0_TimeControls";
+        private const string LegacyCanvasName = "Phase0_TimeControls";
 
         [MenuItem("AnimalCafe/Phase 0/Configure Scene")]
         public static void ConfigurePhase0Scene()
@@ -44,11 +49,13 @@ namespace AnimalCafe.EditorTools
             }
 
             RemoveLegacyDemoObjects(scene);
+            Phase5UiAssetBuilder.BuildAll();
             var settings = GetOrCreateCameraSettings();
             ConfigureCamera(mainCamera);
             ConfigureRuntime(scene, mainCamera, settings);
-            ConfigureTimeControls(scene);
-            EnsureEventSystem(scene);
+            var uiRoot = FindOrCreatePhase5UiRoot(scene);
+            ConfigureTimeControls(scene, uiRoot.transform);
+            EnsureEventSystem(scene, uiRoot.transform);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
@@ -128,21 +135,14 @@ namespace AnimalCafe.EditorTools
             }
         }
 
-        private static void ConfigureTimeControls(Scene scene)
+        private static void ConfigureTimeControls(Scene scene, Transform uiRoot)
         {
-            var canvasObject = FindOrCreateOwnedRoot(scene, CanvasName);
-            GetOrAdd<RectTransform>(canvasObject);
-            GetOrAdd<Canvas>(canvasObject);
-            GetOrAdd<CanvasScaler>(canvasObject);
-            GetOrAdd<GraphicRaycaster>(canvasObject);
-
-            var canvas = canvasObject.GetComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            var scaler = canvasObject.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1024f, 768f);
-
-            var panelObject = FindOrCreateUiObject(canvasObject.transform, "TimePanel");
+            RemoveNamedObjects(scene, LegacyCanvasName);
+            var theme = AssetDatabase.LoadAssetAtPath<AnimalCafeUiTheme>(Phase5UiAssetPaths.ThemePath)
+                ?? throw new InvalidOperationException("Phase 5 UI theme is missing.");
+            var hudLayer = uiRoot.Find("HUD Canvas/HUD Layer")
+                ?? throw new InvalidOperationException("Phase 5 UI Root is missing its HUD Layer.");
+            var panelObject = FindOrCreateUiObject(hudLayer, "TimePanel");
             var panelRect = panelObject.GetComponent<RectTransform>();
             panelRect.anchorMin = new Vector2(0.5f, 0f);
             panelRect.anchorMax = new Vector2(0.5f, 0f);
@@ -150,9 +150,9 @@ namespace AnimalCafe.EditorTools
             panelRect.anchoredPosition = new Vector2(0f, 24f);
             panelRect.sizeDelta = new Vector2(330f, 64f);
 
-            var pause = CreateButton(panelObject.transform, "PauseButton", "Pause", -110f);
-            var normal = CreateButton(panelObject.transform, "NormalButton", "1x", 0f);
-            var fast = CreateButton(panelObject.transform, "FastButton", "2x", 110f);
+            var pause = CreateButton(panelObject.transform, "PauseButton", "Pause", -110f, theme);
+            var normal = CreateButton(panelObject.transform, "NormalButton", "1x", 0f, theme);
+            var fast = CreateButton(panelObject.transform, "FastButton", "2x", 110f, theme);
             var panel = GetOrAdd<TimeControlPanel>(panelObject);
             var runtimeRoot = FindOrCreateOwnedRoot(scene, RuntimeRootName);
             var service = runtimeRoot.GetComponent<GameTimeService>();
@@ -166,7 +166,8 @@ namespace AnimalCafe.EditorTools
             Transform parent,
             string name,
             string label,
-            float x)
+            float x,
+            AnimalCafeUiTheme theme)
         {
             var buttonObject = FindOrCreateUiObject(parent, name);
             var rect = buttonObject.GetComponent<RectTransform>();
@@ -175,9 +176,20 @@ namespace AnimalCafe.EditorTools
             rect.sizeDelta = new Vector2(96f, 48f);
             rect.anchoredPosition = new Vector2(x, 0f);
             var image = GetOrAdd<Image>(buttonObject);
-            image.color = new Color(0.16f, 0.2f, 0.25f, 0.95f);
+            var roundedSprite = AssetDatabase.LoadAllAssetsAtPath(Phase5UiAssetPaths.RoundedSpritePath)
+                .OfType<Sprite>()
+                .FirstOrDefault();
+            image.sprite = roundedSprite;
+            image.type = roundedSprite != null ? Image.Type.Sliced : Image.Type.Simple;
+            image.color = theme.Colors.Accent;
             var button = GetOrAdd<Button>(buttonObject);
             button.targetGraphic = image;
+            var shadow = GetOrAdd<Shadow>(buttonObject);
+            shadow.effectColor = new Color(0.20f, 0.12f, 0.06f, 0.24f);
+            shadow.effectDistance = new Vector2(0f, -6f);
+            shadow.useGraphicAlpha = true;
+            GetOrAdd<AnimalCafeButtonView>(buttonObject)
+                .Configure(theme, UiButtonRole.Primary, button, image);
 
             var textObject = FindOrCreateUiObject(buttonObject.transform, "Label");
             var textRect = textObject.GetComponent<RectTransform>();
@@ -185,18 +197,47 @@ namespace AnimalCafe.EditorTools
             textRect.anchorMax = Vector2.one;
             textRect.offsetMin = Vector2.zero;
             textRect.offsetMax = Vector2.zero;
-            var text = GetOrAdd<Text>(textObject);
+            foreach (var legacyText in textObject.GetComponents<Text>())
+            {
+                UnityEngine.Object.DestroyImmediate(legacyText);
+            }
+
+            var text = GetOrAdd<TextMeshProUGUI>(textObject);
             text.text = label;
-            text.alignment = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignmentOptions.Center;
             text.color = Color.white;
-            text.fontSize = 22;
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = theme.Typography.Label.FontSize;
+            text.font = theme.Typography.Label.FontAsset;
+            text.raycastTarget = false;
             return button;
         }
 
-        private static void EnsureEventSystem(Scene scene)
+        private static void EnsureEventSystem(Scene scene, Transform uiRoot)
         {
-            var eventSystem = FindOrCreateOwnedRoot(scene, "EventSystem");
+            var transforms = scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                .ToArray();
+            var systems = transforms
+                .Select(transform => transform.GetComponent<EventSystem>())
+                .Where(system => system != null)
+                .ToArray();
+            var namedObjects = transforms
+                .Where(transform => transform.name == "EventSystem")
+                .Select(transform => transform.gameObject)
+                .Distinct()
+                .ToArray();
+            var eventSystem = systems.FirstOrDefault()?.gameObject
+                ?? namedObjects.FirstOrDefault()
+                ?? new GameObject("EventSystem");
+            foreach (var duplicate in systems.Select(system => system.gameObject)
+                         .Concat(namedObjects)
+                         .Where(candidate => candidate != eventSystem)
+                         .Distinct())
+            {
+                UnityEngine.Object.DestroyImmediate(duplicate);
+            }
+
+            eventSystem.transform.SetParent(uiRoot, false);
 
             GetOrAdd<EventSystem>(eventSystem);
             var oldModule = eventSystem.GetComponent<StandaloneInputModule>();
@@ -206,6 +247,43 @@ namespace AnimalCafe.EditorTools
             }
 
             GetOrAdd<InputSystemUIInputModule>(eventSystem);
+        }
+
+        private static GameObject FindOrCreatePhase5UiRoot(Scene scene)
+        {
+            var roots = scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                .Where(transform => transform.name == "UI Root")
+                .ToArray();
+            var uiRoot = roots.FirstOrDefault()?.gameObject;
+            foreach (var duplicate in roots.Skip(1))
+            {
+                UnityEngine.Object.DestroyImmediate(duplicate.gameObject);
+            }
+
+            if (uiRoot == null)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Phase5UiAssetPaths.UiRootPrefabPath)
+                    ?? throw new InvalidOperationException("Phase 5 UI Root prefab is missing.");
+                uiRoot = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
+                uiRoot.name = "UI Root";
+            }
+
+            GetOrAdd<UiGraphicRegistration>(uiRoot);
+            uiRoot.SetActive(true);
+            return uiRoot;
+        }
+
+        private static void RemoveNamedObjects(Scene scene, string name)
+        {
+            foreach (var target in scene.GetRootGameObjects()
+                         .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                         .Where(transform => transform.name == name)
+                         .Select(transform => transform.gameObject)
+                         .ToArray())
+            {
+                UnityEngine.Object.DestroyImmediate(target);
+            }
         }
 
         private static GameObject FindOrCreateOwnedRoot(

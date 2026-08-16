@@ -1,0 +1,29 @@
+AnimalCafe Phase 5 TMP shader provenance
+
+Installed official package archive:
+Library/PackageCache/com.unity.ugui@f2d87ebaaa32/Package Resources/TMP Essential Resources.unitypackage
+
+Archive path: Assets/TextMesh Pro/Shaders/TMP_SDF-Mobile.shader
+Destination: Assets/UI/Phase5/Shaders/TMP_SDF-Mobile.shader
+Size: 8,074 bytes
+SHA-256: 44c39aabc7e88e7e1feffc1880df754f4adf86b62e9512aa89e9d2d65171aff4
+
+Archive path: Assets/TextMesh Pro/Shaders/TMPro_Properties.cginc
+Destination: Assets/UI/Phase5/Shaders/TMPro_Properties.cginc
+Size: 2,707 bytes
+SHA-256: 66db1f03e8d7a413eba79bcb6602fdb2de710b586f34a6f2584ed6f68f028e90
+
+Only the mobile SDF shader, its TMP include, and the two official CJK
+line-breaking tables were copied. This keeps the deterministic Phase 5 assets
+self-contained and avoids importing unrelated TMP examples or a second global
+TMP Settings asset.
+
+Archive path: Assets/TextMesh Pro/Resources/LineBreaking Leading Characters.txt
+Destination: Assets/UI/Phase5/Resources/LineBreaking Leading Characters.txt
+Size: 95 bytes
+SHA-256: 62d3f4d5f64aaf885692d2d13a8313f6918e6e4c5aeb3990a43f614652bfd89c
+
+Archive path: Assets/TextMesh Pro/Resources/LineBreaking Following Characters.txt
+Destination: Assets/UI/Phase5/Resources/LineBreaking Following Characters.txt
+Size: 269 bytes
+SHA-256: 3a73e5ffe2510756dd3c2e982fdc1218b4be82c6e21abde88070d6860e1bc8e6

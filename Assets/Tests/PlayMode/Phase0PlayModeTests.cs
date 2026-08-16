@@ -673,7 +673,7 @@ namespace AnimalCafe.Tests.PlayMode
             yield return null;
 
             var runtimeRoot = GameObject.Find("Phase0_Runtime");
-            var canvas = GameObject.Find("Phase0_TimeControls");
+            var uiRoot = GameObject.Find("UI Root");
             var reviewRoot = GameObject.Find(
                 "TEMP_P4_ManualReviewFixtures_DELETE_LATER");
 
@@ -786,10 +786,11 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(GameObject.Find("Selectable_Green"), Is.Null);
             Assert.That(GameObject.Find("Time_Test_Mover"), Is.Null);
             Assert.That(GameObject.Find("CafeFloor"), Is.Null);
-            Assert.That(CountLoadedSceneObjects("Phase0_TimeControls"), Is.EqualTo(1));
-            Assert.That(canvas, Is.Not.Null);
+            Assert.That(CountLoadedSceneObjects("Phase0_TimeControls"), Is.Zero);
+            Assert.That(CountLoadedSceneObjects("UI Root"), Is.EqualTo(1));
+            Assert.That(uiRoot, Is.Not.Null);
             Assert.That(
-                canvas.GetComponentInChildren<TimeControlPanel>(true),
+                uiRoot.GetComponentInChildren<TimeControlPanel>(true),
                 Is.Not.Null);
             Assert.That(CountLoadedSceneObjects("EventSystem"), Is.EqualTo(1));
 
@@ -1359,6 +1360,7 @@ namespace AnimalCafe.Tests.PlayMode
         {
             private readonly GameObject canvasObject;
             private readonly GameObject eventSystemObject;
+            private readonly List<GraphicRaycaster> disabledGraphicRaycasters = new();
             private readonly ExistingEventSystemIsolationScope
                 eventSystemIsolation;
             private readonly Mouse mouse;
@@ -1369,6 +1371,7 @@ namespace AnimalCafe.Tests.PlayMode
                 mouse = virtualMouse;
                 eventSystemIsolation =
                     new ExistingEventSystemIsolationScope();
+                DisableExistingGraphicRaycasters();
 
                 canvasObject = new GameObject(
                     "RealUiPointerCanvasFixture",
@@ -1475,7 +1478,32 @@ namespace AnimalCafe.Tests.PlayMode
 
                 Object.DestroyImmediate(eventSystemObject);
                 Object.DestroyImmediate(canvasObject);
+                foreach (var raycaster in disabledGraphicRaycasters)
+                {
+                    if (raycaster != null)
+                    {
+                        raycaster.enabled = true;
+                    }
+                }
                 eventSystemIsolation.Dispose();
+            }
+
+            private void DisableExistingGraphicRaycasters()
+            {
+                foreach (var raycaster in
+                    Resources.FindObjectsOfTypeAll<GraphicRaycaster>())
+                {
+                    if (raycaster == null
+                        || !raycaster.gameObject.scene.IsValid()
+                        || !raycaster.gameObject.scene.isLoaded
+                        || !raycaster.enabled)
+                    {
+                        continue;
+                    }
+
+                    disabledGraphicRaycasters.Add(raycaster);
+                    raycaster.enabled = false;
+                }
             }
         }
 

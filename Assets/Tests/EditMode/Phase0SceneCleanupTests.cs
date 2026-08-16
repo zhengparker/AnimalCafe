@@ -48,6 +48,9 @@ namespace AnimalCafe.Tests
                 inactiveCanvas.SetActive(false);
                 new GameObject("Phase0_TimeControls");
 
+                var duplicateUiRoot = new GameObject("UI Root");
+                duplicateUiRoot.SetActive(false);
+
                 var inactiveEventSystem = new GameObject("EventSystem");
                 inactiveEventSystem.SetActive(false);
                 new GameObject("EventSystem");
@@ -65,19 +68,19 @@ namespace AnimalCafe.Tests
                     Is.EqualTo(1));
                 Assert.That(
                     CountNamedRootObjects(configuredScene, "Phase0_TimeControls"),
+                    Is.Zero);
+                Assert.That(
+                    CountNamedObjects(configuredScene, "UI Root"),
                     Is.EqualTo(1));
                 Assert.That(
                     CountNamedRootObjects(configuredScene, "EventSystem"),
-                    Is.EqualTo(1));
+                    Is.Zero);
                 AssertCanonicalRoot<MouseCameraInput>(
                     configuredScene,
                     "Phase0_Runtime");
-                AssertCanonicalRoot<Canvas>(
-                    configuredScene,
-                    "Phase0_TimeControls");
-                AssertCanonicalRoot<EventSystem>(
-                    configuredScene,
-                    "EventSystem");
+                Assert.That(
+                    FindAll<EventSystem>(configuredScene),
+                    Has.Length.EqualTo(1));
 
                 var runtime = GetNamedRoot(
                     configuredScene,
@@ -87,21 +90,15 @@ namespace AnimalCafe.Tests
                 AssertSingleComponent<SceneInteractionController>(runtime);
                 AssertSingleComponent<GameTimeService>(runtime);
 
-                var canvas = GetNamedRoot(
-                    configuredScene,
-                    "Phase0_TimeControls");
-                AssertSingleComponent<RectTransform>(canvas);
-                AssertSingleComponent<Canvas>(canvas);
-                AssertSingleComponent<CanvasScaler>(canvas);
-                AssertSingleComponent<GraphicRaycaster>(canvas);
-                var timePanel = canvas.transform.Find("TimePanel");
-                Assert.That(timePanel, Is.Not.Null);
-                AssertSingleComponent<TimeControlPanel>(
-                    timePanel.gameObject);
+                var uiRoot = FindAll<Transform>(configuredScene)
+                    .Single(transform => transform.name == "UI Root");
+                Assert.That(uiRoot.gameObject.activeSelf, Is.True);
+                var timePanels = uiRoot.GetComponentsInChildren<TimeControlPanel>(true);
+                Assert.That(timePanels, Has.Length.EqualTo(1));
+                Assert.That(timePanels[0].name, Is.EqualTo("TimePanel"));
 
-                var eventSystem = GetNamedRoot(
-                    configuredScene,
-                    "EventSystem");
+                var eventSystem = FindAll<EventSystem>(configuredScene).Single().gameObject;
+                Assert.That(eventSystem.transform.IsChildOf(uiRoot), Is.True);
                 AssertSingleComponent<EventSystem>(eventSystem);
                 Assert.That(
                     eventSystem.GetComponents<Component>().Count(
@@ -152,6 +149,19 @@ namespace AnimalCafe.Tests
             }
 
             return count;
+        }
+
+        private static int CountNamedObjects(Scene scene, string objectName)
+        {
+            return FindAll<Transform>(scene).Count(transform =>
+                string.Equals(transform.name, objectName, System.StringComparison.Ordinal));
+        }
+
+        private static T[] FindAll<T>(Scene scene) where T : Component
+        {
+            return scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<T>(true))
+                .ToArray();
         }
 
         private static GameObject GetNamedRoot(
