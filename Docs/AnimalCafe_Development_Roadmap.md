@@ -627,6 +627,12 @@ Decoration Mode 是第一个 UI-heavy system。先建立 reusable system，避�
 
 Title Screen、完整 feature pages、正式 icons、tutorial 和 mobile-specific layout。
 
+### Status
+
+`Completed` — Phase 5 approved design、TDD implementation、review hardening、Studio Owner `MT001–MT034` manual acceptance、PR #4 merge 与 merged-main regression gates 均已完成。
+
+Merged-main evidence（2026-08-15）：PR #4 merge commit 为 `1ac7064`；fresh post-merge rerun 为 EditMode `690 / 690`、Editor PlayMode `121 / 121`、Windows standalone PlayMode `103 / 103` passed，failed、skipped、inconclusive 均为 `0`。首次 post-merge EditMode run 因两个 canonical TextMeshPro shader 的 SHA-256 mismatch 出现 `62` 个 setup failures；资源恢复后完整 rerun 全部通过，两个 shader 当前内容与 Git index 一致。
+
 ---
 
 ## Phase 6 — Basic Decoration Mode
@@ -2625,6 +2631,7 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 - merged-main post-merge evidence（2026-08-03）：EditMode `312 / 312`、PlayMode `55 / 55` passed，failed、skipped、inconclusive 均为 `0`；production validator 为 `3 / 3` valid、`0 issues`；Build Settings/MainCafe isolation 继续由 automated suites 覆盖。
 - Studio Owner 已确认全部三件 user-provided / Tripo-generated benchmark assets 具备用于开发与商业发布所需的使用权，license/use-right gate 为 `Passed`；Camera/readability manual acceptance 为 `Passed`。
 - **Phase 4 — Core Architecture & Functional Furniture Models** 已完成 approved design、TDD implementation、review、Studio Owner `M01–M88` manual acceptance 与 final regression，状态为 `Completed`。Merge-preparation evidence（2026-08-11）：EditMode `570 / 570`、Editor PlayMode `62 / 62`、Windows standalone PlayMode `62 / 62` passed；PlayMode assembly 不引用 `UnityEditor`；P3 validator `3 / 3 valid`、P4 validator `5 / 5 valid`，issues `0`。
-- Phase 5 仍需独立 design/spec/plan approval；本次 Phase 4 closeout 不自动开始 Phase 5。
+- **Phase 5 — UI Architecture & Design System** 已完成 approved design、TDD implementation、review hardening、Studio Owner `MT001–MT034` manual acceptance、PR #4 merge 与 merged-main regression，状态为 `Completed`。Merged-main evidence（2026-08-15）：EditMode `690 / 690`、Editor PlayMode `121 / 121`、Windows standalone PlayMode `103 / 103` passed；failed、skipped、inconclusive 均为 `0`。
+- **Current Next Step：Phase 6 — Basic Decoration Mode design gate。** 先完成并取得 Phase 6 design spec、normal / invalid / boundary / regression test cases、manual playtest plan 与 implementation plan approval；未经 Studio Owner approval 不开始 implementation。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
-- 不开始 Decoration UI 或 Customer AI。
+- 不开始 Customer AI，也不提前实现 Phase 6 `Not Included` 的家具商店、经营功能、anchors、path validation 或 Atmosphere。
