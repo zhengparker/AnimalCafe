@@ -95,7 +95,7 @@ namespace AnimalCafe.Tests
                 Assert.That(uiRoot.gameObject.activeSelf, Is.True);
                 var timePanels = uiRoot.GetComponentsInChildren<TimeControlPanel>(true);
                 Assert.That(timePanels, Has.Length.EqualTo(1));
-                Assert.That(timePanels[0].name, Is.EqualTo("TimePanel"));
+                Assert.That(timePanels[0].name, Is.EqualTo("RightRail"));
 
                 var eventSystem = FindAll<EventSystem>(configuredScene).Single().gameObject;
                 Assert.That(eventSystem.transform.IsChildOf(uiRoot), Is.True);

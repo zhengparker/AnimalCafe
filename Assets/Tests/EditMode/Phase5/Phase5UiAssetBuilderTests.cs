@@ -231,7 +231,7 @@ namespace AnimalCafe.Tests.Phase5
                 text.fontSize = token.FontSize;
                 text.fontStyle = token.FontStyle;
                 text.lineSpacing = token.LineSpacing;
-                text.enableWordWrapping = true;
+                text.textWrappingMode = TextWrappingModes.Normal;
                 text.overflowMode = TextOverflowModes.Overflow;
                 text.text = textValue;
                 Canvas.ForceUpdateCanvases();

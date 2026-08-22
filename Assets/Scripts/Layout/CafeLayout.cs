@@ -13,6 +13,7 @@ namespace AnimalCafe.Layout
         private readonly List<FurnitureInstance> furnitureInstances;
         private readonly Dictionary<string, FurnitureInstance> furnitureInstancesById;
         private readonly Dictionary<GridPosition, string> occupantByCell;
+        private readonly LayoutBounds? layoutBounds;
 
         public GridSettings GridSettings { get; }
         public IReadOnlyList<LayoutRegion> UnlockedRegions { get; }
@@ -23,11 +24,28 @@ namespace AnimalCafe.Layout
         public CafeLayout(
             GridSettings gridSettings,
             FurnitureDefinitionCatalog definitionCatalog)
+            : this(gridSettings, definitionCatalog, null)
+        {
+        }
+
+        public CafeLayout(
+            GridSettings gridSettings,
+            FurnitureDefinitionCatalog definitionCatalog,
+            LayoutBounds layoutBounds)
+            : this(gridSettings, definitionCatalog, (LayoutBounds?)layoutBounds)
+        {
+        }
+
+        private CafeLayout(
+            GridSettings gridSettings,
+            FurnitureDefinitionCatalog definitionCatalog,
+            LayoutBounds? layoutBounds)
         {
             GridSettings = gridSettings ??
                 throw new ArgumentNullException(nameof(gridSettings));
             this.definitionCatalog = definitionCatalog ??
                 throw new ArgumentNullException(nameof(definitionCatalog));
+            this.layoutBounds = layoutBounds;
 
             unlockedRegions = new List<LayoutRegion>();
             regionsById = new Dictionary<string, LayoutRegion>(StringComparer.Ordinal);
@@ -116,21 +134,19 @@ namespace AnimalCafe.Layout
                     PlacementFailureReason.InstanceAlreadyPlaced);
             }
 
-            if (!TryGetFootprintCells(
-                definition,
+            var validationResult = ValidateFurniturePlacement(
+                instance.DefinitionId,
                 instance.Position,
-                instance.Rotation,
-                out var cells))
-            {
-                return PlacementResult.Failure(
-                    PlacementFailureReason.OutOfUnlockedRegion);
-            }
-
-            var validationResult = ValidateCandidateCells(cells);
+                instance.Rotation);
             if (!validationResult.Succeeded)
             {
                 return validationResult;
             }
+
+            var cells = GetFurnitureFootprintCells(
+                instance.DefinitionId,
+                instance.Position,
+                instance.Rotation);
 
             furnitureInstancesById.Add(instance.InstanceId, instance);
             furnitureInstances.Add(instance);
@@ -172,8 +188,8 @@ namespace AnimalCafe.Layout
                     PlacementFailureReason.InstanceNotFound);
             }
 
-            return ReplaceFurniturePlacement(
-                current,
+            return UpdateFurniturePlacement(
+                instanceId,
                 newPosition,
                 current.Rotation);
         }
@@ -193,10 +209,84 @@ namespace AnimalCafe.Layout
                     PlacementFailureReason.InstanceNotFound);
             }
 
-            return ReplaceFurniturePlacement(
-                current,
+            return UpdateFurniturePlacement(
+                instanceId,
                 current.Position,
                 newRotation);
+        }
+
+        public PlacementResult ValidateFurniturePlacement(
+            string definitionId,
+            GridPosition position,
+            FurnitureRotation rotation,
+            string ignoredInstanceId = null)
+        {
+            if (ignoredInstanceId != null)
+            {
+                if (!StableId.IsValidFurnitureInstanceId(ignoredInstanceId) ||
+                    !furnitureInstancesById.ContainsKey(ignoredInstanceId))
+                {
+                    return PlacementResult.Failure(
+                        PlacementFailureReason.InstanceNotFound);
+                }
+            }
+
+            var definition = definitionCatalog.GetRequired(definitionId);
+            if ((definition.AllowedPlacementSurfaces &
+                PlacementSurfaceType.Floor) == 0)
+            {
+                return PlacementResult.Failure(
+                    PlacementFailureReason.UnsupportedPlacementSurface);
+            }
+
+            FurnitureInstance.ValidateRotation(rotation);
+
+            if (!TryGetFootprintCells(
+                definition,
+                position,
+                rotation,
+                out var cells))
+            {
+                return PlacementResult.Failure(
+                    layoutBounds.HasValue
+                        ? PlacementFailureReason.OutOfLayoutBounds
+                        : PlacementFailureReason.OutOfUnlockedRegion);
+            }
+
+            return ValidateCandidateCells(cells, ignoredInstanceId);
+        }
+
+        public PlacementResult UpdateFurniturePlacement(
+            string instanceId,
+            GridPosition position,
+            FurnitureRotation rotation)
+        {
+            ValidateInstanceId(instanceId);
+            FurnitureInstance.ValidateRotation(rotation);
+
+            if (!furnitureInstancesById.TryGetValue(instanceId, out var current))
+            {
+                return PlacementResult.Failure(
+                    PlacementFailureReason.InstanceNotFound);
+            }
+
+            return ReplaceFurniturePlacement(current, position, rotation);
+        }
+
+        public IReadOnlyList<GridPosition> GetFurnitureFootprintCells(
+            string definitionId,
+            GridPosition position,
+            FurnitureRotation rotation)
+        {
+            var definition = definitionCatalog.GetRequired(definitionId);
+            FurnitureInstance.ValidateRotation(rotation);
+
+            if (!TryGetFootprintCells(definition, position, rotation, out var cells))
+            {
+                return new List<GridPosition>().AsReadOnly();
+            }
+
+            return cells.AsReadOnly();
         }
 
         public PlacementResult RemoveFurniture(string instanceId)
@@ -223,28 +313,21 @@ namespace AnimalCafe.Layout
             GridPosition position,
             FurnitureRotation rotation)
         {
-            var candidate = current.WithPlacement(position, rotation);
-            definitionCatalog.TryGet(
-                candidate.DefinitionId,
-                out var definition);
-
-            if (!TryGetFootprintCells(
-                definition,
-                candidate.Position,
-                candidate.Rotation,
-                out var candidateCells))
-            {
-                return PlacementResult.Failure(
-                    PlacementFailureReason.OutOfUnlockedRegion);
-            }
-
-            var validationResult = ValidateCandidateCells(
-                candidateCells,
+            var validationResult = ValidateFurniturePlacement(
+                current.DefinitionId,
+                position,
+                rotation,
                 current.InstanceId);
             if (!validationResult.Succeeded)
             {
                 return validationResult;
             }
+
+            var candidate = current.WithPlacement(position, rotation);
+            var candidateCells = GetFurnitureFootprintCells(
+                candidate.DefinitionId,
+                candidate.Position,
+                candidate.Rotation);
 
             var listIndex = furnitureInstances.FindIndex(
                 instance => string.Equals(
@@ -340,18 +423,34 @@ namespace AnimalCafe.Layout
         {
             foreach (var cell in cells)
             {
+                if (layoutBounds.HasValue &&
+                    !layoutBounds.Value.Contains(cell))
+                {
+                    return PlacementResult.Failure(
+                        PlacementFailureReason.OutOfLayoutBounds);
+                }
+            }
+
+            foreach (var cell in cells)
+            {
                 if (!IsCellUnlocked(cell))
                 {
                     return PlacementResult.Failure(
-                        PlacementFailureReason.OutOfUnlockedRegion);
+                        GetLockedCellFailureReason());
                 }
+            }
 
-                if (IsCellReserved(cell))
+            foreach (var cell in cells)
+            {
+                var reservationFailure = GetReservationFailureReason(cell);
+                if (reservationFailure.HasValue)
                 {
-                    return PlacementResult.Failure(
-                        PlacementFailureReason.ReservedEntranceClearance);
+                    return PlacementResult.Failure(reservationFailure.Value);
                 }
+            }
 
+            foreach (var cell in cells)
+            {
                 if (occupantByCell.TryGetValue(cell, out var occupantId) &&
                     !string.Equals(
                         occupantId,
@@ -366,17 +465,31 @@ namespace AnimalCafe.Layout
             return PlacementResult.Success();
         }
 
-        private bool IsCellReserved(GridPosition cell)
+        private PlacementFailureReason? GetReservationFailureReason(
+            GridPosition cell)
         {
             foreach (var reservation in reservations)
             {
                 if (reservation.Contains(cell))
                 {
-                    return true;
+                    switch (reservation.Type)
+                    {
+                        case LayoutReservationType.EntranceClearance:
+                            return PlacementFailureReason.ReservedEntranceClearance;
+                        case LayoutReservationType.Blocked:
+                            return PlacementFailureReason.Blocked;
+                    }
                 }
             }
 
-            return false;
+            return null;
+        }
+
+        private PlacementFailureReason GetLockedCellFailureReason()
+        {
+            return layoutBounds.HasValue
+                ? PlacementFailureReason.LockedCell
+                : PlacementFailureReason.OutOfUnlockedRegion;
         }
 
         private bool ReservationIntersectsFurniture(LayoutReservation reservation)

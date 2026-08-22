@@ -542,23 +542,51 @@ namespace AnimalCafe.Tests.PlayMode
 
         private IEnumerator Click(Mouse mouse, Vector2 position)
         {
-            Set(mouse.position, position);
+            base.Move(mouse.position, position, time: NextDueTime(mouse));
             yield return null;
             yield return null;
-            Press(mouse.leftButton);
+            Press(mouse.leftButton, time: NextDueTime(mouse));
             yield return null;
             yield return null;
-            Release(mouse.leftButton);
+            Release(mouse.leftButton, time: NextDueTime(mouse));
             yield return null;
             yield return null;
         }
 
         private IEnumerator Move(Mouse mouse, Vector2 position)
         {
-            Set(mouse.position, position);
+            base.Move(mouse.position, position, time: NextDueTime(mouse));
+            var deadline = Time.realtimeSinceStartup + 2f;
             yield return null;
-            yield return null;
-            Assert.That(Vector2.Distance(mouse.position.ReadValue(), position), Is.LessThan(0.5f));
+            while (Vector2.Distance(mouse.position.ReadValue(), position) >= 0.5f
+                && Time.realtimeSinceStartup < deadline)
+            {
+                yield return null;
+            }
+
+            var actual = mouse.position.ReadValue();
+            var module = EventSystem.current?.GetComponent<InputSystemUIInputModule>();
+            Assert.That(Vector2.Distance(actual, position), Is.LessThan(0.5f),
+                "target=" + position
+                + " actual=" + actual
+                + " added=" + mouse.added
+                + " current=" + ReferenceEquals(Mouse.current, mouse)
+                + " deviceId=" + mouse.deviceId
+                + " stateTime=" + InputState.currentTime
+                + " deviceLast=" + mouse.lastUpdateTime
+                + " fixtureTime=" + currentTime
+                + " modulePoint=" + (module == null
+                    ? Vector2.negativeInfinity
+                    : module.point.action.ReadValue<Vector2>()));
+        }
+
+        private static double NextDueTime(InputDevice device)
+        {
+            var eventTime = device.lastUpdateTime + 0.000001d;
+            Assert.That(eventTime, Is.GreaterThan(device.lastUpdateTime));
+            Assert.That(eventTime, Is.LessThanOrEqualTo(InputState.currentTime),
+                "The fixture event must be due in the current InputTestRuntime update window.");
+            return eventTime;
         }
 
         private IEnumerator PressMoveRelease(Mouse mouse, Vector2 start, Vector2 end)

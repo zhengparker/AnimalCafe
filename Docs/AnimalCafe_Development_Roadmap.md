@@ -2508,6 +2508,8 @@ Functional phases 已证明何时需要 feedback；正式 VFX 可以绑定稳定
 ### Scope
 
 - Android / iOS touch pan、pinch zoom 和 tap integration
+- Real-device two-finger Pinch during an active Decoration Furniture Preview；
+  migrated from historical Phase 6 case `P6-M-023`
 - Map both platforms to the shared continuous `1.0x`–`3.0x` zoom envelope
 - Android system Back and iOS in-app Back contract
 - Background / foreground lifecycle
@@ -2533,6 +2535,9 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 ### Tests
 
 - Android / iOS core touch workflows。
+- On real Android and iOS devices，start an active Decoration Furniture drag，add
+  a second finger and Pinch；Camera zooms within the shared envelope，Furniture
+  remains pending，and no Confirm、Cancel or Store action fires。
 - Android system Back 与 shared Back contract。
 - Platform Safe Area integration。
 - Background / foreground persistence。
@@ -2632,6 +2637,8 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 - Studio Owner 已确认全部三件 user-provided / Tripo-generated benchmark assets 具备用于开发与商业发布所需的使用权，license/use-right gate 为 `Passed`；Camera/readability manual acceptance 为 `Passed`。
 - **Phase 4 — Core Architecture & Functional Furniture Models** 已完成 approved design、TDD implementation、review、Studio Owner `M01–M88` manual acceptance 与 final regression，状态为 `Completed`。Merge-preparation evidence（2026-08-11）：EditMode `570 / 570`、Editor PlayMode `62 / 62`、Windows standalone PlayMode `62 / 62` passed；PlayMode assembly 不引用 `UnityEditor`；P3 validator `3 / 3 valid`、P4 validator `5 / 5 valid`，issues `0`。
 - **Phase 5 — UI Architecture & Design System** 已完成 approved design、TDD implementation、review hardening、Studio Owner `MT001–MT034` manual acceptance、PR #4 merge 与 merged-main regression，状态为 `Completed`。Merged-main evidence（2026-08-15）：EditMode `690 / 690`、Editor PlayMode `121 / 121`、Windows standalone PlayMode `103 / 103` passed；failed、skipped、inconclusive 均为 `0`。
-- **Current Next Step：Phase 6 — Basic Decoration Mode design gate。** 先完成并取得 Phase 6 design spec、normal / invalid / boundary / regression test cases、manual playtest plan 与 implementation plan approval；未经 Studio Owner approval 不开始 implementation。
+- **Phase 6 — Basic Decoration Mode** 已完成 approved design、TDD implementation、independent review、Studio Owner manual acceptance 与 fresh full regression，状态为 `Completed`。Merge-preparation evidence（2026-08-22）：EditMode `1136 / 1136`、Editor PlayMode `446 / 446` passed，failed、skipped、inconclusive 均为 `0`；Windows standalone build 为 `Success`，无 C# warning/error；Studio Owner applicable manual set 为 `29 / 29 PASS`。`P6-M-023` 的真实 Android + iOS two-finger Pinch 已按 scope decision 移至 Phase 51，不计入 Phase 6 denominator。
+- Phase 6 清理只删除 obsolete Phase 4 MainCafe manual-review setup 与两份 temporary materials；`ManualReviewPingPongMover` 及其 regression test 因仍有 Phase 5 live consumers 而保留。
+- **Current Next Step：Phase 7 — Interior Walls & Surface Customization design gate。** 未经 Studio Owner approval 不开始 Phase 7 implementation。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Customer AI，也不提前实现 Phase 6 `Not Included` 的家具商店、经营功能、anchors、path validation 或 Atmosphere。

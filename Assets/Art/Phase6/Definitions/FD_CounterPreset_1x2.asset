@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6b73557d0f013c54d9efd85aeaf86f2e, type: 3}
+  m_Name: FD_CounterPreset_1x2
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Content.FurnitureDefinitionAsset
+  definitionId: counter.preset.1x2
+  displayName: Counter 1 x 2
+  footprintWidth: 1
+  footprintDepth: 2
+  allowedPlacementSurfaces: 1
+  functionType: 0
+  prefab: {fileID: 1494308119441978613, guid: 5e08a3306bf4d7d4e85790733a28e486, type: 3}

@@ -84,17 +84,27 @@
 - Counter presets `1 × 2`、`1 × 3`、`2 × 3`；
 - Phase 5 canonical UI Root、Bottom Sheet、Modal、Theme 和 input boundary。
 
+Task 7 component fixtures use one shared `FC_Phase6Production.asset` instance for bootstrap、controller、registry and Store lookup，plus `GridSettings(1f)`、`LayoutBounds(0,0,8,8)`、one full Interior region、Phase 4 `EntrancePortalAuthoring.CreateReservation()` (`entrance.main`、type `EntranceClearance`、origin `(3,0)`、size `2 × 2`) and one initial Counter：Instance ID `00000000000000000000000000000001`、Definition `furniture.counter.module.01`、position `(2,3)`、rotation `Degrees0`。Task 8 binds these defaults in actual `MainCafe`；Task 10 may review visual framing without changing legality。
+
 ### 4.2 Validation layout
 
 Validation Scene 必须能够明确创建：
 
 - empty valid cells；
 - occupied cells；
-- blocked cells；
-- locked cells；
+- labelled blocked reference-only evidence（不是 actual blocked cell）；
+- labelled locked reference-only evidence（不是 actual locked cell）；
 - Entrance Clearance cells；
 - bounds edge / corner；
 - enough free area for every approved footprint and rotation。
+
+Task 8 Validation Scene 的 integrated runtime fixture 只诚实证明 standard startup 可表达的 empty、initial occupied、Entrance、edge/corner 与 free-footprint cases。当前 production startup 没有 arbitrary blocked/locked Scene-authoring seam；因此 Validation 必须创建一个 identity `Phase6_ContractReferences` root，direct children 为 `BlockedArea_ReferenceOnly (4.25,0.05,-0.5)` 和 `LockedArea_ReferenceOnly (4.25,0.05,1.5)`，每个 child 只含 Transform、TextMeshPro 及其 required MeshRenderer，使用 exact labels `Blocked - Reference Only` / `Locked - Reference Only`。它们没有 Collider、Layout reservation/state、registry/selection、controller/input、reflection、第二套 Layout 或 fake controller；pure `CafeLayout` legality tests 负责 blocked/locked 自动化真值，不得宣称 controller integration。若必须做成可互动 fixture，先停止并批准新的 runtime seam。
+
+Task 8 的 actual Scene-loading ownership由 `Assets/Tests/PlayMode/EditorSceneLoading/Phase6DecorationMainCafeSceneTests.cs` 提供；Task 9 的 real Input System Touch fixture 是另一层证据，不可互相替代。
+
+Ownership is target-specific：MainCafe setup owns only Task 8 P4/Phase6/UI additions and allow-lists/validates the healthy Phase0/5 base；first-publish Validation is wholly Task 8-owned and second reconcile may repair/reuse its complete canonical manifest while preserving IDs。Validation mirrors current repo truth：root `Main Camera` owns Camera/AudioListener/URP only；root `Directional Light` owns Light/URP；identity root `Phase0_Runtime` owns exactly one `GameTimeService`、`MouseCameraInput`、`CafeCameraController` and `SceneInteractionController`。`DefaultCameraSettings.asset` is assigned on `MouseCameraInput` and `CafeCameraController`，and both controller components bind the same Main Camera/Mouse input as applicable。It also owns canonical `P4_Environment`、one Task 4/5/7 `Phase6_DecorationRuntime` owner、the exact reference-only root and one PF_UI_Root with three Canvases/layers。
+
+Validation UI exact truth：`EventSystem` is a direct UI Root child with one EventSystem/InputSystemUIInputModule、package actions and zero Standalone；`TimePanel` is a direct `HUD Layer` child with TimeControlPanel，direct Pause/Normal/Fast Buttons at X `-110/0/110`、exact `Pause/1x/2x` Theme/TMP labels and serialized refs to Validation's GameTimeService/buttons；Decoration Safe Area is TimePanel's sibling。A Scene-wide count of one does not excuse a component on the wrong root。Unknown root/child、wrong Prefab or unexplained owned override causes refusal，not deletion。
 
 ### 4.3 Touch fixtures
 
@@ -109,6 +119,8 @@ PlayMode tests 必须使用 Unity Input System Touch device / virtual Touch mapp
 - Safe Area coordinates。
 
 Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
+
+Task 7 controller tests may inject the deterministic Task 5 fake Touch source；this proves routing/state integration only。Task 9 must use the real Input System Touch + EventSystem path before any `P6-IN-*` case is considered integrated acceptance。
 
 ## 5. Automated cases — lifecycle and state
 
@@ -127,6 +139,8 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 - no Layout entry changes；
 - no duplicate UI Root、EventSystem 或 Decoration owner。
 
+Enter publishes open state and visuals only after input suppression、prior Camera state、Pause and session dependencies succeed。Pause rejection or a later enter failure rolls every acquired resource back，leaves state `Closed` and allows retry without stale UI/Grid/subscription/ownership。
+
 ### P6-LC-002 — Repeated enter is idempotent
 
 **Type:** PlayMode / Boundary
@@ -137,7 +151,7 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 
 **Type:** PlayMode / Normal
 **Action:** Exit from `BrowsingCatalogue`。
-**Expected:** Grid and Catalogue close；Decoration Pause ownership releases；pre-entry Game Time restores；Layout unchanged。
+**Expected:** Grid and Catalogue close；Decoration Pause ownership releases；pre-entry Game Time restores；Layout unchanged。Task 7 controller owns one private HUD Button/TMP listener seam：closed click enters，open click exits，failed-enter/cleanup return the label to `Decoration`，and re-enable never duplicates the listener。Task 8 authors/assigns one mobile-visible Safe Area Secondary Button；the open working copy `Done` remains provisional/localizable，and Task 10 owns final copy/clarity acceptance。
 
 ### P6-LC-004 — Exit auto-cancels existing-furniture Preview
 
@@ -156,7 +170,7 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 **Type:** EditMode + PlayMode / Boundary
 **Precondition:** another valid system already holds Pause。
 **Action:** Enter then exit Decoration Mode。
-**Expected:** Decoration releases only its own reason；effective Game Time remains Paused until other owner releases。
+**Expected:** Decoration releases only its own reason；effective Game Time remains Paused until other owner releases。Both `PauseGame` owners must be acquired from the same `UiPauseCoordinator` instance；two separately-created coordinators are invalid evidence。The Store Modal receives that same coordinator but remains `ContinueGame`。
 
 ### P6-LC-007 — Restore non-default pre-entry speed
 
@@ -253,7 +267,7 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 ### P6-PRV-003 — Existing furniture tap creates one Preview
 
 **Type:** PlayMode / Normal
-**Expected:** selected furniture appears suspended；one active Preview exists；original Layout entry is not yet changed。
+**Expected:** selected furniture appears suspended；one active Preview exists；original Layout entry is not yet changed。After the formal representation is hidden and Preview Colliders are disabled，the complete active footprint still classifies as Furniture for subsequent drag。
 
 ### P6-PRV-004 — One active Preview maximum
 
@@ -264,7 +278,7 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 
 **Type:** PlayMode / Recovery
 **Action:** edit Furniture A；explicitly tap Furniture B。
-**Expected:** A auto-cancels to original position / rotation；B becomes the only active Preview。
+**Expected:** A auto-cancels to original position / rotation；B becomes the only active Preview。B must be a distinct visible formal hit outside A's active footprint；an underlying formal object overlapped by A's invalid footprint does not steal the gesture。
 
 ### P6-PRV-006 — Select another while new Preview active
 
@@ -286,7 +300,7 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 
 **Type:** PlayMode / Bug regression
 **Action:** begin drag on A and release pointer over B。
-**Expected:** A remains active at snapped Preview position；B is not selected；no auto-cancel caused by release。
+**Expected:** A remains active at snapped Preview position；B is not selected；no auto-cancel caused by release。Classification occurs only at the primary `Began` and never again on release。
 
 ### P6-PRV-010 — Preview visual does not become formal data
 
@@ -318,12 +332,12 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 
 ### P6-GRID-006 — Four rotations return to origin contract
 
-**Expected:** four Rotate actions restore original orientation、footprint and deterministic snapped position；no accumulated transform drift。
+**Expected:** four Rotate actions restore original orientation、footprint and deterministic snapped position；no accumulated transform drift。When preserving center creates an exact half-cell tie，the per-axis origin delta truncates toward zero (“no extra move”)。
 
 ### P6-GRID-007 — Rotation preserves visual center
 
 **Type:** PlayMode / Presentation contract
-**Expected:** asymmetric furniture re-snaps nearest to prior visual center；does not jump to a distant valid cell。
+**Expected:** asymmetric furniture re-snaps nearest to prior visual center；does not jump to a distant valid cell。The existing `DecorationSession.RotatePreview()` performs this as one internal immutable Preview update with no public API growth；near bounds it keeps the nearest invalid candidate instead of searching outward for validity。Task 7 supplies both the Task 2 EditMode correction and controller PlayMode consumption evidence。
 
 ### P6-GRID-008 — Rotation becomes invalid near bounds
 
@@ -332,7 +346,7 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 ### P6-GRID-009 — Drag snapping deterministic
 
 **Type:** EditMode + PlayMode / Boundary
-**Expected:** same pointer world position and orientation always resolve to the same Grid anchor；threshold boundary has an explicit deterministic tie rule。
+**Expected:** same pointer world position and orientation always resolve to the same Grid anchor。Inverse-map through the configured Grid root and cell size，then use per-axis containing-cell `FloorToInt` semantics；exact boundary enters the positive adjacent cell，just-below/above values are deterministic，and a parallel or behind-plane ray produces no Grid hit。
 
 ### P6-GRID-010 — Full Grid lifecycle
 
@@ -347,7 +361,7 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 
 ### P6-VAL-002 — One occupied cell invalidates multi-cell
 
-**Expected:** complete placement invalid；specific occupied cells visibly indicated；reason `这里已有家具`；Confirm disabled。
+**Expected:** complete candidate footprint visibly invalid；occupied-specific reason `这里已有家具`；Confirm disabled。Phase 6 does not require a separate per-conflict-cell mask；the full-footprint state plus specific copy communicates why this position cannot be placed。
 
 ### P6-VAL-003 — One blocked cell invalidates multi-cell
 
@@ -451,9 +465,11 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 
 ## 11. Automated cases — Layout and Scene representation
 
+Evidence ownership is layered：Task 4 proves reusable registry/Preview/Grid component behavior；Task 7 proves runtime bootstrap fixtures、controller rebuild timing and same-run close/reopen；Task 8 proves the actual production `MainCafe` initial representation and actual Scene reload。Passing a Task 7 component fixture must not be reported as production Scene/reload completion。
+
 ### P6-SYNC-001 — Initial MainCafe representation
 
-**Expected:** one initial `1 × 1 Counter Module` Layout Instance corresponds to exactly one Scene representation。
+**Expected:** one initial `1 × 1 Counter Module` Layout Instance corresponds to exactly one Scene representation。Task 7 component startup initializes Layout，then configures/rebuilds an initially empty representation root before entry；missing dependencies stay closed without a partial clone。Task 8 actual Scene-loading fixture loads production `MainCafe`，waits through startup/Awake and observes the formal Counter before calling `EnterDecorationMode()`。The serialized `FurnitureRepresentationRoot` remains empty and no preplaced Counter clone is saved。
 
 ### P6-SYNC-002 — Rebuild idempotency
 
@@ -494,17 +510,17 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 
 ### P6-SYNC-010 — Runtime-session persistence
 
-**Expected:** confirmed changes survive Decoration close / reopen and unrelated UI navigation within the same run。
+**Expected:** confirmed changes survive Decoration close / reopen and unrelated UI navigation within the same run。Task 7 owns the controller/component close-reopen slice；Task 9 owns integrated production navigation/input evidence。
 
 ### P6-SYNC-011 — Scene reload boundary
 
-**Expected:** reload may restore approved initial Layout；no Phase 6 Save file created；no expectation of cross-reload persistence。
+**Expected:** unload/reload of actual production `MainCafe` restores the approved initial Layout and one formal Counter；there is no expectation of cross-reload persistence。Task 8 owns this exact test in `Phase6DecorationMainCafeSceneTests`；a separately reconstructed Task 7 component is supporting evidence only。The fixture source-scans the runtime Decoration boundary for any Save writer/API，then takes a read-only before/after inventory+byte snapshot of only `Path.Combine(Application.persistentDataPath, "AnimalCafe", "Phase6")`。It never creates、deletes、clears or repairs that namespace，allows pre-existing content only when unchanged，never scans the whole persistentDataPath and calls no setup/save API in PlayMode。
 
 ## 12. Automated cases — Touch, Camera and UI ownership
 
 ### P6-IN-001 — Furniture-start single-finger drag
 
-**Expected:** Furniture Preview moves；Camera pan delta not applied；owner remains Furniture until release。
+**Expected:** Furniture Preview moves；Camera pan delta not applied；owner remains Furniture until release。This includes a collider-free new Preview and a hidden-existing Preview hit through their complete active footprint，not through Physics Colliders。
 
 ### P6-IN-002 — Blank-Scene-start single-finger drag
 
@@ -517,7 +533,7 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 ### P6-IN-004 — Owner cannot switch mid-gesture
 
 **Action:** begin on Furniture then move through blank Scene and UI。
-**Expected:** gesture remains Furniture-owned until release；UI and Camera ignore it。
+**Expected:** gesture remains Furniture-owned until release；UI and Camera ignore it。Primary-Began priority is Modal/active UI raycast → active Preview footprint → visible formal furniture → Floor/Scene → None；an active Preview footprint wins over formal furniture underneath an invalid overlap。Formal Physics hits are distance-sorted、deduplicated by stable Instance ID and exact-distance ties use stable-ID ordinal；registered formal furniture wins over Floor behind it，and only absence of a formal resolution permits configured Scene fallback。
 
 ### P6-IN-005 — Drag threshold separates tap and drag
 
@@ -525,7 +541,7 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 
 ### P6-IN-006 — Touch drag offset
 
-**Expected:** Preview uses configured offset consistently；placement position matches visible Preview rather than hidden finger coordinate。
+**Expected:** Preview uses configured offset consistently；placement position matches visible Preview rather than hidden finger coordinate。`CameraSettings.DragThresholdPixels` remains the only drag threshold source。The offset is sanitized once (`NaN`、infinity、negative → `0`) and that same immutable value is used by the router and raw-coordinate subtraction。The offset coordinate alone drives Floor/Grid projection；raw finger coordinates still drive UI exclusion and edge-zone/Safe Area decisions，so changing offset never moves those hit regions。A separate provisional sanitized hover height affects Preview Y presentation only and is tuned in Task 10。
 
 ### P6-IN-007 — Second finger joins Furniture drag
 
@@ -537,7 +553,7 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 
 ### P6-IN-009 — Edge auto-pan starts
 
-**Expected:** Furniture-owned drag in approved edge zone requests Camera pan in correct direction；Preview continues snapping。
+**Expected:** Furniture-owned drag in approved edge zone requests Camera pan in correct direction；Preview continues snapping。Apply Camera pan first，then reproject the same offset Preview point in that frame so a stationary finger can advance snapped cells as the Camera moves。
 
 ### P6-IN-010 — Edge auto-pan speed cap
 
@@ -549,16 +565,16 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 
 ### P6-IN-012 — Safe Area and Bottom Sheet do not trigger edge pan
 
-**Expected:** Touch within excluded UI / inset regions never produces Camera auto-pan。
+**Expected:** raw finger Touch within excluded UI / inset regions never produces Camera auto-pan；the visual furniture offset cannot shift this classification。Current active `GraphicRaycaster` results and open Modal state stop auto-pan immediately。
 
 ### P6-IN-013 — Modal blocks lower layers
 
-**Expected:** Store Modal gesture cannot rotate、drag、select、pan or activate Catalogue below it。
+**Expected:** Store Modal/open UI wins the primary-Began classifier before Preview/formal/Scene hits；its gesture cannot rotate、drag、select、pan or activate Catalogue below it。Raw Input System `touchId` is never copied into `PointerEventData.pointerId` or `UiPointerBoundary`。
 
 ### P6-IN-014 — UI close input does not pass to Scene
 
 **Type:** Phase 5 regression
-**Expected:** the input that closes / dismisses UI cannot select or move Furniture in the same gesture。
+**Expected:** the input that closes / dismisses UI cannot select or move Furniture in the same gesture。The first owner-safe `SceneInteractionController` suppression lease releases current active/pending Scene pointer ownership；while held，terminal frames drain boundary/input cleanup without registering presses、changing selection or allowing direct selection。Independent lease tokens release idempotently；only the final release sets `ignoreUntilFreshPress`，which drops the same/tail release until a later fresh mouse/touch-compatible press begins normal Scene input。
 
 ### P6-IN-015 — Multiple pointer IDs clean up independently
 
@@ -617,55 +633,67 @@ Mouse 只可作为 Editor mapping coverage，不能替代 Touch acceptance。
 
 ## 14. Automated cases — authoring, MainCafe and cleanup
 
+Task 8 authoring evidence is split across `Phase6MainCafeMigrationTests`、`Phase6DecorationValidatorTests` and actual Scene-loading `Phase6DecorationMainCafeSceneTests`。Parameterize transaction safety over both public setup commands：dirty target；safe resolver-injected missing dependency without moving real assets；unrelated dirty asset/dirty Scene、ordered Selection/active-index and open Scene order preservation；all three fault stages；first-publish Validation deletion；second-run zero save；success/fault cleanup；unknown same-name/wrong Prefab/unexplained Task 8 child refusal。Selection keeps refs for assets/unrelated-Scene objects and records target GameObject/Component GlobalObjectIds for post-reopen resolution；selected TEMP root/descendant refuses before mutation。Every test finally restores each MainCafe/Validation `.unity`/`.meta` byte snapshot or each path's independent absence、Build Settings order/enabled state、exact Selection array/active index、complete Scene setup/order/active Scene and all static seams。
+
+Validation hostile refusal must exercise the real public transaction：inside that outer-finally shield，create the canonical candidate through the authorized production internal factory，seed each hostile case，temporarily publish it at `Assets/Scenes/Validation/Phase6DecorationMode.unity`，close it and invoke public `ConfigureValidationScene`。Require exact hostile bytes/meta/objects/IDs and caller state unchanged；finally restore original bytes/meta or absence。Internal factory/reconciler/pure-validator tests through existing InternalsVisibleTo are supplemental and close candidates in finally；they never replace the public case or add public/runtime API。Task 7 gate is complete，but Task 8 implementation still waits for independent acceptance of round 2。
+
 ### P6-AUTH-001 — Builder idempotency
 
-**Expected:** running approved Phase 6 Scene / asset setup twice creates no duplicate presets、thumbnails、UI nodes、runtime owners or Layout entries。
+**Expected:** each setup follows `preflight + exact backup → BeforeMutation → first mutation → pure candidate validate → only when dirty BeforeSave → at most one SaveScene → AfterSave → target reopen/public validate → caller state restore → success backup cleanup`。Healthy second run emits zero BeforeSave、zero SaveScene observer calls and zero AfterSave。After reopen，each canonical snapshot includes hierarchy path、GlobalObjectId/localID and nearest Prefab GUID/path/source localID，plus counts/refs/bytes/meta。Fault restores exact prior bytes/meta or deletes both first-publish paths。Caller restore includes exact ordered Selection/active index；retained target entries resolve saved GlobalObjectIds while asset/unrelated-Scene refs remain the original objects。Backup cleanup occurs only after validation+caller restore；cleanup failure warns and retains diagnostics without rolling back a valid Scene。
 
 ### P6-AUTH-002 — MainCafe uses canonical Phase 4 environment
 
-**Expected:** exact Floor、Walls、Entrance and Window Prefab references remain valid；no copied replacement environment。
+**Expected:** actual Prefab instances use Floor GUID `ae71a0726a504f24b8d97d7e1f4b15fd`、Back-left `e9324ba340ec5634591234b9c38befd0`、Back-right `3b0e2d354fbc57e4eb64d7c9c48c63ca`、Entrance `c99128042b5e8c04b837af3f4d42ae5c` and Window `f5a18fb1ec2e47c4cb018a16ca3a97b9` at the canonical Phase 4 hierarchy/transforms；no copied replacement environment。The source Floor remains unchanged while only its Scene instance overrides child `GridOverlay` inactive。
 
 ### P6-AUTH-003 — Temporary P4 fixture removed intentionally
 
-**Expected:** `TEMP_P4_ManualReviewFixtures_DELETE_LATER` absent after approved migration；no unrelated Phase 4 production asset removed。
+**Expected:** `TEMP_P4_ManualReviewFixtures_DELETE_LATER`、its retired setup utility and two `M_TEMP_ManualReviewCube_*` materials are absent after approved migration；their `.meta` files are absent；no unrelated Phase 4 production asset is removed。
 
 ### P6-AUTH-004 — Temporary support consumer scan
 
-**Expected:** every proposed temporary setup utility、material or test deletion has zero remaining consumer；otherwise retain it。
+**Expected:** zero consumer means no current compile/type/path reference、live serialized GUID/script/Prefab/Scene reference or active Beginner Guide instruction after the four approved migrations；historical reports/specs/plans are excluded and not rewritten。`ManualReviewPingPongMover` and its tests remain due live Phase 5 compile/serialized consumers。The stale Roadmap deletion sentence is explicitly corrected only in Task 11 and does not authorize Task 8 Roadmap edits。
 
 ### P6-AUTH-005 — MainCafe initial Layout
 
-**Expected:** exactly one approved `1 × 1 Counter Module` formal Instance；other Counter sizes available through Catalogue, not pre-filled in Scene。
+**Expected:** serialized representation root is empty；after Scene load/Awake and before Decoration entry，Task 7 startup produces exactly one approved `1 × 1 Counter Module` formal Instance with ID `00000000000000000000000000000001`、Definition `furniture.counter.module.01`、Grid `(2,3)`、rotation `Degrees0`。Other Counter sizes remain available through Catalogue and are not pre-filled in Scene。
 
 ### P6-AUTH-006 — Cash Register / Coffee Machine not placed
 
-**Expected:** Surface equipment is absent from Phase 6 initial Layout and Floor Catalogue；Phase 4 assets and tests remain intact。
+**Expected:** Work Table、Cash Register and Coffee Machine are absent from the Phase 6 initial Layout and Floor Catalogue，while the shared seven-definition `FC_Phase6Production.asset` still resolves all approved production content and Phase 4 assets/tests remain intact。
 
 ### P6-AUTH-007 — Window not selectable in Phase 6
 
-**Expected:** Window remains visible but Floor Furniture selection cannot acquire it；Phase 7 ownership preserved。
+**Expected:** canonical Window Prefab remains visible under Back-right Wall but Floor Furniture registry/selection cannot acquire it；Phase 7 ownership is preserved。
 
 ### P6-AUTH-008 — Validation Scene excluded from production Build Settings
 
-**Expected:** `MainCafe` remains the sole approved production Scene；Validation Scene is not enabled for player build。
+**Expected:** `Assets/Scenes/MainCafe.unity` remains the sole enabled production Scene；`Assets/Scenes/Validation/Phase6DecorationMode.unity` is absent from Build Settings。Task 8 setup and validator inspect this read-only and never assign `EditorBuildSettings.scenes`。Success、fault and test teardown preserve exact entry order/enabled flags。
 
 ### P6-AUTH-009 — Runtime assembly boundary
 
-**Expected:** Phase 6 runtime assemblies reference no `UnityEditor` API；Editor tools remain in Editor assembly。
+**Expected:** Phase 6 runtime Decoration source contains no `UnityEditor` reference or gameplay persistence writer/API；Editor tools remain in the Editor assembly。Task 8 setup/validator contain no global `AssetDatabase.SaveAssets`/`SaveAssetIfDirty`、broad `Refresh` or Build Settings writer，and `ValidateAll()` leaves Scene state/bytes/dirty flags/Selection unchanged。Runtime no-Save evidence is the exact read-only persistent namespace snapshot in `P6-SYNC-011`，not deletion/repair and not a whole-persistentDataPath absence assertion。
 
 ### P6-AUTH-010 — Missing / duplicate canonical nodes validator
 
-**Expected:** specific issues for missing or duplicate Decoration owner、Grid root、Catalogue binding、UI Root or EventSystem。
+**Expected:** stable issues with exact AssetPath/ObjectPath cover missing/duplicate/mislocated Main Camera、Directional Light、`Phase0_Runtime`、GameTimeService、MouseCameraInput、CafeCameraController、SceneInteractionController；Decoration/environment/Grid/content/HUD/UI infrastructure；wrong transforms/Prefab GUIDs/references；missing content/thumbnail/Prefab；serialized formal furniture；temporary/unexpected content；missing scripts；Build Settings and Save/runtime-Editor boundaries。`UnexpectedStandaloneInputModule` is a required distinct issue/test。Exact duplicate tuples are deduped；ordering is AssetPath ordinal → ObjectPath ordinal → stable code → Message ordinal。Healthy UI has one UI Root、three Canvases、one direct-child EventSystem/InputSystemUIInputModule、zero Standalone；Validation additionally requires exact TimePanel/TimeControlPanel/buttons/Theme/TMP/GameTimeService wiring and the exact non-interactive `Phase6_ContractReferences` inventory。MainCafe's healthy Phase 0/5 base is allow-listed，while Validation's full canonical base is Task 8-owned/reconciled。Package actions GUID `ca9f5fa95ffab41fb9a615ab714db018` remains valid。
+
+### P6-AUTH-011 — Ordered Selection survives setup and rollback
+
+**Expected:** parameterized success、BeforeMutation、BeforeSave and AfterSave cases begin with an ordered mixed Selection containing a persistent asset、an unrelated-Scene object and a retained target-Scene GameObject/Component，with a non-zero active index。After target reopen or rollback，the exact array order and active index return；target entries resolve by stored GlobalObjectId，other refs retain object identity。If Selection contains `TEMP_P4_ManualReviewFixtures_DELETE_LATER` or any descendant，ConfigureMainCafe refuses before BeforeMutation with a deselect-and-retry message and changes no bytes/meta/object/state。
+
+### P6-AUTH-012 — Public Validation hostile and ownership boundary
+
+**Expected:** unknown same-name root、wrong Prefab source and unexplained owned child cases are each temporarily published at the canonical Validation path and passed to real public `ConfigureValidationScene` under full outer-finally backup。The command refuses without changing hostile bytes/meta/objects/IDs or caller state；teardown restores original target bytes/meta or absence。A healthy first/second run owns and preserves the full Validation base、exact Time controls/EventSystem and reference-only root，while the MainCafe command never claims ownership of its existing Phase0/5 base。
 
 ## 15. Regression suites
 
 ### P6-REG-001 — Phase 1 Layout regression
 
-Run full existing Layout data tests；failed / skipped / inconclusive must be `0` unless a separately approved known limitation is recorded。
+Run full existing Layout data tests；Task 8 named regression explicitly includes `CafeLayoutPreviewValidationTests`。Failed / skipped / inconclusive must be `0` unless a separately approved known limitation is recorded。
 
 ### P6-REG-002 — Phase 2 placement regression
 
-Run full occupancy、bounds、rotation、blocked / locked and Entrance rules。
+Run full occupancy、bounds、rotation、blocked / locked and Entrance rules，including `DecorationSessionTests`。
 
 ### P6-REG-003 — Phase 4 asset regression
 
@@ -673,7 +701,9 @@ Run production validators for Work Table、Counter、Coffee Machine、Cash Regis
 
 ### P6-REG-004 — Phase 5 UI regression
 
-Run full UI theme、navigation、Modal、Bottom Sheet、Safe Area、Pause and pointer-boundary suites。
+Run full UI theme、navigation、Modal、Bottom Sheet、Safe Area、Pause and pointer-boundary suites。Task 8 named regression explicitly includes `Phase6DecorationUiPrefabTests` and `Phase6DecorationUiPlayModeTests`。
+
+Task 8 regression inventory lists `Phase6DecorationScenePlayModeTests` once only for the combined Task 4/7 Scene/controller fixture，plus the three actual Touch router/Camera/source fixtures。Do not duplicate one fixture under two historical task labels and inflate evidence counts。
 
 ### P6-REG-005 — Full EditMode
 
@@ -791,9 +821,13 @@ Single-finger drag from blank Floor。Confirm only Camera moves。
 
 Single-finger drag from Furniture。Confirm Furniture moves and Camera stays stable except approved edge auto-pan。
 
-### P6-M-023 — Pinch during active Preview
+### P6-M-023 — Moved to Phase 51 device adaptation
 
-Start Furniture drag, add second finger and Pinch。Confirm Camera zooms、Furniture stays pending and no Confirm / Cancel occurs。
+Studio Owner scope decision（2026-08-22）：physical two-finger Pinch during an active
+Furniture Preview is excluded from the Phase 6 acceptance gate and moved to
+Phase 51 — Android & iOS Platform Adaptation。Phase 51 must verify on real Android
+and iOS devices that Camera zooms、Furniture stays pending and no Confirm / Cancel /
+Store occurs。The historical `P6-M-023` ID remains here only for traceability。
 
 ### P6-M-024 — Edge auto-pan
 
@@ -850,7 +884,8 @@ These are not pass-by-default. Any value changed after manual acceptance require
 - fresh full EditMode XML and log；
 - fresh full Editor PlayMode XML and log；
 - fresh standalone runtime XML and log；
-- manual `P6-M-001–030` result sheet；
+- manual Phase 6 applicable-set result sheet（`P6-M-001–022` and
+  `P6-M-024–030`；historical `P6-M-023` records the Phase 51 migration）；
 - Console evidence；
 - known limitations with explicit acceptance；
 - exact Unity version、commit / working-tree state and test timestamps。

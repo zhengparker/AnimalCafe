@@ -59,5 +59,28 @@ namespace AnimalCafe.Content
             FurnitureDefinition.ValidateDefinitionId(definitionId, nameof(definitionId));
             return prefabsById.TryGetValue(definitionId, out prefab);
         }
+
+        public bool TryGetDefinitionAsset(
+            string definitionId,
+            out FurnitureDefinitionAsset definitionAsset)
+        {
+            FurnitureDefinition.ValidateDefinitionId(definitionId, nameof(definitionId));
+
+            for (var index = 0; index < entries.Count; index++)
+            {
+                var entry = entries[index];
+                if (entry != null && string.Equals(
+                    entry.DefinitionId,
+                    definitionId,
+                    StringComparison.Ordinal))
+                {
+                    definitionAsset = entry;
+                    return true;
+                }
+            }
+
+            definitionAsset = null;
+            return false;
+        }
     }
 }
