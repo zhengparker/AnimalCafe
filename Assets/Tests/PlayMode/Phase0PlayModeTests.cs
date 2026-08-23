@@ -658,6 +658,11 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
             fast.onClick.Invoke();
             Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
+            pause.onClick.Invoke();
+            Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+            pause.onClick.Invoke();
+            Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Fast),
+                "Resume must restore the speed that was active before Pause.");
 
             Object.DestroyImmediate(pause.gameObject);
             Object.DestroyImmediate(normal.gameObject);

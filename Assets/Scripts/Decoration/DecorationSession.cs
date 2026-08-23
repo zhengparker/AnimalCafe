@@ -39,6 +39,18 @@ namespace AnimalCafe.Decoration
                 definitionId,
                 position,
                 rotation);
+            if (!result.Succeeded
+                && TryFindNearestValidPosition(
+                    definitionId,
+                    position,
+                    rotation,
+                    out var nearestPosition,
+                    out var nearestResult))
+            {
+                position = nearestPosition;
+                result = nearestResult;
+            }
+
             ActivePreview = new FurniturePlacementPreview(
                 definitionId,
                 null,
@@ -48,6 +60,63 @@ namespace AnimalCafe.Decoration
                 rotation,
                 result);
             State = DecorationSessionState.PreviewingNewFurniture;
+        }
+
+        private bool TryFindNearestValidPosition(
+            string definitionId,
+            GridPosition preferredPosition,
+            FurnitureRotation rotation,
+            out GridPosition nearestPosition,
+            out PlacementResult nearestResult)
+        {
+            nearestPosition = preferredPosition;
+            nearestResult = default;
+            var found = false;
+            var bestDistance = long.MaxValue;
+
+            foreach (var region in layout.UnlockedRegions)
+            {
+                var right = (long)region.Origin.X + region.Size.Width;
+                var top = (long)region.Origin.Y + region.Size.Height;
+                for (var x = (long)region.Origin.X; x < right; x++)
+                {
+                    for (var y = (long)region.Origin.Y; y < top; y++)
+                    {
+                        if (x < int.MinValue || x > int.MaxValue
+                            || y < int.MinValue || y > int.MaxValue)
+                        {
+                            continue;
+                        }
+
+                        var candidate = new GridPosition((int)x, (int)y);
+                        var candidateResult = layout.ValidateFurniturePlacement(
+                            definitionId,
+                            candidate,
+                            rotation);
+                        if (!candidateResult.Succeeded)
+                        {
+                            continue;
+                        }
+
+                        var distance = System.Math.Abs(x - preferredPosition.X)
+                            + System.Math.Abs(y - preferredPosition.Y);
+                        if (!found
+                            || distance < bestDistance
+                            || (distance == bestDistance
+                                && (candidate.X < nearestPosition.X
+                                    || (candidate.X == nearestPosition.X
+                                        && candidate.Y < nearestPosition.Y))))
+                        {
+                            found = true;
+                            bestDistance = distance;
+                            nearestPosition = candidate;
+                            nearestResult = candidateResult;
+                        }
+                    }
+                }
+            }
+
+            return found;
         }
 
         public PlacementResult BeginExisting(string instanceId)

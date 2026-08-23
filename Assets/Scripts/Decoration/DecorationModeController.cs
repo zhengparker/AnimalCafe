@@ -1219,6 +1219,29 @@ namespace AnimalCafe.Decoration
             }
 
             var ray = targetCamera.ScreenPointToRay(screenPosition);
+            if (TryGetVisibleFurnitureHit(ray, out var visibleInstanceId))
+            {
+                return new DecorationTouchHit(
+                    DecorationTouchHitKind.Furniture,
+                    visibleInstanceId);
+            }
+
+            // The formal grid owns selection inside an occupied cell. A neighbouring
+            // furniture collider may visually overlap that screen area, especially for
+            // differently sized counters, but it must not steal the smaller item's cell.
+            if (TryProjectScreenToGrid(screenPosition, out var occupiedCell)
+                && layoutRuntime.Layout.TryGetOccupant(
+                    occupiedCell,
+                    out var occupiedInstanceId)
+                && sceneRegistry.TryGet(occupiedInstanceId, out var occupiedRepresentation)
+                && occupiedRepresentation != null
+                && occupiedRepresentation.activeInHierarchy)
+            {
+                return new DecorationTouchHit(
+                    DecorationTouchHitKind.Furniture,
+                    occupiedInstanceId);
+            }
+
             var hits = Physics.RaycastAll(ray, Mathf.Infinity, ~0, QueryTriggerInteraction.Collide);
             Array.Sort(hits, CompareRaycastHitsByDistance);
             formalHitDistances.Clear();
@@ -1304,6 +1327,48 @@ namespace AnimalCafe.Decoration
             return configuredFloorHit
                 ? new DecorationTouchHit(DecorationTouchHitKind.Scene)
                 : default;
+        }
+
+        private bool TryGetVisibleFurnitureHit(Ray ray, out string instanceId)
+        {
+            instanceId = null;
+            var bestDistance = float.PositiveInfinity;
+            var instances = layoutRuntime.Layout.FurnitureInstances;
+            for (var instanceIndex = 0; instanceIndex < instances.Count; instanceIndex++)
+            {
+                var candidateId = instances[instanceIndex].InstanceId;
+                if (!sceneRegistry.TryGet(candidateId, out var representation)
+                    || representation == null
+                    || !representation.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                var renderers = representation.GetComponentsInChildren<Renderer>(true);
+                for (var rendererIndex = 0; rendererIndex < renderers.Length; rendererIndex++)
+                {
+                    var renderer = renderers[rendererIndex];
+                    if (renderer == null
+                        || !renderer.enabled
+                        || !renderer.gameObject.activeInHierarchy
+                        || !renderer.bounds.IntersectRay(ray, out var distance))
+                    {
+                        continue;
+                    }
+
+                    var distanceOrder = distance.CompareTo(bestDistance);
+                    if (distanceOrder < 0
+                        || (distanceOrder == 0
+                            && (instanceId == null
+                                || string.CompareOrdinal(candidateId, instanceId) < 0)))
+                    {
+                        instanceId = candidateId;
+                        bestDistance = distance;
+                    }
+                }
+            }
+
+            return instanceId != null;
         }
 
         private bool IsScreenPointInsideActivePreview(Vector2 screenPosition)

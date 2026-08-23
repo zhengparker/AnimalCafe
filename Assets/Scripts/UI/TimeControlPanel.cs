@@ -1,5 +1,6 @@
 using AnimalCafe.Core.Events;
 using AnimalCafe.Core.Time;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -31,6 +32,9 @@ namespace AnimalCafe.UI
 
         [SerializeField]
         private GameObject fastSelectedVisual;
+
+        [SerializeField]
+        private TMP_Text pauseLabel;
 
         private bool listenersRegistered;
         private bool speedListenerRegistered;
@@ -101,7 +105,7 @@ namespace AnimalCafe.UI
 
             if (pauseButton != null)
             {
-                pauseButton.interactable = true;
+                pauseButton.interactable = !locked;
             }
 
             RefreshSelectedVisuals();
@@ -122,7 +126,7 @@ namespace AnimalCafe.UI
                 return;
             }
 
-            pauseButton.onClick.AddListener(gameTimeService.SetPaused);
+            pauseButton.onClick.AddListener(gameTimeService.TogglePaused);
             normalButton.onClick.AddListener(gameTimeService.SetNormal);
             fastButton.onClick.AddListener(gameTimeService.SetFast);
             listenersRegistered = true;
@@ -146,7 +150,7 @@ namespace AnimalCafe.UI
                 return;
             }
 
-            pauseButton.onClick.RemoveListener(gameTimeService.SetPaused);
+            pauseButton.onClick.RemoveListener(gameTimeService.TogglePaused);
             normalButton.onClick.RemoveListener(gameTimeService.SetNormal);
             fastButton.onClick.RemoveListener(gameTimeService.SetFast);
             listenersRegistered = false;
@@ -178,6 +182,12 @@ namespace AnimalCafe.UI
 
         private void RefreshSelectedVisuals(GameSpeed speed)
         {
+            ResolvePauseLabel();
+            if (pauseLabel != null)
+            {
+                pauseLabel.text = speed == GameSpeed.Paused ? "Resume" : "Pause";
+            }
+
             if (decorationPauseLocked)
             {
                 speed = GameSpeed.Paused;
@@ -193,6 +203,14 @@ namespace AnimalCafe.UI
             pauseSelectedVisual ??= FindSelectedVisual(pauseButton);
             normalSelectedVisual ??= FindSelectedVisual(normalButton);
             fastSelectedVisual ??= FindSelectedVisual(fastButton);
+            ResolvePauseLabel();
+        }
+
+        private void ResolvePauseLabel()
+        {
+            pauseLabel ??= pauseButton != null
+                ? pauseButton.GetComponentInChildren<TMP_Text>(true)
+                : null;
         }
 
         private static GameObject FindSelectedVisual(Button button)

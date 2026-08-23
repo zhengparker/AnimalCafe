@@ -76,6 +76,8 @@ namespace AnimalCafe.Tests.PlayMode
             {
                 var gameTime = root.AddComponent<GameTimeService>();
                 var pause = CreateButton("PauseButton", root.transform, new Vector2(64f, 64f));
+                var pauseLabel = UiObject("Label", pause.transform).AddComponent<TextMeshProUGUI>();
+                pauseLabel.text = "Pause";
                 var normal = CreateButton("NormalButton", root.transform, new Vector2(64f, 64f));
                 var fast = CreateButton("FastButton", root.transform, new Vector2(64f, 64f));
                 var pauseSelected = UiObject("SelectedVisual", pause.transform);
@@ -93,6 +95,7 @@ namespace AnimalCafe.Tests.PlayMode
                     normalSelected,
                     fastSelected);
                 fast.onClick.Invoke();
+                Assert.That(pauseLabel.text, Is.EqualTo("Pause"));
                 AssertSelectedSpeed(
                     GameSpeed.Fast,
                     pauseSelected,
@@ -100,10 +103,11 @@ namespace AnimalCafe.Tests.PlayMode
                     fastSelected);
 
                 gameTime.SetPaused();
+                Assert.That(pauseLabel.text, Is.EqualTo("Resume"));
 
                 panel.SetDecorationPauseLock(true);
-                Assert.That(pause.interactable, Is.True,
-                    "Pause remains the visible selected control during Decoration Mode.");
+                Assert.That(pause.interactable, Is.False,
+                    "Decoration Mode owns the Pause lease, so Resume is unavailable until Done.");
                 Assert.That(normal.interactable, Is.False);
                 Assert.That(fast.interactable, Is.False);
                 AssertSelectedSpeed(
@@ -114,6 +118,7 @@ namespace AnimalCafe.Tests.PlayMode
 
                 panel.SetDecorationPauseLock(false);
                 Assert.That(pause.interactable, Is.True);
+                Assert.That(pauseLabel.text, Is.EqualTo("Resume"));
                 Assert.That(normal.interactable, Is.True);
                 Assert.That(fast.interactable, Is.True);
                 gameTime.SetFast();

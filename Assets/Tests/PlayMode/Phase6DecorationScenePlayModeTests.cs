@@ -373,7 +373,10 @@ namespace AnimalCafe.Tests.PlayMode
             fixture.Controller.EnterDecorationMode();
             fixture.Session.BeginNew(
                 "furniture.counter.preset.1x2",
-                new GridPosition(2, 3));
+                new GridPosition(5, 4));
+            Assert.That(
+                fixture.Session.MovePreview(new GridPosition(2, 3)).FailureReason,
+                Is.EqualTo(PlacementFailureReason.Overlap));
             fixture.Registry.Rebuild(fixture.Layout.FurnitureInstances);
             var screen = fixture.ScreenForCell(new GridPosition(2, 3));
             fixture.ShowUiOverlay(screen);
@@ -478,7 +481,10 @@ namespace AnimalCafe.Tests.PlayMode
             fixture.Controller.EnterDecorationMode();
             fixture.Session.BeginNew(
                 "furniture.counter.preset.1x2",
-                new GridPosition(2, 3));
+                new GridPosition(5, 4));
+            Assert.That(
+                fixture.Session.MovePreview(new GridPosition(2, 3)).FailureReason,
+                Is.EqualTo(PlacementFailureReason.Overlap));
             fixture.Registry.Rebuild(fixture.Layout.FurnitureInstances);
 
             var hit = fixture.Classify(fixture.ScreenForCell(new GridPosition(2, 3)));
@@ -511,6 +517,80 @@ namespace AnimalCafe.Tests.PlayMode
             var screen = fixture.ScreenForCell(new GridPosition(2, 3));
 
             var hit = fixture.Classify(screen);
+
+            Assert.That(hit.Kind, Is.EqualTo(DecorationTouchHitKind.Furniture));
+            Assert.That(hit.FurnitureInstanceId,
+                Is.EqualTo("00000000000000000000000000000001"));
+        }
+
+        [Test]
+        public void HitClassifier_AdjacentFurnitureUsesTheVisibleCellsFormalOwnerBeforeAnOverlappingCollider()
+        {
+            using var fixture = CreateControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            var largeId = "00000000000000000000000000000030";
+            Assert.That(fixture.Layout.PlaceFurniture(FurnitureInstance.Restore(
+                largeId,
+                "furniture.counter.preset.2x3",
+                new GridPosition(3, 3),
+                FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            fixture.Registry.Rebuild(fixture.Layout.FurnitureInstances);
+            Assert.That(fixture.Registry.TryGet(largeId, out var largeRepresentation), Is.True);
+
+            var overlappingCollider = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            overlappingCollider.name = "LargeCounterOverlappingHitbox";
+            overlappingCollider.transform.SetParent(largeRepresentation.transform, true);
+            overlappingCollider.transform.position = fixture.GridRoot.TransformPoint(
+                fixture.GridSpace.GetCellCenterLocal(new GridPosition(2, 3)))
+                + fixture.GridRoot.up * 1.25f;
+            overlappingCollider.transform.localScale = new Vector3(0.8f, 0.4f, 0.8f);
+            overlappingCollider.GetComponent<Renderer>().enabled = false;
+            Physics.SyncTransforms();
+
+            var hit = fixture.Classify(fixture.ScreenForCell(new GridPosition(2, 3)));
+
+            Assert.That(hit.Kind, Is.EqualTo(DecorationTouchHitKind.Furniture));
+            Assert.That(hit.FurnitureInstanceId,
+                Is.EqualTo("00000000000000000000000000000001"),
+                "The logical owner of the clicked 1x1 cell must win over a neighbouring large collider.");
+        }
+
+        [Test]
+        public void HitClassifier_IsometricTabletopSelectsTheVisibleSmallFurnitureBeforeTheFloorCellBehindIt()
+        {
+            using var fixture = CreateControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            var largeId = "00000000000000000000000000000031";
+            Assert.That(fixture.Layout.PlaceFurniture(FurnitureInstance.Restore(
+                largeId,
+                "furniture.counter.preset.2x3",
+                new GridPosition(2, 4),
+                FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            fixture.Registry.Rebuild(fixture.Layout.FurnitureInstances);
+            Assert.That(fixture.Registry.TryGet(
+                "00000000000000000000000000000001", out var smallRepresentation), Is.True);
+
+            var floorCenter = fixture.GridRoot.TransformPoint(new Vector3(4f, 0f, 4f));
+            fixture.Camera.transform.position = floorCenter + new Vector3(0f, 6f, -6f);
+            fixture.Camera.transform.LookAt(floorCenter);
+            Physics.SyncTransforms();
+            var smallBounds = smallRepresentation
+                .GetComponentsInChildren<Renderer>(true)
+                .Select(renderer => renderer.bounds)
+                .Aggregate((combined, next) =>
+                {
+                    combined.Encapsulate(next);
+                    return combined;
+                });
+            var tabletopScreen = (Vector2)fixture.Camera.WorldToScreenPoint(
+                new Vector3(smallBounds.center.x, smallBounds.max.y, smallBounds.center.z));
+            var projectedFloorCell = fixture.ProjectScreen(tabletopScreen);
+            Assert.That(fixture.Layout.TryGetOccupant(projectedFloorCell, out var projectedOwner),
+                Is.True);
+            Assert.That(projectedOwner, Is.EqualTo(largeId),
+                "The fixture must reproduce the tabletop-to-floor selection offset into the larger neighbour.");
+
+            var hit = fixture.Classify(tabletopScreen);
 
             Assert.That(hit.Kind, Is.EqualTo(DecorationTouchHitKind.Furniture));
             Assert.That(hit.FurnitureInstanceId,
@@ -612,7 +692,7 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [Test]
-        public void NewPreview_InvalidCameraCenterRemainsAtNearestInvalidCell()
+        public void NewPreview_InvalidCameraCenterUsesTheNearestValidEmptyCell()
         {
             using var fixture = CreateControllerFixture();
             fixture.SetCameraFloorPoint(fixture.GridRoot.TransformPoint(new Vector3(3.5f, 0f, 0.5f)));
@@ -621,11 +701,9 @@ namespace AnimalCafe.Tests.PlayMode
             fixture.SelectCatalogue(0);
 
             Assert.That(fixture.Session.ActivePreview.ProposedPosition,
-                Is.EqualTo(new GridPosition(3, 0)));
-            Assert.That(fixture.Session.ActivePreview.PlacementResult.Succeeded, Is.False);
-            Assert.That(fixture.Session.ActivePreview.PlacementResult.FailureReason,
-                Is.EqualTo(PlacementFailureReason.ReservedEntranceClearance));
-            Assert.That(fixture.Action.Confirm.interactable, Is.False);
+                Is.EqualTo(new GridPosition(2, 0)));
+            Assert.That(fixture.Session.ActivePreview.PlacementResult.Succeeded, Is.True);
+            Assert.That(fixture.Action.Confirm.interactable, Is.True);
             Assert.That(fixture.PreviewRoot.childCount, Is.EqualTo(1));
         }
 

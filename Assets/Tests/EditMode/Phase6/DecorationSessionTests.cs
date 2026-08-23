@@ -114,6 +114,45 @@ namespace AnimalCafe.Tests.Phase6
         }
 
         [Test]
+        public void BeginNew_WhenPreferredCellIsOccupied_UsesTheNearestValidEmptyCell()
+        {
+            var layout = CreateLayout();
+            Assert.That(layout.PlaceFurniture(FurnitureInstance.Restore(
+                ExistingInstanceId,
+                "counter.preset.1x1",
+                new GridPosition(4, 4),
+                FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            var session = new DecorationSession(layout);
+            session.Enter();
+
+            session.BeginNew("counter.preset.1x1", new GridPosition(4, 4));
+
+            Assert.That(session.ActivePreview.ProposedPosition,
+                Is.EqualTo(new GridPosition(3, 4)));
+            Assert.That(session.ActivePreview.PlacementResult.Succeeded, Is.True);
+        }
+
+        [Test]
+        public void BeginNew_WhenTheFloorHasNoValidSpace_KeepsAnInvalidPreferredPreview()
+        {
+            var layout = CreateOneCellLayout();
+            Assert.That(layout.PlaceFurniture(FurnitureInstance.Restore(
+                ExistingInstanceId,
+                "counter.preset.1x1",
+                new GridPosition(0, 0),
+                FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            var session = new DecorationSession(layout);
+            session.Enter();
+
+            session.BeginNew("counter.preset.1x1", new GridPosition(0, 0));
+
+            Assert.That(session.ActivePreview.ProposedPosition,
+                Is.EqualTo(new GridPosition(0, 0)));
+            Assert.That(session.ActivePreview.PlacementResult.FailureReason,
+                Is.EqualTo(PlacementFailureReason.Overlap));
+        }
+
+        [Test]
         public void BeginExisting_ReplacesAnotherExistingPreviewAndLeavesBothFormalInstancesUnchanged()
         {
             var layout = CreateLayoutWithTwoExistingFurniture();
@@ -312,7 +351,10 @@ namespace AnimalCafe.Tests.Phase6
             var layout = CreateLayout();
             var session = new DecorationSession(layout);
             session.Enter();
-            session.BeginNew("counter.preset.1x2", new GridPosition(7, 7));
+            session.BeginNew("counter.preset.1x2", new GridPosition(2, 2));
+            Assert.That(
+                session.MovePreview(new GridPosition(7, 7)).FailureReason,
+                Is.EqualTo(PlacementFailureReason.OutOfLayoutBounds));
 
             var result = session.ConfirmPreview();
 
@@ -499,6 +541,27 @@ namespace AnimalCafe.Tests.Phase6
                 "region.main",
                 new GridPosition(0, 0),
                 new GridSize(8, 8),
+                LayoutZoneType.Interior));
+            return layout;
+        }
+
+        private static CafeLayout CreateOneCellLayout()
+        {
+            var layout = new CafeLayout(
+                new GridSettings(1f),
+                new FurnitureDefinitionCatalog(new[]
+                {
+                    new FurnitureDefinition(
+                        "counter.preset.1x1",
+                        "1 x 1 Counter Module",
+                        new GridSize(1, 1),
+                        PlacementSurfaceType.Floor)
+                }),
+                new LayoutBounds(new GridPosition(0, 0), new GridSize(1, 1)));
+            layout.AddRegion(new LayoutRegion(
+                "region.one-cell",
+                new GridPosition(0, 0),
+                new GridSize(1, 1),
                 LayoutZoneType.Interior));
             return layout;
         }
