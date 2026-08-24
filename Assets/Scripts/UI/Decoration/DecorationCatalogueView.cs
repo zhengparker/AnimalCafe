@@ -45,6 +45,7 @@ namespace AnimalCafe.UI.Decoration
         private Coroutine transitionCoroutine;
 
         public event Action<FurnitureDefinitionAsset> Selected;
+        public event Action<DecorationCatalogueState> StateChanged;
 
         public bool IsCatalogueVisible { get; private set; }
         public bool IsCollapsed { get; private set; }
@@ -267,6 +268,7 @@ namespace AnimalCafe.UI.Decoration
             collapsedRoot?.SetActive(state == DecorationCatalogueState.Collapsed);
             SetInteraction(IsCatalogueVisible);
             BeginTransition(state);
+            StateChanged?.Invoke(state);
         }
 
         private void BeginTransition(DecorationCatalogueState state)

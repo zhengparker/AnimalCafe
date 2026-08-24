@@ -577,6 +577,7 @@ namespace AnimalCafe.Decoration
         {
             UnsubscribeViewEvents();
             catalogueView.Selected += HandleCatalogueSelected;
+            catalogueView.StateChanged += HandleCatalogueStateChanged;
             actionBarView.RotateRequested += HandleRotateRequested;
             actionBarView.ConfirmRequested += HandleConfirmRequested;
             actionBarView.CancelRequested += HandleCancelRequested;
@@ -596,6 +597,7 @@ namespace AnimalCafe.Decoration
             if (catalogueView != null)
             {
                 catalogueView.Selected -= HandleCatalogueSelected;
+                catalogueView.StateChanged -= HandleCatalogueStateChanged;
             }
 
             if (actionBarView != null)
@@ -613,6 +615,25 @@ namespace AnimalCafe.Decoration
             }
 
             viewEventsSubscribed = false;
+        }
+
+        private void HandleCatalogueStateChanged(DecorationCatalogueState state)
+        {
+            if (!isOpen || session?.ActivePreview == null)
+            {
+                return;
+            }
+
+            if (state == DecorationCatalogueState.Expanded)
+            {
+                actionBarView.Hide();
+            }
+            else if (state == DecorationCatalogueState.Collapsed
+                     && (session.State == DecorationSessionState.PreviewingNewFurniture
+                         || session.State == DecorationSessionState.EditingExistingFurniture))
+            {
+                ShowActionForActivePreview();
+            }
         }
 
         private void HandleCatalogueSelected(FurnitureDefinitionAsset definition)

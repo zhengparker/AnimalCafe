@@ -950,6 +950,37 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(fixture.Modal.View.IsOpen, Is.True);
         }
 
+        [Test]
+        public void Controller_CatalogueVisibilityOwnsActionBarWhilePreviewRemainsActive()
+        {
+            using var fixture = CreateControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            fixture.SelectExisting("00000000000000000000000000000001");
+            var preview = fixture.Session.ActivePreview;
+
+            var expand = fixture.Catalogue.Collapsed
+                .GetComponentsInChildren<Button>(true)
+                .Single(button => button.name == "CollapsedHandleButton");
+            expand.onClick.Invoke();
+
+            Assert.That(fixture.Catalogue.View.State,
+                Is.EqualTo(DecorationCatalogueState.Expanded));
+            Assert.That(fixture.Action.View.IsVisible, Is.False,
+                "Expanding the Catalogue must hide the furniture action menu.");
+            Assert.That(fixture.Session.ActivePreview, Is.SameAs(preview));
+
+            var collapse = fixture.Catalogue.Expanded
+                .GetComponentsInChildren<Button>(true)
+                .Single(button => button.name == "CollapseButton");
+            collapse.onClick.Invoke();
+
+            Assert.That(fixture.Catalogue.View.State,
+                Is.EqualTo(DecorationCatalogueState.Collapsed));
+            Assert.That(fixture.Action.View.IsVisible, Is.True,
+                "Collapsing the Catalogue must restore the active preview actions.");
+            Assert.That(fixture.Session.ActivePreview, Is.SameAs(preview));
+        }
+
         [UnityTest]
         public IEnumerator Controller_ActionSafeAreaStopsBeforeRightRail()
         {
