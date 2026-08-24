@@ -10,7 +10,10 @@ namespace AnimalCafe.Layout
         InstanceNotFound = 3,
         InstanceAlreadyPlaced = 4,
         UnsupportedPlacementSurface = 5,
-        ReservedEntranceClearance = 6
+        ReservedEntranceClearance = 6,
+        OutOfLayoutBounds = 7,
+        LockedCell = 8,
+        Blocked = 9
     }
 
     public sealed class PlacementResult

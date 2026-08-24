@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ad6bae91d3e3b594ebc3ea85e86985e7, type: 3}
+  m_Name: DC_Phase6Decoration
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Decoration.DecorationCatalogueAsset
+  entries:
+  - definition: {fileID: 11400000, guid: 8f6b3c69d942ab34b95ec2784d89668a, type: 2}
+    thumbnail: {fileID: 21300000, guid: b5c4fc1d9056b06419f685d6ee7e30b8, type: 3}
+  - definition: {fileID: 11400000, guid: 79f7812e55268ba43bd332ac96f31946, type: 2}
+    thumbnail: {fileID: 21300000, guid: 620041566a986e14f805a501e7b1d644, type: 3}
+  - definition: {fileID: 11400000, guid: b36d588ee4a8c7b47aa892ba0081bc19, type: 2}
+    thumbnail: {fileID: 21300000, guid: 5ac94b565f0863b4390acf5566d94f7f, type: 3}
+  - definition: {fileID: 11400000, guid: 49d6d8d0f0e35004ba4edcf50b521f73, type: 2}
+    thumbnail: {fileID: 21300000, guid: 787e6ad660003304f83d9e0f41de5a96, type: 3}

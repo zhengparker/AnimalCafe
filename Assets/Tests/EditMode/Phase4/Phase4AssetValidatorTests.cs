@@ -1717,24 +1717,6 @@ namespace AnimalCafe.Tests.Phase4
         }
 
         [Test]
-        public void MainCafeManualReviewFixtureSetup_RegistersExactInteractiveMenuItem()
-        {
-            var method = typeof(MainCafeManualReviewFixtureSetup).GetMethod(
-                "Apply",
-                BindingFlags.Public | BindingFlags.Static);
-            Assert.That(method, Is.Not.Null);
-
-            var attributes = method.GetCustomAttributes(typeof(MenuItem), false)
-                .Cast<MenuItem>()
-                .ToArray();
-
-            Assert.That(attributes, Has.Length.EqualTo(1));
-            Assert.That(
-                attributes[0].menuItem,
-                Is.EqualTo("AnimalCafe/Phase 4/Add MainCafe Manual Review Cubes"));
-        }
-
-        [Test]
         public void Menu_SummaryContainsExactCountsAndIssueList()
         {
             var report = new Phase4AssetValidationReport(

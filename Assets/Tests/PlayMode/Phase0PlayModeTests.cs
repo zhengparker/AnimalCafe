@@ -658,6 +658,11 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
             fast.onClick.Invoke();
             Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
+            pause.onClick.Invoke();
+            Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+            pause.onClick.Invoke();
+            Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Fast),
+                "Resume must restore the speed that was active before Pause.");
 
             Object.DestroyImmediate(pause.gameObject);
             Object.DestroyImmediate(normal.gameObject);
@@ -674,105 +679,30 @@ namespace AnimalCafe.Tests.PlayMode
 
             var runtimeRoot = GameObject.Find("Phase0_Runtime");
             var uiRoot = GameObject.Find("UI Root");
-            var reviewRoot = GameObject.Find(
-                "TEMP_P4_ManualReviewFixtures_DELETE_LATER");
+            var environmentRoot = GameObject.Find("P4_Environment");
+            var decorationRoot = GameObject.Find("Phase6_DecorationRuntime");
 
             Assert.That(CountLoadedSceneObjects("Phase0_Runtime"), Is.EqualTo(1));
             Assert.That(
-                CountLoadedSceneObjects(
-                    "TEMP_P4_ManualReviewFixtures_DELETE_LATER"),
-                Is.EqualTo(1));
-            Assert.That(reviewRoot, Is.Not.Null);
-            Assert.That(
-                reviewRoot.scene,
+                CountLoadedSceneObjects("TEMP_P4_ManualReviewFixtures_DELETE_LATER"),
+                Is.Zero);
+            Assert.That(environmentRoot, Is.Not.Null);
+            Assert.That(environmentRoot.scene,
                 Is.EqualTo(SceneManager.GetSceneByName("MainCafe")));
-            Assert.That(reviewRoot.transform.childCount, Is.EqualTo(2));
+            Assert.That(environmentRoot.transform.position, Is.EqualTo(Vector3.zero));
+            Assert.That(environmentRoot.transform.rotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(environmentRoot.transform.localScale, Is.EqualTo(Vector3.one));
+            Assert.That(environmentRoot.transform.Find("P4_Floor_8x8"), Is.Not.Null);
+            Assert.That(environmentRoot.transform.Find("P4_Wall_BackLeft"), Is.Not.Null);
+            Assert.That(environmentRoot.transform.Find("P4_Wall_BackRight"), Is.Not.Null);
+            Assert.That(environmentRoot.transform.Find("P4_Entrance"), Is.Not.Null);
             Assert.That(
-                reviewRoot.transform.position,
-                Is.EqualTo(Vector3.zero));
-            Assert.That(
-                reviewRoot.transform.rotation,
-                Is.EqualTo(Quaternion.identity));
-            Assert.That(
-                reviewRoot.transform.localScale,
-                Is.EqualTo(Vector3.one));
-
-            var moving = reviewRoot.transform.Find("ReviewCube_Moving");
-            var stationary = reviewRoot.transform.Find("ReviewCube_Static");
-            Assert.That(moving, Is.Not.Null);
-            Assert.That(stationary, Is.Not.Null);
-            Assert.That(
-                stationary.localPosition,
-                Is.EqualTo(new Vector3(0.5f, 0.5f, 2f)));
-
-            var mover = moving.GetComponent<ManualReviewPingPongMover>();
-            Assert.That(mover, Is.Not.Null);
-            mover.ResetToStart();
-            Assert.That(
-                moving.localPosition,
-                Is.EqualTo(new Vector3(-2f, 0.5f, -1f)));
-            Assert.That(
-                mover.LocalPointA,
-                Is.EqualTo(new Vector3(-2f, 0.5f, -1f)));
-            Assert.That(
-                mover.LocalPointB,
-                Is.EqualTo(new Vector3(2f, 0.5f, -1f)));
-            Assert.That(mover.UnitsPerSecond, Is.EqualTo(1.5f));
-            Assert.That(
-                stationary.GetComponent<ManualReviewPingPongMover>(),
-                Is.Null);
-
-            foreach (var cube in new[] { moving, stationary })
-            {
-                Assert.That(cube.GetComponent<MeshRenderer>(), Is.Not.Null);
-                Assert.That(cube.GetComponent<BoxCollider>(), Is.Not.Null);
-                Assert.That(cube.GetComponent<ColorSelectable>(), Is.Not.Null);
-            }
-
-            var targetRendererField = typeof(ColorSelectable).GetField(
-                "targetRenderer",
-                BindingFlags.Instance | BindingFlags.NonPublic);
-            Assert.That(targetRendererField, Is.Not.Null);
-            foreach (var cube in new[] { moving, stationary })
-            {
-                var selectable = cube.GetComponent<ColorSelectable>();
-                var assignedRenderer = targetRendererField.GetValue(selectable)
-                    as Renderer;
-
-                Assert.That(
-                    assignedRenderer,
-                    Is.SameAs(cube.GetComponent<MeshRenderer>()),
-                    $"{cube.name} must serialize its own MeshRenderer in "
-                    + "ColorSelectable.targetRenderer.");
-            }
-
-            var movingMaterial =
-                moving.GetComponent<MeshRenderer>().sharedMaterial;
-            var staticMaterial =
-                stationary.GetComponent<MeshRenderer>().sharedMaterial;
-            Assert.That(movingMaterial, Is.Not.Null);
-            Assert.That(staticMaterial, Is.Not.Null);
-            Assert.That(movingMaterial, Is.Not.SameAs(staticMaterial));
-            Assert.That(
-                movingMaterial.name,
-                Is.EqualTo("M_TEMP_ManualReviewCube_Moving"));
-            Assert.That(
-                staticMaterial.name,
-                Is.EqualTo("M_TEMP_ManualReviewCube_Static"));
-            Assert.That(
-                movingMaterial.shader.name,
-                Is.EqualTo("Universal Render Pipeline/Lit"));
-            Assert.That(
-                staticMaterial.shader.name,
-                Is.EqualTo("Universal Render Pipeline/Lit"));
-            Assert.That(movingMaterial.HasProperty("_BaseColor"), Is.True);
-            Assert.That(staticMaterial.HasProperty("_BaseColor"), Is.True);
-            AssertColorWithinTolerance(
-                movingMaterial.GetColor("_BaseColor"),
-                new Color(0.92f, 0.36f, 0.20f, 1f));
-            AssertColorWithinTolerance(
-                staticMaterial.GetColor("_BaseColor"),
-                new Color(0.32f, 0.62f, 0.42f, 1f));
+                environmentRoot.transform.Find(
+                    "P4_Wall_BackRight/P4_Window_BackRight_C3_R0"),
+                Is.Not.Null);
+            Assert.That(decorationRoot, Is.Not.Null);
+            Assert.That(decorationRoot.transform.Find("DecorationSpaceRoot"), Is.Not.Null);
+            Assert.That(GameObject.Find("DecorationModeButton"), Is.Not.Null);
 
             Assert.That(runtimeRoot, Is.Not.Null);
             Assert.That(runtimeRoot.GetComponent<GameTimeService>(), Is.Not.Null);
@@ -846,17 +776,6 @@ namespace AnimalCafe.Tests.PlayMode
             var material = new Material(shader);
             gameObject.GetComponent<Renderer>().sharedMaterial = material;
             return material;
-        }
-
-        private static void AssertColorWithinTolerance(
-            Color actual,
-            Color expected)
-        {
-            const float tolerance = 0.001f;
-            Assert.That(actual.r, Is.EqualTo(expected.r).Within(tolerance));
-            Assert.That(actual.g, Is.EqualTo(expected.g).Within(tolerance));
-            Assert.That(actual.b, Is.EqualTo(expected.b).Within(tolerance));
-            Assert.That(actual.a, Is.EqualTo(expected.a).Within(tolerance));
         }
 
         private static int CountLoadedSceneObjects(string objectName)

@@ -43,17 +43,24 @@ namespace AnimalCafe.Tests.Phase5
 
             var panel = uiRoot.GetComponentsInChildren<TimeControlPanel>(true).Single();
             var buttons = panel.GetComponentsInChildren<Button>(true);
+            var timeButtons = buttons.Where(button =>
+                button.name == "PauseButton"
+                || button.name == "NormalButton"
+                || button.name == "FastButton").ToArray();
             CollectionAssert.AreEquivalent(
                 new[] { "PauseButton", "NormalButton", "FastButton" },
-                buttons.Select(button => button.name));
+                timeButtons.Select(button => button.name));
             Assert.That(panel.GetComponentsInChildren<Text>(true), Is.Empty);
-            Assert.That(panel.GetComponentsInChildren<TMP_Text>(true), Has.Length.EqualTo(3));
+            var timeLabels = timeButtons.Select(button =>
+                button.GetComponentInChildren<TMP_Text>(true)).ToArray();
+            Assert.That(timeLabels, Has.Length.EqualTo(3));
             Assert.That(theme, Is.Not.Null);
-            Assert.That(panel.GetComponentsInChildren<TMP_Text>(true)
-                .All(label => label.font == theme.Typography.Label.FontAsset), Is.True);
-            Assert.That(panel.GetComponentsInChildren<AnimalCafeButtonView>(true), Has.Length.EqualTo(3),
+            Assert.That(timeLabels.All(label =>
+                label.font == theme.Typography.Label.FontAsset), Is.True);
+            Assert.That(timeButtons.All(button =>
+                button.GetComponent<AnimalCafeButtonView>() != null), Is.True,
                 "MainCafe time controls must use the reusable Phase 5 Button presentation.");
-            Assert.That(buttons.All(button => button.GetComponent<Shadow>() != null), Is.True,
+            Assert.That(timeButtons.All(button => button.GetComponent<Shadow>() != null), Is.True,
                 "MainCafe time controls must keep the Phase 5 elevation cue.");
         }
 

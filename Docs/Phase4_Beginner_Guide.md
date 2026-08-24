@@ -229,19 +229,17 @@ Pause / `1x` / `2x` 按钮：
 
 1. 保存当前 Scene，打开 `Assets/Scenes/MainCafe.unity` 并进入 Play Mode。
 2. 依次检查 Pause、`1x`、`2x`；每一步都查看 Console 是否出现新的 P4 error。
-3. 在 Hierarchy 展开 `TEMP_P4_ManualReviewFixtures_DELETE_LATER`；使用已配置好的
-   `ReviewCube_Moving` 和 `ReviewCube_Static`，不要再创建额外 Cube。
-4. 用 `ReviewCube_Moving` 检查 Pause、`1x`、`2x` 的移动速度；用两个 cubes 作为
-   Camera drag/scroll 的视觉参照。
-5. 分别点击两个 cubes，再点击空白处，检查 select/deselect；两者已经包含
-   `BoxCollider`、`ColorSelectable` 和各自的 URP Lit material。
+3. 在 Hierarchy 展开正式的 `P4_Environment`，确认 Floor、两面 Wall、Entrance 和 Window
+   都来自 Phase 4 canonical Prefab；不要再创建额外 Cube。
+4. 使用正式场景里的 Floor、Wall、Window 和初始 Counter 作为 Camera drag/scroll 的视觉参照。
+5. 点击右上角 `DecorationModeButton`，确认 catalogue、grid highlight 与正式 Counter 可读；
+   退出 Decoration Mode 后再点击空白处，确认 Phase 0 interaction 仍然正常。
 6. 退出 Play Mode；确认没有新增 runtime-only object，也没有把测试期间的 Transform
-   或 Component 修改写回 Scene。两个 committed review cubes 会继续存在，这是预期结果。
+   或 Component 修改写回 Scene。旧的 temporary review cubes 已由 Phase 6 migration 移除。
 7. 确认 `MainCafe.unity` 没有未保存修改，再返回 Phase4CoreArchitecture Validation Scene。
 
-这两个 committed review cubes 会保留到 MainCafe 有正式视觉参照物时再删除。届时必须同时删除
-Scene root、两个 `M_TEMP_ManualReviewCube_*` materials、setup utility、无剩余引用的 mover，
-并同步更新对应 PlayMode regression tests。
+`MainCafe` 现在使用正式的 `P4_Environment` 与 `Phase6_DecorationRuntime` fixture。Phase 4 的
+`ManualReviewPingPongMover` 仍由 Phase 5/manual-review consumer 使用，不属于这次清理范围。
 
 | ID | 亲自执行/观察的检查 | Status | Evidence |
 |---|---|---|---|
@@ -255,9 +253,9 @@ Scene root、两个 `M_TEMP_ManualReviewCube_*` materials、setup utility、无�
 | M80 | 在第二个不同 Aspect/分辨率下重复 M79。 | Passed | 分辨率/Aspect；截图。 |
 | M81 | 退出 Play Mode 前后查看 Console，确认没有新增未解释的 P4 error。 | Passed | Console 截图；error count。 |
 | M82 | 打开 `Assets/Scenes/MainCafe.unity`，确认旧场景仍能启动；然后返回 Validation Scene。 | Passed | MainCafe Play Mode 截图；操作记录。 |
-| M83 | 在 `MainCafe` Play Mode 使用 `ReviewCube_Moving` 和 `ReviewCube_Static` 作为视觉参照，检查 Camera pan/zoom 仍可工作。 | Passed | drag/scroll 操作、Camera Transform/Size 与结果。 |
-| M84 | 分别点击两个已配置 `ColorSelectable` 的 review cubes，再点击空白处，确认 select/deselect 没有被 P4 干扰。 | Passed | Cube 选中颜色变化及取消选择结果。 |
-| M85 | 退出 MainCafe Play Mode，确认没有额外 runtime-only object 或测试修改写回 Scene；两个 committed review cubes 仍存在。 | Passed | 退出后 Hierarchy、Scene dirty 状态与无未保存修改证据。 |
+| M83 | 在 `MainCafe` Play Mode 使用正式 Floor、Wall、Window 和初始 Counter 作为视觉参照，检查 Camera pan/zoom 仍可工作。 | Passed | drag/scroll 操作、Camera Transform/Size 与结果。 |
+| M84 | 进入 Decoration Mode 选择正式 Counter，再取消并点击空白处，确认 Phase 6 与 Phase 0 interaction 没有互相干扰。 | Passed | Counter preview/highlight、取消与空白点击结果。 |
+| M85 | 退出 MainCafe Play Mode，确认没有额外 runtime-only object 或测试修改写回 Scene；旧 temporary review cubes 保持不存在。 | Passed | 退出后 Hierarchy、Scene dirty 状态与无未保存修改证据。 |
 | M86 | 退出 Play Mode 后重跑 P3 benchmark validator，记录 `3 / 3 valid, 0 issues` 或完整实际 issue。 | Passed | Console 输出/报告路径。 |
 | M87 | 退出 Play Mode 后重跑 P4 production validator，记录 `5 / 5 valid, 0 issues` 或完整实际 issue。 | Passed | Console 输出/报告路径。 |
 | M88 | 汇总实际 M01–M87、Cash Register rights、自动化证据、已知限制；只有全部 required gates 已接受时，才提交是否更新 Roadmap 的 Studio Owner 决定。 | Passed | 2026-08-08；Studio Owner 明确要求其他项目完成后将 M88 标为完成；Roadmap 更新为 Phase 4 `Completed`。 |

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using AnimalCafe.Core.Events;
 using AnimalCafe.Input;
@@ -27,8 +28,28 @@ namespace AnimalCafe.Interaction
         private readonly HashSet<int> pendingScenePointerPresses = new();
         private readonly HashSet<int> activePointerIds = new();
         private readonly HashSet<int> suppressedPointerIds = new();
+        private readonly HashSet<long> inputSuppressionTokens = new();
+        private long nextInputSuppressionToken;
+        private bool waitForFreshPointerPress;
 
         public ISelectable CurrentSelection { get; private set; }
+
+        public IDisposable AcquireInputSuppression(object owner)
+        {
+            if (owner == null)
+            {
+                throw new ArgumentNullException(nameof(owner));
+            }
+
+            if (inputSuppressionTokens.Count == 0)
+            {
+                ReleaseActivePointerOwnership();
+            }
+
+            var token = NextInputSuppressionToken();
+            inputSuppressionTokens.Add(token);
+            return new InputSuppressionLease(this, token);
+        }
 
         private void Start()
         {
@@ -44,14 +65,37 @@ namespace AnimalCafe.Interaction
 
         private void LateUpdate()
         {
-            ClearInvalidSelection();
+            if (inputSuppressionTokens.Count == 0)
+            {
+                ClearInvalidSelection();
+            }
+
             if (inputSource == null)
             {
                 return;
             }
 
-            RegisterPendingScenePointerPresses();
             var inputFrame = inputSource.ReadFrame();
+
+            if (inputSuppressionTokens.Count > 0)
+            {
+                DrainSuppressedPointerFrame(inputFrame);
+                return;
+            }
+
+            if (waitForFreshPointerPress)
+            {
+                if (!inputFrame.PointerPressed)
+                {
+                    DrainSuppressedPointerFrame(inputFrame);
+                    return;
+                }
+
+                waitForFreshPointerPress = false;
+                suppressedPointerIds.Remove(inputFrame.PointerId);
+            }
+
+            RegisterPendingScenePointerPresses();
             if (inputFrame.PointerPressed)
             {
                 suppressedPointerIds.Remove(inputFrame.PointerId);
@@ -98,7 +142,10 @@ namespace AnimalCafe.Interaction
         private void OnDisable()
         {
             ReleaseActivePointerOwnership();
-            ClearSelection();
+            if (inputSuppressionTokens.Count == 0)
+            {
+                ClearSelection();
+            }
         }
 
         public void Configure(
@@ -164,6 +211,11 @@ namespace AnimalCafe.Interaction
 
         public bool TrySelectAt(Vector2 screenPosition)
         {
+            if (inputSuppressionTokens.Count > 0 || waitForFreshPointerPress)
+            {
+                return false;
+            }
+
             if (targetCamera == null)
             {
                 ClearSelection();
@@ -242,6 +294,77 @@ namespace AnimalCafe.Interaction
             }
 
             return null;
+        }
+
+        private long NextInputSuppressionToken()
+        {
+            do
+            {
+                unchecked
+                {
+                    nextInputSuppressionToken++;
+                }
+            }
+            while (inputSuppressionTokens.Contains(nextInputSuppressionToken));
+
+            return nextInputSuppressionToken;
+        }
+
+        private void ReleaseInputSuppression(long token)
+        {
+            if (!inputSuppressionTokens.Remove(token)
+                || inputSuppressionTokens.Count > 0)
+            {
+                return;
+            }
+
+            // The release which closed Decoration mode may arrive after the lease.
+            // Only a later fresh press is allowed to restore Scene interaction.
+            waitForFreshPointerPress = true;
+        }
+
+        private void DrainSuppressedPointerFrame(CameraInputFrame inputFrame)
+        {
+            if (inputFrame.PointerPressed)
+            {
+                suppressedPointerIds.Add(inputFrame.PointerId);
+            }
+
+            if (!inputFrame.PointerReleased)
+            {
+                return;
+            }
+
+            uiPointerBoundary?.ReleasePointer(inputFrame.PointerId);
+            pendingScenePointerPresses.Remove(inputFrame.PointerId);
+            activePointerIds.Remove(inputFrame.PointerId);
+            suppressedPointerIds.Remove(inputFrame.PointerId);
+        }
+
+        private sealed class InputSuppressionLease : IDisposable
+        {
+            private SceneInteractionController owner;
+            private readonly long token;
+
+            public InputSuppressionLease(
+                SceneInteractionController controller,
+                long suppressionToken)
+            {
+                owner = controller;
+                token = suppressionToken;
+            }
+
+            public void Dispose()
+            {
+                var currentOwner = owner;
+                if (currentOwner == null)
+                {
+                    return;
+                }
+
+                owner = null;
+                currentOwner.ReleaseInputSuppression(token);
+            }
         }
     }
 }

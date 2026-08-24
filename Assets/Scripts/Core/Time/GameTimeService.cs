@@ -10,6 +10,7 @@ namespace AnimalCafe.Core.Time
     public sealed class GameTimeService : MonoBehaviour, IGameTimeService
     {
         private static GameTimeService activeOwner;
+        private GameSpeed lastRunningSpeed = GameSpeed.Normal;
 
         public GameSpeed CurrentSpeed { get; private set; } = GameSpeed.Normal;
 
@@ -56,6 +57,11 @@ namespace AnimalCafe.Core.Time
 
             var previous = CurrentSpeed;
             CurrentSpeed = speed;
+            if (speed != GameSpeed.Paused)
+            {
+                lastRunningSpeed = speed;
+            }
+
             UnityEngine.Time.timeScale = (float)speed;
             GameEventBus.PublishGameSpeedChanged(previous, speed);
             return true;
@@ -64,6 +70,17 @@ namespace AnimalCafe.Core.Time
         public void SetPaused()
         {
             TrySetSpeed(GameSpeed.Paused);
+        }
+
+        /// <summary>
+        /// Pause the game, or resume the speed that was active before Pause.
+        /// 暂停游戏，或恢复暂停前使用的速度。
+        /// </summary>
+        public void TogglePaused()
+        {
+            TrySetSpeed(CurrentSpeed == GameSpeed.Paused
+                ? lastRunningSpeed
+                : GameSpeed.Paused);
         }
 
         public void SetNormal()

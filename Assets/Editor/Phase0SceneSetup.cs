@@ -138,6 +138,17 @@ namespace AnimalCafe.EditorTools
         private static void ConfigureTimeControls(Scene scene, Transform uiRoot)
         {
             RemoveNamedObjects(scene, LegacyCanvasName);
+            var runtimeRoot = FindOrCreateOwnedRoot(scene, RuntimeRootName);
+            var service = runtimeRoot.GetComponent<GameTimeService>();
+            var rightRail = uiRoot.GetComponentsInChildren<TimeControlPanel>(true)
+                .SingleOrDefault(panel => panel.name == "RightRail");
+            if (rightRail != null)
+            {
+                RemoveNamedObjects(scene, "TimePanel");
+                SetObjectReference(rightRail, "gameTimeService", service);
+                return;
+            }
+
             var theme = AssetDatabase.LoadAssetAtPath<AnimalCafeUiTheme>(Phase5UiAssetPaths.ThemePath)
                 ?? throw new InvalidOperationException("Phase 5 UI theme is missing.");
             var hudLayer = uiRoot.Find("HUD Canvas/HUD Layer")
@@ -154,8 +165,6 @@ namespace AnimalCafe.EditorTools
             var normal = CreateButton(panelObject.transform, "NormalButton", "1x", 0f, theme);
             var fast = CreateButton(panelObject.transform, "FastButton", "2x", 110f, theme);
             var panel = GetOrAdd<TimeControlPanel>(panelObject);
-            var runtimeRoot = FindOrCreateOwnedRoot(scene, RuntimeRootName);
-            var service = runtimeRoot.GetComponent<GameTimeService>();
             SetObjectReference(panel, "gameTimeService", service);
             SetObjectReference(panel, "pauseButton", pause);
             SetObjectReference(panel, "normalButton", normal);

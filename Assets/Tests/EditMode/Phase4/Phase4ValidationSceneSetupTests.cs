@@ -285,7 +285,7 @@ namespace AnimalCafe.Tests.Phase4
         }
 
         [Test]
-        public void BeginnerGuide_TimeControlsAndCommittedReviewFixturesUseMainCafe()
+        public void BeginnerGuide_TimeControlsAndFormalPhase4Phase6FixturesUseMainCafe()
         {
             var guidePath = Path.Combine(
                 Directory.GetParent(Application.dataPath).FullName,
@@ -293,13 +293,11 @@ namespace AnimalCafe.Tests.Phase4
             var guide = File.ReadAllText(guidePath);
 
             Assert.That(guide, Does.Contain("M76–M78 必须在 MainCafe 完成"));
-            Assert.That(guide, Does.Contain("ColorSelectable"));
-            Assert.That(
-                guide,
-                Does.Contain("TEMP_P4_ManualReviewFixtures_DELETE_LATER"));
-            Assert.That(guide, Does.Contain("ReviewCube_Moving"));
-            Assert.That(guide, Does.Contain("ReviewCube_Static"));
-            Assert.That(guide, Does.Contain("committed review cubes"));
+            Assert.That(guide, Does.Contain("P4_Environment"));
+            Assert.That(guide, Does.Contain("Phase6_DecorationRuntime"));
+            Assert.That(guide, Does.Contain("DecorationModeButton"));
+            Assert.That(guide, Does.Contain("初始 Counter"));
+            Assert.That(guide, Does.Contain("旧的 temporary review cubes 已由 Phase 6 migration 移除"));
             Assert.That(guide, Does.Not.Contain("Create > 3D Object > Cube"));
             Assert.That(guide, Does.Contain("返回 Phase4CoreArchitecture"));
         }

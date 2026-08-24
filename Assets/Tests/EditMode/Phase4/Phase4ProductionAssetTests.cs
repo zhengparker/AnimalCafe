@@ -475,8 +475,8 @@ namespace AnimalCafe.Tests.Phase4
 
             var report = Phase4AssetValidator.ValidateAll();
 
-            Assert.That(report.AssetCount, Is.EqualTo(5));
-            Assert.That(report.ValidAssetCount, Is.EqualTo(5));
+            Assert.That(report.AssetCount, Is.EqualTo(8));
+            Assert.That(report.ValidAssetCount, Is.EqualTo(8));
             Assert.That(report.InvalidAssetCount, Is.Zero);
             Assert.That(report.Issues, Is.Empty);
         }
