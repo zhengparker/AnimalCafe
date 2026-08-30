@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using AnimalCafe.Content;
 using AnimalCafe.Layout;
 using UnityEngine;
@@ -14,6 +16,56 @@ namespace AnimalCafe.Decoration
         [SerializeField] private EntrancePortalAuthoring entrancePortal;
 
         public CafeLayout Layout { get; private set; }
+        public RoomSurfaceLayout RoomSurfaceLayout { get; private set; }
+        public WallMountedLayout WallMountedLayout { get; private set; }
+
+        public void InitializePhase7Layouts(
+            string roomId,
+            IEnumerable<WallSurfaceAuthoring> wallAuthoring,
+            string initialWallBaseStyleId,
+            string initialFloorStyleId)
+        {
+            if (RoomSurfaceLayout != null || WallMountedLayout != null)
+            {
+                return;
+            }
+
+            if (wallAuthoring == null)
+            {
+                throw new ArgumentNullException(nameof(wallAuthoring));
+            }
+
+            var authoredWalls = wallAuthoring.ToArray();
+            if (authoredWalls.Any(item => item == null))
+            {
+                throw new ArgumentException(
+                    "Wall authoring cannot contain null entries.",
+                    nameof(wallAuthoring));
+            }
+
+            var appearances = authoredWalls.Select(item =>
+                new WallAppearance(item.SurfaceId, initialWallBaseStyleId, null));
+            var floorTiles = new List<FloorTileAppearance>(64);
+            for (var x = 0; x < 8; x++)
+            {
+                for (var y = 0; y < 8; y++)
+                {
+                    floorTiles.Add(new FloorTileAppearance(
+                        new GridPosition(x, y),
+                        initialFloorStyleId,
+                        SurfaceRotation.Degrees0));
+                }
+            }
+
+            var surfaceLayouts = authoredWalls.Select(item =>
+                new WallSurfaceLayout(item.SurfaceId, item.Columns, item.Rows));
+
+            // Build both candidates before publishing either property.
+            var roomCandidate = new RoomSurfaceLayout(roomId, appearances, floorTiles);
+            var mountedCandidate = new WallMountedLayout(surfaceLayouts);
+            RoomSurfaceLayout = roomCandidate;
+            WallMountedLayout = mountedCandidate;
+        }
 
         internal bool UsesContentCatalog(FurnitureContentCatalog candidate)
         {

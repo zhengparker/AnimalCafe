@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a054455c6b74a938a478798c9ec5ced, type: 3}
+  m_Name: SC_Wainscoting_Phase7
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Content.SurfaceStyleCatalogueAsset
+  kind: 2
+  entries:
+  - {fileID: 11400000, guid: d7491baa095d22c47aad4ada17cb69ea, type: 2}
+  - {fileID: 11400000, guid: c6f51cf7dbc28ec4aafbc07b7f247a4f, type: 2}
+  - {fileID: 11400000, guid: 91dfef9cc8e34c8499e1c4a18966edfb, type: 2}

@@ -9,6 +9,7 @@ namespace AnimalCafe.Decoration.Input
         None,
         Ui,
         Furniture,
+        SceneDrag,
         Camera,
         Pinch
     }
@@ -18,7 +19,11 @@ namespace AnimalCafe.Decoration.Input
         None,
         Ui,
         Furniture,
-        Scene
+        Scene,
+        FloorGrid,
+        WallSurface,
+        WallSlot,
+        WallMounted
     }
 
     public readonly struct DecorationTouchPoint

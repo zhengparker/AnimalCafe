@@ -20,17 +20,71 @@ namespace AnimalCafe.UI.Decoration
         [SerializeField] private TMP_Text footprintLabel;
         [SerializeField] private TMP_Text warningLabel;
         [SerializeField] private GameObject warningShape;
+        [SerializeField] private GameObject usingCheck;
+        [SerializeField] private GameObject previewOutline;
+        [SerializeField] private GameObject noneIcon;
 
         private Action<FurnitureDefinitionAsset> selected;
 
         public FurnitureDefinitionAsset Definition { get; private set; }
+        public string ItemId { get; private set; }
+
+        /// <summary>
+        /// Supplies the view references for an isolated runtime fallback tile.
+        /// Prefabs continue to use their serialized references.
+        /// 为独立运行时 fallback tile 提供 view 引用；Prefab 仍使用 serialized 引用。
+        /// </summary>
+        public void ConfigureRuntimeViews(Button targetButton, Image targetThumbnail,
+            TMP_Text targetNameLabel, GameObject targetUsingCheck,
+            GameObject targetPreviewOutline, GameObject targetNoneIcon)
+        {
+            ClearBinding();
+            button = targetButton;
+            thumbnailImage = targetThumbnail;
+            nameLabel = targetNameLabel;
+            usingCheck = targetUsingCheck;
+            previewOutline = targetPreviewOutline;
+            noneIcon = targetNoneIcon;
+        }
+
+        public void Bind(DecorationCatalogueItemModel item, Action<DecorationCatalogueItemModel> onSelected)
+        {
+            ClearBinding();
+            ItemId = item?.ItemId; boundItem = item;
+            Definition = item?.FurnitureDefinition;
+            var surface = item != null && (item.Kind == DecorationCatalogueItemKind.Floor || item.Kind == DecorationCatalogueItemKind.WallSurface);
+            if (nameLabel != null) { nameLabel.gameObject.SetActive(!surface); nameLabel.text = surface || item == null ? string.Empty : item.DisplayName; }
+            if (footprintLabel != null) footprintLabel.gameObject.SetActive(false);
+            if (thumbnailImage != null)
+            {
+                thumbnailImage.sprite = item?.Thumbnail;
+                thumbnailImage.enabled = item?.Thumbnail != null;
+                var thumbnailRect = thumbnailImage.rectTransform;
+                thumbnailRect.anchorMin = new Vector2(thumbnailRect.anchorMin.x, surface ? 0f : .22f);
+                var minimum = thumbnailRect.offsetMin;
+                minimum.y = surface ? 6f : 4f;
+                thumbnailRect.offsetMin = minimum;
+            }
+            usingCheck?.SetActive(false); previewOutline?.SetActive(false); noneIcon?.SetActive(item != null && item.IsNoneOption);
+            if (button != null) { button.interactable = item != null; button.onClick.RemoveListener(HandleModelClick); selectedModel = onSelected; button.onClick.AddListener(HandleModelClick); }
+        }
+        public void SetSurfaceState(bool isUsing, bool isPreview)
+        {
+            // UnityEngine.Object can retain a managed wrapper after its native object
+            // is missing/destroyed; ?. only checks CLR null and still throws there.
+            if (usingCheck) usingCheck.SetActive(isUsing);
+            if (previewOutline) previewOutline.SetActive(isPreview);
+        }
+        private Action<DecorationCatalogueItemModel> selectedModel;
+        private DecorationCatalogueItemModel boundItem;
+        private void HandleModelClick() { if (boundItem != null) selectedModel?.Invoke(boundItem); }
 
         public bool IsInteractable => isActiveAndEnabled
             && gameObject.activeInHierarchy
             && button != null
             && button.isActiveAndEnabled
             && button.interactable
-            && Definition != null;
+            && (Definition != null || boundItem != null);
 
         public void Configure(IUiPointerOwnershipRegistrar pointerBoundary)
         {
@@ -51,6 +105,7 @@ namespace AnimalCafe.UI.Decoration
             DecorationCatalogueEntry entry,
             Action<FurnitureDefinitionAsset> onSelected)
         {
+            ClearBinding();
             Clear();
             EnsureOwnListener();
             selected = onSelected;
@@ -100,7 +155,7 @@ namespace AnimalCafe.UI.Decoration
 
         public void Clear()
         {
-            button?.onClick.RemoveListener(HandleClick);
+            ClearBinding();
             Definition = null;
             selected = null;
             if (button != null)
@@ -157,7 +212,18 @@ namespace AnimalCafe.UI.Decoration
 
         private void OnDestroy()
         {
+            ClearBinding();
+        }
+        private void ClearBinding()
+        {
             button?.onClick.RemoveListener(HandleClick);
+            button?.onClick.RemoveListener(HandleModelClick);
+            selected = null;
+            selectedModel = null;
+            boundItem = null;
+            Definition = null;
+            ItemId = null;
+            if (button != null) button.interactable = false;
         }
     }
 }

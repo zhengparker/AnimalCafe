@@ -12,7 +12,11 @@ namespace AnimalCafe.Decoration
         Blocked,
         EntranceClearance,
         UnsupportedSurface,
-        MissingInstance
+        MissingInstance,
+        WallOverlap,
+        WallOutOfBounds,
+        WallCrossCorner,
+        WallSurfaceMissing
     }
 
     public static class PlacementFeedbackMapper
@@ -44,6 +48,31 @@ namespace AnimalCafe.Decoration
                 case PlacementFailureReason.InstanceNotFound:
                 case PlacementFailureReason.InstanceAlreadyPlaced:
                     return PlacementFeedbackKey.MissingInstance;
+                default:
+                    return PlacementFeedbackKey.None;
+            }
+        }
+
+        public static PlacementFeedbackKey Map(WallPlacementResult result)
+        {
+            if (result == null)
+            {
+                throw new ArgumentNullException(nameof(result));
+            }
+
+            switch (result.FailureReason)
+            {
+                case WallPlacementFailureReason.None:
+                    return PlacementFeedbackKey.None;
+                case WallPlacementFailureReason.Overlap:
+                    return PlacementFeedbackKey.WallOverlap;
+                case WallPlacementFailureReason.OutOfBounds:
+                    return PlacementFeedbackKey.WallOutOfBounds;
+                case WallPlacementFailureReason.CrossCorner:
+                    return PlacementFeedbackKey.WallCrossCorner;
+                case WallPlacementFailureReason.SurfaceMismatch:
+                case WallPlacementFailureReason.SurfaceMissing:
+                    return PlacementFeedbackKey.WallSurfaceMissing;
                 default:
                     return PlacementFeedbackKey.None;
             }

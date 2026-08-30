@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2de7cfe5940d4cab9ca37cc59c416520, type: 3}
+  m_Name: WMC_Phase7Production
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Content.WallMountedCatalogueAsset
+  kind: 0
+  entries:
+  - {fileID: 11400000, guid: 2cedb16a05b8aca4486f63c8857f5ff3, type: 2}
+  - {fileID: 11400000, guid: d8655deb49935a843b905ef3e2e731c0, type: 2}
+  - {fileID: 11400000, guid: b39986114ee064b408969310192cef84, type: 2}

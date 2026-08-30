@@ -492,16 +492,16 @@ namespace AnimalCafe.Tests.PlayMode
                     .Single(item => item.CompareTag("MainCamera"));
                 var catalogue = FindAll<DecorationCatalogueView>(scene).Single();
                 var floor = ReadPrivate<Collider>(controller, "floorCollider");
+                var registry = FindAll<FurnitureSceneRegistry>(scene).Single();
                 var previewRoot = Find(scene, "FurniturePreviewRoot").transform;
 
                 controller.EnterDecorationMode();
-                yield return WaitUntil(() => catalogue.IsCatalogueVisible
-                        && !catalogue.IsCollapsed,
+                yield return WaitUntil(() => CatalogueExpandedAndSettled(catalogue),
                     2f, "Catalogue did not become expanded.");
                 var collapse = catalogue.transform.Find("ExpandedSheet/CollapseButton")
                     .GetComponent<Button>();
                 yield return ClickButtonWithRealMouse(mouse, collapse);
-                yield return WaitUntil(() => catalogue.IsCollapsed, 2f,
+                yield return WaitUntil(() => CatalogueCollapsedAndSettled(catalogue), 2f,
                     "Real Mouse did not collapse the Catalogue.");
 
                 var blankPoints = FindUiFreeFloorScreenPoints(camera, floor, 2, 96f);
@@ -527,7 +527,7 @@ namespace AnimalCafe.Tests.PlayMode
                     .GetComponent<Button>();
                 var cameraBeforeUi = camera.transform.position;
                 yield return ClickButtonWithRealMouse(mouse, expand);
-                yield return WaitUntil(() => !catalogue.IsCollapsed, 2f,
+                yield return WaitUntil(() => CatalogueExpandedAndSettled(catalogue), 2f,
                     "Real Mouse did not expand the Catalogue.");
                 Assert.That(Vector3.Distance(camera.transform.position, cameraBeforeUi),
                     Is.LessThan(0.001f), "UI release must not pan the Scene.");
@@ -535,34 +535,26 @@ namespace AnimalCafe.Tests.PlayMode
                     "UI release must not select or restart Scene furniture.");
                 Assert.That(previewRoot.childCount, Is.Zero);
 
-                Button floorBackedTile = null;
-                var floorBackedPoint = Vector2.zero;
-                foreach (var button in catalogue
-                             .GetComponentsInChildren<DecorationCatalogueTileView>(true)
-                             .Where(tile => tile.gameObject.activeInHierarchy)
-                             .Select(tile => tile.GetComponent<Button>()))
-                {
-                    if (!TryFindFloorBackedButtonPoint(
-                            camera, floor, button, out floorBackedPoint))
-                    {
-                        continue;
-                    }
-                    floorBackedTile = button;
-                    break;
-                }
-                Assert.That(floorBackedTile, Is.Not.Null,
-                    "UI no-pass evidence requires a real Catalogue tile above the floor.");
+                var worldBackedTile = catalogue
+                    .GetComponentsInChildren<DecorationCatalogueTileView>(true)
+                    .Where(tile => tile.gameObject.activeInHierarchy)
+                    .Select(tile => tile.GetComponent<Button>())
+                    .First();
+                var worldBackedPoint = ButtonCenter(worldBackedTile);
+                Assert.That(registry.TryGet(InitialInstanceId, out var formal), Is.True);
+                PlaceFurnitureBehindScreenPoint(camera, floor, formal, worldBackedPoint);
+                AssertFurnitureUnderScreenPoint(camera, registry, worldBackedPoint, InitialInstanceId);
                 cameraBeforeUi = camera.transform.position;
                 yield return ClickButtonWithRealMouse(
-                    mouse, floorBackedTile, floorBackedPoint);
+                    mouse, worldBackedTile, worldBackedPoint);
                 yield return WaitUntil(() =>
                         controller.State == DecorationSessionState.PreviewingNewFurniture
                         && previewRoot.childCount == 1,
                     2f,
-                    "The floor-backed Catalogue tile did not perform its UI action.");
+                    "The world-backed Catalogue tile did not perform its UI action.");
                 Assert.That(Vector3.Distance(camera.transform.position, cameraBeforeUi),
                     Is.LessThan(0.001f),
-                    "A floor-backed UI press/release must not pan the lower Scene layer.");
+                    "A world-backed UI press/release must not pan the lower Scene layer.");
                 Assert.That(source.HasActivePointer, Is.False);
             }
             finally
@@ -592,7 +584,7 @@ namespace AnimalCafe.Tests.PlayMode
                 controller.EnterDecorationMode();
                 var router = ReadPrivate<DecorationTouchRouter>(controller, "touchRouter");
                 catalogue.ShowCollapsedHandle();
-                yield return WaitUntil(() => catalogue.IsCollapsed, 2f,
+                yield return WaitUntil(() => CatalogueCollapsedAndSettled(catalogue), 2f,
                     "Catalogue did not expose the floor for handoff evidence.");
                 var points = FindUiFreeFloorScreenPoints(camera, floor, 3, 72f);
 
@@ -643,17 +635,18 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(router.Owner, Is.EqualTo(DecorationGestureOwner.None));
 
                 var beforeFreshMousePan = camera.transform.position;
-                QueueMouseState(mouse, points[2], false);
+                var freshMousePoints = FindUiFreeFloorScreenPoints(camera, floor, 2, 72f);
+                QueueMouseState(mouse, freshMousePoints[0], false);
                 yield return null;
-                QueueMouseState(mouse, points[2], true);
+                QueueMouseState(mouse, freshMousePoints[0], true);
                 yield return null;
                 yield return null;
                 Assert.That(ActivePointerFamily(controller), Is.EqualTo("Mouse"));
                 Assert.That(router.Owner, Is.EqualTo(DecorationGestureOwner.Camera));
-                QueueMouseState(mouse, points[0], true);
+                QueueMouseState(mouse, freshMousePoints[1], true);
                 yield return null;
                 yield return null;
-                QueueMouseState(mouse, points[0], false);
+                QueueMouseState(mouse, freshMousePoints[1], false);
                 yield return null;
                 yield return null;
                 Assert.That(Vector3.Distance(camera.transform.position, beforeFreshMousePan),
@@ -693,6 +686,30 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(condition(), Is.True, message);
         }
 
+        private static bool CatalogueExpandedAndSettled(DecorationCatalogueView catalogue)
+        {
+            if (catalogue == null || !catalogue.IsCatalogueVisible || catalogue.IsCollapsed
+                || catalogue.transform is not RectTransform rect)
+            {
+                return false;
+            }
+
+            var target = ReadPrivate<Vector2>(catalogue, "expandedAnchoredPosition");
+            return Vector2.SqrMagnitude(rect.anchoredPosition - target) <= 0.01f;
+        }
+
+        private static bool CatalogueCollapsedAndSettled(DecorationCatalogueView catalogue)
+        {
+            if (catalogue == null || !catalogue.IsCatalogueVisible || !catalogue.IsCollapsed
+                || catalogue.transform is not RectTransform rect)
+            {
+                return false;
+            }
+
+            var target = ReadPrivate<Vector2>(catalogue, "collapsedAnchoredPosition");
+            return Vector2.SqrMagnitude(rect.anchoredPosition - target) <= 0.01f;
+        }
+
         private static IEnumerator ClickButtonWithRealMouse(
             Mouse mouse,
             Button button,
@@ -720,50 +737,34 @@ namespace AnimalCafe.Tests.PlayMode
             yield return null;
         }
 
-        private static bool TryFindFloorBackedButtonPoint(
+        private static void PlaceFurnitureBehindScreenPoint(
             UnityEngine.Camera camera,
             Collider floor,
-            Button button,
-            out Vector2 point)
+            GameObject representation,
+            Vector2 screenPoint)
         {
-            var rect = button.transform as RectTransform;
-            var canvas = button.GetComponentInParent<Canvas>();
-            var eventCamera = canvas != null
-                && canvas.rootCanvas.renderMode != RenderMode.ScreenSpaceOverlay
-                ? canvas.rootCanvas.worldCamera
-                : null;
-            var corners = new Vector3[4];
-            rect.GetWorldCorners(corners);
-            var minimum = RectTransformUtility.WorldToScreenPoint(eventCamera, corners[0]);
-            var maximum = RectTransformUtility.WorldToScreenPoint(eventCamera, corners[2]);
-            for (var y = 1; y <= 4; y++)
-            for (var x = 1; x <= 4; x++)
-            {
-                var candidate = new Vector2(
-                    Mathf.Lerp(minimum.x, maximum.x, x / 5f),
-                    Mathf.Lerp(minimum.y, maximum.y, y / 5f));
-                if (!Physics.RaycastAll(camera.ScreenPointToRay(candidate))
-                        .Any(hit => hit.collider == floor))
-                {
-                    continue;
-                }
+            var ray = camera.ScreenPointToRay(screenPoint);
+            var plane = new Plane(floor.transform.up, floor.bounds.center);
+            Assert.That(plane.Raycast(ray, out var distance), Is.True,
+                "UI pass-through fixture point must intersect the production Floor plane.");
+            representation.transform.position = ray.GetPoint(distance);
+            representation.SetActive(true);
+            Physics.SyncTransforms();
+        }
 
-                var hits = new List<RaycastResult>();
-                EventSystem.current.RaycastAll(
-                    new PointerEventData(EventSystem.current) { position = candidate }, hits);
-                if (hits.Count == 0
-                    || (hits[0].gameObject != button.gameObject
-                        && !hits[0].gameObject.transform.IsChildOf(button.transform)))
-                {
-                    continue;
-                }
-
-                point = candidate;
-                return true;
-            }
-
-            point = default;
-            return false;
+        private static void AssertFurnitureUnderScreenPoint(
+            UnityEngine.Camera camera,
+            FurnitureSceneRegistry registry,
+            Vector2 screenPoint,
+            string expectedInstanceId)
+        {
+            var hits = Physics.RaycastAll(camera.ScreenPointToRay(screenPoint), Mathf.Infinity)
+                .OrderBy(hit => hit.distance)
+                .ToArray();
+            Assert.That(hits.Any(hit => registry.TryGetInstanceId(hit.collider, out var instanceId)
+                    && instanceId == expectedInstanceId),
+                Is.True,
+                "The Catalogue release point must have registry-backed Furniture underneath it.");
         }
 
         private static Vector2 ButtonCenter(Button button)
@@ -970,13 +971,12 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         private static T ReadPrivate<T>(object owner, string fieldName)
-            where T : class
         {
             var field = owner.GetType().GetField(
                 fieldName,
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.That(field, Is.Not.Null, fieldName);
-            return field.GetValue(owner) as T;
+            return (T)field.GetValue(owner);
         }
 
         private static GameObject Find(Scene scene, string name) =>

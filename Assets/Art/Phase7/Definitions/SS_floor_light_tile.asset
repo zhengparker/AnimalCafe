@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d59d136c1834dc3b6be0f7a715fe56f, type: 3}
+  m_Name: SS_floor_light_tile
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Content.SurfaceStyleDefinitionAsset
+  styleId: floor.light-tile
+  displayName: Light Tile
+  kind: 3
+  material: {fileID: 2100000, guid: de5e6890663fde541b5f07dfc6ca1e85, type: 2}
+  thumbnail: {fileID: 21300000, guid: 13dee7b3fc5fb0b4e9a5ea6acaa3c0cf, type: 3}
+  isNoneOption: 0
+  worldTileWidthMeters: 1
+  worldTileHeightMeters: 1
+  verticalMapping: 0

@@ -60,7 +60,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 2100000, guid: 6f056e416e96868488d747ea1566412d, type: 2}
   m_Color: {r: 1, g: 0.97, b: 0.9, a: 1}
@@ -90,7 +90,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5e44e2f9ddf925b4e9b4d2e96e5e3f22, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Components.AnimalCafePanelView
   configuredTheme: {fileID: 11400000, guid: c38d96a83d625a8469ffba1c58d533b0, type: 2}
   requestedStyle: 0
@@ -153,7 +153,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.28, g: 0.43, b: 0.31, a: 1}
@@ -183,7 +183,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -227,11 +227,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7fed7fc909c1d834faf47a4fc682e4d1, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Decoration.DecorationPointerBoundaryEventHook
-  semanticLabel: 
+  semanticLabel:
   tooltipRoot: {fileID: 0}
   tooltipLabel: {fileID: 0}
+  tooltipEnabled: 1
 --- !u!1 &4554421803007379040
 GameObject:
   m_ObjectHideFlags: 0
@@ -290,7 +291,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.28, g: 0.43, b: 0.31, a: 1}
@@ -320,7 +321,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -364,11 +365,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7fed7fc909c1d834faf47a4fc682e4d1, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Decoration.DecorationPointerBoundaryEventHook
-  semanticLabel: 
+  semanticLabel:
   tooltipRoot: {fileID: 0}
   tooltipLabel: {fileID: 0}
+  tooltipEnabled: 1
 --- !u!1 &5971493200684258812
 GameObject:
   m_ObjectHideFlags: 0
@@ -424,7 +426,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -485,7 +487,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 
+  m_ActiveFontFeatures:
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -569,7 +571,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bcb00716c34d0b945b3774565ee9946a, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Components.AnimalCafeModalView
   confirmButton: {fileID: 4508241923473244932}
   cancelButton: {fileID: 6592740280498768361}
@@ -585,7 +587,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 35d0e98b402a6094a9aaf4ce308842fa, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Decoration.DecorationStoreModalView
   modalView: {fileID: 7578404892277374947}
   confirmButton: {fileID: 4508241923473244932}
@@ -651,7 +653,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0.08, g: 0.08, b: 0.08, a: 0.52}
@@ -681,7 +683,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
   m_Navigation:
     m_Mode: 3
@@ -725,11 +727,12 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7fed7fc909c1d834faf47a4fc682e4d1, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Decoration.DecorationPointerBoundaryEventHook
-  semanticLabel: 
+  semanticLabel:
   tooltipRoot: {fileID: 0}
   tooltipLabel: {fileID: 0}
+  tooltipEnabled: 1
 --- !u!1 &7657572274865961837
 GameObject:
   m_ObjectHideFlags: 0
@@ -785,7 +788,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -845,7 +848,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 
+  m_ActiveFontFeatures:
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -922,7 +925,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -982,7 +985,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 
+  m_ActiveFontFeatures:
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -1059,7 +1062,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
@@ -1119,7 +1122,7 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 
+  m_ActiveFontFeatures:
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
@@ -1188,6 +1191,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 52582a571f6a56c4e91914a57a0113b1, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Components.SafeAreaContainer
   autoApplyRuntimeSafeArea: 1

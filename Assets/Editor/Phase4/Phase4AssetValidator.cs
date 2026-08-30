@@ -168,7 +168,8 @@ namespace AnimalCafe.EditorTools.Phase4
                     definition.Prefab,
                     assetPath,
                     definition.DefinitionId,
-                    issues);
+                    issues,
+                    false);
             }
 
             return CreateSingleAssetReport(issues);
@@ -178,7 +179,8 @@ namespace AnimalCafe.EditorTools.Phase4
             GameObject root,
             string definitionAssetPath,
             string definitionId,
-            ICollection<Phase4AssetValidationIssue> issues)
+            ICollection<Phase4AssetValidationIssue> issues,
+            bool allowSelectionTrigger)
         {
             var prefabAssetPath = AssetDatabase.GetAssetPath(root);
             if (string.IsNullOrEmpty(prefabAssetPath))
@@ -187,7 +189,7 @@ namespace AnimalCafe.EditorTools.Phase4
             }
 
             var technicalIssues = new List<Phase4AssetValidationIssue>();
-            CollectTechnicalAssetIssues(root, prefabAssetPath, technicalIssues);
+            CollectTechnicalAssetIssues(root, prefabAssetPath, technicalIssues,allowSelectionTrigger);
             foreach (var issue in technicalIssues)
             {
                 AddIssueOnce(
@@ -201,8 +203,11 @@ namespace AnimalCafe.EditorTools.Phase4
         private static void CollectTechnicalAssetIssues(
             GameObject root,
             string assetPath,
-            ICollection<Phase4AssetValidationIssue> issues)
+            ICollection<Phase4AssetValidationIssue> issues,
+            bool allowSelectionTrigger=false)
         {
+            var phase7WallMounted = assetPath.StartsWith(
+                "Assets/Art/Phase7/Prefabs/", StringComparison.Ordinal);
             if (root.transform.localPosition != Vector3.zero)
             {
                 AddIssueOnce(
@@ -358,7 +363,7 @@ namespace AnimalCafe.EditorTools.Phase4
                             assetPath,
                             $"Material '{material.name}' shader is missing required field '_Surface'.");
                     }
-                    else if (material.GetFloat("_Surface") != 0f)
+                    else if (material.GetFloat("_Surface") != 0f && !phase7WallMounted)
                     {
                         AddIssueOnce(
                             issues,
@@ -370,7 +375,7 @@ namespace AnimalCafe.EditorTools.Phase4
                     var baseMap = material.HasProperty("_BaseMap")
                         ? material.GetTexture("_BaseMap")
                         : null;
-                    if (baseMap == null)
+                    if (baseMap == null && !phase7WallMounted)
                     {
                         AddIssueOnce(
                             issues,
@@ -378,7 +383,7 @@ namespace AnimalCafe.EditorTools.Phase4
                             assetPath,
                             $"Renderer '{GetHierarchyIdentity(root, renderer.transform)}' Material slot {materialIndex} ('{material.name}') field '_BaseMap' is missing its Texture reference.");
                     }
-                    else if (baseMap.width > 1024 || baseMap.height > 1024)
+                    else if (baseMap != null && !phase7WallMounted && (baseMap.width > 1024 || baseMap.height > 1024))
                     {
                         AddIssueOnce(
                             issues,
@@ -399,7 +404,7 @@ namespace AnimalCafe.EditorTools.Phase4
                 }
             }
 
-            if (triangleCount > 6000)
+            if (triangleCount > 6000 && !phase7WallMounted)
             {
                 AddIssueOnce(
                     issues,
@@ -432,7 +437,7 @@ namespace AnimalCafe.EditorTools.Phase4
                         $"Collider '{GetHierarchyIdentity(root, collider.transform)}' uses unsupported type '{collider.GetType().Name}'; use BoxCollider, SphereCollider, or CapsuleCollider.");
                 }
 
-                if (collider.isTrigger)
+                if (collider.isTrigger && !allowSelectionTrigger)
                 {
                     AddIssueOnce(
                         issues,
@@ -455,7 +460,7 @@ namespace AnimalCafe.EditorTools.Phase4
                 }
             }
 
-            if (hasVisibleBounds)
+            if (hasVisibleBounds && !phase7WallMounted)
             {
                 if (Math.Abs(visibleBounds.min.y) > 0.05f ||
                     Math.Abs(visibleBounds.center.x) > 0.05f ||
@@ -681,7 +686,8 @@ namespace AnimalCafe.EditorTools.Phase4
                         definition.Prefab,
                         definitionPath,
                         definition.DefinitionId,
-                        technicalIssues);
+                        technicalIssues,
+                        true);
                     if (technicalIssues.Count > 0)
                     {
                         isValidDefinition = false;

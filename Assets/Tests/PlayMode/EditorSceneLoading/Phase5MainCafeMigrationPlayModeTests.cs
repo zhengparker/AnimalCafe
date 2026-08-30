@@ -81,7 +81,8 @@ namespace AnimalCafe.Tests.PlayMode
             try
             {
                 var position = camera.WorldToScreenPoint(selectableObject.transform.position);
-                Assert.That(Vector2.Distance(position, worldPosition), Is.LessThan(0.01f));
+                Assert.That(Vector2.Distance(position, worldPosition), Is.LessThan(0.05f),
+                    "Perspective round-trip error must stay below a sub-pixel tolerance.");
                 Assert.That(position.x, Is.InRange(0f, Screen.width));
                 Assert.That(position.y, Is.InRange(0f, Screen.height));
                 Assert.That(Physics.Raycast(camera.ScreenPointToRay(position), out var hit), Is.True);

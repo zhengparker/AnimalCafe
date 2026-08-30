@@ -119,6 +119,8 @@ namespace AnimalCafe.EditorTools.Phase6
     /// </summary>
     public static class Phase6DecorationSceneSetup
     {
+        private const string Phase7CataloguePrefabPath="Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationCatalogue.prefab";
+        private const string Phase7ActionBarPrefabPath="Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationActionBar.prefab";
         private const string FloorPrefabPath =
             "Assets/Art/Phase4/Environment/Prefabs/PF_Environment_Floor_8x8.prefab";
         private const string BackLeftPrefabPath =
@@ -597,7 +599,8 @@ namespace AnimalCafe.EditorTools.Phase6
                     Quaternion.identity);
                 changed = true;
             }
-            changed |= EnsureClosedActiveUiRoot(catalogueObject);
+            if(!IsExactPhase7Upgrade(catalogueObject,Phase7CataloguePrefabPath))
+                changed |= EnsureClosedActiveUiRoot(catalogueObject);
             var actionObject = FindNamed(scene, "PF_UI_DecorationActionBar")
                 .SingleOrDefault();
             if (actionObject == null)
@@ -610,7 +613,8 @@ namespace AnimalCafe.EditorTools.Phase6
                     Quaternion.identity);
                 changed = true;
             }
-            changed |= EnsureClosedActiveUiRoot(actionObject);
+            if(!IsExactPhase7Upgrade(actionObject,Phase7ActionBarPrefabPath))
+                changed |= EnsureClosedActiveUiRoot(actionObject);
             var modalObject = FindNamed(scene, "PF_UI_DecorationStoreModal")
                 .SingleOrDefault();
             if (modalObject == null)
@@ -702,14 +706,16 @@ namespace AnimalCafe.EditorTools.Phase6
             var catalogue = FindNamed(scene, "PF_UI_DecorationCatalogue").SingleOrDefault();
             var action = FindNamed(scene, "PF_UI_DecorationActionBar").SingleOrDefault();
             var modal = FindNamed(scene, "PF_UI_DecorationStoreModal").SingleOrDefault();
+            var phase7Catalogue=catalogue!=null&&IsExactPhase7Upgrade(catalogue,Phase7CataloguePrefabPath);
+            var phase7Action=action!=null&&IsExactPhase7Upgrade(action,Phase7ActionBarPrefabPath);
             if (catalogue != null
                 && (!HasPrefabSource(catalogue,
-                        Phase6DecorationAssetPaths.DecorationCataloguePrefabPath)
+                        Phase6DecorationAssetPaths.DecorationCataloguePrefabPath)&&!phase7Catalogue
                     || catalogue.GetComponent<BoxCollider>() != null))
                 throw new InvalidOperationException("Decoration catalogue UI contains hostile drift.");
             if (action != null
                 && !HasPrefabSource(action,
-                    Phase6DecorationAssetPaths.DecorationActionBarPrefabPath))
+                    Phase6DecorationAssetPaths.DecorationActionBarPrefabPath)&&!phase7Action)
                 throw new InvalidOperationException("Decoration action bar UI contains hostile drift.");
             if (modal != null)
             {
@@ -719,6 +725,12 @@ namespace AnimalCafe.EditorTools.Phase6
                     || rect == null
                     || rect.anchoredPosition != Vector2.zero)
                     throw new InvalidOperationException("Decoration store modal UI contains hostile drift.");
+            }
+            if(phase7Catalogue&&phase7Action)
+            {
+                if(!catalogue.activeSelf||!action.activeSelf||action.transform.GetSiblingIndex()<catalogue.transform.GetSiblingIndex())
+                    throw new InvalidOperationException("Canonical Phase 7 decoration UI activation or sibling order drifted.");
+                return;
             }
             if (catalogue != null && action != null && modal != null)
             {
@@ -743,6 +755,45 @@ namespace AnimalCafe.EditorTools.Phase6
                     PrefabUtility.GetCorrespondingObjectFromSource(instance)),
                 path,
                 StringComparison.Ordinal);
+
+        private static bool IsExactPhase7Upgrade(GameObject instance,string path)
+        {
+            if(instance==null||!instance.activeSelf||!HasPrefabSource(instance,path))return false;
+            var source=AssetDatabase.LoadAssetAtPath<GameObject>(path);if(source==null)return false;
+            var instanceGraph = BuildComponentGraph(instance);
+            if (string.Equals(path, Phase7CataloguePrefabPath, StringComparison.Ordinal))
+            {
+                // Phase 7 authors the Floor range controls into MainCafe under
+                // the prefab's SurfaceFooterHost. Their exact structure is
+                // validated by Phase7MainCafeMigrationTests; ignore only that
+                // approved Scene-owned subtree while retaining hostile-drift
+                // checks for every prefab-authored component.
+                instanceGraph = instanceGraph.Where(signature =>
+                    !IsPhase7SceneOwnedFloorRangeSignature(signature));
+            }
+
+            return instanceGraph.SequenceEqual(BuildComponentGraph(source),StringComparer.Ordinal);
+        }
+
+        private static bool IsPhase7SceneOwnedFloorRangeSignature(string signature)
+        {
+            const string root = "SurfaceFooterHost/FloorRange";
+            return signature.StartsWith(root + "|", StringComparison.Ordinal)
+                || signature.StartsWith(root + "/", StringComparison.Ordinal);
+        }
+
+        private static IEnumerable<string> BuildComponentGraph(GameObject root)=>root
+            .GetComponentsInChildren<Transform>(true)
+            .SelectMany(transform=>transform.GetComponents<Component>().Select(component=>
+                GetRelativePath(root.transform,transform)+"|"+(component==null?"<missing>":component.GetType().FullName)))
+            .OrderBy(signature=>signature,StringComparer.Ordinal);
+
+        private static string GetRelativePath(Transform root,Transform current)
+        {
+            if(current==root)return string.Empty;var names=new Stack<string>();
+            while(current!=null&&current!=root){names.Push(current.name);current=current.parent;}
+            return string.Join("/",names);
+        }
 
         private static GameObject[] FindNamed(Scene scene, string name) =>
             scene.GetRootGameObjects()

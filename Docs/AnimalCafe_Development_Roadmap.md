@@ -8,7 +8,7 @@
 >
 > 正式目标平台：Android 与 iOS
 >
-> 更新日期：2026-08-11
+> 更新日期：2026-08-29
 
 ## 1. 文档用途
 
@@ -16,6 +16,7 @@
 
 - `AnimalCafe_Project_Design.md` 是长期游戏规则的 Source of Truth。
 - 本文档定义 implementation 顺序、system dependencies、risks 和 phase gates。
+- `AnimalCafe_Phase_Development_Process.md` 定义所有 Phase 的默认开发、测试、review 和 evidence 流程；从 Phase 6 剩余收尾立即生效。
 - Phase 0 保持已完成状态；Phase 1–52 采用 dependency-driven 小阶段。
 - 每个 Phase 只承担一个主要技术风险，并拥有独立 design、implementation plan 和 tests。
 - 每个 Phase 使用独立的 `Docs/PhaseN_Beginner_Guide.md` 作为 beginner educational note；不能把多个 Phase 的教学内容混入同一个 guide。
@@ -70,7 +71,21 @@ AnimalCafe 使用 **Dependency-driven Small Phases + Playable Milestones**。
 
 多个小 Phase 共同形成一个玩家可感知的 Major Milestone。
 
-### 3.1 为什么不是先完成整个装修系统
+### 3.1 Phase 开发节奏
+
+每个 Phase 默认采用 `AnimalCafe_Phase_Development_Process.md`：
+
+```text
+Phase 开始：一次 design + test cases + implementation plan approval
+→ Task 开发：focused RED/GREEN + 直接相关 regression
+→ Phase 收尾：一次完整 regression + Engineering/QA/必要的 Art review
+→ Studio Owner 手工验收
+→ 更新 report、guide 和 Roadmap
+```
+
+Task 不是独立 release。除非涉及 shared architecture、Save/migration、input ownership、Scene transaction 或其他高风险变更，不为每个 Task 重复完整回归、跨部门 review、截图和 hash closure。
+
+### 3.2 为什么不是先完成整个装修系统
 
 装修系统必须先提供最小 Layout foundation，避免 Cafe Loop 把 Cash Register、Coffee Machine 和 Pick-up 写死在 Scene 中。
 
@@ -85,7 +100,7 @@ AnimalCafe 使用 **Dependency-driven Small Phases + Playable Milestones**。
 → 根据真实 gameplay 扩展完整 Decoration 与 Store Expansion
 ```
 
-### 3.2 核心 Dependency Chain
+### 3.3 核心 Dependency Chain
 
 ```text
 Layout Data
@@ -200,7 +215,7 @@ Layout Data
 ### 5.2 Implementation Gate
 
 - 使用小步 implementation，优先采用 failing test → minimal implementation → passing test。
-- 每个 task 完成后运行 focused tests。
+- 每个 Task 完成后运行 focused tests 和直接相关 regression；完整 regression 留到 Phase 收尾。
 - 不把多个未验证 subsystem 同时接入 Scene。
 - 缺失 dependency 时 fail clearly，不允许静默产生错误状态。
 - Runtime data 不以 UI 或临时 Scene reference 作为唯一可信来源。
@@ -208,11 +223,14 @@ Layout Data
 ### 5.3 Verification Gate
 
 - 当前 Phase focused tests 全部通过。
-- 所有旧 Phase regression tests 全部通过。
+- Phase 收尾时运行一次完整 EditMode、PlayMode 和必要 integration regression；不在每个 Task 后重复运行所有旧 Phase tests。
 - Integration tests 覆盖本 Phase 与直接 dependencies。
 - 必要的人工 Play Mode checklist 完成。
 - Console 没有未处理 error。
 - 如果修改持久数据，Save / Load、invalid data 和 migration tests 通过。
+- Engineering 和 QA 默认在 Phase 收尾各 review 一次；只有明显视觉变化才需要 Art/UX review。
+- Critical 和 Important 必须修复；Minor 默认进入 polish backlog，不阻挡 Phase。
+- docs-only 修正只做静态验证，不重新运行 Unity。
 - Roadmap 只在全部 gate 通过后记录 `Completed` evidence。
 
 ### 5.4 Feature UI 与 Functional Feedback Rule
@@ -687,6 +705,12 @@ Preview 使用临时 placement state，不直接修改正式 Layout。只有 Con
 ---
 
 ## Phase 7 — Interior Walls & Surface Customization
+
+### Status
+
+`Completed — implementation and acceptance; merge pending`（2026-08-29）。Approved design、TDD implementation、review amendments、Engineering/QA closeout 与 Studio Owner `MT-001–MT-034` manual acceptance 均已完成；Owner decision 为 `GO`。Merge-preparation evidence：Phase 6 migration `127/127`、Phase 7 MainCafe migration `30/30`、fresh full EditMode `1443/1443`、fresh full PlayMode `625/625`，failed/skipped/inconclusive 均为 `0`。当前 feature branch 尚未 merge 到 `main`。
+
+Known scope：不建造、移动或删除墙；Window 不切割真实 wall opening；confirmed Window 只在当前 runtime session 存在，reload 后清除；本 Phase 未宣称 player build evidence。
 
 ### Goal
 
@@ -2639,6 +2663,6 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 - **Phase 5 — UI Architecture & Design System** 已完成 approved design、TDD implementation、review hardening、Studio Owner `MT001–MT034` manual acceptance、PR #4 merge 与 merged-main regression，状态为 `Completed`。Merged-main evidence（2026-08-15）：EditMode `690 / 690`、Editor PlayMode `121 / 121`、Windows standalone PlayMode `103 / 103` passed；failed、skipped、inconclusive 均为 `0`。
 - **Phase 6 — Basic Decoration Mode** 已完成 approved design、TDD implementation、independent review、Studio Owner manual acceptance 与 fresh full regression，状态为 `Completed`。Merge-preparation evidence（2026-08-22）：EditMode `1136 / 1136`、Editor PlayMode `446 / 446` passed，failed、skipped、inconclusive 均为 `0`；Windows standalone build 为 `Success`，无 C# warning/error；Studio Owner applicable manual set 为 `29 / 29 PASS`。`P6-M-023` 的真实 Android + iOS two-finger Pinch 已按 scope decision 移至 Phase 51，不计入 Phase 6 denominator。
 - Phase 6 清理只删除 obsolete Phase 4 MainCafe manual-review setup 与两份 temporary materials；`ManualReviewPingPongMover` 及其 regression test 因仍有 Phase 5 live consumers 而保留。
-- **Current Next Step：Phase 7 — Interior Walls & Surface Customization design gate。** 未经 Studio Owner approval 不开始 Phase 7 implementation。
+- **Current Next Step：Phase 7 merge PR review。** Phase 7 implementation、automated regression 与 Studio Owner manual acceptance 已完成；feature branch 仍待 merge。只有 Studio Owner 明确批准后才可 merge；在 Phase 7 合入前不开始 **Phase 8 — Functional Furniture & Layout Readiness**。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Customer AI，也不提前实现 Phase 6 `Not Included` 的家具商店、经营功能、anchors、path validation 或 Atmosphere。

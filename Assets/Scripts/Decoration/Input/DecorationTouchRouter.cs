@@ -1,4 +1,5 @@
 using UnityEngine;
+using AnimalCafe.Layout;
 using InputTouchPhase = UnityEngine.InputSystem.TouchPhase;
 
 namespace AnimalCafe.Decoration.Input
@@ -7,19 +8,34 @@ namespace AnimalCafe.Decoration.Input
     {
         public DecorationTouchHit(
             DecorationTouchHitKind kind,
-            string furnitureInstanceId = null)
+            string furnitureInstanceId = null,
+            string targetId = null,
+            string surfaceId = null,
+            GridPosition? floorPosition = null,
+            WallSlotPosition? wallSlotPosition = null)
         {
             Kind = kind;
             FurnitureInstanceId = furnitureInstanceId;
+            TargetId = targetId ?? furnitureInstanceId;
+            SurfaceId = surfaceId;
+            FloorPosition = floorPosition;
+            WallSlotPosition = wallSlotPosition;
         }
 
         public DecorationTouchHitKind Kind { get; }
         public string FurnitureInstanceId { get; }
+        public string TargetId { get; }
+        public string SurfaceId { get; }
+        public GridPosition? FloorPosition { get; }
+        public WallSlotPosition? WallSlotPosition { get; }
     }
 
     public interface IDecorationTouchHitClassifier
     {
         DecorationTouchHit ClassifyBegan(int touchId, Vector2 screenPosition);
+
+        DecorationTouchHit ClassifyCurrent(int touchId, Vector2 screenPosition) =>
+            ClassifyBegan(touchId, screenPosition);
     }
 
     public readonly struct DecorationTouchRoutingResult
@@ -27,19 +43,26 @@ namespace AnimalCafe.Decoration.Input
         internal DecorationTouchRoutingResult(
             DecorationGestureOwner owner,
             DecorationTouchHit originHit,
+            DecorationTouchHit currentHit = default,
             bool tapReleased = false,
             bool furnitureDragRequested = false,
             Vector2 furnitureDragScreenPosition = default,
+            bool sceneDragRequested = false,
+            Vector2 sceneDragScreenPosition = default,
             bool cameraPanRequested = false,
             Vector2 cameraPanDelta = default,
             bool pinchZoomRequested = false,
-            float pinchDistanceDelta = 0f)
+            float pinchDistanceDelta = 0f,
+            bool currentHitClassified = false)
         {
             Owner = owner;
             OriginHit = originHit;
+            CurrentHit = currentHitClassified ? currentHit : originHit;
             TapReleased = tapReleased;
             FurnitureDragRequested = furnitureDragRequested;
             FurnitureDragScreenPosition = furnitureDragScreenPosition;
+            SceneDragRequested = sceneDragRequested;
+            SceneDragScreenPosition = sceneDragScreenPosition;
             CameraPanRequested = cameraPanRequested;
             CameraPanDelta = cameraPanDelta;
             PinchZoomRequested = pinchZoomRequested;
@@ -48,9 +71,12 @@ namespace AnimalCafe.Decoration.Input
 
         public DecorationGestureOwner Owner { get; }
         public DecorationTouchHit OriginHit { get; }
+        public DecorationTouchHit CurrentHit { get; }
         public bool TapReleased { get; }
         public bool FurnitureDragRequested { get; }
         public Vector2 FurnitureDragScreenPosition { get; }
+        public bool SceneDragRequested { get; }
+        public Vector2 SceneDragScreenPosition { get; }
         public bool CameraPanRequested { get; }
         public Vector2 CameraPanDelta { get; }
         public bool PinchZoomRequested { get; }
@@ -146,6 +172,7 @@ namespace AnimalCafe.Decoration.Input
                 // 短 Began -> terminal 也必须用 terminal 位置锁定 drag threshold。
                 if (!isDragging
                     && (owner == DecorationGestureOwner.Furniture
+                        || owner == DecorationGestureOwner.SceneDrag
                         || owner == DecorationGestureOwner.Camera)
                     && Vector2.Distance(primaryPressPosition, primaryTerminalTouch.Position)
                         > dragThresholdPixels)
@@ -222,6 +249,7 @@ namespace AnimalCafe.Decoration.Input
                 }
 
                 if ((owner == DecorationGestureOwner.Furniture
+                        || owner == DecorationGestureOwner.SceneDrag
                         || owner == DecorationGestureOwner.Camera)
                     && touch.TouchId != primaryTouchId
                     && secondaryTouchId == NoTouchId)
@@ -303,6 +331,20 @@ namespace AnimalCafe.Decoration.Input
                         + Vector2.up * furnitureDragOffsetPixels);
             }
 
+            if (owner == DecorationGestureOwner.SceneDrag)
+            {
+                var currentHit = hitClassifier != null
+                    ? hitClassifier.ClassifyCurrent(primaryTouchId, activePrimary.Position)
+                    : default;
+                return new DecorationTouchRoutingResult(
+                    owner,
+                    originHit,
+                    currentHit: currentHit,
+                    sceneDragRequested: true,
+                    sceneDragScreenPosition: activePrimary.Position,
+                    currentHitClassified: true);
+            }
+
             if (owner == DecorationGestureOwner.Camera
                 && activePrimary.Delta != Vector2.zero)
             {
@@ -346,6 +388,10 @@ namespace AnimalCafe.Decoration.Input
             {
                 DecorationTouchHitKind.Ui => DecorationGestureOwner.Ui,
                 DecorationTouchHitKind.Furniture => DecorationGestureOwner.Furniture,
+                DecorationTouchHitKind.WallSlot => DecorationGestureOwner.SceneDrag,
+                DecorationTouchHitKind.WallMounted => DecorationGestureOwner.SceneDrag,
+                DecorationTouchHitKind.FloorGrid => DecorationGestureOwner.Camera,
+                DecorationTouchHitKind.WallSurface => DecorationGestureOwner.Camera,
                 DecorationTouchHitKind.Scene => DecorationGestureOwner.Camera,
                 _ => DecorationGestureOwner.None
             };
