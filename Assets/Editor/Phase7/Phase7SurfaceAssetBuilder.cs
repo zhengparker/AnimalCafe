@@ -502,7 +502,7 @@ namespace AnimalCafe.EditorTools.Phase7
                 var rotateIconRect=rotateIcon.rectTransform;
                 rotateIconRect.anchorMin=Vector2.one*.5f;rotateIconRect.anchorMax=Vector2.one*.5f;
                 rotateIconRect.pivot=Vector2.one*.5f;rotateIconRect.anchoredPosition=Vector2.zero;
-                rotateIconRect.sizeDelta=new Vector2(28f,28f);rotateIconRect.localScale=Vector3.one;
+                rotateIconRect.sizeDelta=new Vector2(32f,32f);rotateIconRect.localScale=Vector3.one;
                 rotateIcon.sprite=BuildRotateIconSprite();rotateIcon.color=new Color(1f,.97f,.90f,1f);
                 rotateIcon.preserveAspect=true;rotateIcon.raycastTarget=false;rotateIcon.gameObject.SetActive(false);
                 viewSo.FindProperty("rotateIcon").objectReferenceValue=rotateIcon;

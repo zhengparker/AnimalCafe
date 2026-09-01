@@ -413,7 +413,7 @@ namespace AnimalCafe.Tests.EditMode.Phase7
                 "Phase 7 compact Furniture actions need a real Rotate icon; the legacy R remains fallback only.");
             Assert.That(icon.sprite, Is.Not.Null);
             Assert.That(icon.raycastTarget, Is.False);
-            Assert.That(((RectTransform)icon.transform).sizeDelta, Is.EqualTo(new Vector2(28f, 28f)));
+            Assert.That(((RectTransform)icon.transform).sizeDelta, Is.EqualTo(new Vector2(32f, 32f)));
             Assert.That(rotate.transform.Find("Tooltip")?.GetComponentInChildren<TMPro.TMP_Text>(true)?.text,
                 Is.EqualTo("Rotate"),
                 "The icon button still needs the beginner-readable Rotate semantic label.");
