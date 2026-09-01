@@ -1,6 +1,6 @@
 # Phase 7 Beginner Guide — Interior Walls & Surface Customization
 
-> 当前状态：Phase 7 implementation、final automated regression 与 Studio Owner manual acceptance 已完成。2026-08-29 evidence：EditMode `1443/1443`、PlayMode `625/625`、MT-001–MT-034 `34/34 PASS`；目前等待 merge PR review，不代表已经 merge 到 `main`。
+> 当前状态：Phase 7 implementation、merge-review fixes、final automated regression 与 Studio Owner manual acceptance 已完成。2026-09-01 evidence：EditMode `1444/1444`、PlayMode `634/634`、MT-001–MT-034 `34/34 PASS`；目前等待 merge PR review，不代表已经 merge 到 `main`。
 
 ## 2026-08-26 Manual review adjustments
 
@@ -8,7 +8,7 @@
 - Floor / Wall 素材：绿色勾表示目前已使用；有色 outline 表示尚未 Confirm 的 Preview；Cancel 后 Preview outline 必须清除。
 - Wainscoting 只使用 Wall shader/texture 显示在墙面下半部；不会额外生成 geometry、Collider 或 NavMesh blockage。
 - Wall Decor 选中后同时显示真实 Prefab ghost 与绿色/红色墙面 footprint；拖动时两者一起刷新，Confirm 生成正式实例，Cancel 清除 ghost；Wall Decor 不提供 Rotate。
-- Floor / Wall 的 Cancel、Confirm 使用 Bottom Sheet 内的大号文字按钮；Furniture / Wall Decor 使用跟随 Preview 的小圆 icon buttons（`×`、`✓`，Furniture 另有 `R`）。
+- Floor / Wall 的 Cancel、Confirm 使用 Bottom Sheet 内的大号文字按钮；Furniture / Wall Decor 使用跟随 Preview 的小圆 icon buttons（`×`、`✓`，Furniture 另有圆形箭头 Rotate icon，semantic label / tooltip 为 `Rotate`）。
 - MainCafe 开局不再显示临时预放 Window；两种 Window 仍保留在 Wall Decor catalogue，玩家可自行放置。
 
 ## 1. 打开正确的 Unity Project
@@ -42,7 +42,7 @@ Wall Decor catalogue 应显示五个正式模型：
 - Window `1x1`
 - Window `1x2`
 
-这五张 Catalogue thumbnail 应显示真实游戏 prefab 安装在统一暖色墙面上的样子，并能看到轻微 `3/4` 角度、地脚线和接触感；不应出现 Blender 式黑色背景。
+这五张 Catalogue thumbnail 应使用真实游戏 prefab 的 mounted-angle `3/4` 视角，并采用 object-only transparent cutout；不应包含墙面、地面、黑底或 checkerboard 背景。
 
 Production `MainCafe` 不应出现 `TEST_ONLY_*` placeholder。技术 Validation Scene 中可保留明确标记的 test-only fixtures，但它不进入 Build Settings。
 

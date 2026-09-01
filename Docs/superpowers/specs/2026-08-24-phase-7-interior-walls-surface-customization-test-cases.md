@@ -80,7 +80,7 @@
 - 两个 `WallSurfaceLayout`，每面 `8 columns × 2 rows`，Slot 为 `1 m × 1 m`。
 - Footprints：`1×1`、`2×1`、`1×2`、`2×2`、`3×2`；较大尺寸只需 test fixture，不要求正式 model。
 - 已占用 Slot 同时包含 Wall Decor 与 Window，证明两者共享 occupancy。
-- deterministic nearest-slot fixture 提供相同 Manhattan distance 的候选，按 stable Surface ID ordinal → Column → Row 破 tie。
+- deterministic nearest-slot fixture 先优先 preferred Surface，再以 Manhattan distance → stable Surface ID ordinal → Column → Row 破 tie。
 - cross-wall failure fixture 在 destination 设置 overlap / out-of-bounds，并记录 source/destination dictionaries 与 occupied-slot counts。
 
 ### 4.3 Surface and Catalogue fixture
@@ -181,7 +181,7 @@
 | ID | 前置条件 | 操作 | 预期结果 | 风险 | Evidence | Asset dependency |
 |---|---|---|---|---|---|---|
 | AT-053 | empty compatible Slots | BeginNew without selecting Slot | Preview 出现在 viewport-center 附近最近 deterministic valid Slot | Normal：初始 Preview 不确定 | deterministic candidate assertion | READY |
-| AT-054 | equal Manhattan candidates across/within Walls | repeat BeginNew many times | tie-break 固定为 Surface ID ordinal → Column → Row；结果不随 iteration order 变化 | Boundary：Camera corner nondeterminism | randomized-order repeat test | READY |
+| AT-054 | preferred Surface 及 fallback Walls 存在 equal Manhattan candidates | repeat BeginNew many times | priority 固定为 preferred Surface → Manhattan distance → Surface ID ordinal → Column → Row；结果不随 iteration order 变化 | Boundary：Camera corner nondeterminism或意外跳墙 | randomized-order repeat test | READY |
 | AT-055 | new Preview | 检查 actions；Move valid；Confirm | 无 Store、无 Rotate；Confirm 后 exactly one confirmed instance | Normal：new lifecycle/action 错 | session state + mutation count | READY |
 | AT-056 | existing Wall Decor/Window | BeginExisting；Move valid；Cancel | Store 可用、Rotate 不存在；Cancel 后 position/Surface/occupancy 精确恢复 | Recovery：existing move 无法回退 | before/after snapshot | READY |
 | AT-057 | existing instance | Preview same-wall then cross-wall valid；Confirm | confirmed source 在 drag 中不被临时移除；Confirm 后 atomic move | Normal：Preview 暂时污染 Layout | mid-preview + final snapshots | READY |
@@ -470,3 +470,12 @@ Studio Owner 请 review 2026-08-27 amendment：
 - Fresh full EditMode：`1443/1443`；fresh full PlayMode：`625/625`；failed/skipped/inconclusive 均为 `0`。
 - Final static/version-control review 未发现 open Critical/Important finding；`TestResults/`、self-audit outputs、temporary InitTestScene 与 generated solution files 不进入 PR。
 - 已知 scope 保持不变：不建造/移动/删除墙，不切割真实 Wall opening；confirmed Window 仅在当前 runtime session 存在，reload 后清除；未宣称 player build evidence。
+
+## 27. 2026-09-01 merge-review follow-up evidence
+
+- Review finding 1：Wall Preview Cancel 会清除 selected Wall，但没有恢复 persistent `Select a wall to edit` guidance。Focused regression 先 RED `0/1`，minimal controller fix 后 GREEN `1/1`。
+- Review finding 2：Wall Decor Store Confirm 是 terminal action，却没有立即恢复 blocker fade。真实 `WallOcclusionFadeView` + Material/MPB regression 先 RED `0/1`，minimal controller fix 后 GREEN `1/1`。
+- Direct GREEN：Wall Mounted/Touch `57/57`、Surface/Fade `42/42`、Decoration UI `59/59`。
+- Full PlayMode 首轮 `633/634`：旧 Phase 6 real-Mouse drag timing case 首帧位移为 `0`；该 case 隔离复跑 `1/1`，fresh full rerun `634/634`。Fresh full EditMode `1444/1444`；final failed/skipped/inconclusive 均为 `0`。
+- Studio Owner 选择 nearest-slot 方案 A：preferred Surface 优先，再按 Manhattan distance → stable Surface ID → Column → Row；保留当前墙面直觉并保持 deterministic fallback。
+- 本轮 automated evidence 不重新替代已完成的 MT-001–MT-034 manual acceptance；merge 仍需单独授权。

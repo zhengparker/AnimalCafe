@@ -1951,6 +1951,7 @@ namespace AnimalCafe.Decoration
                 catalogueView?.SetSheetState(
                     DecorationSheetState.Expanded,
                     hasActivePreview: false);
+                RefreshTargetSelectionInstruction();
                 return;
             }
 
@@ -2079,6 +2080,7 @@ namespace AnimalCafe.Decoration
                 wallMountedProjectionView?.ClearPreview();
                 wallMountedDisplaySurfaceId = null;
                 wallMountedDisplayPosition = default;
+                wallOcclusionFadeView?.RestoreAllFades();
                 wallMountedSceneRegistry?.Remove(instanceId, destroyRepresentation: true);
                 if (string.Equals(
                         hiddenWallMountedSourceInstanceId,

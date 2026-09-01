@@ -1369,6 +1369,59 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [Test]
+        public void Controller_WallMountedStoreConfirmRestoresOcclusionFadeImmediately()
+        {
+            using var fixture = new EnterControllerFixture();
+            var blocker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var fadeObject = new GameObject("StoreConfirmFadeView");
+            var sourceMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            var fadeTemplate = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            try
+            {
+                var blockerRenderer = blocker.GetComponent<Renderer>();
+                blockerRenderer.sharedMaterial = sourceMaterial;
+                var sentinelId = Shader.PropertyToID("_Phase7StoreSentinel");
+                var originalBlock = new MaterialPropertyBlock();
+                originalBlock.SetFloat(sentinelId, 17f);
+                blockerRenderer.SetPropertyBlock(originalBlock);
+
+                var fadeView = fadeObject.AddComponent<WallOcclusionFadeView>();
+                fadeView.Configure(
+                    fixture.CameraController.GetComponent<UnityEngine.Camera>(),
+                    fixture.LeftWall.GetComponent<Renderer>(),
+                    0.35f,
+                    fadeTemplate);
+                Set(fixture.Controller, "wallOcclusionFadeView", fadeView);
+
+                fixture.Controller.EnterDecorationMode();
+                Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.WallDecor), Is.True);
+                Assert.That(fixture.Controller.TryHandleSceneTap(new DecorationTouchHit(
+                    DecorationTouchHitKind.WallMounted,
+                    targetId: "decor.existing")), Is.True);
+                fadeView.FadeRepresentations(new[] { blocker.transform });
+                Assert.That(blockerRenderer.sharedMaterial, Is.Not.SameAs(sourceMaterial),
+                    "The regression fixture must start with a genuinely faded blocker.");
+
+                fixture.Store.onClick.Invoke();
+                fixture.StoreConfirm.onClick.Invoke();
+
+                Assert.That(blockerRenderer.sharedMaterial, Is.SameAs(sourceMaterial),
+                    "Store Confirm is terminal and must restore blockers without waiting for a mode switch.");
+                var restoredBlock = new MaterialPropertyBlock();
+                blockerRenderer.GetPropertyBlock(restoredBlock);
+                Assert.That(restoredBlock.GetFloat(sentinelId), Is.EqualTo(17f),
+                    "Restoring the fade must preserve the blocker's original MaterialPropertyBlock.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(fadeObject);
+                UnityEngine.Object.DestroyImmediate(blocker);
+                UnityEngine.Object.DestroyImmediate(sourceMaterial);
+                UnityEngine.Object.DestroyImmediate(fadeTemplate);
+            }
+        }
+
+        [Test]
         public void Controller_ReenterResetsControllerTabsAndFloorRangeVisualsToDefaults()
         {
             using var fixture = new EnterControllerFixture();
@@ -1420,6 +1473,26 @@ namespace AnimalCafe.Tests.PlayMode
                 surfaceId: "wall.back-left")), Is.True);
             Assert.That(fixture.Feedback.text, Is.Empty,
                 "The persistent target instruction must clear once the wall preview begins.");
+        }
+
+        [Test]
+        public void Controller_WallCancelClearsTargetAndRestoresSelectionGuidance()
+        {
+            using var fixture = new EnterControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.Wall), Is.True);
+            Assert.That(fixture.Controller.TryHandleSceneTap(new DecorationTouchHit(
+                DecorationTouchHitKind.WallSurface,
+                surfaceId: "wall.back-left")), Is.True);
+            Assert.That(fixture.Controller.TrySelectCatalogueItem(fixture.PaintItem), Is.True);
+            Assert.That(fixture.Feedback.text, Is.Empty);
+
+            fixture.Cancel.onClick.Invoke();
+
+            Assert.That(fixture.Controller.ActiveSurfacePreview, Is.Null);
+            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(DecorationSheetState.Expanded));
+            Assert.That(fixture.Feedback.text, Is.EqualTo("Select a wall to edit"),
+                "Cancel clears the selected wall, so the persistent target guidance must return immediately.");
         }
 
         [Test]

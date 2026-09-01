@@ -393,7 +393,7 @@ public sealed class WallMountedDecorationSession
 ```
 
 - [x] **Step 1: Write RED tests** mirroring Phase 6 Furniture lifecycle without Rotate：direct nearest deterministic Slot、drag、cross-wall drag、invalid corner gap、Confirm、Cancel、existing move and Store。
-- [x] **Step 2: Add nearest-slot tie tests:** Manhattan distance first，then stable Surface ID ordinal，then Column，then Row；this prevents Camera-corner nondeterminism。
+- [x] **Step 2: Add nearest-slot tie tests:** preferred Surface first，then Manhattan distance、stable Surface ID ordinal、Column、Row；这让玩家选择某面墙后优先留在该墙，同时保持 fallback deterministic。
 - [x] **Step 3: Run** `AnimalCafe.Tests.Phase7.WallMountedDecorationSessionTests` and observe missing-type RED。
 - [x] **Step 4: Implement immutable Preview and session** using `WallMountedLayout.ValidatePlacement`; never temporarily remove the confirmed source instance during drag。
 - [x] **Step 5: Extend feedback mapping** to exact keys `WallOverlap`、`WallOutOfBounds`、`WallCrossCorner`、`WallSurfaceMissing`；Confirm disabled for every failure。
@@ -568,7 +568,7 @@ public static Phase7ValidationReport ValidateAll();
 - [x] **Step 1: Inspect delivered models** for scale、orientation、Materials、texture licenses and visible bounds before copying or modifying them。
 - [x] **Step 2: Create Prefab wrappers** and correct Pivot in the wrapper transform rather than destructively editing source Mesh。
 - [x] **Step 3: Add selection Colliders** on the selectable layer；exclude them from character Navigation / physical blocking layers。
-- [x] **Step 4: Author mounted thumbnails** from the five production Prefabs inside one deterministic warm in-game wall vignette；bind the committed `256×256` Sprites to Definitions and Catalogue entries。The normal builder/runtime never starts a thumbnail Camera or RenderTexture；Validator rejects missing、hash-drifted、black-border or non-warm-backdrop assets。Owner-approved scope contains three Wall Decor and two Windows。
+- [x] **Step 4: Author mounted thumbnails** from the five production Prefabs as mounted-angle object-only transparent cutouts；bind the committed `256×256` Sprites to Definitions and Catalogue entries。The normal builder/runtime never starts a thumbnail Camera or RenderTexture；Validator rejects missing、hash-drifted、opaque-border、empty-item、wall/floor/black/checkerboard backdrop assets。Owner-approved scope contains three Wall Decor and two Windows。
 - [x] **Step 5: Run Phase 7 validator and focused Scene tests.** Production Catalogue/MainCafe no longer references placeholders; explicit `TEST_ONLY` validation fixtures remain outside Build Settings。
 - [x] **Step 6: Prepare side-by-side in-game stills** for Studio Owner visual acceptance；technical validation cannot approve appearance on the Owner's behalf。
 
@@ -875,6 +875,8 @@ unity test . --mode PlayMode --output 'TestResults\Phase7Amendment\Task17\task17
 
 **Final closeout evidence (2026-08-29):** Studio Owner manual review `34/34 PASS`，decision `GO`。A final compatibility audit exposed one stale Phase 6 migration guard that rejected the canonical Phase 7 scene-owned `SurfaceFooterHost/FloorRange` subtree；a focused RED was added before the minimal compatibility fix。Final Phase 6 migration `127/127`、Phase 7 MainCafe migration `30/30`、fresh full EditMode `1443/1443`、fresh full PlayMode `625/625`，failed/skipped/inconclusive 均为 `0`。Engineering、QA 与 Production closeout have no open Critical/Important finding。
 
+**Merge-review follow-up evidence (2026-09-01):** independent review found two Important terminal-cleanup gaps：Wall Cancel cleared its target without restoring `Select a wall to edit`，and Wall Decor Store Confirm did not restore blocker fades。Each regression first failed `0/1`，then passed `1/1` after the two-line controller fix。Direct GREEN：Wall Mounted/Touch `57/57`、Surface/Fade `42/42`、Decoration UI `59/59`。The first full PlayMode run was `633/634` because an existing Phase 6 real-Mouse drag timing case did not move on its first frame；isolated rerun passed `1/1` and a fresh full rerun passed `634/634`。Fresh full EditMode passed `1444/1444`；final failed/skipped/inconclusive are `0`。Approved nearest-slot priority is preferred Surface → Manhattan distance → stable Surface ID → Column → Row。No open Critical/Important finding remains；merge is still a separate Studio Owner authorization gate。
+
 ---
 
 ### Task 20: Later-decision UI/Bug self-audit and mounted-thumbnail correction
@@ -890,8 +892,8 @@ unity test . --mode PlayMode --output 'TestResults\Phase7Amendment\Task17\task17
 **Interfaces:** Catalogue continues to consume ordinary Sprite references；no runtime Camera、RenderTexture or new gameplay API。
 
 - [x] **Step 1: Re-audit against later decisions.** Treat the newest interaction/UI amendments as authoritative；keep Studio Owner visual acceptance separate from automated confidence。
-- [x] **Step 2: Write RED thumbnail evidence.** Reject opaque black borders and require the mounted item to remain visible within a shared warm wall presentation。
-- [x] **Step 3: Replace all five previews.** Use the real production prefab、light `3/4` view、warm wall、baseboard and contact shadow；remove Blender-style black presentation。
+- [x] **Step 2: Write RED thumbnail evidence.** Reject opaque borders / empty cutouts and require the mounted item to remain visible on genuine transparency。
+- [x] **Step 3: Replace all five previews.** Use the real production prefab and light mounted-angle `3/4` view as object-only transparent cutouts；remove wall、floor、black and checkerboard presentation。
 - [x] **Step 4: Remove automatic GPU rebake from normal builder.** Keep the approved PNGs as authored/versioned assets；builder binds them and Validator owns explicit failure for missing/hash/backdrop drift。This avoids the reproduced Unity 6 native shutdown crash from the P7 preview-render path。
 - [x] **Step 5: Add validator regression.** A temporary valid `256×256` black PNG must produce `P7-MOUNTED-THUMBNAIL-BACKDROP` and restore the original bytes in `finally`。
 - [x] **Step 6: Run focused and Phase 7 regressions.** Record exact XML counts、process exit、static diff checks and visual inspection of all five PNGs。
