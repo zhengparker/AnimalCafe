@@ -26,8 +26,10 @@ namespace AnimalCafe.Tests.Phase7
     {
         [TestCase(PlacementFeedbackKey.WallOverlap, "Wall space already occupied")]
         [TestCase(PlacementFeedbackKey.WallOutOfBounds, "Outside wall area")]
-        [TestCase(PlacementFeedbackKey.WallCrossCorner, "Wall decor cannot cross a corner")]
+        [TestCase(PlacementFeedbackKey.WallCrossCorner, "Place the item fully on one wall")]
         [TestCase(PlacementFeedbackKey.WallSurfaceMissing, "Wall surface unavailable")]
+        [TestCase(PlacementFeedbackKey.SelectWallTarget, "Select a wall to edit")]
+        [TestCase(PlacementFeedbackKey.SelectFloorGridTarget, "Select a floor grid to edit")]
         [TestCase(PlacementFeedbackKey.None, "")]
         public void Wall_mounted_feedback_uses_specific_beginner_readable_copy(
             PlacementFeedbackKey key, string expected)
@@ -299,6 +301,51 @@ namespace AnimalCafe.Tests.Phase7
                 Assert.That(hook.IsTooltipVisible, Is.True,
                     "Compact icon actions need their tooltip after leaving Surface mode.");
             }
+        }
+
+        [Test]
+        public void Furniture_compact_action_uses_rotate_icon_while_floor_keeps_readable_rotate_text()
+        {
+            using var fixture = new ActionFixture();
+            var icon = Ui("Icon", fixture.GetButton("rotateButton").transform).AddComponent<Image>();
+            Set(fixture.View, "rotateIcon", icon);
+
+            fixture.View.SetModeActions(DecorationModeKind.Furniture, existing: false);
+            Assert.That(icon.gameObject.activeSelf, Is.True);
+            Assert.That(icon.raycastTarget, Is.False);
+            Assert.That(fixture.Label("rotateButton").gameObject.activeSelf, Is.False,
+                "The real icon must replace the temporary R in compact Furniture actions.");
+
+            fixture.View.SetModeActions(DecorationModeKind.Floor, existing: false);
+            Assert.That(icon.gameObject.activeSelf, Is.False);
+            Assert.That(fixture.Label("rotateButton").gameObject.activeSelf, Is.True);
+            Assert.That(fixture.Label("rotateButton").text, Is.EqualTo("Rotate"),
+                "Floor keeps the approved full-text action.");
+        }
+
+        [UnityTest]
+        public IEnumerator Target_selection_instruction_stays_visible_until_a_real_preview_replaces_it()
+        {
+            using var fixture = new ActionFixture();
+            var feedbackGroup = fixture.Feedback.gameObject.AddComponent<CanvasGroup>();
+            Set(fixture.View, "feedbackRoot", fixture.Feedback.rectTransform);
+            Set(fixture.View, "feedbackCanvasGroup", feedbackGroup);
+
+            fixture.View.ShowInstruction(PlacementFeedbackKey.SelectWallTarget);
+            Assert.That(fixture.Panel.gameObject.activeSelf, Is.False);
+            Assert.That(fixture.Feedback.gameObject.activeSelf, Is.True);
+            Assert.That(fixture.Feedback.text, Is.EqualTo("Select a wall to edit"));
+            Assert.That(feedbackGroup.alpha, Is.EqualTo(1f));
+            Assert.That(feedbackGroup.blocksRaycasts, Is.False);
+
+            yield return new WaitForSecondsRealtime(2f);
+            Assert.That(fixture.Feedback.gameObject.activeSelf, Is.True,
+                "Target guidance is an instruction, not the 1.8 second invalid-placement toast.");
+
+            fixture.View.SetModeActions(DecorationModeKind.Wall, existing: false);
+            fixture.View.Show(false, canConfirm: false, PlacementFeedbackKey.None);
+            Assert.That(fixture.Panel.gameObject.activeSelf, Is.True);
+            Assert.That(fixture.Feedback.gameObject.activeSelf, Is.False);
         }
 
         [TestCase(DecorationModeKind.Furniture, false, "×,R,✓")]

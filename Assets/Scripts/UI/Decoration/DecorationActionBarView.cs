@@ -39,6 +39,7 @@ namespace AnimalCafe.UI.Decoration
         [SerializeField] private Button undoLastButton;
         [SerializeField] private Button applyAllButton;
         [SerializeField] private Button rotateButton;
+        [SerializeField] private Image rotateIcon;
         [SerializeField] private Button cancelButton;
         [SerializeField] private Button confirmButton;
         [SerializeField] private TMP_Text feedbackLabel;
@@ -233,6 +234,7 @@ namespace AnimalCafe.UI.Decoration
             ConfigureSurfaceButton(applyAllButton, "Apply All", SurfaceUtilityButtonWidth, false);
             ConfigureSurfaceButton(cancelButton, "Cancel", SurfacePrimaryButtonWidth, false);
             ConfigureSurfaceButton(confirmButton, "Confirm", SurfacePrimaryButtonWidth, true);
+            SetRotateIconVisible(false);
 
             var visibleButtonCount = isFloor ? 5 : 2;
             var width = isFloor
@@ -306,6 +308,7 @@ namespace AnimalCafe.UI.Decoration
             ConfigureCompactButton(confirmButton, "✓");
             ConfigureCompactButton(undoLastButton, "Undo");
             ConfigureCompactButton(applyAllButton, "All");
+            SetRotateIconVisible(mode == DecorationModeKind.Furniture);
 
             var ordered = new System.Collections.Generic.List<Button>(4);
             if (showStore && storeButton != null && storeButton.gameObject.activeSelf)
@@ -438,6 +441,26 @@ namespace AnimalCafe.UI.Decoration
                 : null;
         }
 
+        private void SetRotateIconVisible(bool compactFurniture)
+        {
+            var hasIcon = rotateIcon != null;
+            if (rotateIcon != null)
+            {
+                rotateIcon.gameObject.SetActive(compactFurniture);
+                rotateIcon.raycastTarget = false;
+            }
+
+            var label = FindPrimaryLabel(rotateButton);
+            if (label != null)
+            {
+                label.gameObject.SetActive(!compactFurniture || !hasIcon);
+                if (compactFurniture && !hasIcon)
+                {
+                    label.text = "R";
+                }
+            }
+        }
+
         private static void StretchPrimaryLabel(TMP_Text text)
         {
             if (text == null || text.rectTransform == null)
@@ -534,6 +557,10 @@ namespace AnimalCafe.UI.Decoration
             this.canConfirm = canConfirm;
             terminalConsumed = false;
             IsVisible = true;
+            if (presentationRoot != null)
+            {
+                presentationRoot.gameObject.SetActive(true);
+            }
             if (storeButton != null)
             {
                 storeButton.gameObject.SetActive(canStore);
@@ -551,6 +578,30 @@ namespace AnimalCafe.UI.Decoration
             }
 
             PresentFeedback(feedback);
+            SetInteraction(true);
+            BeginTransition(visible: true);
+        }
+
+        public void ShowInstruction(PlacementFeedbackKey feedback)
+        {
+            transform.SetAsLastSibling();
+            terminalConsumed = false;
+            IsVisible = true;
+            if (presentationRoot != null)
+            {
+                presentationRoot.gameObject.SetActive(false);
+            }
+            else
+            {
+                Set(storeButton, false);
+                Set(undoLastButton, false);
+                Set(applyAllButton, false);
+                Set(rotateButton, false);
+                Set(cancelButton, false);
+                Set(confirmButton, false);
+            }
+
+            PresentPersistentFeedback(feedback);
             SetInteraction(true);
             BeginTransition(visible: true);
         }
@@ -595,6 +646,37 @@ namespace AnimalCafe.UI.Decoration
                 feedbackPositionInitialized = true;
             }
             feedbackCoroutine = StartCoroutine(ShowFeedbackToast());
+        }
+
+        private void PresentPersistentFeedback(PlacementFeedbackKey feedback)
+        {
+            if (feedbackCoroutine != null)
+            {
+                StopCoroutine(feedbackCoroutine);
+                feedbackCoroutine = null;
+            }
+
+            var text = GetFeedbackText(feedback);
+            if (feedbackLabel != null)
+            {
+                feedbackLabel.text = text;
+            }
+            feedbackStateShape?.SetActive(feedback != PlacementFeedbackKey.None);
+            if (feedbackRoot == null || feedbackCanvasGroup == null)
+            {
+                return;
+            }
+
+            if (!feedbackPositionInitialized)
+            {
+                feedbackVisiblePosition = feedbackRoot.anchoredPosition;
+                feedbackPositionInitialized = true;
+            }
+            feedbackRoot.anchoredPosition = feedbackVisiblePosition;
+            feedbackRoot.gameObject.SetActive(feedback != PlacementFeedbackKey.None);
+            feedbackCanvasGroup.alpha = feedback == PlacementFeedbackKey.None ? 0f : 1f;
+            feedbackCanvasGroup.blocksRaycasts = false;
+            feedbackCanvasGroup.interactable = false;
         }
 
         private IEnumerator ShowFeedbackToast()
@@ -717,9 +799,13 @@ namespace AnimalCafe.UI.Decoration
                 case PlacementFeedbackKey.WallOutOfBounds:
                     return "Outside wall area";
                 case PlacementFeedbackKey.WallCrossCorner:
-                    return "Wall decor cannot cross a corner";
+                    return "Place the item fully on one wall";
                 case PlacementFeedbackKey.WallSurfaceMissing:
                     return "Wall surface unavailable";
+                case PlacementFeedbackKey.SelectWallTarget:
+                    return "Select a wall to edit";
+                case PlacementFeedbackKey.SelectFloorGridTarget:
+                    return "Select a floor grid to edit";
                 default:
                     return string.Empty;
             }

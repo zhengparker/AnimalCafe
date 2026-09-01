@@ -949,6 +949,11 @@ namespace AnimalCafe.Decoration
             if (floorRangeView != null)
                 floorRangeView.gameObject.SetActive(isOpen && mode == DecorationModeKind.Floor);
             BindCatalogueForActiveMode();
+            catalogueView?.ShowCatalogue();
+            catalogueView?.SetSheetState(
+                DecorationSheetState.Expanded,
+                hasActivePreview: false);
+            RefreshTargetSelectionInstruction();
             return true;
         }
 
@@ -976,7 +981,11 @@ namespace AnimalCafe.Decoration
             }
 
             floorRange = range;
+            selectedFloorTarget = null;
+            floorSurfaceGridView?.ClearSelectionFeedback();
             floorRangeView?.SetSelected(range);
+            RefreshSurfaceCatalogueState();
+            RefreshTargetSelectionInstruction();
             return true;
         }
 
@@ -992,6 +1001,8 @@ namespace AnimalCafe.Decoration
             }
 
             selectedFloorTarget = target;
+            RefreshSurfaceCatalogueState();
+            RefreshTargetSelectionInstruction();
             return true;
         }
 
@@ -2179,6 +2190,32 @@ namespace AnimalCafe.Decoration
                     hasActivePreview: true);
             }
             UpdateActionPresentation();
+        }
+
+        private void RefreshTargetSelectionInstruction()
+        {
+            if (actionBarView == null || HasAnyActivePreview())
+            {
+                return;
+            }
+
+            AttachActionBarForActiveMode();
+            if (activeMode == DecorationModeKind.Wall
+                && string.IsNullOrEmpty(selectedWallTarget))
+            {
+                actionBarView.ShowInstruction(PlacementFeedbackKey.SelectWallTarget);
+                return;
+            }
+
+            if (activeMode == DecorationModeKind.Floor
+                && floorRange == SurfaceEditScope.SingleGridFloor
+                && !selectedFloorTarget.HasValue)
+            {
+                actionBarView.ShowInstruction(PlacementFeedbackKey.SelectFloorGridTarget);
+                return;
+            }
+
+            actionBarView.Hide();
         }
 
         private void AttachActionBarForActiveMode()

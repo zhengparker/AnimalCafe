@@ -398,6 +398,28 @@ namespace AnimalCafe.Tests.EditMode.Phase7
         }
 
         [Test]
+        public void BuildOrUpdateAssets_ProvidesFurnitureRotateIconWithTextFallbackMetadata()
+        {
+            Phase7SurfaceAssetBuilder.BuildOrUpdateAssets();
+
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Phase7AssetPaths.ActionBarPrefabPath);
+            var actionBar = prefab.GetComponentInChildren<DecorationActionBarView>(true);
+            var so = new SerializedObject(actionBar);
+            var rotate = so.FindProperty("rotateButton").objectReferenceValue as Button;
+            Assert.That(rotate, Is.Not.Null);
+
+            var icon = rotate.transform.Find("Icon")?.GetComponent<Image>();
+            Assert.That(icon, Is.Not.Null,
+                "Phase 7 compact Furniture actions need a real Rotate icon; the legacy R remains fallback only.");
+            Assert.That(icon.sprite, Is.Not.Null);
+            Assert.That(icon.raycastTarget, Is.False);
+            Assert.That(((RectTransform)icon.transform).sizeDelta, Is.EqualTo(new Vector2(28f, 28f)));
+            Assert.That(rotate.transform.Find("Tooltip")?.GetComponentInChildren<TMPro.TMP_Text>(true)?.text,
+                Is.EqualTo("Rotate"),
+                "The icon button still needs the beginner-readable Rotate semantic label.");
+        }
+
+        [Test]
         public void BuildOrUpdateAssets_StretchesEveryActionLabelAcrossItsRoundedButton()
         {
             Phase7SurfaceAssetBuilder.BuildOrUpdateAssets();

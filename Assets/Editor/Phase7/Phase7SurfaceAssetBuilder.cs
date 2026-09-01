@@ -496,6 +496,16 @@ namespace AnimalCafe.EditorTools.Phase7
                     EnsureButtonLabel(button);
                     if(button.image!=null){button.image.sprite=roundedSprite;button.image.type=Image.Type.Sliced;}
                 }
+                var rotate=viewSo.FindProperty("rotateButton").objectReferenceValue as Button;
+                if(rotate==null)throw new InvalidOperationException("Phase7 Action Bar requires RotateButton.");
+                var rotateIcon=EnsureImage(rotate.transform,"Icon");
+                var rotateIconRect=rotateIcon.rectTransform;
+                rotateIconRect.anchorMin=Vector2.one*.5f;rotateIconRect.anchorMax=Vector2.one*.5f;
+                rotateIconRect.pivot=Vector2.one*.5f;rotateIconRect.anchoredPosition=Vector2.zero;
+                rotateIconRect.sizeDelta=new Vector2(28f,28f);rotateIconRect.localScale=Vector3.one;
+                rotateIcon.sprite=BuildRotateIconSprite();rotateIcon.color=new Color(1f,.97f,.90f,1f);
+                rotateIcon.preserveAspect=true;rotateIcon.raycastTarget=false;rotateIcon.gameObject.SetActive(false);
+                viewSo.FindProperty("rotateIcon").objectReferenceValue=rotateIcon;
                 viewSo.ApplyModifiedPropertiesWithoutUndo();
                 PrefabUtility.SaveAsPrefabAsset(root,Phase7AssetPaths.ActionBarPrefabPath);
             }
@@ -524,6 +534,44 @@ namespace AnimalCafe.EditorTools.Phase7
         {
             return BuildRoundedSprite(Phase7AssetPaths.RoundedCatalogueCardSpritePath,32,8f);
         }
+        private static Sprite BuildRotateIconSprite()
+        {
+            const int size=64;
+            var texture=new Texture2D(size,size,TextureFormat.RGBA32,false);
+            var pixels=new Color[size*size];
+            var center=new Vector2((size-1)*.5f,(size-1)*.5f);
+            var arrowTip=new Vector2(52f,47f);
+            var arrowBaseA=new Vector2(39f,47f);
+            var arrowBaseB=new Vector2(49f,35f);
+            for(var y=0;y<size;y++)for(var x=0;x<size;x++)
+            {
+                var delta=new Vector2(x,y)-center;
+                var radius=delta.magnitude;
+                var angle=Mathf.Atan2(delta.y,delta.x)*Mathf.Rad2Deg;
+                if(angle<0f)angle+=360f;
+                var arc=radius>=16f&&radius<=21f&&angle>=48f&&angle<=342f;
+                var arrow=PointInTriangle(new Vector2(x,y),arrowTip,arrowBaseA,arrowBaseB);
+                pixels[y*size+x]=arc||arrow?Color.white:Color.clear;
+            }
+            texture.SetPixels(pixels);texture.Apply();
+            var bytes=texture.EncodeToPNG();UnityEngine.Object.DestroyImmediate(texture);
+            var path=Phase7AssetPaths.RotateIconSpritePath;
+            if(!File.Exists(path)||!File.ReadAllBytes(path).SequenceEqual(bytes))File.WriteAllBytes(path,bytes);
+            AssetDatabase.ImportAsset(path,ImportAssetOptions.ForceSynchronousImport|ImportAssetOptions.ForceUpdate);
+            var importer=(TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType=TextureImporterType.Sprite;importer.spriteImportMode=SpriteImportMode.Single;
+            importer.alphaIsTransparency=true;importer.mipmapEnabled=false;importer.spritePixelsPerUnit=size;
+            importer.textureCompression=TextureImporterCompression.Uncompressed;importer.SaveAndReimport();
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+        private static bool PointInTriangle(Vector2 point,Vector2 a,Vector2 b,Vector2 c)
+        {
+            var d1=TriangleSign(point,a,b);var d2=TriangleSign(point,b,c);var d3=TriangleSign(point,c,a);
+            var hasNegative=d1<0f||d2<0f||d3<0f;var hasPositive=d1>0f||d2>0f||d3>0f;
+            return !(hasNegative&&hasPositive);
+        }
+        private static float TriangleSign(Vector2 p1,Vector2 p2,Vector2 p3)
+        {return (p1.x-p3.x)*(p2.y-p3.y)-(p2.x-p3.x)*(p1.y-p3.y);}
         private static Sprite BuildRoundedSprite(string path,int size,float radius)
         {
             var texture=new Texture2D(size,size,TextureFormat.RGBA32,false);

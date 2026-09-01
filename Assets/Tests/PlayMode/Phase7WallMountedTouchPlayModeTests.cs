@@ -1259,7 +1259,7 @@ namespace AnimalCafe.Tests.PlayMode
             {
                 (new DecorationTouchHit(DecorationTouchHitKind.WallSlot, surfaceId: "wall.back-left", wallSlotPosition: new WallSlotPosition(4, 0)), "Wall space already occupied"),
                 (new DecorationTouchHit(DecorationTouchHitKind.WallSlot, surfaceId: "wall.back-left", wallSlotPosition: new WallSlotPosition(8, 0)), "Outside wall area"),
-                (default(DecorationTouchHit), "Wall decor cannot cross a corner"),
+                (default(DecorationTouchHit), "Place the item fully on one wall"),
                 (new DecorationTouchHit(DecorationTouchHitKind.WallSlot, surfaceId: "wall.missing", wallSlotPosition: new WallSlotPosition(0, 0)), "Wall surface unavailable")
             };
             foreach (var item in cases)
@@ -1384,6 +1384,62 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(fixture.Controller.FloorRange, Is.EqualTo(SurfaceEditScope.WholeRoomFloor));
             Assert.That(fixture.Tabs.ActiveMode, Is.EqualTo(DecorationModeKind.Furniture));
             Assert.That(fixture.Range.SelectedRange, Is.EqualTo(SurfaceEditScope.WholeRoomFloor));
+        }
+
+        [Test]
+        public void Controller_ModeTabFromTabsOnlyReopensExpandedCatalogue()
+        {
+            using var fixture = new EnterControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            fixture.Catalogue.SetSheetState(
+                DecorationSheetState.TabsOnly,
+                hasActivePreview: false);
+            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(DecorationSheetState.TabsOnly));
+
+            Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.Wall), Is.True);
+
+            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(DecorationSheetState.Expanded),
+                "Selecting any mode tab must reopen its catalogue instead of leaving only the tabs visible.");
+            Assert.That(fixture.Catalogue.AreCategoryRowsVisible, Is.True);
+        }
+
+        [Test]
+        public void Controller_WallModeGuidesTargetSelectionBeforeMaterialSelection()
+        {
+            using var fixture = new EnterControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+
+            Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.Wall), Is.True);
+            Assert.That(fixture.Feedback.text, Is.EqualTo("Select a wall to edit"));
+            Assert.That(fixture.Controller.TrySelectCatalogueItem(fixture.PaintItem), Is.False,
+                "A wall material must not silently start before the player selects a wall.");
+            Assert.That(fixture.Feedback.text, Is.EqualTo("Select a wall to edit"));
+
+            Assert.That(fixture.Controller.TryHandleSceneTap(new DecorationTouchHit(
+                DecorationTouchHitKind.WallSurface,
+                surfaceId: "wall.back-left")), Is.True);
+            Assert.That(fixture.Feedback.text, Is.Empty,
+                "The persistent target instruction must clear once the wall preview begins.");
+        }
+
+        [Test]
+        public void Controller_SingleGridFloorGuidesTargetSelectionBeforeTileSelection()
+        {
+            using var fixture = new EnterControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.Floor), Is.True);
+
+            Assert.That(fixture.Controller.TrySelectFloorRange(SurfaceEditScope.SingleGridFloor), Is.True);
+            Assert.That(fixture.Feedback.text, Is.EqualTo("Select a floor grid to edit"));
+            Assert.That(fixture.Controller.TrySelectCatalogueItem(fixture.FloorItem), Is.False,
+                "Single Grid material selection must wait for a highlighted floor target.");
+            Assert.That(fixture.Feedback.text, Is.EqualTo("Select a floor grid to edit"));
+
+            Assert.That(fixture.Controller.TryHandleSceneTap(new DecorationTouchHit(
+                DecorationTouchHitKind.FloorGrid,
+                floorPosition: new GridPosition(2, 3))), Is.True);
+            Assert.That(fixture.Feedback.text, Is.Empty,
+                "The persistent target instruction must clear once the floor preview begins.");
         }
 
         [Test]

@@ -30,6 +30,7 @@ namespace AnimalCafe.EditorTools.Phase7
         public const string RoundedCatalogueCardSpritePath = UiRoot + "/T_UI_CatalogueCard_Rounded.png";
         public const string RoundedCataloguePanelSpritePath = UiRoot + "/T_UI_CataloguePanel_Rounded.png";
         public const string RoundedCataloguePreviewOutlineSpritePath = UiRoot + "/T_UI_CataloguePreviewOutline_Rounded.png";
+        public const string RotateIconSpritePath = UiRoot + "/T_UI_Action_Rotate.png";
         public const string ProjectionValidMaterialPath = MaterialFolder + "/M_WallProjection_Valid.mat";
         public const string ProjectionInvalidMaterialPath = MaterialFolder + "/M_WallProjection_Invalid.mat";
         public const string LayeredWallMaterialPath = MaterialFolder + "/M_WallSurface_Layered.mat";

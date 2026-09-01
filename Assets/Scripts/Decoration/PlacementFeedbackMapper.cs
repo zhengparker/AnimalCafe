@@ -16,7 +16,9 @@ namespace AnimalCafe.Decoration
         WallOverlap,
         WallOutOfBounds,
         WallCrossCorner,
-        WallSurfaceMissing
+        WallSurfaceMissing,
+        SelectWallTarget,
+        SelectFloorGridTarget
     }
 
     public static class PlacementFeedbackMapper
