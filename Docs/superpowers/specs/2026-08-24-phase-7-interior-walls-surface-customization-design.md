@@ -213,7 +213,7 @@ Wall geometry
 
 ## 5. Texture authoring contract
 
-完整 authoring 规则由 `Docs/Phase7_Wall_Surface_Texture_Authoring_Guide.md` 维护。本 Phase spec 依赖以下核心合同：
+Surface authoring 的长期核心合同统一保存在本 Spec；Texture provenance 继续由 `ArtSource/Phase7/SurfaceTextures/AssetProvenance.md` 维护：
 
 - Wallpaper、Wainscoting 和 Floor Surface 每张 texture 的 World 宽度对应 `1 Grid = 1 m`。
 - 一个 texture tile 内可以包含任意花纹或多个 pattern units。

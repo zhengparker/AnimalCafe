@@ -61,7 +61,7 @@ Coffee Machine 与 Decoration Mode 的已确认 UX 想法继续保存在 Game De
 1. `Docs/AnimalCafe_Project_Design.md`：长期游戏规则。
 2. `Docs/AnimalCafe_Development_Roadmap.md`：Phase scope 与顺序。
 3. 本 approved design spec：Phase 5 architecture 与 behavior contract。
-4. `Docs/Phase5_UI_Decision_Log.md`：confirmed / provisional 决策记录。
+4. 本 Spec：统一保存 confirmed / provisional 决策与 future-owner boundary。
 5. Figma：视觉目标与可交互 prototype 参考。
 6. Unity Theme、Prefabs、Materials、Shader、animation 与 C#：runtime implementation。
 

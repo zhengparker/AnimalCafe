@@ -528,7 +528,7 @@ Assets/Editor/AssetPipeline/BenchmarkAssetValidationIssue.cs
 Assets/Tests/EditMode/AssetPipeline/BenchmarkAssetValidatorTests.cs
 Assets/Tests/PlayMode/AssetReadability/AssetPipelineReadabilityTests.cs
 Assets/Scenes/Validation/AssetPipelineReadability.unity
-Docs/VisualAssetPipeline_Beginner_Guide.md
+Docs/Phase3_Beginner_Guide.md
 Docs/AnimalCafe_Development_Roadmap.md
 ```
 

@@ -182,9 +182,8 @@ RED 表示 test 故意证明错误会被发现；GREEN 表示最小规则完成�
 ### Documentation 与 provenance
 
 ```text
-Docs/VisualAssetPipeline_Beginner_Guide.md
+Docs/Phase3_Beginner_Guide.md
 Docs/superpowers/specs/2026-07-31-phase-3-visual-asset-pipeline-design.md
-Docs/superpowers/plans/2026-07-31-visual-asset-pipeline.md
 ArtSource/VisualPipeline/Benchmarks/AssetProvenance.md
 ```
 

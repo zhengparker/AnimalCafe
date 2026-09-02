@@ -29,10 +29,7 @@
 
 ### 1.1 Superseded Documentation
 
-以下文件描述旧版大型 Phase 1，保留作为历史参考，但不再作为当前执行依据：
-
-- `Docs/superpowers/specs/2026-07-25-phase-1-core-cafe-loop-design.md`
-- `Docs/superpowers/plans/2026-07-25-phase-1-core-cafe-loop.md`
+旧版大型 Phase 1 Core Cafe Loop 文档已从当前 documentation set 清理；其历史仍可从 Git history 查询，但不再作为当前执行依据。
 
 新 implementation 从本文档的 **Phase 1 — Layout Data Model** 开始。
 
@@ -614,7 +611,7 @@ Basic Decoration 和 Functional Furniture 必须用真实或生产级尺寸验�
 - Minimum touch target baseline 为 `48 × 48` logical pixels；正文 / 小标签 baseline 分别不小于 `16 / 14`；主要字体 baseline 为 `Noto Sans SC`。
 - Toast queue / duplicate merge、Touch-safe Tooltip、specific Validation Message、Reduced Motion expansion point 和 long-localized-label fixtures 属于 foundation contract。
 
-完整 decision ledger 与 Provisional / Future Finalization ownership 记录在 `Docs/Phase5_UI_Decision_Log.md`。任何 provisional baseline 调整都必须同步 Figma、approved spec、Unity Theme / Prefabs 和 tests。
+Phase 5 的长期合同与 Provisional / Future Finalization ownership 统一保存在 canonical Phase 5 Spec。任何 provisional baseline 调整都必须同步 approved spec、Unity Theme / Prefabs 和 tests。
 
 ### Why Before Decoration UI
 
@@ -817,6 +814,38 @@ Anchors 使用 furniture-local coordinates。家具位置或旋转变化后重�
 ### Milestone Gate
 
 玩家能装修基础空间；功能家具由通用 capability 和 anchors 描述；还没有 Customer 经营。
+
+---
+
+## Phase 8R — Decoration & Functional Layout Review & Polish
+
+### Goal
+
+对 Phase 1–8 已完成的系统与玩家体验进行集中 Review 和 Polish，为进入 `Milestone B — Core Cafe Loop` 建立稳定基线。具体目标 `TBD`。
+
+### Confirmed Scope
+
+- 只 Review 和 Polish Phase 1–8 已存在的系统、功能与内容。
+- 只优化、修复或打磨现有行为，不加入任何新的 system 或 feature。
+
+### Review / Polish Areas
+
+`TBD`。在 Phase 8 完成后，由 Studio Owner 另行决定具体检查与打磨项目。
+
+### Tests 与 Manual Acceptance
+
+`TBD`。根据最终批准的 Review / Polish 项目确定 focused regression、完整 regression 与人工验收范围。
+
+### Not Included
+
+- 任何新 system 或 feature。
+- Phase 9 及后续 Core Cafe Loop 内容。
+- Customer、Employee、Order、Queue 或正式 Navigation gameplay。
+- 未经单独批准的视觉重设计或未来高级 Decoration 功能。
+
+### Milestone Gate
+
+`TBD`。Phase 8R 完成并由 Studio Owner 验收后，才进入 `Milestone B — Core Cafe Loop`。
 
 ---
 
@@ -2663,6 +2692,6 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 - **Phase 5 — UI Architecture & Design System** 已完成 approved design、TDD implementation、review hardening、Studio Owner `MT001–MT034` manual acceptance、PR #4 merge 与 merged-main regression，状态为 `Completed`。Merged-main evidence（2026-08-15）：EditMode `690 / 690`、Editor PlayMode `121 / 121`、Windows standalone PlayMode `103 / 103` passed；failed、skipped、inconclusive 均为 `0`。
 - **Phase 6 — Basic Decoration Mode** 已完成 approved design、TDD implementation、independent review、Studio Owner manual acceptance 与 fresh full regression，状态为 `Completed`。Merge-preparation evidence（2026-08-22）：EditMode `1136 / 1136`、Editor PlayMode `446 / 446` passed，failed、skipped、inconclusive 均为 `0`；Windows standalone build 为 `Success`，无 C# warning/error；Studio Owner applicable manual set 为 `29 / 29 PASS`。`P6-M-023` 的真实 Android + iOS two-finger Pinch 已按 scope decision 移至 Phase 51，不计入 Phase 6 denominator。
 - Phase 6 清理只删除 obsolete Phase 4 MainCafe manual-review setup 与两份 temporary materials；`ManualReviewPingPongMover` 及其 regression test 因仍有 Phase 5 live consumers 而保留。
-- **Current Next Step：Phase 8 — Functional Furniture & Layout Readiness design gate。** Phase 7 已完成 implementation、review、manual acceptance、merge 与 merged-main full regression。Phase 8 implementation 尚未获授权；开始 coding 前先确认 scope/design、normal/invalid/boundary/recovery test cases、implementation plan 与 Studio Owner approval。
+- **Current Next Step：Phase 8 — Functional Furniture & Layout Readiness design gate。** Phase 7 已完成 implementation、review、manual acceptance、merge 与 merged-main full regression。Phase 8 implementation 尚未获授权；开始 coding 前先确认 scope/design、normal/invalid/boundary/recovery test cases、implementation plan 与 Studio Owner approval。Phase 8 完成后进入 `Phase 8R — Decoration & Functional Layout Review & Polish`；Phase 8R 只允许 Review / Polish Phase 1–8，不加入新 system 或 feature，具体内容保持 `TBD`，完成并经 Studio Owner 验收后才进入 Milestone B。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Customer AI，也不提前实现 Phase 6 `Not Included` 的家具商店、经营功能、anchors、path validation 或 Atmosphere。

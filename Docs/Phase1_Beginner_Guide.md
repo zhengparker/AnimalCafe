@@ -313,28 +313,10 @@ Phase 1 没有实现：
 
 ## 10. 完成状态和下一步
 
-Phase 1 当前状态是：
+Phase 1 当前状态是 `Completed`。
 
-```text
-In Review
-```
+最终 gate 已全部完成：implementation、strict TDD、automated verification、independent review、Studio Owner manual acceptance、merge，以及 merged-main regression。最终 fresh evidence 为 EditMode `116 / 116`、PlayMode `18 / 18` passed；Failed、Skipped、Inconclusive 均为 `0`。
 
-已经完成：
-
-- implementation；
-- strict TDD；
-- automated verification；
-- independent code review；
-- documentation update。
-
-仍未完成：
-
-- 用户 manual test；
-- 用户明确批准；
-- merge 到 `main`；
-- merged-main regression；
-- worktree 和 local branch cleanup。
-
-只有这些步骤全部完成后，Roadmap 才能把 Phase 1 改成 `Completed`。
+本 Guide 中列出的正常、异常、边界、rollback、Scene 清洁、Camera、Input、Selection 和 Game Time test cases 均已完成并通过。它们现在是历史验收记录；以后修改 Phase 1 contract 时，应重新运行受影响的 focused tests 和完整 regression。
 
 下一阶段是 Phase 2：Grid Rules。它会在本 Phase 的 data contracts 上继续建立 grid behavior。

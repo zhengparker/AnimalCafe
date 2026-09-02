@@ -224,10 +224,8 @@ Phase 2 没有制作：
 
 ## 12. 完成状态和下一步
 
-Phase 2 当前状态是 `In Review`，不是 `Completed`。PR hardening Option A 的 fresh full regression 为 EditMode `191 / 191`、PlayMode `35 / 35`，Failed、Skipped、Inconclusive 都是 `0`；它覆盖真实 UGUI/Input System pointer boundary、`GridPlacementTests`、Phase 0 和 Phase 1 regression，并确认超出 `1024` cells 的错误 `FurnitureDefinition` 会被拒绝。
+Phase 2 当前状态是 `Completed`。
 
-最新 `main` 已整合到 Phase 2，fresh integrated automated verification 与 manual acceptance 均已通过。PR hardening Option A 的 manual acceptance 也已通过：temporary Cube selection 在点击 `Pause`、`1x`、`2x` 后一直保持，Camera pan / zoom 正常，Console clean。
+Approved design、implementation、automated verification、review、Studio Owner manual acceptance、merge 和 merged-main regression 均已完成。最终 fresh evidence 为 EditMode `191 / 191`、PlayMode `35 / 35` passed；Failed、Skipped、Inconclusive 均为 `0`。
 
-下一步由用户完成当前 P2 hardening commit 和 branch push，再批准 merge，并在 merged `main` 上重新运行 full EditMode 与 PlayMode regression。
-
-在用户明确验收、merge 和 merged-main regression 完成前，Roadmap 不能把 Phase 2 标记为 `Completed`。
+本 Guide 中列出的 bounds、rotation、overlap、rollback、remove、consistency、极端 coordinate、`1024`-cell safety limit、UI/Input boundary、Camera 和 Game Time regression cases 均已完成并通过。它们现在是历史验收记录；以后修改 Grid Occupancy 或 Placement transaction 时必须重跑相关 cases。
