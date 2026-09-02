@@ -708,7 +708,7 @@ Preview 使用临时 placement state，不直接修改正式 Layout。只有 Con
 
 ### Status
 
-`Completed — implementation and acceptance; merge pending`（2026-08-29）。Approved design、TDD implementation、review amendments、Engineering/QA closeout 与 Studio Owner `MT-001–MT-034` manual acceptance 均已完成；Owner decision 为 `GO`。Merge-preparation evidence：Phase 6 migration `127/127`、Phase 7 MainCafe migration `30/30`、fresh full EditMode `1443/1443`、fresh full PlayMode `625/625`，failed/skipped/inconclusive 均为 `0`。当前 feature branch 尚未 merge 到 `main`。
+`Completed — merged to main`（2026-09-01；post-merge remediation locally verified 2026-09-02）。Approved design、TDD implementation、review amendments、Engineering/QA closeout 与 Studio Owner `MT-001–MT-034` manual acceptance 均已完成；Owner decision 为 `GO`。PR #6 已以 merge commit `925213af6132597592aa60d815434259b18b8ed1` 合入 `main`。Latest fresh local evidence：standalone committed-state preflight `1/1`、EditMode `1451/1451`、PlayMode `638/638`，failed/skipped/inconclusive 均为 `0`；post-merge remediation 修复了 Windows staged Scene rollback/backup retention 与 `SceneAsset` selection restore、Wall base explicit Kind lookup、duplicate-root continuation reporting、Wall Decor drag Preview/Fade reuse，以及 destroyed blocker-root fade cleanup。Remediation 的 commit/push closeout 尚待单独授权。
 
 Known scope：不建造、移动或删除墙；Window 不切割真实 wall opening；confirmed Window 只在当前 runtime session 存在，reload 后清除；本 Phase 未宣称 player build evidence。
 
@@ -2663,6 +2663,6 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 - **Phase 5 — UI Architecture & Design System** 已完成 approved design、TDD implementation、review hardening、Studio Owner `MT001–MT034` manual acceptance、PR #4 merge 与 merged-main regression，状态为 `Completed`。Merged-main evidence（2026-08-15）：EditMode `690 / 690`、Editor PlayMode `121 / 121`、Windows standalone PlayMode `103 / 103` passed；failed、skipped、inconclusive 均为 `0`。
 - **Phase 6 — Basic Decoration Mode** 已完成 approved design、TDD implementation、independent review、Studio Owner manual acceptance 与 fresh full regression，状态为 `Completed`。Merge-preparation evidence（2026-08-22）：EditMode `1136 / 1136`、Editor PlayMode `446 / 446` passed，failed、skipped、inconclusive 均为 `0`；Windows standalone build 为 `Success`，无 C# warning/error；Studio Owner applicable manual set 为 `29 / 29 PASS`。`P6-M-023` 的真实 Android + iOS two-finger Pinch 已按 scope decision 移至 Phase 51，不计入 Phase 6 denominator。
 - Phase 6 清理只删除 obsolete Phase 4 MainCafe manual-review setup 与两份 temporary materials；`ManualReviewPingPongMover` 及其 regression test 因仍有 Phase 5 live consumers 而保留。
-- **Current Next Step：Phase 7 merge PR review。** Phase 7 implementation、automated regression 与 Studio Owner manual acceptance 已完成；feature branch 仍待 merge。只有 Studio Owner 明确批准后才可 merge；在 Phase 7 合入前不开始 **Phase 8 — Functional Furniture & Layout Readiness**。
+- **Current Next Step：Phase 8 — Functional Furniture & Layout Readiness design gate。** Phase 7 已完成 implementation、review、manual acceptance、merge 与 merged-main full regression。Phase 8 implementation 尚未获授权；开始 coding 前先确认 scope/design、normal/invalid/boundary/recovery test cases、implementation plan 与 Studio Owner approval。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 Customer AI，也不提前实现 Phase 6 `Not Included` 的家具商店、经营功能、anchors、path validation 或 Atmosphere。

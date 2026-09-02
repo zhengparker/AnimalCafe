@@ -173,7 +173,14 @@ namespace AnimalCafe.Decoration
                 return;
             }
 
-            var baseStyle = styleLookup.GetRequired(baseStyleId, GetBaseKind(baseStyleId));
+            if (!styleLookup.TryGet(baseStyleId, out var baseStyle)
+                || (baseStyle.Kind != SurfaceStyleKind.Paint
+                    && baseStyle.Kind != SurfaceStyleKind.Wallpaper))
+            {
+                throw new ArgumentException(
+                    $"Missing Wall base Surface Style '{baseStyleId}'.",
+                    nameof(baseStyleId));
+            }
             var wainscoting = wainscotingStyleId == null
                 ? null
                 : styleLookup.GetRequired(wainscotingStyleId, SurfaceStyleKind.Wainscoting);
@@ -298,13 +305,6 @@ namespace AnimalCafe.Decoration
                 propertyBlock.SetColor(BaseColorId, color);
             }
             renderer.SetPropertyBlock(propertyBlock);
-        }
-
-        private static SurfaceStyleKind GetBaseKind(string styleId)
-        {
-            return styleId != null && styleId.StartsWith("wallpaper.", StringComparison.Ordinal)
-                ? SurfaceStyleKind.Wallpaper
-                : SurfaceStyleKind.Paint;
         }
 
         private static Texture GetTexture(Material material)

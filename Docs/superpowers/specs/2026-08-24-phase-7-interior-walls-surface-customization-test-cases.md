@@ -1,8 +1,8 @@
 # AnimalCafe Phase 7 — Interior Walls & Surface Customization Test Cases
 
-> Status: `PASS — automated regression and Studio Owner manual acceptance complete; ready for merge PR`
+> Status: `PASS — merged-main automated regression and Studio Owner manual acceptance complete; Phase 7 closed`
 >
-> Date: 2026-08-24；amended through final closeout 2026-08-29
+> Date: 2026-08-24；amended through post-merge remediation 2026-09-02
 >
 > Source spec: `Docs/superpowers/specs/2026-08-24-phase-7-interior-walls-surface-customization-design.md`
 >
@@ -94,7 +94,7 @@
 ### 4.4 Scene / input fixture
 
 - production `Assets/Scenes/MainCafe.unity` 保持唯一 enabled production Scene；`Assets/Scenes/Validation/Phase7InteriorWalls.unity` 不进入 player Build Settings。
-- canonical Phase 4 Floor、Back-left / Back-right Walls、Window、Entrance 与 Phase 6 Furniture roots 不被替换。
+- canonical Phase 4 Floor、Back-left / Back-right Walls、Entrance 与 Phase 6 Furniture roots 不被替换；MainCafe 不预放 active Window，两个 Window definitions 仍保留在 Catalogue。
 - Input fixture 使用 Unity Input System Touch device / virtual Touch，覆盖 tap、drag、press/move/release、pointer ID、UI-start gesture 与 Safe Area coordinates。
 - responsive fixture 至少覆盖 reference Portrait、narrow Portrait、tall Portrait、Landscape fallback 与 safe-area insets；exact heights、card size 与 drag threshold 保持可调，但 Expanded / Compact transition 固定为 `0.16s`。
 
@@ -238,7 +238,7 @@
 | IT-030 | overlap/out-of-bounds/cross-corner/missing Wall matrix | render projection | 红色 projection + `×`；对应具体 reason；Confirm disabled；不只依赖色相 | Invalid：错误反馈/可提交 | matrix + grayscale screenshot | READY |
 | IT-031 | rotated target Wall 被真实 Furniture/Wall Decor 挡住；或 Floor Mode 无 Preview | select/edit Wall target；进入 Floor Mode | Wall rule：以真实 Wall plane（非 world AABB near face）为 ray distance，只淡化 camera-to-target blockers；target/highlight保持正常；Floor rule：所有 confirmed Furniture 立即约 `35%` 淡化，Wall/Wall Decor/Window 保持正常；两者都不改变 data/occupancy/collider/input boundary | Visual：目标/Floor不可读或淡化改逻辑 | rotated-plane raycast + object/material snapshots + screenshot | READY |
 | IT-032 | Wall/Floor fade 已应用 | 切 target、切出对应 Mode、Cancel、Discard、exit、disable、fault seam；Continue Editing 留在当前 Mode | cleanup path 精确恢复原 Materials、MaterialPropertyBlocks 与 opacity；Continue Editing 保持对应 fade；无 permanent fade | Recovery：视觉状态泄漏 | parameterized cleanup assertions | READY |
-| IT-033 | canonical MainCafe migrated | load Scene、enter/use/exit mixed session | exact two Wall IDs、64 Floor tiles、wall registries、four Tabs 存在；Window、Entrance、Phase 6 Furniture preserved | Regression：production integration 破坏 | actual Scene-loading test XML | READY |
+| IT-033 | canonical MainCafe migrated | load Scene、enter/use/exit mixed session | exact two Wall IDs、64 Floor tiles、wall registries、four Tabs 存在；Entrance 与 Phase 6 Furniture preserved；MainCafe 无 active Window seed，但两个 Window Catalogue entries 仍可用 | Regression：production integration 破坏 | actual Scene-loading test XML | READY |
 | IT-034 | Validation Scene and player build | load standalone-compatible runtime | runtime assembly/Scene load 不依赖 UnityEditor；Validation Scene 未进入 production Build Settings | Regression：player build失败 | player/Scene smoke log | READY |
 | IT-035 | responsive fixture 含 reference/narrow/tall Portrait、Landscape 与 safe-area insets | 对每个尺寸依次：render 四 Tabs；横/竖 nested scroll；进入 Compact Preview；记录 `0.16s` transition；定位并 raycast Surface footer Cancel/Confirm | 每个尺寸下 Tabs 完整且 Active 在前；nested scroll direction-lock；Compact footer 不裁切且跟随 Sheet；Cancel/Confirm bounds 位于 safe containment 内、可 raycast、无遮挡且不被 safe-area 截断 | Boundary：responsive 下关键操作不可达 | parameterized PlayMode bounds/raycast/timing matrix + XML | READY |
 
@@ -248,11 +248,11 @@
 |---|---|---|---|---|---|---|
 | RT-001 | Phase 1 Layout suites available | 跑完整 `CafeLayout` data tests | exact counts；failed/skipped/inconclusive 均为 0 或有单独 approved limitation | Regression：Layout 基础回退 | XML/log | READY |
 | RT-002 | Phase 2 placement suites available | 跑 occupancy/bounds/rotation/Entrance/transaction tests | 旧 Floor Furniture legality 与 transaction semantics 不变 | Regression：placement 回退 | XML/log | READY |
-| RT-003 | Phase 4 Wall suites/validators available | 跑 `WallSurfaceLayoutTests` 与 production asset validators | Phase 4 Wall API/result ordering、canonical Walls/Window/Entrance 不变 | Regression：Wall contract 回退 | XML/log | READY |
+| RT-003 | Phase 4 Wall suites/validators available | 跑 `WallSurfaceLayoutTests` 与 production asset validators | Phase 4 Wall API/result ordering、canonical Walls/Entrance 与 Window definition contracts 不变；不要求 MainCafe 预放 active Window | Regression：Wall contract 回退 | XML/log | READY |
 | RT-004 | Phase 5 UI suites available | 跑 Theme/navigation/Modal/Bottom Sheet/Safe Area/Pause/pointer boundary tests | Phase 5 accessibility与 input boundary 继续通过 | Regression：UI foundation 回退 | XML/log | READY |
 | RT-005 | Phase 6 EditMode suites available | 跑 Catalogue、`DecorationSessionTests`、Layout/Scene sync focused regressions | 4 Furniture presets、Rotate、Confirm/Cancel/Store 与 runtime Layout 不变 | Regression：Furniture flow 回退 | XML/log | READY |
 | RT-006 | Phase 6 PlayMode Touch/UI suites available | 跑完整 Phase 6 Decoration Touch/UI/Scene tests | Furniture drag、Camera ownership、UI pointer blocking 与 Pause lifecycle 不变 | Regression：input ownership 回退 | XML/log | READY |
-| RT-007 | production MainCafe | load、enter Phase 7、只用 Furniture flow、exit/resume | initial Furniture/Window/Entrance preserved；无 duplicate runtime/UI；Game Time 正常恢复 | Regression：MainCafe smoke | Scene test + Console log | READY |
+| RT-007 | production MainCafe | load、enter Phase 7、只用 Furniture flow、exit/resume | initial Furniture/Entrance preserved；MainCafe 无预放 active Window，Catalogue 仍提供两个 Window definitions；无 duplicate runtime/UI；Game Time 正常恢复 | Regression：MainCafe smoke | Scene test + Console log | READY |
 | RT-008 | Phase 7 tasks focused GREEN | 跑 fresh full EditMode once at Phase closeout | XML 逐项记录 passed/failed/skipped/inconclusive；不可用 focused pass 替代 | Regression：隐藏跨系统失败 | full EditMode XML/log | READY |
 | RT-009 | Phase 7 tasks focused GREEN | 跑 fresh full Editor PlayMode once at Phase closeout | exact counts；order/input failures 不得隐藏 | Regression：runtime integration失败 | full PlayMode XML/log | READY |
 | RT-010 | full run imported/generated assets or exposed order issue | 修复后 rerun affected focused tests；最终再跑 full suite once | 报告首次原因、修复与最终 counts；不擦除首次失败历史 | Recovery：假绿/顺序依赖 | initial + final XML/log | READY |
@@ -478,4 +478,5 @@ Studio Owner 请 review 2026-08-27 amendment：
 - Direct GREEN：Wall Mounted/Touch `57/57`、Surface/Fade `42/42`、Decoration UI `59/59`。
 - Full PlayMode 首轮 `633/634`：旧 Phase 6 real-Mouse drag timing case 首帧位移为 `0`；该 case 隔离复跑 `1/1`，fresh full rerun `634/634`。Fresh full EditMode `1444/1444`；final failed/skipped/inconclusive 均为 `0`。
 - Studio Owner 选择 nearest-slot 方案 A：preferred Surface 优先，再按 Manhattan distance → stable Surface ID → Column → Row；保留当前墙面直觉并保持 deterministic fallback。
-- 本轮 automated evidence 不重新替代已完成的 MT-001–MT-034 manual acceptance；merge 仍需单独授权。
+- 本轮 automated evidence 不重新替代已完成的 MT-001–MT-034 manual acceptance。Studio Owner 后续已单独授权 merge；PR #6 于 2026-09-01 以 merge commit `925213af6132597592aa60d815434259b18b8ed1` 合入 `main`。Merge-day regression：EditMode `1444/1444`、PlayMode `634/634`，failed/skipped/inconclusive 均为 `0`；local `main` 与 `origin/main` 的 commit、tree 和 diff 一致。
+- Post-merge remediation（2026-09-02）：新增 explicit Surface Kind、duplicate-root continuation、standalone committed-state preflight、Wall Decor Preview/Ghost/Mesh 与 Fade Material reuse、destroyed blocker-root cleanup、disk-backed staged Scene rollback、`.meta` byte verification及 target `SceneAsset` selection restore regressions。首次 full EditMode `1424/1445`，根因是 Windows IO 1224 与其 20 个 downstream failures；后续 full-order `1450/1451` 又定位到 hostile hash-drift test 的同类直接覆盖问题。Raw、derived 与 thumbnail drift 现统一用 test-only hash seam 注入，不再改写 canonical binaries；补充 focused `raw-hash` `1/1`、`derived-hash` `1/1`，且两套 Scene recovery parent 均在测试后不存在。Focused：rollback failure injection `6/6`、Phase 6 transaction `133/133`、Phase 6 validator `194/194`、Phase 7 validator `30/30`、surface/fade `46/46`、Wall Mounted Touch `57/57`；standalone committed-state preflight `1/1`、fresh full EditMode `1451/1451`、fresh full PlayMode `638/638`，failed/skipped/inconclusive 均为 `0`。

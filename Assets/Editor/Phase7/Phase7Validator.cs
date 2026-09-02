@@ -17,6 +17,8 @@ namespace AnimalCafe.EditorTools.Phase7
     public sealed class Phase7ValidationReport { public Phase7ValidationReport(IEnumerable<Phase7ValidationIssue> issues){Issues=issues.ToArray();} public IReadOnlyList<Phase7ValidationIssue> Issues{get;} public bool IsValid=>Issues.Count==0; }
     public static class Phase7Validator
     {
+        internal static Func<string,string> HashOverrideForTests { get; set; }
+
         private static readonly (string Path,SurfaceStyleKind Kind,string[] Ids)[] ExpectedCatalogues={
             (Phase7AssetPaths.FloorCataloguePath,SurfaceStyleKind.Floor,new[]{"floor.dark-stone","floor.light-tile","floor.warm-wood"}),
             (Phase7AssetPaths.PaintCataloguePath,SurfaceStyleKind.Paint,new[]{"paint.cream","paint.sage","paint.terracotta"}),
@@ -65,7 +67,21 @@ namespace AnimalCafe.EditorTools.Phase7
             var manifest=File.Exists(Phase7AssetPaths.ProvenanceManifestPath)?File.ReadAllText(Phase7AssetPaths.ProvenanceManifestPath):string.Empty;
             foreach(var hash in Phase7FormalAssetIntake.SourceSha256.Values.Concat(Phase7FormalAssetIntake.DerivedSha256.Values))if(!manifest.Contains(hash))Add(issues,"P7-PROVENANCE-MANIFEST",hash);
         }
-        private static void ValidateHash(string path,string expected,string code,ICollection<Phase7ValidationIssue> issues){if(!File.Exists(path)){Add(issues,code,path);return;}using var sha=SHA256.Create();var actual=BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(path))).Replace("-","");if(!actual.Equals(expected,StringComparison.OrdinalIgnoreCase))Add(issues,code,path);}
+        private static void ValidateHash(
+            string path,
+            string expected,
+            string code,
+            ICollection<Phase7ValidationIssue> issues)
+        {
+            if(!File.Exists(path)){Add(issues,code,path);return;}
+            var actual=HashOverrideForTests?.Invoke(path);
+            if(string.IsNullOrEmpty(actual))
+            {
+                using var sha=SHA256.Create();
+                actual=BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(path))).Replace("-","");
+            }
+            if(!actual.Equals(expected,StringComparison.OrdinalIgnoreCase))Add(issues,code,path);
+        }
         private static void ValidateMounted(ICollection<Phase7ValidationIssue> issues){ValidateMountedCatalogue(Phase7AssetPaths.WallMountedProductionCataloguePath,WallMountedCatalogueKind.WallDecor,new[]{"wall-decor.monitor.01","wall-decor.shiba-painting.01","wall-decor.wood-shelf.01"},issues);ValidateMountedCatalogue(Phase7AssetPaths.WindowCataloguePath,WallMountedCatalogueKind.Windows,new[]{"window.canonical.phase4","window.tall-glass.1x2.01"},issues);}
         private static void ValidateMountedCatalogue(string path,WallMountedCatalogueKind kind,string[] expectedIds,ICollection<Phase7ValidationIssue> issues)
         {
@@ -170,7 +186,13 @@ namespace AnimalCafe.EditorTools.Phase7
                             UnityEngine.Object.DestroyImmediate(runtimeWall);
                         }
                     }
-                    if(all.Count(x=>x.name=="Phase7_InteriorRuntime")!=1||all.Count(x=>x.name=="Phase7_UIRuntime")!=1)Add(issues,"P7-SCENE-ROOTS",path);var runtime=all.SingleOrDefault(x=>x.name=="Phase7_InteriorRuntime");if(runtime==null||runtime.GetComponents<WallSurfaceRegistry>().Length!=1||runtime.GetComponents<WallMountedSceneRegistry>().Length!=1||runtime.GetComponents<FloorSurfaceGridView>().Length!=1)Add(issues,"P7-SCENE-REGISTRIES",path);
+                    var interiorRoots=all.Where(x=>x.name=="Phase7_InteriorRuntime").ToArray();
+                    if(interiorRoots.Length!=1||all.Count(x=>x.name=="Phase7_UIRuntime")!=1)Add(issues,"P7-SCENE-ROOTS",path);
+                    if(interiorRoots.Length==1)
+                    {
+                        var runtime=interiorRoots[0];
+                        if(runtime.GetComponents<WallSurfaceRegistry>().Length!=1||runtime.GetComponents<WallMountedSceneRegistry>().Length!=1||runtime.GetComponents<FloorSurfaceGridView>().Length!=1)Add(issues,"P7-SCENE-REGISTRIES",path);
+                    }
                 }
                 finally{if(opened&&scene.IsValid()&&scene.isLoaded)EditorSceneManager.CloseScene(scene,true);}
             }

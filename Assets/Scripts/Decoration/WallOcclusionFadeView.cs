@@ -26,17 +26,38 @@ namespace AnimalCafe.Decoration
         private Renderer targetRenderer;
         private Transform targetRepresentationRoot;
         private Transform nonDecorationBlockerRoot;
+        private bool blockersCurrentForTarget;
 
         public void SetNonDecorationBlockerRoot(Transform root)
         {
+            if (ReferenceEquals(nonDecorationBlockerRoot, root))
+            {
+                return;
+            }
+
+            RestoreAllFades();
             nonDecorationBlockerRoot = root;
         }
 
         public void ConfigureTarget(Renderer targetRenderer)
         {
+            if (targetRenderer == null)
+            {
+                throw new ArgumentNullException(nameof(targetRenderer));
+            }
+
+            var representationRoot = ResolveRepresentationRoot(targetRenderer.transform);
+            if (this.targetRenderer == targetRenderer
+                && targetRepresentationRoot == representationRoot)
+            {
+                workingBlock ??= new MaterialPropertyBlock();
+                EnsureConfigured();
+                return;
+            }
+
             RestoreAllFades();
-            this.targetRenderer = targetRenderer ?? throw new ArgumentNullException(nameof(targetRenderer));
-            targetRepresentationRoot = ResolveRepresentationRoot(targetRenderer.transform);
+            this.targetRenderer = targetRenderer;
+            targetRepresentationRoot = representationRoot;
             workingBlock ??= new MaterialPropertyBlock();
             EnsureConfigured();
         }
@@ -76,9 +97,15 @@ namespace AnimalCafe.Decoration
             try
             {
                 EnsureConfigured();
+                if (blockersCurrentForTarget)
+                {
+                    return;
+                }
+
                 RestoreAllFades();
                 if (!TryGetTargetScreenRect(out var targetScreenRect))
                 {
+                    blockersCurrentForTarget = true;
                     return;
                 }
 
@@ -133,6 +160,7 @@ namespace AnimalCafe.Decoration
                         }
                     }
                 }
+                blockersCurrentForTarget = true;
             }
             catch
             {
@@ -248,6 +276,7 @@ namespace AnimalCafe.Decoration
             }
 
             originalStates.Clear();
+            blockersCurrentForTarget = false;
         }
 
         private void OnDisable()

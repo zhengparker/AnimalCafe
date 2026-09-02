@@ -10,7 +10,7 @@
 
 **Spec:** `Docs/superpowers/specs/2026-08-24-phase-7-interior-walls-surface-customization-design.md`
 
-**Current status:** Phase 7 implementation、review amendments、final automated regression 与 Studio Owner manual acceptance 均已完成。2026-08-29 的剩余动作仅为已单独授权的 feature branch commit、push 与 merge PR；不授权 merge 或 branch/worktree cleanup。
+**Current status:** Phase 7 implementation、review amendments、Studio Owner manual acceptance 与原 Phase 7 version-control closeout 均已完成；post-merge remediation 已在 local `main` working tree 验证完成，commit/push closeout 尚待单独授权。PR #6 已于 2026-09-01 以 merge commit `925213af6132597592aa60d815434259b18b8ed1` 合入 `main`；2026-09-02 fresh local regression 为 standalone committed-state preflight `1/1`、EditMode `1451/1451`、PlayMode `638/638`，failed/skipped/inconclusive 均为 `0`。Local Phase 7 worktree 与 local feature branch 已清理；本历史 plan 不授权 Phase 8 implementation。
 
 ## Global Constraints
 
@@ -877,6 +877,8 @@ unity test . --mode PlayMode --output 'TestResults\Phase7Amendment\Task17\task17
 
 **Merge-review follow-up evidence (2026-09-01):** independent review found two Important terminal-cleanup gaps：Wall Cancel cleared its target without restoring `Select a wall to edit`，and Wall Decor Store Confirm did not restore blocker fades。Each regression first failed `0/1`，then passed `1/1` after the two-line controller fix。Direct GREEN：Wall Mounted/Touch `57/57`、Surface/Fade `42/42`、Decoration UI `59/59`。The first full PlayMode run was `633/634` because an existing Phase 6 real-Mouse drag timing case did not move on its first frame；isolated rerun passed `1/1` and a fresh full rerun passed `634/634`。Fresh full EditMode passed `1444/1444`；final failed/skipped/inconclusive are `0`。Approved nearest-slot priority is preferred Surface → Manhattan distance → stable Surface ID → Column → Row。No open Critical/Important finding remains；merge is still a separate Studio Owner authorization gate。
 
+**Post-merge remediation evidence (2026-09-02):** merged-main review found Wall Decor drag Preview/Fade rebuild、Style-ID Kind inference、builder-before-validator ordering、duplicate-root termination and Windows Scene restore IO 1224 risks。TDD regressions now require stable Preview/Ghost/Mesh and Fade Material identity、explicit `SurfaceStyleKind` lookup、standalone read-only committed-state preflight、duplicate-root continuation、destroyed blocker-root cleanup、disk-backed staged Scene rollback、exact `.meta` verification and target `SceneAsset` selection restore。The first fresh full EditMode run exposed Windows IO 1224 in direct Scene restore paths and passed `1424/1445` with 20 downstream failures；a later full-order run passed `1450/1451` and exposed the same IO 1224 pattern in a derived-FBX hostile-test cleanup。All raw、derived and thumbnail hash-drift cases now use a test-only hash seam instead of rewriting canonical binaries；focused `raw-hash` and `derived-hash` each pass `1/1`，and both Scene recovery parent directories are absent after cleanup。Final focused evidence includes rollback failure injection `6/6`、Phase 6 transaction `133/133`、Phase 6 validator `194/194`、Phase 7 validator `30/30`、surface/fade `46/46` and Wall Mounted Touch `57/57`；standalone committed-state preflight passed `1/1`，fresh full EditMode passed `1451/1451`，fresh full PlayMode passed `638/638`。Final failed/skipped/inconclusive are `0`。
+
 ---
 
 ### Task 20: Later-decision UI/Bug self-audit and mounted-thumbnail correction
@@ -903,4 +905,4 @@ unity test . --mode PlayMode --output 'TestResults\Phase7Amendment\Task17\task17
 
 ## Execution Gate
 
-Historical execution gate: Tasks 12–17 originally required Studio Owner approval and did not themselves authorize version-control actions。The Studio Owner subsequently completed manual acceptance and explicitly authorized final review/debug、commit、push and creation of a merge PR on 2026-08-29。Merge、branch/worktree deletion and cleanup remain unauthorized。
+Historical execution gate: Tasks 12–17 originally required Studio Owner approval and did not themselves authorize version-control actions。The Studio Owner subsequently completed manual acceptance，authorized final review/debug、commit、push and creation of a merge PR on 2026-08-29，then separately authorized merge and local cleanup。PR #6 merged to `main` on 2026-09-01；merged-main regression passed，and the local Phase 7 worktree/branch were cleaned。These later approvals close Phase 7 only and do not authorize Phase 8 implementation。

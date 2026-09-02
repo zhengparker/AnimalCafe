@@ -1,6 +1,6 @@
 # Phase 7 Beginner Guide — Interior Walls & Surface Customization
 
-> 当前状态：Phase 7 implementation、merge-review fixes、final automated regression 与 Studio Owner manual acceptance 已完成。2026-09-01 evidence：EditMode `1444/1444`、PlayMode `634/634`、MT-001–MT-034 `34/34 PASS`；目前等待 merge PR review，不代表已经 merge 到 `main`。
+> 当前状态：Phase 7 implementation、merge-review fixes、Studio Owner manual acceptance 与 merge 均已完成；post-merge remediation 已在 local `main` working tree 验证完成，commit/push closeout 尚待单独授权。PR #6 已于 2026-09-01 以 merge commit `925213af6132597592aa60d815434259b18b8ed1` 合入 `main`；2026-09-02 fresh local evidence：standalone committed-state preflight `1/1`、EditMode `1451/1451`、PlayMode `638/638`、MT-001–MT-034 `34/34 PASS`。下一步是 Phase 8 design gate，不代表 Phase 8 implementation 已获授权。
 
 ## 2026-08-26 Manual review adjustments
 
@@ -14,9 +14,9 @@
 ## 1. 打开正确的 Unity Project
 
 1. 打开 Unity Hub。
-2. 选择 `E:\Unity\Project\AnimalCafe\.worktrees\phase-7-interior-walls`。
+2. 选择主项目 `E:\Unity\Project\AnimalCafe`，并确认当前 branch 是 `main`。
 3. 确认 Unity version 是 `6000.5.5f1`。
-4. 打开 `Assets/Scenes/MainCafe.unity`，不要打开 main checkout 中的同名 Scene。
+4. 打开 `Assets/Scenes/MainCafe.unity`。
 5. 等待 import 和 compile 完成；Console 不应出现 unexpected Error / Exception。
 
 Timeline package 的 immutable-package warning 属于 Unity package 自身提示；不要修改 `Packages/com.unity.timeline` 中的文件。若出现其他 warning，请截图并记录完整文字。

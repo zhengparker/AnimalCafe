@@ -41,6 +41,13 @@ namespace AnimalCafe.EditorTools.Phase6
         AfterSave
     }
 
+    internal enum Phase6SceneRestoreStage
+    {
+        BeforeStagingCopy,
+        AfterAssetRelease,
+        BeforeImport
+    }
+
     internal enum Phase6SceneSetupDependency
     {
         ContentCatalog,
@@ -156,6 +163,8 @@ namespace AnimalCafe.EditorTools.Phase6
 
         internal static Action<Phase6SceneSetupStage> FaultInjectorForTests { get; set; }
 
+        internal static Action<Phase6SceneRestoreStage> RestoreFaultInjectorForTests { get; set; }
+
         internal static Func<Phase4AssetValidationReport> Phase4ValidatorOverrideForTests
         {
             get;
@@ -259,6 +268,7 @@ namespace AnimalCafe.EditorTools.Phase6
                 Phase5ValidatorOverrideForTests = null;
                 DecorationCatalogueValidatorOverrideForTests = null;
                 FaultInjectorForTests = null;
+                RestoreFaultInjectorForTests = null;
                 SaveSceneObserverForTests = null;
             }
         }
@@ -1752,6 +1762,7 @@ namespace AnimalCafe.EditorTools.Phase6
             private readonly int originalTargetIndex;
             private readonly ulong activeSceneHandle;
             private readonly UnityEngine.Object[] selection;
+            private readonly bool[] selectionHadReference;
             private readonly GlobalObjectId?[] targetSelectionIds;
             private readonly int activeSelectionIndex;
             private readonly ulong previousSceneHandle;
@@ -1789,6 +1800,9 @@ namespace AnimalCafe.EditorTools.Phase6
                     : 0UL;
                 activeSceneHandle = SceneManager.GetActiveScene().handle.GetRawData();
                 selection = Selection.objects.ToArray();
+                selectionHadReference = selection
+                    .Select(value => !ReferenceEquals(value, null))
+                    .ToArray();
                 activeSelectionIndex = Array.IndexOf(selection, Selection.activeObject);
                 targetSelectionIds = selection.Select(value =>
                     BelongsToTarget(value, TargetPath)
@@ -1906,33 +1920,28 @@ namespace AnimalCafe.EditorTools.Phase6
             {
                 if (rolledBack || completed)
                     return;
-                rolledBack = true;
                 if (!backupCreated)
                 {
                     RestoreCallerDirtyFlags();
+                    rolledBack = true;
                     return;
                 }
 
-                try
+                if (Scene.IsValid() && Scene.isLoaded)
+                    EditorSceneManager.CloseScene(Scene, true);
+                RestoreFiles();
+                if (originalTargetLoaded)
                 {
-                    if (Scene.IsValid() && Scene.isLoaded)
-                        EditorSceneManager.CloseScene(Scene, true);
-                    RestoreFiles();
-                    if (originalTargetLoaded)
-                    {
-                        Scene = EditorSceneManager.OpenScene(
-                            TargetPath,
-                            OpenSceneMode.Additive);
-                        RestoreTargetOrder();
-                    }
-                    RestoreActiveScene();
-                    RestoreSelection();
-                    RestoreCallerDirtyFlags();
+                    Scene = EditorSceneManager.OpenScene(
+                        TargetPath,
+                        OpenSceneMode.Additive);
+                    RestoreTargetOrder();
                 }
-                finally
-                {
-                    CleanupBackup();
-                }
+                RestoreActiveScene();
+                RestoreSelection();
+                RestoreCallerDirtyFlags();
+                rolledBack = true;
+                CleanupBackup();
             }
 
             public void Dispose()
@@ -1945,16 +1954,28 @@ namespace AnimalCafe.EditorTools.Phase6
             {
                 if (targetExisted)
                 {
-                    File.Copy(Path.Combine(runFolder, "target.unity"), TargetPath, true);
-                    var metaBackup = Path.Combine(runFolder, "target.meta");
-                    if (File.Exists(metaBackup))
-                        File.Copy(metaBackup, TargetPath + ".meta", true);
-                    else if (File.Exists(TargetPath + ".meta"))
-                        File.Delete(TargetPath + ".meta");
-                    AssetDatabase.ImportAsset(
-                        TargetPath,
-                        ImportAssetOptions.ForceSynchronousImport
-                        | ImportAssetOptions.ForceUpdate);
+                    try
+                    {
+                        RestoreExistingTarget(true);
+                    }
+                    catch (Exception firstRestoreFailure)
+                    {
+                        try
+                        {
+                            RestoreExistingTarget(false);
+                            Debug.LogWarning(
+                                "Phase 6 rollback recovered from a Scene restore failure: "
+                                + firstRestoreFailure.Message);
+                        }
+                        catch (Exception recoveryFailure)
+                        {
+                            throw new AggregateException(
+                                "Phase 6 rollback could not restore the target Scene. "
+                                + "The disk backup was retained at '" + runFolder + "'.",
+                                firstRestoreFailure,
+                                recoveryFailure);
+                        }
+                    }
                     return;
                 }
 
@@ -1965,6 +1986,87 @@ namespace AnimalCafe.EditorTools.Phase6
                     AssetDatabase.DeleteAsset(TargetPath);
                 if (File.Exists(TargetPath)) File.Delete(TargetPath);
                 if (File.Exists(TargetPath + ".meta")) File.Delete(TargetPath + ".meta");
+            }
+
+            private void RestoreExistingTarget(bool invokeTestFaults)
+            {
+                var sceneBackup = Path.Combine(runFolder, "target.unity");
+                var metaBackup = Path.Combine(runFolder, "target.meta");
+                var stagedScene = Path.Combine(runFolder, "restore.unity");
+                var stagedMeta = Path.Combine(runFolder, "restore.meta");
+
+                if (invokeTestFaults)
+                    RestoreFaultInjectorForTests?.Invoke(
+                        Phase6SceneRestoreStage.BeforeStagingCopy);
+                File.Copy(sceneBackup, stagedScene, true);
+                if (File.Exists(metaBackup))
+                    File.Copy(metaBackup, stagedMeta, true);
+                else if (File.Exists(stagedMeta))
+                    File.Delete(stagedMeta);
+                VerifySameBytes(sceneBackup, stagedScene, "staged Scene");
+                VerifyOptionalSameBytes(metaBackup, stagedMeta, "staged Scene metadata");
+
+                ReleaseTargetAsset();
+                if (invokeTestFaults)
+                    RestoreFaultInjectorForTests?.Invoke(
+                        Phase6SceneRestoreStage.AfterAssetRelease);
+
+                File.Move(stagedScene, TargetPath);
+                if (File.Exists(stagedMeta))
+                    File.Move(stagedMeta, TargetPath + ".meta");
+                if (invokeTestFaults)
+                    RestoreFaultInjectorForTests?.Invoke(
+                        Phase6SceneRestoreStage.BeforeImport);
+                AssetDatabase.ImportAsset(
+                    TargetPath,
+                    ImportAssetOptions.ForceSynchronousImport
+                    | ImportAssetOptions.ForceUpdate);
+
+                VerifySameBytes(sceneBackup, TargetPath, "restored Scene");
+                VerifyOptionalSameBytes(metaBackup, TargetPath + ".meta", "restored Scene metadata");
+                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(TargetPath) == null)
+                    throw new InvalidOperationException(
+                        "Unity could not import the restored target Scene.");
+            }
+
+            private void ReleaseTargetAsset()
+            {
+                var targetIsKnown = File.Exists(TargetPath)
+                    || AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(TargetPath) != null
+                    || !string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(
+                        TargetPath,
+                        AssetPathToGUIDOptions.OnlyExistingAssets));
+                if (targetIsKnown && !AssetDatabase.DeleteAsset(TargetPath))
+                    throw new InvalidOperationException(
+                        "Unity could not release the target Scene before rollback restore.");
+                if (File.Exists(TargetPath) || File.Exists(TargetPath + ".meta"))
+                    throw new IOException(
+                        "Unity reported deleting the target Scene but retained its files.");
+            }
+
+            private static void VerifySameBytes(
+                string expectedPath,
+                string actualPath,
+                string label)
+            {
+                if (!File.Exists(expectedPath)
+                    || !File.Exists(actualPath)
+                    || !File.ReadAllBytes(actualPath)
+                        .SequenceEqual(File.ReadAllBytes(expectedPath)))
+                {
+                    throw new IOException(label + " does not match its rollback backup.");
+                }
+            }
+
+            private static void VerifyOptionalSameBytes(
+                string expectedPath,
+                string actualPath,
+                string label)
+            {
+                if (File.Exists(expectedPath) != File.Exists(actualPath))
+                    throw new IOException(label + " existence does not match its rollback backup.");
+                if (File.Exists(expectedPath))
+                    VerifySameBytes(expectedPath, actualPath, label);
             }
 
             private void RestoreTargetOrder()
@@ -2001,7 +2103,7 @@ namespace AnimalCafe.EditorTools.Phase6
                         ? GlobalObjectId.GlobalObjectIdentifierToObjectSlow(
                             targetSelectionIds[index].Value)
                         : selection[index];
-                    if (selection[index] != null && restored[index] == null)
+                    if (selectionHadReference[index] && restored[index] == null)
                         throw new InvalidOperationException(
                             "Could not restore a selected target Scene object.");
                 }
@@ -2092,6 +2194,13 @@ namespace AnimalCafe.EditorTools.Phase6
 
             private static bool BelongsToTarget(UnityEngine.Object value, string targetPath)
             {
+                if (ReferenceEquals(value, null))
+                    return false;
+                if (string.Equals(
+                        AssetDatabase.GetAssetPath(value),
+                        targetPath,
+                        StringComparison.Ordinal))
+                    return true;
                 var scene = value switch
                 {
                     GameObject gameObject => gameObject.scene,

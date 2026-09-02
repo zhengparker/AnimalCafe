@@ -3,19 +3,19 @@ using AnimalCafe.Content;
 using AnimalCafe.EditorTools.Phase7;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using System.IO;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 
 namespace AnimalCafe.Tests.EditMode.Phase7
 {
     public sealed class Phase7ValidatorTests
     {
         [Test]
-        public void ValidateAll_AfterBuildAndSetup_HasNoIssuesAndExcludesValidationScene()
+        public void ValidateAll_CommittedProductionState_HasNoIssuesAndExcludesValidationScene()
         {
-            Phase7SurfaceAssetBuilder.BuildOrUpdateAssets();
-            Phase7DecorationSceneSetup.ConfigureValidationScene();
             var report = Phase7Validator.ValidateAll();
 
             Assert.That(report.Issues, Is.Empty,
@@ -24,6 +24,63 @@ namespace AnimalCafe.Tests.EditMode.Phase7
                 scene.enabled && scene.path == Phase7AssetPaths.ValidationScenePath), Is.False);
             Assert.That(EditorBuildSettings.scenes.Count(scene =>
                 scene.enabled && scene.path == Phase7AssetPaths.MainCafeScenePath), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ValidateAll_DuplicateInteriorRuntimeReportsRootIssueWithoutThrowing()
+        {
+            var existingMain = Enumerable.Range(0, SceneManager.sceneCount)
+                .Select(SceneManager.GetSceneAt)
+                .FirstOrDefault(scene => scene.path == Phase7AssetPaths.MainCafeScenePath);
+            var existingValidation = Enumerable.Range(0, SceneManager.sceneCount)
+                .Select(SceneManager.GetSceneAt)
+                .FirstOrDefault(scene => scene.path == Phase7AssetPaths.ValidationScenePath);
+            if (existingMain.IsValid() || existingValidation.IsValid())
+                Assert.Ignore(
+                    "Duplicate-root validation owns temporary target Scene handles; "
+                    + "close caller-owned Phase 7 target Scenes before running it.");
+            var main = EditorSceneManager.OpenScene(
+                Phase7AssetPaths.MainCafeScenePath,
+                OpenSceneMode.Additive);
+            var validation = EditorSceneManager.OpenScene(
+                Phase7AssetPaths.ValidationScenePath,
+                OpenSceneMode.Additive);
+            var source = main.GetRootGameObjects()
+                .Single(root => root.name == "Phase7_InteriorRuntime");
+            var duplicate = Object.Instantiate(source);
+            duplicate.name = source.name;
+            SceneManager.MoveGameObjectToScene(duplicate, main);
+            var laterWall = validation.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<WallSurfaceAuthoring>(true))
+                .First();
+            var laterWallSerialized = new SerializedObject(laterWall);
+            var columns = laterWallSerialized.FindProperty("columns");
+            var originalColumns = columns.intValue;
+            columns.intValue = originalColumns - 1;
+            laterWallSerialized.ApplyModifiedPropertiesWithoutUndo();
+            try
+            {
+                Phase7ValidationReport report = null;
+                Assert.DoesNotThrow(() => report = Phase7Validator.ValidateAll(),
+                    "Duplicate roots must be reported instead of terminating validation.");
+                Assert.That(report.Issues, Has.Some.Matches<Phase7ValidationIssue>(issue =>
+                    issue.Code == "P7-SCENE-ROOTS"
+                    && issue.Message == Phase7AssetPaths.MainCafeScenePath));
+                Assert.That(report.Issues, Has.Some.Matches<Phase7ValidationIssue>(issue =>
+                    issue.Code == "P7-SCENE-WALL-SLOTS"
+                    && issue.Message == Phase7AssetPaths.ValidationScenePath),
+                    "Validation must continue into the later Scene after reporting duplicate roots.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(duplicate);
+                columns.intValue = originalColumns;
+                laterWallSerialized.ApplyModifiedPropertiesWithoutUndo();
+                if (validation.IsValid() && validation.isLoaded)
+                    EditorSceneManager.CloseScene(validation, true);
+                if (main.IsValid() && main.isLoaded)
+                    EditorSceneManager.CloseScene(main, true);
+            }
         }
 
         [Test]
@@ -172,7 +229,10 @@ namespace AnimalCafe.Tests.EditMode.Phase7
                 else if(drift.EndsWith("hash"))
                 {
                     mutatedFile=drift=="raw-hash"?Phase7AssetPaths.RawSourceFolder+"/Wall monitor 3d model.glb":drift=="derived-hash"?"ArtSource/Phase7/Derived/SM_WallDecor_Monitor_01.fbx":AssetDatabase.GetAssetPath(definition.Thumbnail);
-                    originalBytes=File.ReadAllBytes(mutatedFile);File.WriteAllBytes(mutatedFile,originalBytes.Concat(new byte[]{0x7F}).ToArray());AssetDatabase.ImportAsset(mutatedFile,ImportAssetOptions.ForceSynchronousImport);
+                    Phase7Validator.HashOverrideForTests=path=>
+                        string.Equals(path,mutatedFile,System.StringComparison.Ordinal)
+                            ? "INJECTED-HASH-DRIFT"
+                            : null;
                 }
                 else
                 {
@@ -204,6 +264,7 @@ namespace AnimalCafe.Tests.EditMode.Phase7
             }
             finally
             {
+                Phase7Validator.HashOverrideForTests=null;
                 if(mutatedFile!=null&&originalBytes!=null){File.WriteAllBytes(mutatedFile,originalBytes);AssetDatabase.ImportAsset(mutatedFile,ImportAssetOptions.ForceSynchronousImport);}
                 if(temporaryMesh!=null)AssetDatabase.DeleteAsset(temporaryMesh);
                 Phase7SurfaceAssetBuilder.BuildOrUpdateAssets();

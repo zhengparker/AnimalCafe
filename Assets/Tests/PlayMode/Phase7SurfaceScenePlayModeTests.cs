@@ -130,6 +130,34 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [Test]
+        public void WallSurfaceView_RendersWallpaperFromExplicitKindWithoutIdPrefix()
+        {
+            var view = (WallSurfaceView)AddRequiredComponent(
+                "AnimalCafe.Decoration.WallSurfaceView");
+            var wall = CreatePrimitive("NonPrefixedWallpaperWall", PrimitiveType.Cube);
+            wall.transform.localScale = new Vector3(8f, 3f, 0.1f);
+            var authoring = wall.AddComponent<WallSurfaceAuthoring>();
+            SetField(authoring, "surfaceId", "wall.back-left");
+            SetField(authoring, "columns", 8);
+            var wallpaperMaterial = CreateMaterial();
+            var wallpaperTexture = CreateTexture(Color.magenta);
+            wallpaperMaterial.SetTexture("_BaseMap", wallpaperTexture);
+            var wainscotingMaterial = CreateMaterial();
+            var lookup = new SurfaceStyleLookup(new[]
+            {
+                CreateStyle("cream-floral", SurfaceStyleKind.Wallpaper, wallpaperMaterial),
+                CreateStyle("wainscot.white", SurfaceStyleKind.Wainscoting, wainscotingMaterial)
+            });
+            view.Configure(authoring, wall.GetComponent<Renderer>(), 3f, lookup);
+
+            view.RenderConfirmed(CreateSurfaceLayout("cream-floral"));
+
+            Assert.That(ReadRendererTexture(wall.GetComponent<Renderer>()),
+                Is.SameAs(wallpaperTexture),
+                "Wall rendering must honor the definition's explicit Kind, not an ID prefix.");
+        }
+
+        [Test]
         public void WallSurfaceView_ClearPreviewRestoresConfirmedVisualAndLatestConfirmedCache()
         {
             var view = (WallSurfaceView)AddRequiredComponent("AnimalCafe.Decoration.WallSurfaceView");
@@ -1122,6 +1150,58 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(GetProperty(view, "CurrentGhost"), Is.Null);
         }
 
+        [Test]
+        public void WallMountedPreviewView_ReusesProjectionGhostAndMeshesAcrossDragUpdates()
+        {
+            var view = (WallMountedPreviewView)AddRequiredComponent(
+                "AnimalCafe.Decoration.WallMountedPreviewView");
+            var root = CreateObject("ReusablePreviewRoot");
+            var wall = CreatePrimitive("ReusablePreviewWall", PrimitiveType.Cube);
+            var authoring = wall.AddComponent<WallSurfaceAuthoring>();
+            SetField(authoring, "surfaceId", "wall.back-left");
+            SetField(authoring, "columns", 8);
+            SetField(authoring, "rows", 2);
+            SetField(authoring, "slotSize", 1f);
+            var prefab = CreatePrimitive("ReusablePaintingPrefab", PrimitiveType.Cube);
+            view.Configure(root.transform, CreateMaterial(), CreateMaterial());
+
+            view.ShowWallPreview(
+                CreateWallPreview("wall.back-left", new WallSlotPosition(1, 0),
+                    new WallFootprint(1, 2), true),
+                authoring,
+                true,
+                PlacementFeedbackKey.None,
+                prefab);
+            var projection = view.CurrentProjection;
+            var ghost = view.CurrentGhost;
+            var firstProjectionPosition = projection.transform.position;
+            var projectionMesh = projection.GetComponent<MeshFilter>().sharedMesh;
+            var icon = projection.transform.Find("ProjectionFeedbackIcon").gameObject;
+            var iconMesh = icon.GetComponent<MeshFilter>().sharedMesh;
+
+            view.ShowWallPreview(
+                CreateWallPreview("wall.back-left", new WallSlotPosition(4, 0),
+                    new WallFootprint(2, 1), false),
+                authoring,
+                false,
+                PlacementFeedbackKey.WallOverlap,
+                prefab);
+
+            Assert.That(view.CurrentProjection, Is.SameAs(projection));
+            Assert.That(view.CurrentGhost, Is.SameAs(ghost));
+            Assert.That(view.CurrentProjection.GetComponent<MeshFilter>().sharedMesh,
+                Is.SameAs(projectionMesh));
+            Assert.That(view.CurrentProjection.transform.Find("ProjectionFeedbackIcon").gameObject,
+                Is.SameAs(icon));
+            Assert.That(icon.GetComponent<MeshFilter>().sharedMesh, Is.SameAs(iconMesh));
+            Assert.That(projectionMesh.bounds.size.x, Is.EqualTo(2f).Within(0.001f),
+                "The reused footprint Mesh must still resize when the definition changes.");
+            Assert.That(view.CurrentProjection.name, Does.Contain("InvalidCross"));
+            Assert.That(view.CurrentProjection.transform.position.x,
+                Is.Not.EqualTo(firstProjectionPosition.x),
+                "The reused projection must still move to the latest Wall slot.");
+        }
+
         [TestCase(
             "Assets/Art/Phase7/Definitions/WD_WallDecor_Monitor_01.asset",
             "wall-decor.monitor.01",
@@ -1356,6 +1436,71 @@ namespace AnimalCafe.Tests.PlayMode
                 Is.EqualTo(blockerOriginal));
             Assert.That(ReadRendererColor(untouched.GetComponent<Renderer>()),
                 Is.EqualTo(untouchedOriginal));
+        }
+
+        [UnityTest]
+        public IEnumerator WallOcclusionFadeView_ReusesFadeMaterialsForRepeatedSameTargetRefresh()
+        {
+            var cameraObject = CreateObject("StableFadeCamera", typeof(UnityEngine.Camera));
+            cameraObject.transform.position = new Vector3(0f, 0f, -10f);
+            var target = CreatePrimitive("StableFadeTarget", PrimitiveType.Cube);
+            var blocker = CreatePrimitive("StableFadeBlocker", PrimitiveType.Cube);
+            blocker.transform.position = new Vector3(0f, 0f, -5f);
+            var source = CreateMaterial();
+            blocker.GetComponent<Renderer>().sharedMaterial = source;
+            var view = (WallOcclusionFadeView)AddRequiredComponent(
+                "AnimalCafe.Decoration.WallOcclusionFadeView");
+            ConfigureFadeView(
+                view,
+                cameraObject.GetComponent<UnityEngine.Camera>(),
+                target.GetComponent<Renderer>(),
+                0.35f);
+
+            view.FadeBlockersForTarget();
+            yield return null;
+            var firstFadeMaterial = blocker.GetComponent<Renderer>().sharedMaterial;
+            Assert.That(firstFadeMaterial, Is.Not.SameAs(source),
+                "The fixture must begin with a genuinely faded blocker.");
+
+            view.ConfigureTarget(target.GetComponent<Renderer>());
+            view.FadeBlockersForTarget();
+            yield return null;
+
+            Assert.That(blocker.GetComponent<Renderer>().sharedMaterial,
+                Is.SameAs(firstFadeMaterial),
+                "Refreshing the same target must not restore and clone fade Materials again.");
+        }
+
+        [UnityTest]
+        public IEnumerator WallOcclusionFadeView_DestroyedBlockerRootToNullRestoresExistingFades()
+        {
+            var cameraObject = CreateObject("DestroyedRootFadeCamera", typeof(UnityEngine.Camera));
+            cameraObject.transform.position = new Vector3(0f, 0f, -10f);
+            var target = CreatePrimitive("DestroyedRootFadeTarget", PrimitiveType.Cube);
+            var blocker = CreatePrimitive("DestroyedRootFadeBlocker", PrimitiveType.Cube);
+            blocker.transform.position = new Vector3(0f, 0f, -5f);
+            var source = CreateMaterial();
+            blocker.GetComponent<Renderer>().sharedMaterial = source;
+            var trackedRoot = CreateObject("TrackedNonDecorationRoot");
+            var view = (WallOcclusionFadeView)AddRequiredComponent(
+                "AnimalCafe.Decoration.WallOcclusionFadeView");
+            ConfigureFadeView(
+                view,
+                cameraObject.GetComponent<UnityEngine.Camera>(),
+                target.GetComponent<Renderer>(),
+                0.35f);
+            view.SetNonDecorationBlockerRoot(trackedRoot.transform);
+            view.FadeBlockersForTarget();
+            yield return null;
+            Assert.That(blocker.GetComponent<Renderer>().sharedMaterial, Is.Not.SameAs(source));
+
+            UnityEngine.Object.Destroy(trackedRoot);
+            yield return null;
+            view.SetNonDecorationBlockerRoot(null);
+            yield return null;
+
+            Assert.That(blocker.GetComponent<Renderer>().sharedMaterial, Is.SameAs(source),
+                "A destroyed cached root must not compare equal to a new null before fade cleanup.");
         }
 
         [UnityTest]

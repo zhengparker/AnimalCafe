@@ -25,6 +25,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
 using UnityEngine.UI;
 
 namespace AnimalCafe.Tests.EditMode.Phase6
@@ -409,6 +410,55 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 Assert.Throws<Task8InjectedFaultException>(() => Configure(target));
 
                 Assert.That(FullStateFingerprint.Capture(), Is.EqualTo(before));
+                callerFixture.AssertPreserved();
+            }
+            finally
+            {
+                ClearSeams();
+                scope.Dispose();
+            }
+        }
+
+        [TestCase(Phase6SceneSetupTarget.MainCafe, Phase6SceneRestoreStage.BeforeStagingCopy)]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, Phase6SceneRestoreStage.AfterAssetRelease)]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, Phase6SceneRestoreStage.BeforeImport)]
+        [TestCase(Phase6SceneSetupTarget.Validation, Phase6SceneRestoreStage.BeforeStagingCopy)]
+        [TestCase(Phase6SceneSetupTarget.Validation, Phase6SceneRestoreStage.AfterAssetRelease)]
+        [TestCase(Phase6SceneSetupTarget.Validation, Phase6SceneRestoreStage.BeforeImport)]
+        public void Configure_Target_InjectedRestoreFailureRecoversExactSceneAndSelection(
+            Phase6SceneSetupTarget target,
+            Phase6SceneRestoreStage restoreStage)
+        {
+            var scope = new FullEditorStateScope();
+            try
+            {
+                Configure(target);
+                var targetScene = OpenTargetForTest(target, out _);
+                ArrangeSaveRequiredInLoadedTarget(target, targetScene);
+                var callerFixture = CreateDirtyCallerFixture(scope, target, targetScene);
+                var beforeScene = Hash(PathFor(target));
+                var beforeMeta = Hash(PathFor(target) + ".meta");
+                var restoreFaultCalls = 0;
+                Phase6DecorationSceneSetup.FaultInjectorForTests = stage =>
+                {
+                    if (stage == Phase6SceneSetupStage.AfterSave)
+                        throw new Task8InjectedFaultException(stage.ToString());
+                };
+                Phase6DecorationSceneSetup.RestoreFaultInjectorForTests = stage =>
+                {
+                    if (stage == restoreStage && restoreFaultCalls++ == 0)
+                        throw new Task8InjectedFaultException("restore-" + stage);
+                };
+                LogAssert.Expect(
+                    LogType.Warning,
+                    new Regex("Phase 6 rollback recovered from a Scene restore failure"));
+
+                Assert.Throws<Task8InjectedFaultException>(() => Configure(target));
+
+                Assert.That(Hash(PathFor(target)), Is.EqualTo(beforeScene));
+                Assert.That(Hash(PathFor(target) + ".meta"), Is.EqualTo(beforeMeta));
+                Assert.That(AssetDatabase.LoadAssetAtPath<SceneAsset>(PathFor(target)), Is.Not.Null);
+                Assert.That(restoreFaultCalls, Is.EqualTo(1));
                 callerFixture.AssertPreserved();
             }
             finally
@@ -2677,6 +2727,7 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             Phase6DecorationSceneSetup.Phase5ValidatorOverrideForTests = null;
             Phase6DecorationSceneSetup.DecorationCatalogueValidatorOverrideForTests = null;
             Phase6DecorationSceneSetup.FaultInjectorForTests = null;
+            Phase6DecorationSceneSetup.RestoreFaultInjectorForTests = null;
             Phase6DecorationSceneSetup.SaveSceneObserverForTests = null;
         }
 
@@ -2703,10 +2754,14 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             var targetComponent = Find(targetScene, "Main Camera")
                 .GetComponent<UnityEngine.Camera>();
             var targetId = GlobalObjectId.GetGlobalObjectIdSlow(targetComponent);
-            Selection.activeObject = targetComponent;
+            var targetSceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(PathFor(target));
+            Assert.That(targetSceneAsset, Is.Not.Null);
+            var targetSceneAssetId = GlobalObjectId.GetGlobalObjectIdSlow(targetSceneAsset);
+            Selection.activeObject = targetSceneAsset;
             Selection.objects = new UnityEngine.Object[]
             {
                 targetComponent,
+                targetSceneAsset,
                 asset,
                 unrelatedObject
             };
@@ -2718,6 +2773,7 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 unrelatedObject,
                 CaptureSceneObjectFingerprint(unrelated),
                 targetId,
+                targetSceneAssetId,
                 Array.IndexOf(Selection.objects, Selection.activeObject));
         }
 
@@ -2850,6 +2906,7 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             private readonly GameObject unrelatedObject;
             private readonly string sceneFingerprint;
             private readonly GlobalObjectId targetId;
+            private readonly GlobalObjectId targetSceneAssetId;
             private readonly int activeSelectionIndex;
 
             public DirtyCallerFixture(
@@ -2860,6 +2917,7 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 GameObject unrelatedObject,
                 string sceneFingerprint,
                 GlobalObjectId targetId,
+                GlobalObjectId targetSceneAssetId,
                 int activeSelectionIndex)
             {
                 this.asset = asset;
@@ -2869,6 +2927,7 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 this.unrelatedObject = unrelatedObject;
                 this.sceneFingerprint = sceneFingerprint;
                 this.targetId = targetId;
+                this.targetSceneAssetId = targetSceneAssetId;
                 this.activeSelectionIndex = activeSelectionIndex;
             }
 
@@ -2881,11 +2940,13 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 Assert.That(asset.PanSpeed, Is.EqualTo(37f));
                 Assert.That(EditorUtility.IsDirty(asset), Is.True);
                 Assert.That(Hash(assetPath), Is.EqualTo(savedAssetHash));
-                Assert.That(Selection.objects, Has.Length.EqualTo(3));
+                Assert.That(Selection.objects, Has.Length.EqualTo(4));
                 Assert.That(GlobalObjectId.GetGlobalObjectIdSlow(Selection.objects[0]),
                     Is.EqualTo(targetId));
-                Assert.That(Selection.objects[1], Is.SameAs(asset));
-                Assert.That(Selection.objects[2], Is.SameAs(unrelatedObject));
+                Assert.That(GlobalObjectId.GetGlobalObjectIdSlow(Selection.objects[1]),
+                    Is.EqualTo(targetSceneAssetId));
+                Assert.That(Selection.objects[2], Is.SameAs(asset));
+                Assert.That(Selection.objects[3], Is.SameAs(unrelatedObject));
                 Assert.That(Array.IndexOf(Selection.objects, Selection.activeObject),
                     Is.EqualTo(activeSelectionIndex));
             }
@@ -3191,21 +3252,54 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             FileState sceneFile,
             FileState metaFile)
         {
-            if (!sceneFile.Existed
-                && AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path) != null)
+            var recoveryRoot = Path.Combine(
+                "Library/AnimalCafe/Phase6MigrationTestRestore",
+                Guid.NewGuid().ToString("N"));
+            var recoveryScene = Path.Combine(recoveryRoot, "target.unity");
+            var recoveryMeta = Path.Combine(recoveryRoot, "target.meta");
+            Directory.CreateDirectory(recoveryRoot);
+            sceneFile.Stage(recoveryScene);
+            metaFile.Stage(recoveryMeta);
+            var restored = false;
+            try
             {
-                AssetDatabase.DeleteAsset(path);
-            }
+                if (File.Exists(path)
+                    || AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path) != null)
+                {
+                    Assert.That(AssetDatabase.DeleteAsset(path), Is.True,
+                        "Target Scene must be released through AssetDatabase before restoring its bytes.");
+                }
+                else if (File.Exists(path + ".meta"))
+                {
+                    File.Delete(path + ".meta");
+                }
 
-            sceneFile.Restore();
-            metaFile.Restore();
-            if (sceneFile.Existed)
-                ImportIfPresent(path);
-            else
+                sceneFile.RestoreFrom(recoveryScene, path);
+                metaFile.RestoreFrom(recoveryMeta, path + ".meta");
+                if (sceneFile.Existed)
+                    ImportIfPresent(path);
+                else
+                {
+                    Assert.That(File.Exists(path), Is.False);
+                    Assert.That(File.Exists(path + ".meta"), Is.EqualTo(metaFile.Existed));
+                    Assert.That(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path), Is.Null);
+                }
+                sceneFile.AssertMatches(path);
+                metaFile.AssertMatches(path + ".meta");
+                restored = true;
+            }
+            finally
             {
-                Assert.That(File.Exists(path), Is.False);
-                Assert.That(File.Exists(path + ".meta"), Is.EqualTo(metaFile.Existed));
-                Assert.That(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path), Is.Null);
+                if (restored && Directory.Exists(recoveryRoot))
+                {
+                    Directory.Delete(recoveryRoot, true);
+                    var recoveryParent = Path.GetDirectoryName(recoveryRoot);
+                    if (Directory.Exists(recoveryParent)
+                        && !Directory.EnumerateFileSystemEntries(recoveryParent).Any())
+                    {
+                        Directory.Delete(recoveryParent);
+                    }
+                }
             }
 
             foreach (var anchor in Enumerable.Range(0, SceneManager.sceneCount)
@@ -3278,11 +3372,13 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             public static SelectionEntry Capture(UnityEngine.Object value)
             {
                 var scene = SceneFor(value);
-                var isSceneObject = scene.IsValid() && IsTargetPath(scene.path);
+                var isTargetValue = scene.IsValid() && IsTargetPath(scene.path)
+                    || !ReferenceEquals(value, null)
+                    && IsTargetPath(AssetDatabase.GetAssetPath(value));
                 return new SelectionEntry(
                     value,
-                    isSceneObject ? GlobalObjectId.GetGlobalObjectIdSlow(value) : default,
-                    isSceneObject);
+                    isTargetValue ? GlobalObjectId.GetGlobalObjectIdSlow(value) : default,
+                    isTargetValue);
             }
 
             public UnityEngine.Object Resolve() => useGlobal
@@ -3310,17 +3406,31 @@ namespace AnimalCafe.Tests.EditMode.Phase6
 
             public bool Existed => existed;
 
-            public void Restore()
+            public void Stage(string recoveryPath)
             {
                 if (existed)
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    File.WriteAllBytes(path, bytes);
+                    Directory.CreateDirectory(Path.GetDirectoryName(recoveryPath));
+                    File.WriteAllBytes(recoveryPath, bytes);
                 }
-                else if (File.Exists(path))
+            }
+
+            public void RestoreFrom(string recoveryPath, string destinationPath)
+            {
+                if (existed)
                 {
-                    File.Delete(path);
+                    Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
+                    File.Move(recoveryPath, destinationPath);
                 }
+                else if (File.Exists(destinationPath))
+                    File.Delete(destinationPath);
+            }
+
+            public void AssertMatches(string actualPath)
+            {
+                Assert.That(File.Exists(actualPath), Is.EqualTo(existed), actualPath);
+                if (existed)
+                    Assert.That(File.ReadAllBytes(actualPath), Is.EqualTo(bytes), actualPath);
             }
         }
 

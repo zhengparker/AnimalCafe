@@ -2132,7 +2132,9 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             public static SelectionEntry Capture(UnityEngine.Object value)
             {
                 var scene = SceneFor(value);
-                var useGlobal = scene.IsValid() && IsTargetPath(scene.path);
+                var useGlobal = scene.IsValid() && IsTargetPath(scene.path)
+                    || !ReferenceEquals(value, null)
+                    && IsTargetPath(AssetDatabase.GetAssetPath(value));
                 return new SelectionEntry(
                     value,
                     useGlobal ? GlobalObjectId.GetGlobalObjectIdSlow(value) : default,
@@ -2180,20 +2182,53 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             FileState sceneFile,
             FileState metaFile)
         {
-            if (!sceneFile.Existed
-                && AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path) != null)
+            var recoveryRoot = Path.Combine(
+                "Library/AnimalCafe/Phase6ValidatorTestRestore",
+                Guid.NewGuid().ToString("N"));
+            var recoveryScene = Path.Combine(recoveryRoot, "target.unity");
+            var recoveryMeta = Path.Combine(recoveryRoot, "target.meta");
+            Directory.CreateDirectory(recoveryRoot);
+            sceneFile.Stage(recoveryScene);
+            metaFile.Stage(recoveryMeta);
+            var restored = false;
+            try
             {
-                AssetDatabase.DeleteAsset(path);
-            }
+                if (File.Exists(path)
+                    || AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path) != null)
+                {
+                    Assert.That(AssetDatabase.DeleteAsset(path), Is.True,
+                        "Target Scene must be released through AssetDatabase before restoring its bytes.");
+                }
+                else if (File.Exists(path + ".meta"))
+                {
+                    File.Delete(path + ".meta");
+                }
 
-            sceneFile.Restore();
-            metaFile.Restore();
-            if (sceneFile.Existed) ImportIfPresent(path);
-            else
+                sceneFile.RestoreFrom(recoveryScene, path);
+                metaFile.RestoreFrom(recoveryMeta, path + ".meta");
+                if (sceneFile.Existed) ImportIfPresent(path);
+                else
+                {
+                    Assert.That(File.Exists(path), Is.False);
+                    Assert.That(File.Exists(path + ".meta"), Is.EqualTo(metaFile.Existed));
+                    Assert.That(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path), Is.Null);
+                }
+                sceneFile.AssertMatches(path);
+                metaFile.AssertMatches(path + ".meta");
+                restored = true;
+            }
+            finally
             {
-                Assert.That(File.Exists(path), Is.False);
-                Assert.That(File.Exists(path + ".meta"), Is.EqualTo(metaFile.Existed));
-                Assert.That(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path), Is.Null);
+                if (restored && Directory.Exists(recoveryRoot))
+                {
+                    Directory.Delete(recoveryRoot, true);
+                    var recoveryParent = Path.GetDirectoryName(recoveryRoot);
+                    if (Directory.Exists(recoveryParent)
+                        && !Directory.EnumerateFileSystemEntries(recoveryParent).Any())
+                    {
+                        Directory.Delete(recoveryParent);
+                    }
+                }
             }
 
             foreach (var anchor in Enumerable.Range(0, SceneManager.sceneCount)
@@ -2268,17 +2303,31 @@ namespace AnimalCafe.Tests.EditMode.Phase6
 
             public bool Existed => existed;
 
-            public void Restore()
+            public void Stage(string recoveryPath)
             {
                 if (existed)
                 {
-                    Directory.CreateDirectory(Path.GetDirectoryName(path));
-                    File.WriteAllBytes(path, bytes);
+                    Directory.CreateDirectory(Path.GetDirectoryName(recoveryPath));
+                    File.WriteAllBytes(recoveryPath, bytes);
                 }
-                else if (File.Exists(path))
+            }
+
+            public void RestoreFrom(string recoveryPath, string destinationPath)
+            {
+                if (existed)
                 {
-                    File.Delete(path);
+                    Directory.CreateDirectory(Path.GetDirectoryName(destinationPath));
+                    File.Move(recoveryPath, destinationPath);
                 }
+                else if (File.Exists(destinationPath))
+                    File.Delete(destinationPath);
+            }
+
+            public void AssertMatches(string actualPath)
+            {
+                Assert.That(File.Exists(actualPath), Is.EqualTo(existed), actualPath);
+                if (existed)
+                    Assert.That(File.ReadAllBytes(actualPath), Is.EqualTo(bytes), actualPath);
             }
         }
 
