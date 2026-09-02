@@ -171,6 +171,17 @@ namespace AnimalCafe.EditorTools.Phase6
             "Assets/Config/DefaultCameraSettings.asset";
         private const string DefaultInputActionsGuid =
             "ca9f5fa95ffab41fb9a615ab714db018";
+        private const string Phase7CataloguePrefabPath="Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationCatalogue.prefab";
+        private const string Phase7ActionBarPrefabPath="Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationActionBar.prefab";
+        private const string Phase7WallBodyMaterialPath =
+            "Assets/Art/Phase7/Materials/M_WallBody_Architectural.mat";
+        private static readonly string[] Phase7WallExtensionNames =
+        {
+            "Phase7_WallFinish",
+            "Phase7_WainscotingFinish",
+            "Phase7_WainscotingRailLip",
+            "Phase7_WainscotingBaseboardLip"
+        };
 
         internal static Func<string, bool> SceneExistsOverrideForTests { get; set; }
         internal static EditorBuildSettingsScene[] BuildSettingsOverrideForTests { get; set; }
@@ -793,11 +804,13 @@ namespace AnimalCafe.EditorTools.Phase6
                 if (root == null)
                     continue;
                 var group = root.GetComponent<CanvasGroup>();
-                if (!root.gameObject.activeSelf
+                var phase7Upgrade=(uiRootName=="PF_UI_DecorationCatalogue"&&IsExactPhase7Upgrade(root.gameObject,Phase7CataloguePrefabPath))
+                    ||(uiRootName=="PF_UI_DecorationActionBar"&&IsExactPhase7Upgrade(root.gameObject,Phase7ActionBarPrefabPath));
+                if (!phase7Upgrade&&(!root.gameObject.activeSelf
                     || group == null
                     || !Mathf.Approximately(group.alpha, 0f)
                     || group.interactable
-                    || group.blocksRaycasts)
+                    || group.blocksRaycasts))
                 {
                     issues.Add(Issue(
                         Phase6DecorationIssueCode.MissingUiReference,
@@ -1026,6 +1039,15 @@ namespace AnimalCafe.EditorTools.Phase6
             string assetPath,
             ICollection<Phase6DecorationValidationIssue> issues)
         {
+            if (!HasExactSourceBackedEnvironmentHierarchy(instanceRoot))
+            {
+                issues.Add(Issue(
+                    Phase6DecorationIssueCode.EnvironmentPrefabDrift,
+                    assetPath,
+                    ObjectPath(instanceRoot),
+                    "Environment Prefab source-backed hierarchy drifted."));
+            }
+
             var transforms = instanceRoot.GetComponentsInChildren<Transform>(true);
             foreach (var transform in transforms)
             {
@@ -1033,6 +1055,13 @@ namespace AnimalCafe.EditorTools.Phase6
                     transform.gameObject);
                 if (sourceObject == null)
                 {
+                    if (IsAllowedPhase7WallExtensionChild(
+                            instanceRoot,
+                            transform,
+                            assetPath))
+                    {
+                        continue;
+                    }
                     issues.Add(Issue(
                         Phase6DecorationIssueCode.EnvironmentPrefabDrift,
                         assetPath,
@@ -1083,7 +1112,7 @@ namespace AnimalCafe.EditorTools.Phase6
             foreach (var modification in PrefabUtility.GetPropertyModifications(
                          instanceRoot.gameObject) ?? Array.Empty<PropertyModification>())
             {
-                if (IsAllowedEnvironmentModification(instanceRoot, modification))
+                if (IsAllowedEnvironmentModification(instanceRoot, modification, assetPath))
                     continue;
                 var modifiedTransform = FindInstanceTransformForSource(
                     instanceRoot,
@@ -1097,19 +1126,123 @@ namespace AnimalCafe.EditorTools.Phase6
             }
         }
 
+        private static bool HasExactSourceBackedEnvironmentHierarchy(
+            Transform instanceRoot)
+        {
+            if (instanceRoot == null)
+                return false;
+
+            var sourceRoot = PrefabUtility.GetCorrespondingObjectFromSource(
+                instanceRoot.gameObject);
+            if (sourceRoot == null)
+                return false;
+
+            var separatelyValidatedWindow = GetCanonicalBackRightWindow(instanceRoot);
+            var expected = sourceRoot.transform.GetComponentsInChildren<Transform>(true)
+                .Select(transform => BuildHierarchySignature(
+                    sourceRoot.transform,
+                    transform,
+                    transform.gameObject,
+                    transform.GetComponents<Component>()
+                        .Where(component => component != null)))
+                .ToArray();
+            var actual = instanceRoot.GetComponentsInChildren<Transform>(true)
+                .Where(transform => separatelyValidatedWindow == null
+                    || (transform != separatelyValidatedWindow
+                        && !transform.IsChildOf(separatelyValidatedWindow)))
+                .Where(transform => PrefabUtility.GetCorrespondingObjectFromSource(
+                    transform.gameObject) != null)
+                .Select(transform => BuildHierarchySignature(
+                    instanceRoot,
+                    transform,
+                    PrefabUtility.GetCorrespondingObjectFromSource(
+                        transform.gameObject),
+                    transform.GetComponents<Component>()
+                        .Where(component => component != null
+                            && PrefabUtility.GetCorrespondingObjectFromSource(component) != null)))
+                .ToArray();
+            return !expected.Contains(null)
+                && !actual.Contains(null)
+                && actual.SequenceEqual(expected, StringComparer.Ordinal);
+        }
+
+        private static string BuildHierarchySignature(
+            Transform root,
+            Transform transform,
+            UnityEngine.Object sourceObject,
+            IEnumerable<Component> components)
+        {
+            if (sourceObject == null
+                || !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(
+                    sourceObject,
+                    out string sourceGuid,
+                    out long sourceLocalId))
+            {
+                return null;
+            }
+
+            return GetRelativePath(root, transform)
+                + "|"
+                + sourceGuid
+                + ":"
+                + sourceLocalId
+                + "|"
+                + string.Join(",", components.Select(component =>
+                    component.GetType().FullName));
+        }
+
+        private static Transform GetCanonicalBackRightWindow(Transform instanceRoot)
+        {
+            if (instanceRoot == null || instanceRoot.name != "P4_Wall_BackRight")
+                return null;
+
+            const string windowName = "P4_Window_BackRight_C3_R0";
+            const string windowAssetPath =
+                "Assets/Art/Phase4/Environment/Prefabs/PF_Environment_Window_01.prefab";
+            var window = instanceRoot.Find(windowName);
+            var expectedWindow = AssetDatabase.LoadAssetAtPath<GameObject>(windowAssetPath);
+            return window != null
+                && window.parent == instanceRoot
+                && expectedWindow != null
+                && PrefabUtility.GetCorrespondingObjectFromSource(window.gameObject)
+                    == expectedWindow
+                && IsIdentity(window, new Vector3(-.5f, .5f, -.061f))
+                    ? window
+                    : null;
+        }
+
         private static bool IsAllowedEnvironmentAddedComponent(
             Transform instanceRoot,
             Transform owner,
-            Component component) =>
-            owner == instanceRoot
+            Component component)
+        {
+            if (component is WallMountedSeedAuthoring seed)
+            {
+                return owner.parent != null
+                    && owner.parent.name == "P4_Wall_BackRight"
+                    && owner.parent.parent != null
+                    && owner.parent.parent.name == "P4_Environment"
+                    && owner.name == "P4_Window_BackRight_C3_R0"
+                    && owner.GetComponents<WallMountedSeedAuthoring>().Length == 1
+                    && seed.InstanceId == "wall-mounted.main.window.canonical.01"
+                    && seed.DefinitionId == "window.canonical.phase4"
+                    && seed.SurfaceId == "wall.back-right"
+                    && seed.Position == new AnimalCafe.Layout.WallSlotPosition(3, 0)
+                    && seed.Footprint.Width == 1
+                    && seed.Footprint.Height == 1;
+            }
+
+            return owner == instanceRoot
             && ((instanceRoot.name.StartsWith("P4_Wall_", StringComparison.Ordinal)
                     && component is WallSurfaceAuthoring)
                 || (instanceRoot.name == "P4_Entrance"
                     && component is EntrancePortalAuthoring));
+        }
 
         private static bool IsAllowedEnvironmentModification(
             Transform instanceRoot,
-            PropertyModification modification)
+            PropertyModification modification,
+            string assetPath)
         {
             var rootSource = PrefabUtility.GetCorrespondingObjectFromSource(
                 instanceRoot.gameObject);
@@ -1133,9 +1266,189 @@ namespace AnimalCafe.EditorTools.Phase6
             var modifiedTransform = FindInstanceTransformForSource(
                 instanceRoot,
                 modification.target);
+            if (string.Equals(assetPath, MainCafePath, StringComparison.Ordinal)
+                && instanceRoot.name == "P4_Window_BackRight_C3_R0"
+                && modifiedTransform == instanceRoot
+                && modification.propertyPath == "m_IsActive"
+                && modification.value == "0")
+            {
+                return true;
+            }
+            if (IsExactCanonicalPhase7WallExtension(instanceRoot, assetPath)
+                && modifiedTransform == instanceRoot.Find("WallVisual")
+                && (modification.propertyPath == "m_Materials.Array.data[0]"
+                    || modification.propertyPath == "m_CastShadows"
+                    || modification.propertyPath == "m_RenderingLayerMask"))
+            {
+                return true;
+            }
             return modifiedTransform != null
                 && modifiedTransform.name == "GridOverlay"
                 && modification.propertyPath == "m_IsActive";
+        }
+
+        private static bool IsAllowedPhase7WallExtensionChild(
+            Transform instanceRoot,
+            Transform candidate,
+            string assetPath)
+        {
+            return candidate != null
+                && candidate.parent == instanceRoot
+                && Phase7WallExtensionNames.Contains(candidate.name)
+                && IsExactCanonicalPhase7WallExtension(instanceRoot, assetPath);
+        }
+
+        private static bool IsExactCanonicalPhase7WallExtension(
+            Transform instanceRoot,
+            string assetPath)
+        {
+            if (!string.Equals(assetPath, MainCafePath, StringComparison.Ordinal)
+                || instanceRoot == null
+                || (instanceRoot.name != "P4_Wall_BackLeft"
+                    && instanceRoot.name != "P4_Wall_BackRight")
+                || instanceRoot.parent == null
+                || instanceRoot.parent.name != "P4_Environment")
+            {
+                return false;
+            }
+
+            var addedTransforms = instanceRoot.GetComponentsInChildren<Transform>(true)
+                .Where(transform => transform != instanceRoot
+                    && PrefabUtility.GetCorrespondingObjectFromSource(
+                        transform.gameObject) == null)
+                .ToArray();
+            if (addedTransforms.Length != Phase7WallExtensionNames.Length
+                || addedTransforms.Any(transform => transform.parent != instanceRoot)
+                || !addedTransforms.Select(transform => transform.name)
+                    .OrderBy(name => name, StringComparer.Ordinal)
+                    .SequenceEqual(
+                        Phase7WallExtensionNames.OrderBy(
+                            name => name,
+                            StringComparer.Ordinal),
+                        StringComparer.Ordinal))
+            {
+                return false;
+            }
+
+            var body = instanceRoot.Find("WallVisual");
+            var bodyRenderer = body != null && body.parent == instanceRoot
+                ? body.GetComponent<Renderer>()
+                : null;
+            if (!HasExactWallRendererContract(
+                    bodyRenderer,
+                    UnityEngine.Rendering.ShadowCastingMode.On,
+                    true))
+            {
+                return false;
+            }
+
+            const float finishDepth = .012f;
+            const float wainscotingDepth = .014f;
+            const float railDepth = .04f;
+            const float baseboardDepth = .032f;
+            var waistHeight = CharacterScaleReference.SharedCharacterWaistHeightMeters;
+            var front = body.localPosition.z - body.localScale.z * .5f;
+            var bottom = body.localPosition.y - body.localScale.y * .5f;
+
+            var finish = instanceRoot.Find("Phase7_WallFinish");
+            if (!IsExactPhase7RenderOnlyCube(
+                    finish,
+                    new Vector3(
+                        body.localPosition.x,
+                        body.localPosition.y,
+                        front - finishDepth * .5f - .003f),
+                    new Vector3(body.localScale.x, body.localScale.y, finishDepth),
+                    true))
+            {
+                return false;
+            }
+
+            var wainscoting = instanceRoot.Find("Phase7_WainscotingFinish");
+            if (!IsExactPhase7RenderOnlyCube(
+                    wainscoting,
+                    new Vector3(
+                        body.localPosition.x,
+                        bottom + waistHeight * .5f,
+                        finish.localPosition.z - finishDepth * .5f
+                        - wainscotingDepth * .5f - .004f),
+                    new Vector3(body.localScale.x, waistHeight, wainscotingDepth),
+                    true))
+            {
+                return false;
+            }
+
+            var rail = instanceRoot.Find("Phase7_WainscotingRailLip");
+            if (!IsExactPhase7RenderOnlyCube(
+                    rail,
+                    new Vector3(
+                        body.localPosition.x,
+                        bottom + waistHeight - .005f,
+                        wainscoting.localPosition.z - wainscotingDepth * .5f
+                        - railDepth * .5f - .003f),
+                    new Vector3(body.localScale.x, .055f, railDepth),
+                    false))
+            {
+                return false;
+            }
+
+            var baseboard = instanceRoot.Find("Phase7_WainscotingBaseboardLip");
+            return IsExactPhase7RenderOnlyCube(
+                baseboard,
+                new Vector3(
+                    body.localPosition.x,
+                    bottom + .045f,
+                    wainscoting.localPosition.z - wainscotingDepth * .5f
+                    - baseboardDepth * .5f - .003f),
+                new Vector3(body.localScale.x, .09f, baseboardDepth),
+                false);
+        }
+
+        private static bool IsExactPhase7RenderOnlyCube(
+            Transform transform,
+            Vector3 expectedPosition,
+            Vector3 expectedScale,
+            bool rendererEnabled)
+        {
+            if (transform == null
+                || transform.childCount != 0
+                || !transform.gameObject.activeSelf
+                || !HasExactComponents(
+                    transform.gameObject,
+                    typeof(Transform),
+                    typeof(MeshFilter),
+                    typeof(MeshRenderer))
+                || !Approximately(transform.localPosition, expectedPosition)
+                || Quaternion.Angle(transform.localRotation, Quaternion.identity) > .01f
+                || !Approximately(transform.localScale, expectedScale))
+            {
+                return false;
+            }
+
+            var meshFilter = transform.GetComponent<MeshFilter>();
+            var renderer = transform.GetComponent<MeshRenderer>();
+            return meshFilter.sharedMesh
+                    == Resources.GetBuiltinResource<Mesh>("Cube.fbx")
+                && HasExactWallRendererContract(
+                    renderer,
+                    UnityEngine.Rendering.ShadowCastingMode.Off,
+                    rendererEnabled);
+        }
+
+        private static bool HasExactWallRendererContract(
+            Renderer renderer,
+            UnityEngine.Rendering.ShadowCastingMode shadowCastingMode,
+            bool rendererEnabled)
+        {
+            return renderer != null
+                && renderer.enabled == rendererEnabled
+                && renderer.shadowCastingMode == shadowCastingMode
+                && renderer.receiveShadows
+                && renderer.renderingLayerMask == 3u
+                && renderer.sharedMaterials.Length == 1
+                && string.Equals(
+                    AssetDatabase.GetAssetPath(renderer.sharedMaterial),
+                    Phase7WallBodyMaterialPath,
+                    StringComparison.Ordinal);
         }
 
         private static Transform FindInstanceTransformForSource(
@@ -1160,6 +1473,34 @@ namespace AnimalCafe.EditorTools.Phase6
             }
             return null;
         }
+
+        private static bool IsExactPhase7Upgrade(GameObject instance,string path)
+        {
+            if(instance==null||!string.Equals(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(instance)),path,StringComparison.Ordinal))return false;
+            var source=AssetDatabase.LoadAssetAtPath<GameObject>(path);if(source==null)return false;
+            var instanceGraph = BuildComponentGraph(instance);
+            if (string.Equals(path, Phase7CataloguePrefabPath, StringComparison.Ordinal))
+            {
+                instanceGraph = instanceGraph.Where(signature =>
+                    !IsPhase7SceneOwnedFloorRangeSignature(signature));
+            }
+
+            return instanceGraph.SequenceEqual(BuildComponentGraph(source),StringComparer.Ordinal);
+        }
+
+        private static bool IsPhase7SceneOwnedFloorRangeSignature(string signature)
+        {
+            const string root = "SurfaceFooterHost/FloorRange";
+            return signature.StartsWith(root + "|", StringComparison.Ordinal)
+                || signature.StartsWith(root + "/", StringComparison.Ordinal);
+        }
+
+        private static IEnumerable<string> BuildComponentGraph(GameObject root)=>root.GetComponentsInChildren<Transform>(true)
+            .SelectMany(transform=>transform.GetComponents<Component>().Select(component=>GetRelativePath(root.transform,transform)+"|"+(component==null?"<missing>":component.GetType().FullName)))
+            .OrderBy(signature=>signature,StringComparer.Ordinal);
+
+        private static string GetRelativePath(Transform root,Transform current)
+        {if(current==root)return string.Empty;var names=new Stack<string>();while(current!=null&&current!=root){names.Push(current.name);current=current.parent;}return string.Join("/",names);}
 
         private static void ValidateDecorationReferences(
             Transform[] transforms,
@@ -1262,7 +1603,16 @@ namespace AnimalCafe.EditorTools.Phase6
                 return;
             }
 
-            ValidatePrefabOwnedNode(instanceRoot, sourceRoot, assetPath, issues, true);
+            var allowsPhase7FloorRange = IsExactPhase7Upgrade(
+                instanceRoot.gameObject,
+                Phase7CataloguePrefabPath);
+            ValidatePrefabOwnedNode(
+                instanceRoot,
+                sourceRoot,
+                assetPath,
+                issues,
+                true,
+                allowsPhase7FloorRange);
         }
 
         private static void ValidatePrefabOwnedNode(
@@ -1270,7 +1620,8 @@ namespace AnimalCafe.EditorTools.Phase6
             Transform source,
             string assetPath,
             ICollection<Phase6DecorationValidationIssue> issues,
-            bool isRoot)
+            bool isRoot,
+            bool allowsPhase7FloorRange)
         {
             var instanceChildren = instance.Cast<Transform>().ToArray();
             var sourceChildren = source.Cast<Transform>().ToArray();
@@ -1278,6 +1629,13 @@ namespace AnimalCafe.EditorTools.Phase6
             foreach (var extra in instanceChildren.Where(child =>
                          !sourceNames.Contains(child.name, StringComparer.Ordinal)))
             {
+                if (allowsPhase7FloorRange
+                    && instance.name == "SurfaceFooterHost"
+                    && extra.name == "FloorRange")
+                {
+                    continue;
+                }
+
                 issues.Add(Issue(
                     Phase6DecorationIssueCode.MissingUiReference,
                     assetPath,
@@ -1322,7 +1680,13 @@ namespace AnimalCafe.EditorTools.Phase6
                         "Required Task 6 Prefab-owned UI child is missing."));
                     continue;
                 }
-                ValidatePrefabOwnedNode(instanceChild, sourceChild, assetPath, issues, false);
+                ValidatePrefabOwnedNode(
+                    instanceChild,
+                    sourceChild,
+                    assetPath,
+                    issues,
+                    false,
+                    allowsPhase7FloorRange);
             }
         }
 

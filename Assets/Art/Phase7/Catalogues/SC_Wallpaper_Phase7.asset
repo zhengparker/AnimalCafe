@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a054455c6b74a938a478798c9ec5ced, type: 3}
+  m_Name: SC_Wallpaper_Phase7
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Content.SurfaceStyleCatalogueAsset
+  kind: 1
+  entries:
+  - {fileID: 11400000, guid: 1feaaaa9b49f73c4eb795835b7022d41, type: 2}
+  - {fileID: 11400000, guid: ee8c884790e741e428518ec0440de9bc, type: 2}

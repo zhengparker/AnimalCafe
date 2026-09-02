@@ -19,6 +19,7 @@ namespace AnimalCafe.UI.Decoration
         [SerializeField] private string semanticLabel;
         [SerializeField] private GameObject tooltipRoot;
         [SerializeField] private TMP_Text tooltipLabel;
+        [SerializeField] private bool tooltipEnabled = true;
 
         private IUiPointerOwnershipRegistrar pointerBoundary;
 
@@ -28,6 +29,15 @@ namespace AnimalCafe.UI.Decoration
         public void Configure(IUiPointerOwnershipRegistrar registrar)
         {
             pointerBoundary = registrar ?? throw new ArgumentNullException(nameof(registrar));
+        }
+
+        public void SetTooltipEnabled(bool enabled)
+        {
+            tooltipEnabled = enabled;
+            if (!enabled)
+            {
+                HideTooltip();
+            }
         }
 
         public void OnPointerDown(PointerEventData eventData)
@@ -48,7 +58,10 @@ namespace AnimalCafe.UI.Decoration
 
         public void OnPointerEnter(PointerEventData eventData)
         {
-            if (!isActiveAndEnabled || !gameObject.activeInHierarchy || tooltipRoot == null)
+            if (!tooltipEnabled
+                || !isActiveAndEnabled
+                || !gameObject.activeInHierarchy
+                || tooltipRoot == null)
             {
                 return;
             }

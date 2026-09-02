@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d59d136c1834dc3b6be0f7a715fe56f, type: 3}
+  m_Name: SS_wainscoting_sage_plain
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Content.SurfaceStyleDefinitionAsset
+  styleId: wainscoting.sage-plain
+  displayName: Sage Plain
+  kind: 2
+  material: {fileID: 2100000, guid: 2dd60d7bde37cc14cad6acd46a7f9758, type: 2}
+  thumbnail: {fileID: 21300000, guid: ebb928a142f535340a1ac03e47401ef6, type: 3}
+  isNoneOption: 0
+  worldTileWidthMeters: 1
+  worldTileHeightMeters: 0.65
+  verticalMapping: 2

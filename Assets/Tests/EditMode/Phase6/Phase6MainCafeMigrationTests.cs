@@ -903,6 +903,22 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             });
         }
 
+        [Test]
+        public void ConfigureMainCafe_AcceptsCanonicalPhase7SceneOwnedFloorRange()
+        {
+            WithConfigured(Phase6SceneSetupTarget.MainCafe, scene =>
+            {
+                var catalogue = FindAll<DecorationCatalogueView>(scene).Single();
+                var range = FindAll<DecorationFloorRangeView>(scene).Single();
+
+                Assert.That(catalogue.SurfaceFooterHost, Is.Not.Null);
+                Assert.That(range.transform.parent,
+                    Is.SameAs(catalogue.SurfaceFooterHost));
+                Assert.That(range.GetComponentsInChildren<Button>(true),
+                    Has.Length.EqualTo(2));
+            });
+        }
+
         [TestCase(Phase6SceneSetupTarget.MainCafe)]
         [TestCase(Phase6SceneSetupTarget.Validation)]
         public void PublishedTarget_DirectReopenContainsPersistedTimeSelectedVisualsAndBindings(
@@ -2019,8 +2035,15 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             }
 
             AssertDirectChildren(Find(scene, "HUD Canvas").transform, "HUD Layer");
-            AssertDirectChildren(Find(scene, "Screen Canvas").transform,
-                "Panel Layer", "Modal Layer");
+            var screenCanvas=Find(scene,"Screen Canvas").transform;
+            if(screenCanvas.Find("Phase7_UIRuntime")!=null)
+                AssertDirectChildren(
+                    screenCanvas,
+                    "Panel Layer",
+                    "Modal Layer",
+                    "Phase7_UIRuntime",
+                    "PF_UI_Phase7DecorationExitModal");
+            else AssertDirectChildren(screenCanvas,"Panel Layer","Modal Layer");
             AssertDirectChildren(Find(scene, "Toast Canvas").transform, "Toast Layer");
             foreach (var layerName in new[]
                      { "HUD Layer", "Panel Layer", "Modal Layer", "Toast Layer" })
@@ -2101,18 +2124,21 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 "Assets/UI/Phase5/Prefabs/PF_UI_Button_Secondary_Default.prefab",
                 false,
                 Phase5DecorationButtonManifest());
-            AssertExactUiPrefabSubtree(
-                scene,
-                "PF_UI_DecorationCatalogue",
-                "Assets/UI/Phase6/Prefabs/PF_UI_DecorationCatalogue.prefab",
-                true,
-                CatalogueManifest());
-            AssertExactUiPrefabSubtree(
-                scene,
-                "PF_UI_DecorationActionBar",
-                "Assets/UI/Phase6/Prefabs/PF_UI_DecorationActionBar.prefab",
-                true,
-                ActionBarManifest());
+            var catalogueRoot=Find(scene,"PF_UI_DecorationCatalogue");
+            var cataloguePath=AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(catalogueRoot));
+            var phase7Upgrade=cataloguePath=="Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationCatalogue.prefab";
+            if(phase7Upgrade)
+            {
+                AssertExactCurrentPrefabSubtree(catalogueRoot,cataloguePath);
+                var actionRoot=Find(scene,"PF_UI_DecorationActionBar");
+                AssertExactCurrentPrefabSubtree(actionRoot,"Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationActionBar.prefab");
+                Assert.That(catalogueRoot.activeSelf,Is.True);Assert.That(actionRoot.activeSelf,Is.True);
+            }
+            else
+            {
+                AssertExactUiPrefabSubtree(scene,"PF_UI_DecorationCatalogue","Assets/UI/Phase6/Prefabs/PF_UI_DecorationCatalogue.prefab",true,CatalogueManifest());
+                AssertExactUiPrefabSubtree(scene,"PF_UI_DecorationActionBar","Assets/UI/Phase6/Prefabs/PF_UI_DecorationActionBar.prefab",true,ActionBarManifest());
+            }
             AssertExactUiPrefabSubtree(
                 scene,
                 "PF_UI_DecorationStoreModal",
@@ -2120,9 +2146,24 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 true,
                 StoreModalManifest());
 
-            AssertClosedActiveUiRoot(Find(scene, "PF_UI_DecorationCatalogue"));
-            AssertClosedActiveUiRoot(Find(scene, "PF_UI_DecorationActionBar"));
+            if(!phase7Upgrade){AssertClosedActiveUiRoot(catalogueRoot);AssertClosedActiveUiRoot(Find(scene,"PF_UI_DecorationActionBar"));}
             AssertClosedActiveUiRoot(Find(scene, "PF_UI_DecorationStoreModal"));
+        }
+
+        private static void AssertExactCurrentPrefabSubtree(GameObject instance,string prefabPath)
+        {
+            Assert.That(AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(instance)),Is.EqualTo(prefabPath));
+            var source=AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);Assert.That(source,Is.Not.Null);
+            var actual=instance.GetComponentsInChildren<Transform>(true);var expected=source.GetComponentsInChildren<Transform>(true);
+            if(prefabPath=="Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationCatalogue.prefab")
+                actual=actual.Where(item=>
+                {
+                    var path=RelativePath(instance.transform,item);
+                    return path!="SurfaceFooterHost/FloorRange"
+                        && !path.StartsWith("SurfaceFooterHost/FloorRange/",StringComparison.Ordinal);
+                }).ToArray();
+            Assert.That(actual.Select(item=>RelativePath(instance.transform,item)),Is.EqualTo(expected.Select(item=>RelativePath(source.transform,item))));
+            for(var index=0;index<actual.Length;index++)Assert.That(actual[index].GetComponents<Component>().Select(item=>item?.GetType()),Is.EqualTo(expected[index].GetComponents<Component>().Select(item=>item?.GetType())));
         }
 
         private static void AssertClosedActiveUiRoot(GameObject root)

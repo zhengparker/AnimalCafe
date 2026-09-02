@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6d59d136c1834dc3b6be0f7a715fe56f, type: 3}
+  m_Name: SS_floor_warm_wood
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Content.SurfaceStyleDefinitionAsset
+  styleId: floor.warm-wood
+  displayName: Warm Wood
+  kind: 3
+  material: {fileID: 2100000, guid: a4868adb67ff9e746a3e4c59542a7a20, type: 2}
+  thumbnail: {fileID: 21300000, guid: 4b9377fef3c62544dbd1d1b20d06d4d8, type: 3}
+  isNoneOption: 0
+  worldTileWidthMeters: 1
+  worldTileHeightMeters: 1
+  verticalMapping: 0

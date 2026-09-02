@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a054455c6b74a938a478798c9ec5ced, type: 3}
+  m_Name: SC_Floor_Phase7
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Content.SurfaceStyleCatalogueAsset
+  kind: 3
+  entries:
+  - {fileID: 11400000, guid: 01d7b11c8e6a806409fd8da205b24b46, type: 2}
+  - {fileID: 11400000, guid: 631b9b8f60fdd2f47afbad6f8132cd12, type: 2}
+  - {fileID: 11400000, guid: 16a01be03d84c954e95d4993cbaf4e02, type: 2}

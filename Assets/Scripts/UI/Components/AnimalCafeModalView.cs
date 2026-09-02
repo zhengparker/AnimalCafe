@@ -30,6 +30,34 @@ namespace AnimalCafe.UI.Components
         private IDisposable sceneBlockHandle;
         private Coroutine transitionCoroutine;
         private readonly HashSet<int> ownedPointerIds = new HashSet<int>();
+        private IUiPointerOwnershipRegistrar delayedPointerBoundary;
+        private readonly HashSet<int> delayedPointerIds = new HashSet<int>();
+
+        public void ConfigureDelayedPointerRelease(IUiPointerOwnershipRegistrar boundary)
+        {
+            if (boundary == null)
+            {
+                throw new ArgumentNullException(nameof(boundary));
+            }
+
+            ReleaseAllRetainedPointers();
+            delayedPointerBoundary = boundary;
+        }
+        public void RetainPointerUntilGestureEnd(int pointerId)
+        {
+            if (delayedPointerBoundary == null) throw new InvalidOperationException("Configure delayed pointer release first.");
+            delayedPointerBoundary.RegisterUiPointerPress(pointerId); delayedPointerIds.Add(pointerId);
+        }
+        public void ReleaseRetainedPointer(int pointerId)
+        {
+            if (delayedPointerIds.Remove(pointerId)) delayedPointerBoundary.ReleasePointer(pointerId);
+        }
+        public void ReleaseAllRetainedPointers()
+        {
+            if (delayedPointerBoundary != null)
+                foreach (var pointerId in delayedPointerIds) delayedPointerBoundary.ReleasePointer(pointerId);
+            delayedPointerIds.Clear();
+        }
 
         public event Action Confirmed;
 
@@ -234,6 +262,7 @@ namespace AnimalCafe.UI.Components
         private void OnDestroy()
         {
             Close();
+            ReleaseAllRetainedPointers();
             RemoveListeners();
         }
 

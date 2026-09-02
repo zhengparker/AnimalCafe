@@ -475,10 +475,31 @@ namespace AnimalCafe.Tests.Phase4
 
             var report = Phase4AssetValidator.ValidateAll();
 
-            Assert.That(report.AssetCount, Is.EqualTo(8));
-            Assert.That(report.ValidAssetCount, Is.EqualTo(8));
+            Assert.That(report.AssetCount, Is.GreaterThan(8),
+                "The global validator must include valid definitions introduced by later phases.");
+            Assert.That(report.ValidAssetCount, Is.EqualTo(report.AssetCount));
             Assert.That(report.InvalidAssetCount, Is.Zero);
             Assert.That(report.Issues, Is.Empty);
+        }
+
+        [Test]
+        public void GlobalValidation_IncludesLaterPhaseAssetsWithoutWeakeningInvalidDefinitionDetection()
+        {
+            Phase4ProductionAssetBuilder.BuildProductionContent();
+            var global = Phase4AssetValidator.ValidateAll();
+            Assert.That(global.AssetCount, Is.GreaterThan(8));
+            Assert.That(global.ValidAssetCount, Is.EqualTo(global.AssetCount));
+
+            var invalid = ScriptableObject.CreateInstance<FurnitureDefinitionAsset>();
+            try
+            {
+                var invalidReport = Phase4AssetValidator.ValidateAll(new[] { invalid });
+                Assert.That(invalidReport.AssetCount, Is.EqualTo(1));
+                Assert.That(invalidReport.ValidAssetCount, Is.Zero);
+                Assert.That(invalidReport.InvalidAssetCount, Is.EqualTo(1));
+                Assert.That(invalidReport.Issues, Is.Not.Empty);
+            }
+            finally { Object.DestroyImmediate(invalid); }
         }
 
         private static void AssertImportedModel(

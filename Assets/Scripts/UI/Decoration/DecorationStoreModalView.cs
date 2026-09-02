@@ -115,6 +115,28 @@ namespace AnimalCafe.UI.Decoration
             modalView.Open();
         }
 
+        public void ShowWallMounted(WallMountedDefinitionAsset definition)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            completionConsumed = false;
+            if (titleLabel != null)
+            {
+                titleLabel.text = "Store wall decoration?";
+            }
+
+            if (bodyLabel != null)
+            {
+                bodyLabel.text =
+                    "This removes it from the current wall. You can place it again from the catalogue.";
+            }
+
+            modalView.Open();
+        }
+
         public bool TryHandleBack()
         {
             if (!IsEligible() || completionConsumed)

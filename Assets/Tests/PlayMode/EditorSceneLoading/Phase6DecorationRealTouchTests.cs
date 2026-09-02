@@ -681,7 +681,6 @@ namespace AnimalCafe.Tests.PlayMode
                     {
                         reprojectedUsableEdges++;
                     }
-
                     var actionPoint = ButtonCenter(FindNamed<Button>(context.Scene, "CancelButton"));
                     yield return MoveContact(touch, id + 2, actionPoint);
                     Assert.That(driver.IsEdgeAutoPanning, Is.False,
@@ -1023,7 +1022,7 @@ namespace AnimalCafe.Tests.PlayMode
                     newContext.Layout, newPreview.DefinitionId, newPreview.ProposedRotation);
                 yield return MovePreviewDirectlyThroughTouch(newContext, newTouch, 213, moved);
                 Assert.That(ActivePreview(newContext.Controller), Is.Not.Null);
-                yield return TapButton(newTouch, 214, newContext.HudButton);
+                yield return ContinueThenDiscardExitByTouch(newContext, newTouch, 214);
                 Assert.That(SnapshotLayout(newContext.Layout), Is.EqualTo(initial));
                 Assert.That(ActivePreview(newContext.Controller), Is.Null);
                 Assert.That(ActiveFootprintVisualCount(newContext), Is.Zero);
@@ -1059,7 +1058,7 @@ namespace AnimalCafe.Tests.PlayMode
                 yield return TapButton(existingTouch, 224, FindNamed<Button>(existingContext.Scene, "RotateButton"));
                 Assert.That(SnapshotLayout(existingContext.Layout), Is.EqualTo(initial),
                     "Existing edit remains transactional before exit.");
-                yield return TapButton(existingTouch, 225, existingContext.HudButton);
+                yield return ContinueThenDiscardExitByTouch(existingContext, existingTouch, 225);
                 Assert.That(SnapshotLayout(existingContext.Layout), Is.EqualTo(initial));
                 Assert.That(existingContext.Controller.State, Is.EqualTo(DecorationSessionState.Closed));
                 Assert.That(ActivePreview(existingContext.Controller), Is.Null);
@@ -1321,7 +1320,7 @@ namespace AnimalCafe.Tests.PlayMode
                     modalStartedAt, modalDismissStartedAt, 0.16f, "Modal open -> dismiss");
                 Assert.That(modalDismissed, Is.EqualTo(1));
 
-                yield return TapButton(touch, 250, context.HudButton);
+                yield return ContinueThenDiscardExitByTouch(context, touch, 250);
                 AssertTransitionCommandTiming(
                     modalDismissStartedAt, exitStartedAt, 0.16f, "Modal dismiss -> exit");
                 yield return WaitUntil(
@@ -1350,7 +1349,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(cancelRequested, Is.EqualTo(1));
                 Assert.That(storeRequested, Is.EqualTo(1));
                 Assert.That(modalDismissed, Is.EqualTo(1));
-                Assert.That(hudClicked, Is.EqualTo(2));
+                Assert.That(hudClicked, Is.EqualTo(3));
                 Assert.That(collapseClicked, Is.EqualTo(1));
                 Assert.That(expandClicked, Is.EqualTo(1));
                 AssertPointerBoundaryClean(ReadPrivate<UiPointerBoundary>(context.Controller, "pointerBoundary"));
@@ -1547,6 +1546,10 @@ namespace AnimalCafe.Tests.PlayMode
                     var feedback = context.ActionBar.transform.Find("FeedbackToast/Message").GetComponent<TMP_Text>();
                     var stateShape = FindNamed<Transform>(context.Scene, "StateShape").gameObject;
                     var invalid = ActivePreview(context.Controller);
+                    Assert.That(invalid.ProposedPosition, Is.EqualTo(target),
+                        $"{invalidCase.Interruption}: requested invalid cell " +
+                        $"({target.X},{target.Y}), but Touch settled at " +
+                        $"({invalid.ProposedPosition.X},{invalid.ProposedPosition.Y}).");
                     Assert.That(invalid.PlacementResult.Succeeded, Is.False, invalidCase.Interruption);
                     Assert.That(invalid.PlacementResult.FailureReason, Is.EqualTo(invalidCase.Reason));
                     Assert.That(confirm.interactable, Is.False);
@@ -1569,7 +1572,7 @@ namespace AnimalCafe.Tests.PlayMode
                     }
                     else if (invalidCase.Interruption == "Exit")
                     {
-                        yield return TapButton(touch, id + 4, context.HudButton);
+                        yield return ContinueThenDiscardExitByTouch(context, touch, id + 4);
                     }
                     else
                     {
@@ -1872,11 +1875,73 @@ namespace AnimalCafe.Tests.PlayMode
             yield return TapButton(touch, id, context.HudButton);
             yield return WaitUntil(() => context.Controller.IsOpen, 2f, "Decoration HUD Touch did not enter.");
             yield return WaitUntil(
-                () => ActiveTiles(context.Catalogue).Length == 4
+                () => CatalogueExpandedAndSettled(context.Catalogue)
+                    && ActiveTiles(context.Catalogue).Length == 4
                     && IsTopButton(context.EventSystem,
                         ActiveTiles(context.Catalogue)[0].GetComponent<Button>()),
                 2f,
                 "Entered Catalogue did not expose an actionable tile.");
+        }
+
+        private static bool CatalogueExpandedAndSettled(DecorationCatalogueView catalogue)
+        {
+            if (catalogue == null || !catalogue.IsCatalogueVisible || catalogue.IsCollapsed
+                || catalogue.transform is not RectTransform rect)
+            {
+                return false;
+            }
+
+            var target = ReadPrivate<Vector2>(catalogue, "expandedAnchoredPosition");
+            return Vector2.SqrMagnitude(rect.anchoredPosition - target) <= 0.01f;
+        }
+
+        private static bool CatalogueCollapsedAndSettled(DecorationCatalogueView catalogue)
+        {
+            if (catalogue == null || !catalogue.IsCatalogueVisible || !catalogue.IsCollapsed
+                || catalogue.transform is not RectTransform rect)
+            {
+                return false;
+            }
+
+            var target = ReadPrivate<Vector2>(catalogue, "collapsedAnchoredPosition");
+            return Vector2.SqrMagnitude(rect.anchoredPosition - target) <= 0.01f;
+        }
+
+        private IEnumerator ContinueThenDiscardExitByTouch(
+            MainCafeContext context,
+            Touchscreen touch,
+            int firstId)
+        {
+            var previewBefore = ActivePreview(context.Controller);
+            Assert.That(previewBefore, Is.Not.Null,
+                "The Phase 7 Exit Modal contract applies only while a Preview is active.");
+            yield return TapButton(touch, firstId, context.HudButton);
+            var continueButton = FindNamed<Button>(context.Scene, "ContinueEditingButton");
+            var discardButton = FindNamed<Button>(context.Scene, "DiscardChangesButton");
+            yield return WaitUntil(() => continueButton.gameObject.activeInHierarchy
+                    && IsTopButton(context.EventSystem, continueButton),
+                2f, "Continue Editing did not become the real top Modal action.");
+            Assert.That(context.Controller.IsOpen, Is.True);
+            Assert.That(ActivePreview(context.Controller), Is.SameAs(previewBefore),
+                "Opening the Exit Modal must not auto-confirm or silently discard.");
+
+            yield return TapButton(touch, firstId + 1, continueButton);
+            Assert.That(context.Controller.IsOpen, Is.True);
+            Assert.That(ActivePreview(context.Controller), Is.SameAs(previewBefore),
+                "Continue Editing must preserve the live Preview.");
+            yield return WaitUntil(() => !continueButton.gameObject.activeInHierarchy,
+                2f, "Continue Editing did not close the Exit Modal.");
+
+            yield return TapButton(touch, firstId + 2, context.HudButton);
+            yield return WaitUntil(() => discardButton.gameObject.activeInHierarchy
+                    && IsTopButton(context.EventSystem, discardButton),
+                2f, "Discard Changes did not become the real top Modal action.");
+            Assert.That(ActivePreview(context.Controller), Is.SameAs(previewBefore));
+            yield return TapButton(touch, firstId + 3, discardButton);
+            yield return WaitUntil(() => !context.Controller.IsOpen
+                    && context.Controller.State == DecorationSessionState.Closed
+                    && ActivePreview(context.Controller) == null,
+                2f, "Discard Changes did not rollback the Preview and exit Decoration Mode.");
         }
 
         private IEnumerator SelectTileByTouch(MainCafeContext context, Touchscreen touch, int id, int index)
@@ -1892,6 +1957,8 @@ namespace AnimalCafe.Tests.PlayMode
             var rotate = FindNamed<Button>(context.Scene, "RotateButton");
             yield return WaitUntil(() => IsTopButton(context.EventSystem, rotate), 2f,
                 "Preview action bar did not expose an actionable Rotate control.");
+            yield return WaitUntil(() => CatalogueCollapsedAndSettled(context.Catalogue), 2f,
+                "Catalogue did not finish its 0.16s collapse before the Scene Preview became draggable.");
         }
 
         private IEnumerator SelectInitialCounter(MainCafeContext context, Touchscreen touch, int id)
@@ -1899,7 +1966,7 @@ namespace AnimalCafe.Tests.PlayMode
             if (context.Catalogue.IsCatalogueVisible && !context.Catalogue.IsCollapsed)
             {
                 yield return TapButton(touch, id - 1, FindNamed<Button>(context.Scene, "CollapseButton"));
-                yield return WaitUntil(() => context.Catalogue.IsCollapsed, 2f,
+                yield return WaitUntil(() => CatalogueCollapsedAndSettled(context.Catalogue), 2f,
                     "Catalogue did not collapse before the Scene furniture selection.");
             }
 
@@ -1930,9 +1997,97 @@ namespace AnimalCafe.Tests.PlayMode
         {
             var preview = ActivePreview(context.Controller);
             var offset = ReadPrivate<float>(context.Controller, "sanitizedFurnitureDragOffsetPixels");
-            var start = GridCellScreenCenter(context, preview.ProposedPosition);
             var end = GridCellScreenCenter(context, target) - Vector2.up * offset;
-            yield return Drag(touch, id, start, end);
+            var start = FindUiFreeScreenPointOnActivePreview(context, end);
+            Assert.That(TopGraphicAt(context.EventSystem, end), Is.Null,
+                $"Real Touch drag end {end} is covered by " +
+                HierarchyPath(TopGraphicAt(context.EventSystem, end)?.transform));
+            var projectedTarget = FindContainingGridCellAtScreen(
+                context, end + Vector2.up * offset);
+            Assert.That(projectedTarget, Is.EqualTo(target),
+                $"The production drag offset must project {end} back to the requested target.");
+            yield return BeginContact(touch, id, start);
+            var router = ReadPrivate<DecorationTouchRouter>(context.Controller, "touchRouter");
+            Assert.That(router.Owner, Is.EqualTo(DecorationGestureOwner.Furniture),
+                $"The active Preview must own Touch Began at the UI-free point {start}.");
+            yield return MoveContact(touch, id, end);
+            Assert.That(router.IsDragging, Is.True,
+                $"Furniture Touch did not cross the production drag threshold: " +
+                $"start={start}, end={end}, distance={Vector2.Distance(start, end)}.");
+            Assert.That(ActivePreview(context.Controller).ProposedPosition, Is.EqualTo(target),
+                $"Furniture drag Move was consumed but did not settle on the requested cell. " +
+                $"start={start}, end={end}, projected=({projectedTarget.X},{projectedTarget.Y}), " +
+                $"owner={router.Owner}, dragging={router.IsDragging}, " +
+                $"endTop={HierarchyPath(TopGraphicAt(context.EventSystem, end)?.transform)}.");
+            yield return Release(touch, id, end);
+        }
+
+        private static Vector2 FindUiFreeScreenPointOnActivePreview(
+            MainCafeContext context,
+            Vector2 dragEnd)
+        {
+            var previewView = ReadPrivate<FurniturePreviewView>(context.Controller, "previewView");
+            Assert.That(previewView.TryGetWorldBounds(out var bounds), Is.True,
+                "The active Preview must expose Renderer bounds before a real Touch drag.");
+
+            var min = bounds.min;
+            var max = bounds.max;
+            var worldCorners = new[]
+            {
+                new Vector3(min.x, min.y, min.z),
+                new Vector3(min.x, min.y, max.z),
+                new Vector3(min.x, max.y, min.z),
+                new Vector3(min.x, max.y, max.z),
+                new Vector3(max.x, min.y, min.z),
+                new Vector3(max.x, min.y, max.z),
+                new Vector3(max.x, max.y, min.z),
+                new Vector3(max.x, max.y, max.z)
+            };
+            var projected = worldCorners.Select(context.Camera.WorldToScreenPoint).ToArray();
+            Assert.That(projected.All(point => point.z > 0f), Is.True,
+                "The active Preview must remain in front of the production Camera.");
+
+            var screenMin = projected
+                .Select(point => new Vector2(point.x, point.y))
+                .Aggregate(Vector2.Min);
+            var screenMax = projected
+                .Select(point => new Vector2(point.x, point.y))
+                .Aggregate(Vector2.Max);
+            var classifier = (IDecorationTouchHitClassifier)context.Controller;
+            var samples = new[] { 0.15f, 0.3f, 0.5f, 0.7f, 0.85f };
+            var candidates = new List<Vector2>();
+            foreach (var y in samples)
+            foreach (var x in samples)
+            {
+                candidates.Add(new Vector2(
+                    Mathf.Lerp(screenMin.x, screenMax.x, x),
+                    Mathf.Lerp(screenMin.y, screenMax.y, y)));
+            }
+
+            var preview = ActivePreview(context.Controller);
+            candidates.AddRange(context.Layout
+                .GetFurnitureFootprintCells(
+                    preview.DefinitionId,
+                    preview.ProposedPosition,
+                    preview.ProposedRotation)
+                .Select(cell => GridCellScreenCenter(context, cell)));
+
+            var threshold = ReadPrivate<AnimalCafe.Camera.CameraSettings>(
+                context.Controller, "cameraSettings").DragThresholdPixels;
+            var chosen = candidates
+                .Where(point => context.Camera.pixelRect.Contains(point))
+                .Where(point => TopGraphicAt(context.EventSystem, point) == null)
+                .Where(point => classifier.ClassifyBegan(-1, point).Kind
+                    == DecorationTouchHitKind.Furniture)
+                .Where(point => Vector2.Distance(point, dragEnd) > threshold)
+                .OrderByDescending(point => Vector2.SqrMagnitude(point - dragEnd))
+                .Cast<Vector2?>()
+                .FirstOrDefault();
+            Assert.That(chosen.HasValue, Is.True,
+                $"No UI-free Touch point exists on active Preview screen bounds " +
+                $"[{screenMin}..{screenMax}] farther than the {threshold}px drag threshold " +
+                $"from {dragEnd}.");
+            return chosen.GetValueOrDefault();
         }
 
         private IEnumerator Tap(Touchscreen device, int touchId, Vector2 position)
@@ -2380,10 +2535,23 @@ namespace AnimalCafe.Tests.PlayMode
 
         private static void AssertTopButton(EventSystem eventSystem, Button button)
         {
-            var top = TopGraphicAt(eventSystem, ButtonCenter(button));
+            var center = ButtonCenter(button);
+            var top = TopGraphicAt(eventSystem, center);
             Assert.That(top, Is.Not.Null);
             Assert.That(top == button.gameObject || top.transform.IsChildOf(button.transform), Is.True,
-                $"{button.name} must own the top actionable raycast before Touch.");
+                $"{button.name} must own the top actionable raycast before Touch. " +
+                $"center={center}, top={HierarchyPath(top?.transform)}");
+        }
+
+        private static string HierarchyPath(Transform transform)
+        {
+            if (transform == null) return "<none>";
+            var names = new Stack<string>();
+            for (var current = transform; current != null; current = current.parent)
+            {
+                names.Push(current.name);
+            }
+            return string.Join("/", names);
         }
 
         private static bool IsTopButton(EventSystem eventSystem, Button button)
@@ -2454,7 +2622,16 @@ namespace AnimalCafe.Tests.PlayMode
             PlacementFailureReason reason,
             GridPosition origin)
         {
-            var originScreen = GridCellScreenCenter(context, origin);
+            var dragOffset = ReadPrivate<float>(
+                context.Controller, "sanitizedFurnitureDragOffsetPixels");
+            var edgeZone = ReadPrivate<DecorationCameraDriver>(
+                context.Controller, "cameraDriver").EdgeZonePixels;
+            var safePixelRect = Rect.MinMaxRect(
+                context.Camera.pixelRect.xMin + edgeZone,
+                context.Camera.pixelRect.yMin + edgeZone,
+                context.Camera.pixelRect.xMax - edgeZone,
+                context.Camera.pixelRect.yMax - edgeZone);
+            var originScreen = GridCellScreenCenter(context, origin) - Vector2.up * dragOffset;
             var candidates = new List<(GridPosition Cell, float Distance)>();
             for (var y = -2; y <= 9; y++)
             for (var x = -2; x <= 9; x++)
@@ -2462,8 +2639,8 @@ namespace AnimalCafe.Tests.PlayMode
                 var cell = new GridPosition(x, y);
                 var result = context.Layout.ValidateFurniturePlacement(definitionId, cell, rotation);
                 if (result.Succeeded || result.FailureReason != reason) continue;
-                var screen = GridCellScreenCenter(context, cell);
-                if (!context.Camera.pixelRect.Contains(screen)
+                var screen = GridCellScreenCenter(context, cell) - Vector2.up * dragOffset;
+                if (!safePixelRect.Contains(screen)
                     || TopGraphicAt(context.EventSystem, screen) != null)
                 {
                     continue;
@@ -2603,7 +2780,9 @@ namespace AnimalCafe.Tests.PlayMode
             var camera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
             var screen = corners.Select(corner => RectTransformUtility.WorldToScreenPoint(camera, corner)).ToArray();
             Assert.That(screen.All(point => point.x >= 0f && point.x <= Screen.width
-                && point.y >= 0f && point.y <= Screen.height), Is.True, button.name);
+                && point.y >= 0f && point.y <= Screen.height), Is.True,
+                $"{button.name}; Screen={Screen.width}x{Screen.height}; " +
+                $"corners={string.Join(",", screen.Select(point => point.ToString()))}");
             Assert.That(rect.rect.width, Is.GreaterThanOrEqualTo(48f), button.name + " authoring width");
             Assert.That(rect.rect.height, Is.GreaterThanOrEqualTo(48f), button.name + " authoring height");
             var canvasRect = (RectTransform)canvas.transform;

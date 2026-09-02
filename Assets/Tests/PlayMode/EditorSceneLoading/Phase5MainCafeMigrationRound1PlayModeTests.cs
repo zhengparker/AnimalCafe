@@ -82,7 +82,11 @@ namespace AnimalCafe.Tests.PlayMode
             Physics.SyncTransforms();
             var selectable = selectableObject.AddComponent<ColorSelectable>();
             selectable.Configure(selectableObject.GetComponent<Renderer>());
-            var clearPosition = FindPositionOutsideUiAndPhysics(EventSystem.current, camera, selectPosition);
+            var clearPosition = FindPositionOutsideUiAndPhysics(
+                EventSystem.current,
+                camera,
+                selectPosition,
+                selectableObject.GetComponent<Collider>());
             var events = new List<SelectionChangedEvent>();
             GameEventBus.SelectionChanged += events.Add;
             var mouse = InputSystem.AddDevice<Mouse>();
@@ -200,7 +204,8 @@ namespace AnimalCafe.Tests.PlayMode
         private static Vector2 FindPositionOutsideUiAndPhysics(
             EventSystem eventSystem,
             UnityEngine.Camera camera,
-            Vector2 excluded = default)
+            Vector2 excluded = default,
+            Collider selectableCollider = null)
         {
             var candidates = new[]
             {
@@ -215,10 +220,23 @@ namespace AnimalCafe.Tests.PlayMode
                 if (candidate == excluded) continue;
                 var uiHits = new List<RaycastResult>();
                 eventSystem.RaycastAll(new PointerEventData(eventSystem) { position = candidate }, uiHits);
-                if (uiHits.Count == 0 && !Physics.Raycast(camera.ScreenPointToRay(candidate))) return candidate;
+                if (uiHits.Count != 0) continue;
+
+                var hitsPhysics = Physics.Raycast(
+                    camera.ScreenPointToRay(candidate),
+                    out var hit);
+                if (!hitsPhysics
+                    || (selectableCollider != null
+                        && hit.collider != selectableCollider))
+                {
+                    return candidate;
+                }
             }
 
-            Assert.Fail("MainCafe needs two UI-clear, physics-clear positions for selection and deselection coverage.");
+            Assert.Fail(
+                selectableCollider == null
+                    ? "MainCafe needs a UI-clear, physics-clear position for selection coverage."
+                    : "MainCafe needs a UI-clear position that does not hit the selected object for deselection coverage.");
             return default;
         }
 

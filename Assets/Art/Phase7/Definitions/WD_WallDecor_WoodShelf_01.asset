@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1a02e8364bc4c6cb04a018ec4575d24, type: 3}
+  m_Name: WD_WallDecor_WoodShelf_01
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Content.WallMountedDefinitionAsset
+  definitionId: wall-decor.wood-shelf.01
+  displayName: Wood Shelf
+  footprintWidth: 2
+  footprintHeight: 1
+  prefab: {fileID: 3694186633511889001, guid: 32d7e5eceac59fb4e813fd012817fe44, type: 3}
+  thumbnail: {fileID: 21300000, guid: 1f746fff6b3639e43b176262938f4d83, type: 3}
+  maxVisualDepth: 0.34

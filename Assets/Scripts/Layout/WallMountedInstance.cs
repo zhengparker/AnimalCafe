@@ -1,14 +1,7 @@
-using System;
-using System.Text.RegularExpressions;
-
 namespace AnimalCafe.Layout
 {
     public sealed class WallMountedInstance
     {
-        private static readonly Regex StableIdPattern = new Regex(
-            "^[a-z0-9][a-z0-9._-]*$",
-            RegexOptions.CultureInvariant);
-
         public string InstanceId { get; }
         public string DefinitionId { get; }
         public string SurfaceId { get; }
@@ -35,28 +28,24 @@ namespace AnimalCafe.Layout
 
         internal WallMountedInstance WithPosition(WallSlotPosition position)
         {
+            return WithPlacement(SurfaceId, position);
+        }
+
+        internal WallMountedInstance WithPlacement(
+            string surfaceId,
+            WallSlotPosition position)
+        {
             return new WallMountedInstance(
                 InstanceId,
                 DefinitionId,
-                SurfaceId,
+                surfaceId,
                 position,
                 Footprint);
         }
 
         internal static void ValidateId(string value, string paramName)
         {
-            if (value == null)
-            {
-                throw new ArgumentNullException(paramName);
-            }
-
-            if (string.IsNullOrWhiteSpace(value) ||
-                !StableIdPattern.IsMatch(value))
-            {
-                throw new ArgumentException(
-                    "Wall stable ID has an invalid format.",
-                    paramName);
-            }
+            LayoutStableId.Validate(value, paramName);
         }
     }
 }

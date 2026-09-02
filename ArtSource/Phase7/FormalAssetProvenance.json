@@ -1,0 +1,26 @@
+{
+  "sourceRoot": "Blender Model Item/Phase 7",
+  "licenseBasis": "StudioOwnerSupplied",
+  "repositoryAuthority": "Assets/Art/Phase7/RawSources + ArtSource/Phase7/Derived",
+  "nonDestructiveWrapperIntake": true,
+  "sources": [
+    { "source": "T_WallDecor_ShibaPortrait_v01.png", "sha256": "69C35321DF0110F062A8631FE92D1486DBCE8692EF1DE6EE1BCF8B515EBA52F7" },
+    { "source": "Wall monitor 3d model.glb", "sha256": "866778921ECAAD30C0FC3FFACB746688952EBDE363EF25F7DA38B8273BF31941" },
+    { "source": "tall glass window 3d model_1x1_fixed_v01.glb", "sha256": "64CB2BC212A0278FB9E5E5297EDB9B6780199D7BBFD5126D1F457A89C8B9FF1C" },
+    { "source": "tall glass window 3d model_1x2_fixed_v01.glb", "sha256": "0494E87CE27CD0ADF2FE204B28EA64D352FDA66BACE8C513CFA7BE9C8EB6E1EF" },
+    { "source": "wooden paint 3d model_fixed_v01.glb", "sha256": "C699199DD046956939F318CEBCBDFDE0C595EF029190F598D42A72AEA67B7DF4" },
+    { "source": "wooden shelf 3d model.glb", "sha256": "D05373DD26111ED43DC38BD7F90EB3508ACBE0A300E9E981AF325A547C765F21" }
+  ],
+  "derived": [
+    { "derived": "SM_WallDecor_Monitor_01.fbx", "sha256": "17FAC5E8A66E70426EE8BC6552E5F45C131895657E901DB4CD127BB97417A34F" },
+    { "derived": "SM_WallDecor_Monitor_01_computer_monitor_3d_model_basecolor_jpg.png", "sha256": "C64E0A088058C541E37EB8FA50D256A6A99FC478EDC0EF4DE0D8570A1C187758" },
+    { "derived": "SM_WallDecor_ShibaPainting_01.fbx", "sha256": "C13DF59FDF41B3DD2E11E9CC4AA903C772E40049C8D59BBD2A8CE300CEC2B3F5" },
+    { "derived": "SM_WallDecor_ShibaPainting_01_wooden_paint_3d_model_basecolor.png", "sha256": "81A07293E9118F85C8AF32993A083C2F4FA2953023472334220A670B73635E18" },
+    { "derived": "SM_WallDecor_WoodShelf_01.fbx", "sha256": "AD6956326C0F2EC7C326CC4ED80C335DEE30771A5CD9D37B3D982D8C34F2E163" },
+    { "derived": "SM_WallDecor_WoodShelf_01_wooden_sofa_3d_model_basecolor_jpg.png", "sha256": "3C0C0FCA116DD5DCD5C1FE9E654826DF132D42E7CA48B1D146564559DAACB19A" },
+    { "derived": "SM_Window_TallGlass_1x1_01.fbx", "sha256": "CBBC5B42A9C42A0DB4F0A3F2F5EB741EEF541937C600B804423644AF2468D6CF" },
+    { "derived": "SM_Window_TallGlass_1x1_01_tall_glass_window_3d_model_basecolor.png", "sha256": "A61AD47A311286ABBE75D3E95BAF9E428F8971B014ABB8FAFF0571B5E500BEF2" },
+    { "derived": "SM_Window_TallGlass_1x2_01.fbx", "sha256": "BEAB8705B4F82FE878A8979B921AFCEA60560A728A592C9A5192E0A2C394EA2C" },
+    { "derived": "SM_Window_TallGlass_1x2_01_tall_glass_window_3d_model_basecolor.png", "sha256": "A61AD47A311286ABBE75D3E95BAF9E428F8971B014ABB8FAFF0571B5E500BEF2" }
+  ]
+}

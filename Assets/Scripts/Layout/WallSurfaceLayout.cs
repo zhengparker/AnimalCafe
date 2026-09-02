@@ -10,7 +10,10 @@ namespace AnimalCafe.Layout
         Overlap = 2,
         SurfaceMismatch = 3,
         ItemAlreadyPlaced = 4,
-        ItemNotFound = 5
+        ItemNotFound = 5,
+        CrossCorner = 6,
+        SurfaceMissing = 7,
+        ConfirmationPending = 8
     }
 
     public sealed class WallPlacementResult
@@ -37,6 +40,20 @@ namespace AnimalCafe.Layout
 
     public sealed class WallSurfaceLayout
     {
+        internal sealed class OrderedState
+        {
+            internal IReadOnlyList<WallMountedInstance> MountedItems { get; }
+            internal IReadOnlyDictionary<WallSlotPosition, string> Occupants { get; }
+
+            internal OrderedState(
+                IReadOnlyList<WallMountedInstance> mountedItems,
+                IReadOnlyDictionary<WallSlotPosition, string> occupants)
+            {
+                MountedItems = mountedItems;
+                Occupants = occupants;
+            }
+        }
+
         private readonly Dictionary<WallSlotPosition, string> occupantBySlot =
             new Dictionary<WallSlotPosition, string>();
         private readonly List<WallMountedInstance> mountedItems =
@@ -95,18 +112,13 @@ namespace AnimalCafe.Layout
                     WallPlacementFailureReason.ItemAlreadyPlaced);
             }
 
-            if (!TryGetFootprintSlots(item, out var slots))
-            {
-                return WallPlacementResult.Failure(
-                    WallPlacementFailureReason.OutOfBounds);
-            }
-
-            var validationResult = ValidateCandidateSlots(slots);
+            var validationResult = ValidatePlacement(item);
             if (!validationResult.Succeeded)
             {
                 return validationResult;
             }
 
+            var slots = GetFootprintSlots(item);
             mountedItemsById.Add(item.InstanceId, item);
             mountedItems.Add(item);
             OccupySlots(slots, item.InstanceId);
@@ -127,18 +139,13 @@ namespace AnimalCafe.Layout
             }
 
             var candidate = current.WithPosition(newPosition);
-            if (!TryGetFootprintSlots(candidate, out var slots))
-            {
-                return WallPlacementResult.Failure(
-                    WallPlacementFailureReason.OutOfBounds);
-            }
-
-            var validationResult = ValidateCandidateSlots(slots, current.InstanceId);
+            var validationResult = ValidatePlacement(candidate, current.InstanceId);
             if (!validationResult.Succeeded)
             {
                 return validationResult;
             }
 
+            var slots = GetFootprintSlots(candidate);
             var listIndex = mountedItems.FindIndex(item => string.Equals(
                 item.InstanceId,
                 current.InstanceId,
@@ -149,6 +156,46 @@ namespace AnimalCafe.Layout
             OccupySlots(slots, candidate.InstanceId);
 
             return WallPlacementResult.Success();
+        }
+
+        public WallPlacementResult ValidatePlacement(
+            WallMountedInstance item,
+            string ignoredItemId = null)
+        {
+            if (item == null)
+            {
+                throw new ArgumentNullException(nameof(item));
+            }
+
+            if (!string.Equals(item.SurfaceId, SurfaceId, StringComparison.Ordinal))
+            {
+                return WallPlacementResult.Failure(
+                    WallPlacementFailureReason.SurfaceMismatch);
+            }
+
+            if (!TryGetFootprintSlots(item, out var slots))
+            {
+                return WallPlacementResult.Failure(
+                    WallPlacementFailureReason.OutOfBounds);
+            }
+
+            return ValidateCandidateSlots(slots, ignoredItemId);
+        }
+
+        public IReadOnlyList<WallSlotPosition> GetFootprintSlots(
+            WallMountedInstance item)
+        {
+            if (item == null)
+            {
+                throw new ArgumentNullException(nameof(item));
+            }
+
+            if (!TryGetFootprintSlots(item, out var slots))
+            {
+                return new List<WallSlotPosition>().AsReadOnly();
+            }
+
+            return slots.AsReadOnly();
         }
 
         public WallPlacementResult TryRemove(string itemId)
@@ -171,6 +218,52 @@ namespace AnimalCafe.Layout
         public bool TryGetOccupant(WallSlotPosition position, out string itemId)
         {
             return occupantBySlot.TryGetValue(position, out itemId);
+        }
+
+        internal WallSurfaceLayout CreateDetachedCopy()
+        {
+            var copy = new WallSurfaceLayout(SurfaceId, ColumnCount, RowCount);
+            copy.RestoreOrderedState(CaptureOrderedState());
+            return copy;
+        }
+
+        internal OrderedState CaptureOrderedState()
+        {
+            var itemCopies = new List<WallMountedInstance>(mountedItems.Count);
+            foreach (var item in mountedItems)
+            {
+                itemCopies.Add(item.WithPlacement(item.SurfaceId, item.Position));
+            }
+
+            return new OrderedState(
+                itemCopies.AsReadOnly(),
+                new Dictionary<WallSlotPosition, string>(occupantBySlot));
+        }
+
+        internal void RestoreOrderedState(OrderedState state)
+        {
+            if (state == null)
+            {
+                throw new ArgumentNullException(nameof(state));
+            }
+
+            mountedItems.Clear();
+            mountedItemsById.Clear();
+            occupantBySlot.Clear();
+
+            foreach (var stateItem in state.MountedItems)
+            {
+                var item = stateItem.WithPlacement(
+                    stateItem.SurfaceId,
+                    stateItem.Position);
+                mountedItems.Add(item);
+                mountedItemsById.Add(item.InstanceId, item);
+            }
+
+            foreach (var occupant in state.Occupants)
+            {
+                occupantBySlot.Add(occupant.Key, occupant.Value);
+            }
         }
 
         private bool TryGetFootprintSlots(
