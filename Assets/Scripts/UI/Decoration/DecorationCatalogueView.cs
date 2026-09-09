@@ -37,6 +37,7 @@ namespace AnimalCafe.UI.Decoration
         [SerializeField] private RectTransform categoryContent;
         [SerializeField] private GameObject categoryRowTemplate;
         [SerializeField] private DecorationCatalogueTileView categoryTileTemplate;
+        [SerializeField] private Button pickUpPointButton;
         private readonly List<DecorationCategoryRowView> categoryRows = new List<DecorationCategoryRowView>();
         private ScrollRect nestedDragSource;
         private int nestedDragAxis;
@@ -145,6 +146,8 @@ namespace AnimalCafe.UI.Decoration
         public void BindCategories(IReadOnlyList<DecorationCategoryModel> categories, Action<DecorationCatalogueItemModel> selected)
         {
             EndNestedDrag();
+            if (pickUpPointButton != null)
+                pickUpPointButton.gameObject.SetActive(IsFurnitureTab(categories));
             if (categoryContent != null)
                 foreach (Transform child in categoryContent)
                     if (child.gameObject != categoryRowTemplate)
@@ -153,7 +156,14 @@ namespace AnimalCafe.UI.Decoration
                         Destroy(child.gameObject);
                     }
             categoryRows.Clear();
-            if (verticalScroll != null) { verticalScroll.vertical = true; verticalScroll.horizontal = false; }
+            if (verticalScroll != null)
+            {
+                verticalScroll.vertical = true;
+                verticalScroll.horizontal = false;
+                // Catalogue uses pointer dragging; mouse wheel remains available for camera zoom.
+                // 目录保留 pointer drag，滚轮继续用于 Camera zoom。
+                verticalScroll.scrollSensitivity = 0f;
+            }
             if (categories == null) return;
             foreach (var category in categories)
             {
@@ -165,6 +175,7 @@ namespace AnimalCafe.UI.Decoration
                 row.SetActive(true);
                 var scroll = row.GetComponent<ScrollRect>() ?? row.AddComponent<ScrollRect>();
                 scroll.horizontal = true; scroll.vertical = false;
+                scroll.scrollSensitivity = 0f;
                 ConfigureNestedPointerDrag(row, scroll);
                 var label = row.GetComponentInChildren<TMP_Text>(true);
                 if (label != null) label.text = category.DisplayName;
@@ -356,6 +367,7 @@ namespace AnimalCafe.UI.Decoration
         private Coroutine transitionCoroutine;
 
         public event Action<FurnitureDefinitionAsset> Selected;
+        public event Action PickUpPointRequested;
         public event Action<DecorationCatalogueState> StateChanged;
 
         public bool IsCatalogueVisible { get; private set; }
@@ -402,7 +414,8 @@ namespace AnimalCafe.UI.Decoration
                 tile.gameObject.SetActive(false);
             }
 
-            for (var index = 0; index < catalogue.Entries.Count; index++)
+            var entries = catalogue.Entries;
+            for (var index = 0; index < entries.Count; index++)
             {
                 var tile = GetOrCreateTile(index);
                 tile.gameObject.SetActive(true);
@@ -411,8 +424,8 @@ namespace AnimalCafe.UI.Decoration
                     tile.Configure(pointerBoundary);
                 }
 
-                PositionTile(tile, index, catalogue.Entries.Count);
-                tile.Bind(catalogue.Entries[index], HandleTileSelected);
+                PositionTile(tile, index, entries.Count);
+                tile.Bind(entries[index], HandleTileSelected);
             }
         }
 
@@ -421,7 +434,10 @@ namespace AnimalCafe.UI.Decoration
             // The scroll viewport fills the Sheet, so keep the explicit collapse
             // control above it in the real GraphicRaycaster order.
             collapseButton?.transform.SetAsLastSibling();
-            TransitionTo(DecorationCatalogueState.Expanded);
+            var sheetChanged = SheetState != DecorationSheetState.Expanded;
+            SheetState = DecorationSheetState.Expanded;
+            if (sheetActionRoot != null) sheetActionRoot.SetActive(true);
+            TransitionTo(DecorationCatalogueState.Expanded, forceTransition: sheetChanged);
         }
 
         public void ShowCollapsedHandle()
@@ -476,6 +492,11 @@ namespace AnimalCafe.UI.Decoration
 
         private void EnsureOwnListeners()
         {
+            if (pickUpPointButton != null)
+            {
+                pickUpPointButton.onClick.RemoveListener(HandlePickUpPointRequested);
+                pickUpPointButton.onClick.AddListener(HandlePickUpPointRequested);
+            }
             if (collapseButton != null)
             {
                 collapseButton.onClick.RemoveListener(HandleCollapseRequested);
@@ -487,6 +508,36 @@ namespace AnimalCafe.UI.Decoration
                 collapsedHandleButton.onClick.RemoveListener(HandleExpandRequested);
                 collapsedHandleButton.onClick.AddListener(HandleExpandRequested);
             }
+        }
+
+        private void HandlePickUpPointRequested()
+        {
+            if (!IsCatalogueVisible
+                || IsCollapsed
+                || SheetState != DecorationSheetState.Expanded
+                || !IsEligibleButton(pickUpPointButton))
+            {
+                return;
+            }
+
+            PickUpPointRequested?.Invoke();
+        }
+
+        private static bool IsFurnitureTab(IReadOnlyList<DecorationCategoryModel> categories)
+        {
+            if (categories == null) return false;
+            for (var index = 0; index < categories.Count; index++)
+            {
+                var categoryId = categories[index]?.CategoryId;
+                if (categoryId == "furniture"
+                    || categoryId == "cash-register"
+                    || categoryId == "coffee-machine")
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void HandleCollapseRequested()
@@ -584,9 +635,9 @@ namespace AnimalCafe.UI.Decoration
             canvasGroup.interactable = enabled;
         }
 
-        private void TransitionTo(DecorationCatalogueState state)
+        private void TransitionTo(DecorationCatalogueState state, bool forceTransition = false)
         {
-            if (state != DecorationCatalogueState.Hidden && State == state)
+            if (!forceTransition && state != DecorationCatalogueState.Hidden && State == state)
             {
                 // Reasserting the same visible state must not restart the 0.16s tween.
                 // 同一 visible state 重复调用必须幂等，避免 Confirm 后按钮短暂失去 raycast。
@@ -724,6 +775,7 @@ namespace AnimalCafe.UI.Decoration
             EndNestedDrag();
             collapseButton?.onClick.RemoveListener(HandleCollapseRequested);
             collapsedHandleButton?.onClick.RemoveListener(HandleExpandRequested);
+            pickUpPointButton?.onClick.RemoveListener(HandlePickUpPointRequested);
         }
     }
 }

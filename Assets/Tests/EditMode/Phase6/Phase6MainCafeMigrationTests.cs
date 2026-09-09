@@ -46,6 +46,14 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             "TEMP_P4_ManualReviewFixtures_DELETE_LATER";
         private const string BackupRoot =
             "Library/AnimalCafe/Phase6Task8SceneBackup";
+        private const string Phase8CataloguePrefabPath =
+            "Assets/UI/Phase8/Prefabs/PF_UI_Phase8DecorationCatalogue.prefab";
+        private const string Phase8ActionBarPrefabPath =
+            "Assets/UI/Phase8/Prefabs/PF_UI_Phase8DecorationActionBar.prefab";
+        private const string Phase8CataloguePrefabGuid =
+            "c9629ed3cd810f34b8e67ee4402b8c89";
+        private const string Phase8ActionBarPrefabGuid =
+            "628e7dd8323d2a341b76290af6745059";
 
         [TestCase(Phase6SceneSetupTarget.MainCafe)]
         [TestCase(Phase6SceneSetupTarget.Validation)]
@@ -491,6 +499,53 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             }
         }
 
+        [Test]
+        public void ConfigureMainCafe_AcceptsExactPhase8UiPairWithoutMutation()
+        {
+            var scope = new FullEditorStateScope();
+            try
+            {
+                var before = CanonicalTargetSnapshot.Capture(
+                    Phase6SceneSetupTarget.MainCafe);
+
+                Phase6DecorationSceneSetup.ConfigureMainCafe();
+                Phase6DecorationSceneSetup.ConfigureMainCafe();
+
+                Assert.That(CanonicalTargetSnapshot.Capture(
+                    Phase6SceneSetupTarget.MainCafe), Is.EqualTo(before));
+                var scene = OpenTargetForTest(
+                    Phase6SceneSetupTarget.MainCafe,
+                    out var openedByTest);
+                try
+                {
+                    AssertPrefabSource(scene, "PF_UI_DecorationCatalogue",
+                        Phase8CataloguePrefabPath);
+                    AssertPrefabSource(scene, "PF_UI_DecorationActionBar",
+                        Phase8ActionBarPrefabPath);
+                    Assert.That(AssetDatabase.AssetPathToGUID(
+                        Phase8CataloguePrefabPath), Is.EqualTo(Phase8CataloguePrefabGuid));
+                    Assert.That(AssetDatabase.AssetPathToGUID(
+                        Phase8ActionBarPrefabPath), Is.EqualTo(Phase8ActionBarPrefabGuid));
+                    var controller = FindAll<DecorationModeController>(scene).Single();
+                    Assert.That(ReadObjectReference(controller, "catalogueView"),
+                        Is.SameAs(Find(scene, "PF_UI_DecorationCatalogue")
+                            .GetComponent<DecorationCatalogueView>()));
+                    Assert.That(ReadObjectReference(controller, "actionBarView"),
+                        Is.SameAs(Find(scene, "PF_UI_DecorationActionBar")
+                            .GetComponent<DecorationActionBarView>()));
+                }
+                finally
+                {
+                    if (openedByTest) EditorSceneManager.CloseScene(scene, true);
+                }
+            }
+            finally
+            {
+                ClearSeams();
+                scope.Dispose();
+            }
+        }
+
         [TestCase(Phase6SceneSetupTarget.MainCafe, false)]
         [TestCase(Phase6SceneSetupTarget.MainCafe, true)]
         [TestCase(Phase6SceneSetupTarget.Validation, false)]
@@ -674,6 +729,25 @@ namespace AnimalCafe.Tests.EditMode.Phase6
         [TestCase(Phase6SceneSetupTarget.MainCafe, "modal-extra-component")]
         [TestCase(Phase6SceneSetupTarget.MainCafe, "action-internal-active-drift")]
         [TestCase(Phase6SceneSetupTarget.MainCafe, "catalogue-internal-component")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-mixed-generation")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-unapproved-catalogue-source")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-catalogue-internal-transform")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-space-missing-child")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-space-duplicate-child")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-space-renamed-child")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-space-child-extra-component")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-space-child-transform")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-space-child-order")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-space-unbound-root")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-runtime-missing")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-runtime-missing-component")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-runtime-extra-component")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-runtime-extra-child")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-new-root-extra-child")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-floor-range-renamed")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-floor-range-button-unbound")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-floor-range-scene-owned")]
+        [TestCase(Phase6SceneSetupTarget.MainCafe, "phase8-runtime-transform")]
         [TestCase(Phase6SceneSetupTarget.Validation, "duplicate")]
         [TestCase(Phase6SceneSetupTarget.Validation, "wrong-prefab")]
         [TestCase(Phase6SceneSetupTarget.Validation, "extra-child")]
@@ -736,7 +810,7 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 Assert.Throws<InvalidOperationException>(() => Configure(target));
 
                 var after = CanonicalTargetSnapshot.Capture(target);
-                Assert.That(after, Is.EqualTo(before));
+                Assert.That(after, Is.EqualTo(before), after.DescribeDifference(before));
                 Assert.That(FullStateFingerprint.Capture(), Is.EqualTo(callerBefore));
                 Assert.That(unrelated.isDirty, Is.True);
                 Assert.That(unrelatedObject, Is.SameAs(Selection.activeObject));
@@ -748,6 +822,40 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 ClearSeams();
                 scope.Dispose();
             }
+        }
+
+        [TestCase("ModeTabs")]
+        [TestCase("ActionPanel")]
+        public void ValidateCandidate_MainCafeRejectsPhase8PrefabInternalSiblingOrderDrift(
+            string parentName)
+        {
+            WithConfigured(Phase6SceneSetupTarget.MainCafe, scene =>
+            {
+                var parent = Find(scene, parentName).transform;
+                Assert.That(parent.childCount, Is.GreaterThan(1));
+                var originalOrder = parent.Cast<Transform>()
+                    .Select(child => child.name)
+                    .ToArray();
+
+                parent.GetChild(parent.childCount - 1).SetSiblingIndex(0);
+                Assert.That(parent.Cast<Transform>().Select(child => child.name),
+                    Is.Not.EqualTo(originalOrder),
+                    "The candidate hierarchy must contain a real in-memory sibling-order drift.");
+
+                var first = Phase6DecorationValidator.ValidateCandidateSceneForTests(
+                    scene,
+                    Phase6SceneSetupTarget.MainCafe);
+                var second = Phase6DecorationValidator.ValidateCandidateSceneForTests(
+                    scene,
+                    Phase6SceneSetupTarget.MainCafe);
+
+                Assert.That(second.Issues, Is.EqualTo(first.Issues));
+                Assert.That(first.Issues, Has.Some.Matches<Phase6DecorationValidationIssue>(
+                    issue => issue.Code == Phase6DecorationIssueCode.MissingUiReference
+                        && issue.ObjectPath.EndsWith("/" + parentName,
+                            StringComparison.Ordinal)
+                        && issue.Message.Contains("sibling order")));
+            });
         }
 
         [TestCase(Phase6SceneSetupTarget.MainCafe, null)]
@@ -909,13 +1017,15 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 Assert.That(space.parent, Is.SameAs(owner.transform));
                 Assert.That(space.GetComponents<Component>().Select(item => item.GetType()),
                     Is.EqualTo(new[] { typeof(Transform) }));
+                var expectedChildren = new[]
+                {
+                    "GridVisualRoot", "FurnitureRepresentationRoot", "FurniturePreviewRoot",
+                    "FunctionalSurfaceRepresentationRoot", "FunctionalSurfacePreviewRoot",
+                    "PickUpPointIndicatorRoot"
+                };
                 Assert.That(space.Cast<Transform>().Select(child => child.name),
-                    Is.EqualTo(new[]
-                    {
-                        "GridVisualRoot", "FurnitureRepresentationRoot", "FurniturePreviewRoot"
-                    }));
-                foreach (var name in new[]
-                         { "GridVisualRoot", "FurnitureRepresentationRoot", "FurniturePreviewRoot" })
+                    Is.EqualTo(expectedChildren));
+                foreach (var name in expectedChildren)
                 {
                     var child = space.Find(name);
                     Assert.That(child, Is.Not.Null, name);
@@ -954,18 +1064,28 @@ namespace AnimalCafe.Tests.EditMode.Phase6
         }
 
         [Test]
-        public void ConfigureMainCafe_AcceptsCanonicalPhase7SceneOwnedFloorRange()
+        public void ConfigureMainCafe_Phase8FloorRangeIsExactPrefabOwnedNotSceneOwnedException()
         {
             WithConfigured(Phase6SceneSetupTarget.MainCafe, scene =>
             {
                 var catalogue = FindAll<DecorationCatalogueView>(scene).Single();
-                var range = FindAll<DecorationFloorRangeView>(scene).Single();
-
-                Assert.That(catalogue.SurfaceFooterHost, Is.Not.Null);
-                Assert.That(range.transform.parent,
-                    Is.SameAs(catalogue.SurfaceFooterHost));
-                Assert.That(range.GetComponentsInChildren<Button>(true),
-                    Has.Length.EqualTo(2));
+                Assert.That(AssetDatabase.GetAssetPath(
+                    PrefabUtility.GetCorrespondingObjectFromSource(catalogue)),
+                    Is.EqualTo(Phase8CataloguePrefabPath));
+                var catalogueRanges = catalogue.GetComponentsInChildren<DecorationFloorRangeView>(true);
+                var sceneRanges = FindAll<DecorationFloorRangeView>(scene);
+                Assert.That(catalogueRanges, Has.Length.EqualTo(1));
+                Assert.That(sceneRanges, Has.Length.EqualTo(1),
+                    "Phase 8 must reject any additional Scene-owned FloorRange.");
+                var range = catalogueRanges.Single();
+                Assert.That(sceneRanges.Single(), Is.SameAs(range));
+                Assert.That(RelativePath(catalogue.transform, range.transform),
+                    Is.EqualTo("SurfaceFooterHost/FloorRange"));
+                var source = PrefabUtility.GetCorrespondingObjectFromSource(range);
+                Assert.That(source, Is.Not.Null,
+                    "Phase 8 FloorRange must be owned by the approved catalogue prefab.");
+                Assert.That(AssetDatabase.GetAssetPath(source),
+                    Is.EqualTo(Phase8CataloguePrefabPath));
             });
         }
 
@@ -1833,6 +1953,179 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 return;
             }
 
+            if (hostileKind == "phase8-mixed-generation")
+            {
+                ReplaceUiRootWithPrefab(
+                    scene,
+                    "PF_UI_DecorationActionBar",
+                    "Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationActionBar.prefab");
+                return;
+            }
+
+            if (hostileKind == "phase8-unapproved-catalogue-source")
+            {
+                var current = Find(scene, "PF_UI_DecorationCatalogue");
+                var parent = current.transform.parent;
+                var sibling = current.transform.GetSiblingIndex();
+                UnityEngine.Object.DestroyImmediate(current);
+                var replacement = new GameObject(
+                    "PF_UI_DecorationCatalogue",
+                    typeof(RectTransform),
+                    typeof(CanvasGroup),
+                    typeof(DecorationCatalogueView));
+                SceneManager.MoveGameObjectToScene(replacement, scene);
+                replacement.transform.SetParent(parent, false);
+                replacement.transform.SetSiblingIndex(sibling);
+                return;
+            }
+
+            if (hostileKind == "phase8-catalogue-internal-transform")
+            {
+                Find(scene, "ExpandedSheet").GetComponent<RectTransform>()
+                    .anchoredPosition += new Vector2(11f, -7f);
+                return;
+            }
+
+            if (hostileKind == "phase8-space-missing-child")
+            {
+                UnityEngine.Object.DestroyImmediate(
+                    Find(scene, "FunctionalSurfacePreviewRoot"));
+                return;
+            }
+
+            if (hostileKind == "phase8-space-duplicate-child")
+            {
+                var duplicate = new GameObject("PickUpPointIndicatorRoot");
+                duplicate.transform.SetParent(Find(scene, "DecorationSpaceRoot").transform,
+                    false);
+                return;
+            }
+
+            if (hostileKind == "phase8-space-renamed-child")
+            {
+                Find(scene, "FunctionalSurfaceRepresentationRoot").name =
+                    "FunctionalSurfaceRepresentationRoot_Renamed";
+                return;
+            }
+
+            if (hostileKind == "phase8-space-child-extra-component")
+            {
+                Find(scene, "FunctionalSurfaceRepresentationRoot")
+                    .AddComponent<BoxCollider>();
+                return;
+            }
+
+            if (hostileKind == "phase8-space-child-transform")
+            {
+                Find(scene, "FunctionalSurfacePreviewRoot").transform.localPosition =
+                    new Vector3(.25f, 0f, 0f);
+                return;
+            }
+
+            if (hostileKind == "phase8-space-child-order")
+            {
+                Find(scene, "PickUpPointIndicatorRoot").transform.SetSiblingIndex(0);
+                return;
+            }
+
+            if (hostileKind == "phase8-space-unbound-root")
+            {
+                var controller = Find(scene, "Phase6_DecorationRuntime")
+                    .GetComponent<DecorationModeController>();
+                var serialized = new SerializedObject(controller);
+                serialized.FindProperty("functionalSurfacePreviewRoot")
+                    .objectReferenceValue = null;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                return;
+            }
+
+            if (hostileKind == "phase8-runtime-missing")
+            {
+                UnityEngine.Object.DestroyImmediate(
+                    Find(scene, "Phase8_FunctionalRuntime"));
+                return;
+            }
+
+            if (hostileKind == "phase8-runtime-missing-component")
+            {
+                UnityEngine.Object.DestroyImmediate(
+                    Find(scene, "Phase8_FunctionalRuntime")
+                        .GetComponent<SurfaceMountedPreviewView>());
+                return;
+            }
+
+            if (hostileKind == "phase8-runtime-extra-component")
+            {
+                Find(scene, "Phase8_FunctionalRuntime").AddComponent<BoxCollider>();
+                return;
+            }
+
+            if (hostileKind == "phase8-runtime-extra-child")
+            {
+                var extra = new GameObject("UnexpectedPhase8RuntimeChild");
+                extra.transform.SetParent(
+                    Find(scene, "Phase8_FunctionalRuntime").transform, false);
+                return;
+            }
+
+            if (hostileKind == "phase8-new-root-extra-child")
+            {
+                var extra = new GameObject("UnexpectedMountedRepresentationChild");
+                extra.transform.SetParent(
+                    Find(scene, "FunctionalSurfaceRepresentationRoot").transform, false);
+                return;
+            }
+
+            if (hostileKind == "phase8-floor-range-renamed")
+            {
+                FindAll<DecorationFloorRangeView>(scene).Single().name =
+                    "FloorRange_Renamed";
+                return;
+            }
+
+            if (hostileKind == "phase8-floor-range-button-unbound")
+            {
+                var range = FindAll<DecorationFloorRangeView>(scene).Single();
+                var serialized = new SerializedObject(range);
+                serialized.FindProperty("singleGridButton").objectReferenceValue = null;
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                return;
+            }
+
+            if (hostileKind == "phase8-floor-range-scene-owned")
+            {
+                var range = FindAll<DecorationFloorRangeView>(scene).Single();
+                var parent = range.transform.parent;
+                var siblingIndex = range.transform.GetSiblingIndex();
+                var replacement = UnityEngine.Object.Instantiate(range.gameObject);
+                replacement.name = "FloorRange";
+                if (PrefabUtility.IsAnyPrefabInstanceRoot(replacement))
+                {
+                    PrefabUtility.UnpackPrefabInstance(
+                        replacement,
+                        PrefabUnpackMode.Completely,
+                        InteractionMode.AutomatedAction);
+                }
+                replacement.transform.SetParent(parent, false);
+                replacement.transform.SetSiblingIndex(siblingIndex);
+                UnityEngine.Object.DestroyImmediate(range.gameObject);
+                Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(
+                    replacement.GetComponent<DecorationFloorRangeView>()), Is.Null);
+                var controller = FindAll<DecorationModeController>(scene).Single();
+                var serialized = new SerializedObject(controller);
+                serialized.FindProperty("floorRangeView").objectReferenceValue =
+                    replacement.GetComponent<DecorationFloorRangeView>();
+                serialized.ApplyModifiedPropertiesWithoutUndo();
+                return;
+            }
+
+            if (hostileKind == "phase8-runtime-transform")
+            {
+                Find(scene, "Phase8_FunctionalRuntime").transform.localPosition =
+                    new Vector3(0f, 0f, .25f);
+                return;
+            }
+
             if (hostileKind == "ui-active-drift")
             {
                 Find(scene, "PF_UI_DecorationActionBar").SetActive(false);
@@ -1942,6 +2235,23 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             var owner = Find(scene, "Phase6_DecorationRuntime");
             var child = new GameObject("Unknown_Task8_Owned_Child");
             child.transform.SetParent(owner.transform, false);
+        }
+
+        private static void ReplaceUiRootWithPrefab(
+            Scene scene,
+            string rootName,
+            string prefabPath)
+        {
+            var current = Find(scene, rootName);
+            var parent = current.transform.parent;
+            var sibling = current.transform.GetSiblingIndex();
+            UnityEngine.Object.DestroyImmediate(current);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.That(prefab, Is.Not.Null, prefabPath);
+            var replacement = (GameObject)PrefabUtility.InstantiatePrefab(prefab, scene);
+            replacement.name = rootName;
+            replacement.transform.SetParent(parent, false);
+            replacement.transform.SetSiblingIndex(sibling);
         }
 
         private static void Configure(Phase6SceneSetupTarget target)
@@ -2086,7 +2396,32 @@ namespace AnimalCafe.Tests.EditMode.Phase6
 
             AssertDirectChildren(Find(scene, "HUD Canvas").transform, "HUD Layer");
             var screenCanvas=Find(scene,"Screen Canvas").transform;
-            if(screenCanvas.Find("Phase7_UIRuntime")!=null)
+            var feedbackCatalogueSource = AssetDatabase.GetAssetPath(
+                PrefabUtility.GetCorrespondingObjectFromSource(
+                    Find(scene, "PF_UI_DecorationCatalogue")));
+            var feedbackActionSource = AssetDatabase.GetAssetPath(
+                PrefabUtility.GetCorrespondingObjectFromSource(
+                    Find(scene, "PF_UI_DecorationActionBar")));
+            var hasExactPhase8UiPair = feedbackCatalogueSource == Phase8CataloguePrefabPath
+                && feedbackActionSource == Phase8ActionBarPrefabPath
+                && AssetDatabase.AssetPathToGUID(feedbackCatalogueSource) == Phase8CataloguePrefabGuid
+                && AssetDatabase.AssetPathToGUID(feedbackActionSource) == Phase8ActionBarPrefabGuid;
+            // Only the approved P8 pair may extend the strict P6/P7 layer contract.
+            if (hasExactPhase8UiPair)
+            {
+                AssertDirectChildren(
+                    screenCanvas,
+                    "Phase8_FeedbackLayer",
+                    "Panel Layer",
+                    "Modal Layer",
+                    "Phase7_UIRuntime",
+                    "PF_UI_Phase7DecorationExitModal");
+                var feedbackLayer = screenCanvas.Find("Phase8_FeedbackLayer");
+                AssertExactComponents(feedbackLayer.gameObject,
+                    typeof(RectTransform), typeof(SafeAreaContainer));
+                AssertDirectChildren(feedbackLayer, "Phase8_ValidationMessage");
+            }
+            else if(screenCanvas.Find("Phase7_UIRuntime")!=null)
                 AssertDirectChildren(
                     screenCanvas,
                     "Panel Layer",
@@ -2177,11 +2512,14 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             var catalogueRoot=Find(scene,"PF_UI_DecorationCatalogue");
             var cataloguePath=AssetDatabase.GetAssetPath(PrefabUtility.GetCorrespondingObjectFromSource(catalogueRoot));
             var phase7Upgrade=cataloguePath=="Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationCatalogue.prefab";
-            if(phase7Upgrade)
+            var phase8Upgrade=cataloguePath==Phase8CataloguePrefabPath;
+            if(phase7Upgrade||phase8Upgrade)
             {
                 AssertExactCurrentPrefabSubtree(catalogueRoot,cataloguePath);
                 var actionRoot=Find(scene,"PF_UI_DecorationActionBar");
-                AssertExactCurrentPrefabSubtree(actionRoot,"Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationActionBar.prefab");
+                AssertExactCurrentPrefabSubtree(actionRoot,phase8Upgrade
+                    ?Phase8ActionBarPrefabPath
+                    :"Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationActionBar.prefab");
                 Assert.That(catalogueRoot.activeSelf,Is.True);Assert.That(actionRoot.activeSelf,Is.True);
             }
             else
@@ -2196,7 +2534,7 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 true,
                 StoreModalManifest());
 
-            if(!phase7Upgrade){AssertClosedActiveUiRoot(catalogueRoot);AssertClosedActiveUiRoot(Find(scene,"PF_UI_DecorationActionBar"));}
+            if(!phase7Upgrade&&!phase8Upgrade){AssertClosedActiveUiRoot(catalogueRoot);AssertClosedActiveUiRoot(Find(scene,"PF_UI_DecorationActionBar"));}
             AssertClosedActiveUiRoot(Find(scene, "PF_UI_DecorationStoreModal"));
         }
 
@@ -2657,6 +2995,8 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 "c107df1e47be10744ad4ccc31fcee90f",
             "Assets/UI/Phase6/Prefabs/PF_UI_DecorationStoreModal.prefab" =>
                 "a6d341f22a31ecf4089ed87449eb0234",
+            Phase8CataloguePrefabPath => Phase8CataloguePrefabGuid,
+            Phase8ActionBarPrefabPath => Phase8ActionBarPrefabGuid,
             _ => throw new ArgumentOutOfRangeException(nameof(path), path, null)
         };
 
@@ -3495,6 +3835,68 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             public override int GetHashCode() => value?.GetHashCode() ?? 0;
         }
 
+        [TestCase("generated", true)]
+        [TestCase("authored", false)]
+        [TestCase("extra-component", false)]
+        [TestCase("extra-child", false)]
+        [TestCase("name-only", false)]
+        public void CanonicalSnapshot_ExcludesOnlyUnsavedTmpRenderHelpers(
+            string kind, bool expectedTransient)
+        {
+            using var scope = new FullEditorStateScope();
+            var label = new GameObject("Snapshot_TMP_Owner", typeof(RectTransform),
+                typeof(TextMeshProUGUI));
+            try
+            {
+                var text = label.GetComponent<TextMeshProUGUI>();
+                var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
+                    "Assets/UI/Phase8/Fonts/NotoSansSC-Phase8 SDF.asset");
+                Assert.That(font, Is.Not.Null);
+                text.font = font;
+                var helper = TMP_SubMeshUI.AddSubTextObject(text,
+                    new MaterialReference(0, font, null, font.material, 0f));
+                var candidate = helper.transform;
+                if (kind == "authored") helper.gameObject.hideFlags = HideFlags.None;
+                if (kind == "extra-component") helper.gameObject.AddComponent<CanvasGroup>();
+                if (kind == "extra-child")
+                    new GameObject("Authored child").transform.SetParent(candidate, false);
+                if (kind == "name-only")
+                {
+                    var unrelated = new GameObject(helper.name, typeof(RectTransform));
+                    unrelated.hideFlags = HideFlags.DontSave;
+                    unrelated.transform.SetParent(label.transform, false);
+                    candidate = unrelated.transform;
+                }
+
+                Assert.That(IsTransientTmpRenderHelper(candidate), Is.EqualTo(expectedTransient));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(label);
+            }
+        }
+
+        private static bool IsTransientTmpRenderHelper(Transform transform)
+        {
+            var go = transform.gameObject;
+            // TMP creates these render-only children on demand; never hide authored objects.
+            if (go.GetComponent<TMP_SubMeshUI>() == null
+                || transform.parent == null
+                || transform.parent.GetComponent<TextMeshProUGUI>() == null
+                || (go.hideFlags & HideFlags.DontSave) != HideFlags.DontSave
+                || transform.childCount != 0
+                || PrefabUtility.GetCorrespondingObjectFromSource(go) != null
+                || !GlobalObjectId.GetGlobalObjectIdSlow(go).Equals(default(GlobalObjectId)))
+                return false;
+
+            var layout = go.GetComponent<LayoutElement>();
+            var components = go.GetComponents<Component>();
+            return layout != null && layout.ignoreLayout && components.Length == 4
+                && components.All(component => component is RectTransform
+                    || component is CanvasRenderer || component is LayoutElement
+                    || component is TMP_SubMeshUI);
+        }
+
         private readonly struct CanonicalTargetSnapshot : IEquatable<CanonicalTargetSnapshot>
         {
             private readonly string value;
@@ -3505,8 +3907,12 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 var scene = OpenTargetForTest(target, out var openedByTest);
                 try
                 {
-                    var objects = scene.GetRootGameObjects()
+                    var retainedTransforms = scene.GetRootGameObjects()
                         .SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                        .Where(transform => !IsTransientTmpRenderHelper(transform))
+                        .ToArray();
+                    var retainedSet = new HashSet<Transform>(retainedTransforms);
+                    var objects = retainedTransforms
                         .OrderBy(HierarchyPath, StringComparer.Ordinal)
                         .Select(transform =>
                         {
@@ -3523,7 +3929,8 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                             }
                             var id = GlobalObjectId.GetGlobalObjectIdSlow(go);
                             return $"{HierarchyPath(transform)}|{id}|{sourceGuid}|{sourceLocalId}|"
-                                + $"{go.GetComponents<Component>().Length}|{transform.childCount}";
+                                + $"{go.GetComponents<Component>().Length}|"
+                                + transform.Cast<Transform>().Count(retainedSet.Contains);
                         });
                     var serializedRefs = FindAll<DecorationModeController>(scene)
                         .SelectMany(SerializedReferences)
@@ -3541,6 +3948,23 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             }
 
             public bool Equals(CanonicalTargetSnapshot other) => value == other.value;
+
+            public string DescribeDifference(CanonicalTargetSnapshot expected)
+            {
+                // Show only the first changed fields; keep exact equality as the contract.
+                var actualLines = (value ?? string.Empty).Split('\n');
+                var expectedLines = (expected.value ?? string.Empty).Split('\n');
+                return string.Join("\n", Enumerable.Range(0,
+                        Math.Max(actualLines.Length, expectedLines.Length))
+                    .Where(index => (index < actualLines.Length ? actualLines[index] : "<missing>")
+                        != (index < expectedLines.Length ? expectedLines[index] : "<missing>"))
+                    .Take(6)
+                    .Select(index => $"Line {index}: expected "
+                        + (index < expectedLines.Length ? expectedLines[index] : "<missing>")
+                        + "\n  actual "
+                        + (index < actualLines.Length ? actualLines[index] : "<missing>")));
+            }
+
             public override bool Equals(object obj) =>
                 obj is CanonicalTargetSnapshot other && Equals(other);
             public override int GetHashCode() => value?.GetHashCode() ?? 0;

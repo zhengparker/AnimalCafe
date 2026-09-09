@@ -1,3 +1,4 @@
+using System.Linq;
 using AnimalCafe.Decoration;
 using AnimalCafe.Layout;
 using NUnit.Framework;
@@ -423,6 +424,90 @@ namespace AnimalCafe.Tests.Phase6
             Assert.That(layout.TryGetFurnitureInstance(ExistingInstanceId, out _), Is.False);
             Assert.That(layout.FurnitureInstances, Is.Empty);
             Assert.That(layout.OccupiedCellCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ConfirmStore_OccupiedSupportIsBlockedWithContentIdsAndNoCascadeDelete()
+        {
+            const string supportDefinitionId = "counter.support.1x2";
+            const string equipmentDefinitionId = "equipment.cash-register";
+            const string mountedInstanceId = "9f17d8fa59f64be0a6689666ce4a28d2";
+            const string pickUpInstanceId = "af17d8fa59f64be0a6689666ce4a28d2";
+            var catalog = new FurnitureDefinitionCatalog(new[]
+            {
+                new FurnitureDefinition(
+                    supportDefinitionId,
+                    "Support Counter",
+                    new GridSize(1, 2),
+                    PlacementSurfaceType.Floor),
+                new FurnitureDefinition(
+                    equipmentDefinitionId,
+                    "Cash Register",
+                    new GridSize(1, 1),
+                    PlacementSurfaceType.FurnitureSurface,
+                    FurnitureFunctionType.CashRegister)
+            });
+            var layout = new CafeLayout(
+                new GridSettings(1f),
+                catalog,
+                new LayoutBounds(new GridPosition(0, 0), new GridSize(8, 8)));
+            layout.AddRegion(new LayoutRegion(
+                "region.main",
+                new GridPosition(0, 0),
+                new GridSize(8, 8),
+                LayoutZoneType.Interior));
+            Assert.That(layout.PlaceFurniture(FurnitureInstance.Restore(
+                ExistingInstanceId,
+                supportDefinitionId,
+                new GridPosition(1, 1),
+                FurnitureRotation.Degrees0)).Succeeded,
+                Is.True);
+            var functionalLayout = new FunctionalSurfaceLayout(
+                layout,
+                catalog,
+                new SurfaceSlotCatalog(new[]
+                {
+                    new SurfaceSlotDefinition(
+                        supportDefinitionId,
+                        "slot.0",
+                        new GridPosition(0, 0)),
+                    new SurfaceSlotDefinition(
+                        supportDefinitionId,
+                        "slot.1",
+                        new GridPosition(0, 1))
+                }));
+            var mountedAddress = new SurfaceSlotAddress(ExistingInstanceId, "slot.0");
+            var pickUpAddress = new SurfaceSlotAddress(ExistingInstanceId, "slot.1");
+            Assert.That(functionalLayout.PlaceMounted(new SurfaceMountedInstance(
+                mountedInstanceId,
+                equipmentDefinitionId,
+                mountedAddress,
+                FurnitureRotation.Degrees0)).Succeeded,
+                Is.True);
+            Assert.That(functionalLayout.PlacePickUp(new PickUpPointInstance(
+                pickUpInstanceId,
+                pickUpAddress)).Succeeded,
+                Is.True);
+            var session = new DecorationSession(layout, functionalLayout);
+            session.Enter();
+            Assert.That(session.BeginExisting(ExistingInstanceId).Succeeded, Is.True);
+            Assert.That(session.BeginStoreConfirmation(), Is.True);
+
+            var result = session.ConfirmStore();
+
+            Assert.That(result.FailureReason, Is.EqualTo(PlacementFailureReason.Blocked));
+            Assert.That(session.State, Is.EqualTo(DecorationSessionState.ConfirmingStore));
+            Assert.That(session.ActivePreview.StoreBlockerContentIds,
+                Is.EqualTo(new[] { mountedInstanceId, pickUpInstanceId }));
+            Assert.That(layout.TryGetFurnitureInstance(ExistingInstanceId, out _), Is.True);
+            Assert.That(functionalLayout.MountedInstances.Single().InstanceId,
+                Is.EqualTo(mountedInstanceId));
+            Assert.That(functionalLayout.PickUpPoints.Single().InstanceId,
+                Is.EqualTo(pickUpInstanceId));
+            Assert.That(functionalLayout.TryGetOccupant(mountedAddress, out var mounted), Is.True);
+            Assert.That(mounted, Is.EqualTo(mountedInstanceId));
+            Assert.That(functionalLayout.TryGetOccupant(pickUpAddress, out var pickUp), Is.True);
+            Assert.That(pickUp, Is.EqualTo(pickUpInstanceId));
         }
 
         [Test]

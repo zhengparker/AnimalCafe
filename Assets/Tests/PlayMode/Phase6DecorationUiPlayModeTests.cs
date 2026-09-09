@@ -556,6 +556,7 @@ namespace AnimalCafe.Tests.PlayMode
                     safeArea.yMax - rect.rect.height * 0.5f));
         }
 
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator ActionBar_ConvertsScreenAnchorsIntoScaledCanvasAtFourSizesAndEdges()
         {
@@ -602,6 +603,8 @@ namespace AnimalCafe.Tests.PlayMode
             }
         }
 
+#endif
+
         [TestCase(PlacementFeedbackKey.None, "")]
         [TestCase(PlacementFeedbackKey.Occupied, "Space already occupied")]
         [TestCase(PlacementFeedbackKey.OutsideUnlockedArea, "Outside decoration area")]
@@ -623,6 +626,7 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(fixture.Confirm.interactable, Is.EqualTo(key == PlacementFeedbackKey.None));
         }
 
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator ActionBar_MouseHoverShowsExactlyOneEnglishTooltipAndExitHidesIt()
         {
@@ -763,6 +767,8 @@ namespace AnimalCafe.Tests.PlayMode
             }
         }
 
+#endif
+
         [UnityTest]
         public IEnumerator StoreModal_UsesContinueGameBlocksSceneAndOutsideDoesNotDismiss()
         {
@@ -893,6 +899,7 @@ namespace AnimalCafe.Tests.PlayMode
             yield return null;
         }
 
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator GeneratedPrefabs_LoadConfigureAndExerciseSerializedRuntimePath()
         {
@@ -1023,6 +1030,8 @@ namespace AnimalCafe.Tests.PlayMode
             }
         }
 
+#endif
+
         [UnityTest]
         public IEnumerator StoreModal_NonTopModalCannotConsumeCompletionLatch()
         {
@@ -1098,6 +1107,7 @@ namespace AnimalCafe.Tests.PlayMode
             }
         }
 
+#if UNITY_EDITOR
         [UnityTest]
         public IEnumerator GeneratedProductionViews_FourCanonicalRenderTargetsRaycastAndTouchEssentialActionsInsideSimulatedSafeArea()
         {
@@ -1824,6 +1834,8 @@ namespace AnimalCafe.Tests.PlayMode
             }
             harness.AssertDisposed();
         }
+
+#endif
 
         private IEnumerator RunResponsiveTouchBranch(ResponsiveCase responsiveCase)
         {

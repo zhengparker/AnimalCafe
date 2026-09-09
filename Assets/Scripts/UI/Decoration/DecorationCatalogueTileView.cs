@@ -52,7 +52,7 @@ namespace AnimalCafe.UI.Decoration
             ClearBinding();
             ItemId = item?.ItemId; boundItem = item;
             Definition = item?.FurnitureDefinition;
-            var surface = item != null && (item.Kind == DecorationCatalogueItemKind.Floor || item.Kind == DecorationCatalogueItemKind.WallSurface);
+            var surface = item != null && UsesSurfaceImageOnly(item.Kind);
             if (nameLabel != null) { nameLabel.gameObject.SetActive(!surface); nameLabel.text = surface || item == null ? string.Empty : item.DisplayName; }
             if (footprintLabel != null) footprintLabel.gameObject.SetActive(false);
             if (thumbnailImage != null)
@@ -77,7 +77,15 @@ namespace AnimalCafe.UI.Decoration
         }
         private Action<DecorationCatalogueItemModel> selectedModel;
         private DecorationCatalogueItemModel boundItem;
-        private void HandleModelClick() { if (boundItem != null) selectedModel?.Invoke(boundItem); }
+        private void HandleModelClick()
+        {
+            if (boundItem != null && IsInteractable) selectedModel?.Invoke(boundItem);
+        }
+        private static bool UsesSurfaceImageOnly(DecorationCatalogueItemKind kind)
+        {
+            return kind == DecorationCatalogueItemKind.Floor
+                || kind == DecorationCatalogueItemKind.WallSurface;
+        }
 
         public bool IsInteractable => isActiveAndEnabled
             && gameObject.activeInHierarchy

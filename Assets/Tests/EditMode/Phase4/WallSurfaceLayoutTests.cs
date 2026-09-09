@@ -82,6 +82,25 @@ namespace AnimalCafe.Tests.Phase4
                     new WallFootprint(1, 1)));
         }
 
+        [TestCase(0, 0)]
+        [TestCase(999, 999)]
+        public void WallMountedInstance_DefaultFootprintIsRejectedBeforeLayoutMutation(
+            int column,
+            int row)
+        {
+            var wall = new WallSurfaceLayout("wall.back-right", 8, 2);
+
+            var error = Assert.Throws<System.ArgumentOutOfRangeException>(() =>
+                wall.TryPlace(CreateItem(
+                    "window.01",
+                    new WallSlotPosition(column, row),
+                    default(WallFootprint))));
+
+            Assert.That(error.ParamName, Is.EqualTo("footprint"));
+            Assert.That(wall.MountedItems, Is.Empty);
+            Assert.That(wall.OccupiedSlotCount, Is.Zero);
+        }
+
         [Test]
         public void WallMountedInstance_RejectsNullStableItemId()
         {

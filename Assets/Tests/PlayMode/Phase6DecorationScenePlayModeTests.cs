@@ -2183,14 +2183,22 @@ namespace AnimalCafe.Tests.PlayMode
             fixture.SetFurnitureOffset(120f);
             fixture.Controller.EnterDecorationMode();
             fixture.SelectCatalogue(0);
-            var raw = fixture.ScreenForCell(new GridPosition(4, 3));
+            var raw = fixture.ScreenForCell(fixture.Session.ActivePreview.ProposedPosition);
 
             fixture.SendTouch(32, raw, Vector2.zero, UnityEngine.InputSystem.TouchPhase.Began);
             fixture.SendTouch(32, raw + Vector2.right * 40f, Vector2.right * 40f,
                 UnityEngine.InputSystem.TouchPhase.Moved);
 
             var offsetProjected = fixture.ProjectScreen(raw + Vector2.right * 40f + Vector2.up * 120f);
-            Assert.That(fixture.Session.ActivePreview.ProposedPosition, Is.EqualTo(offsetProjected));
+            var proposedPosition = fixture.Session.ActivePreview.ProposedPosition;
+            Assert.That(proposedPosition.X, Is.EqualTo(offsetProjected.X),
+                $"Furniture drag X must use the configured offset. Expected " +
+                $"({offsetProjected.X}, {offsetProjected.Y}), but was " +
+                $"({proposedPosition.X}, {proposedPosition.Y}).");
+            Assert.That(proposedPosition.Y, Is.EqualTo(offsetProjected.Y),
+                $"Furniture drag Y must use the configured offset. Expected " +
+                $"({offsetProjected.X}, {offsetProjected.Y}), but was " +
+                $"({proposedPosition.X}, {proposedPosition.Y}).");
             Assert.That(fixture.CameraDriver.IsEdgeAutoPanning, Is.False,
                 "The raw finger remains away from the edge even if the visual offset is nearer it.");
         }

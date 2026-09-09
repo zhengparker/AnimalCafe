@@ -173,6 +173,10 @@ namespace AnimalCafe.EditorTools.Phase6
             "ca9f5fa95ffab41fb9a615ab714db018";
         private const string Phase7CataloguePrefabPath="Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationCatalogue.prefab";
         private const string Phase7ActionBarPrefabPath="Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationActionBar.prefab";
+        private const string Phase8CataloguePrefabPath="Assets/UI/Phase8/Prefabs/PF_UI_Phase8DecorationCatalogue.prefab";
+        private const string Phase8ActionBarPrefabPath="Assets/UI/Phase8/Prefabs/PF_UI_Phase8DecorationActionBar.prefab";
+        private const string Phase8CataloguePrefabGuid="c9629ed3cd810f34b8e67ee4402b8c89";
+        private const string Phase8ActionBarPrefabGuid="628e7dd8323d2a341b76290af6745059";
         private const string Phase7WallBodyMaterialPath =
             "Assets/Art/Phase7/Materials/M_WallBody_Architectural.mat";
         private static readonly string[] Phase7WallExtensionNames =
@@ -565,10 +569,17 @@ namespace AnimalCafe.EditorTools.Phase6
                     "Decoration space component inventory drifted."));
             }
 
-            var expectedSpaceChildren = new[]
+            var legacySpaceChildren = new[]
             {
                 "GridVisualRoot", "FurnitureRepresentationRoot", "FurniturePreviewRoot"
             };
+            var phase8SpaceChildren = new[]
+            {
+                "FunctionalSurfaceRepresentationRoot", "FunctionalSurfacePreviewRoot",
+                "PickUpPointIndicatorRoot"
+            };
+            var expectedSpaceChildren = HasExactPhase8DecorationSpaceContract(
+                transforms, assetPath, owner, space) ? legacySpaceChildren.Concat(phase8SpaceChildren).ToArray() : legacySpaceChildren;
             if (!space.Cast<Transform>().Select(child => child.name)
                     .SequenceEqual(expectedSpaceChildren))
             {
@@ -679,6 +690,58 @@ namespace AnimalCafe.EditorTools.Phase6
                     "Phase6_DecorationRuntime/DecorationSpaceRoot/FurnitureRepresentationRoot",
                     "Serialized furniture representation must start empty."));
             }
+        }
+
+        private static bool HasExactPhase8DecorationSpaceContract(
+            Transform[] transforms,
+            string assetPath,
+            Transform owner,
+            Transform space)
+        {
+            if (!string.Equals(assetPath, MainCafePath, StringComparison.Ordinal))
+                return false;
+            var runtimes = transforms.Where(transform =>
+                transform.name == "Phase8_FunctionalRuntime").ToArray();
+            if (runtimes.Length != 1 || runtimes[0].parent != null
+                || !IsIdentity(runtimes[0], Vector3.zero)
+                || runtimes[0].childCount != 0)
+                return false;
+            var runtime = runtimes[0];
+            if (!runtime.GetComponents<Component>().Select(component => component?.GetType())
+                    .SequenceEqual(new[]
+                    {
+                        typeof(Transform), typeof(SurfaceMountedSceneRegistry),
+                        typeof(SurfaceMountedPreviewView), typeof(PickUpPointIndicatorView)
+                    }))
+                return false;
+
+            var mountedRoots = transforms.Where(transform =>
+                transform.name == "FunctionalSurfaceRepresentationRoot").ToArray();
+            var previewRoots = transforms.Where(transform =>
+                transform.name == "FunctionalSurfacePreviewRoot").ToArray();
+            var indicatorRoots = transforms.Where(transform =>
+                transform.name == "PickUpPointIndicatorRoot").ToArray();
+            if (mountedRoots.Length != 1 || previewRoots.Length != 1
+                || indicatorRoots.Length != 1)
+                return false;
+            var roots = new[] { mountedRoots[0], previewRoots[0], indicatorRoots[0] };
+            if (roots.Any(root => root.parent != space
+                || !IsIdentity(root, Vector3.zero)
+                || root.childCount != 0
+                || !root.GetComponents<Component>().Select(component => component?.GetType())
+                    .SequenceEqual(new[] { typeof(Transform) })))
+                return false;
+
+            var controller = owner.GetComponent<DecorationModeController>();
+            var mountedRegistry = runtime.GetComponent<SurfaceMountedSceneRegistry>();
+            var mountedPreview = runtime.GetComponent<SurfaceMountedPreviewView>();
+            var pickUpIndicators = runtime.GetComponent<PickUpPointIndicatorView>();
+            return ReadReference(controller, "surfaceMountedSceneRegistry") == mountedRegistry
+                && ReadReference(controller, "surfaceMountedPreviewView") == mountedPreview
+                && ReadReference(controller, "pickUpPointIndicatorView") == pickUpIndicators
+                && ReadReference(controller, "surfaceMountedRepresentationRoot") == mountedRoots[0]
+                && ReadReference(controller, "functionalSurfacePreviewRoot") == previewRoots[0]
+                && ReadReference(controller, "pickUpPointIndicatorRoot") == indicatorRoots[0];
         }
 
         private static void ValidateUi(
@@ -792,6 +855,28 @@ namespace AnimalCafe.EditorTools.Phase6
                     "RightRail order, components, geometry, copy, font, raycast, or bindings drifted."));
             }
 
+            var catalogueRoot = transforms.FirstOrDefault(transform =>
+                transform.name == "PF_UI_DecorationCatalogue")?.gameObject;
+            var actionRoot = transforms.FirstOrDefault(transform =>
+                transform.name == "PF_UI_DecorationActionBar")?.gameObject;
+            var phase7CatalogueUpgrade = IsExactPhase7Upgrade(
+                catalogueRoot, Phase7CataloguePrefabPath);
+            var phase7ActionUpgrade = IsExactPhase7Upgrade(
+                actionRoot, Phase7ActionBarPrefabPath);
+            var phase8CatalogueUpgrade = IsExactPhase8Upgrade(
+                catalogueRoot, Phase8CataloguePrefabPath, Phase8CataloguePrefabGuid);
+            var phase8ActionUpgrade = IsExactPhase8Upgrade(
+                actionRoot, Phase8ActionBarPrefabPath, Phase8ActionBarPrefabGuid);
+            var hasUpgrade = phase7CatalogueUpgrade || phase7ActionUpgrade
+                || phase8CatalogueUpgrade || phase8ActionUpgrade;
+            var hasSameGenerationUpgrade =
+                (phase7CatalogueUpgrade && phase7ActionUpgrade)
+                || (phase8CatalogueUpgrade && phase8ActionUpgrade);
+            if (hasUpgrade && !hasSameGenerationUpgrade)
+                issues.Add(Issue(Phase6DecorationIssueCode.MissingUiReference,
+                    assetPath, "UI Root/Screen Canvas/Panel Layer",
+                    "Decoration catalogue/action bar UI generations cannot be mixed."));
+
             foreach (var uiRootName in new[]
                      {
                          "PF_UI_DecorationCatalogue",
@@ -804,9 +889,9 @@ namespace AnimalCafe.EditorTools.Phase6
                 if (root == null)
                     continue;
                 var group = root.GetComponent<CanvasGroup>();
-                var phase7Upgrade=(uiRootName=="PF_UI_DecorationCatalogue"&&IsExactPhase7Upgrade(root.gameObject,Phase7CataloguePrefabPath))
-                    ||(uiRootName=="PF_UI_DecorationActionBar"&&IsExactPhase7Upgrade(root.gameObject,Phase7ActionBarPrefabPath));
-                if (!phase7Upgrade&&(!root.gameObject.activeSelf
+                var approvedOpenUpgrade = hasSameGenerationUpgrade
+                    && uiRootName != "PF_UI_DecorationStoreModal";
+                if (!approvedOpenUpgrade&&(!root.gameObject.activeSelf
                     || group == null
                     || !Mathf.Approximately(group.alpha, 0f)
                     || group.interactable
@@ -1488,6 +1573,54 @@ namespace AnimalCafe.EditorTools.Phase6
             return instanceGraph.SequenceEqual(BuildComponentGraph(source),StringComparer.Ordinal);
         }
 
+        private static bool IsExactPhase8Upgrade(
+            GameObject instance,
+            string path,
+            string expectedGuid)
+        {
+            if (!string.Equals(AssetDatabase.AssetPathToGUID(path), expectedGuid,
+                    StringComparison.Ordinal)
+                || !IsExactPhase7Upgrade(instance, path))
+            {
+                return false;
+            }
+
+            return !string.Equals(path, Phase8CataloguePrefabPath,
+                    StringComparison.Ordinal)
+                || HasExactPhase8FloorRangeContract(instance);
+        }
+
+        private static bool HasExactPhase8FloorRangeContract(GameObject instance)
+        {
+            var catalogue = instance.GetComponent<DecorationCatalogueView>();
+            var ranges = instance.GetComponentsInChildren<DecorationFloorRangeView>(true);
+            if (catalogue == null || catalogue.SurfaceFooterHost == null
+                || ranges.Length != 1
+                || ranges[0].transform.parent != catalogue.SurfaceFooterHost
+                || !string.Equals(
+                    GetRelativePath(instance.transform, ranges[0].transform),
+                    "SurfaceFooterHost/FloorRange",
+                    StringComparison.Ordinal)
+                || !string.Equals(AssetDatabase.GetAssetPath(
+                        PrefabUtility.GetCorrespondingObjectFromSource(ranges[0])),
+                    Phase8CataloguePrefabPath,
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var buttons = ranges[0].GetComponentsInChildren<Button>(true);
+            var wholeRoom = buttons.FirstOrDefault(button =>
+                button.name == "WholeRoomButton");
+            var singleGrid = buttons.FirstOrDefault(button =>
+                button.name == "SingleGridButton");
+            return buttons.Length == 2
+                && wholeRoom != null
+                && singleGrid != null
+                && ReadReference(ranges[0], "wholeRoomButton") == wholeRoom
+                && ReadReference(ranges[0], "singleGridButton") == singleGrid;
+        }
+
         private static bool IsPhase7SceneOwnedFloorRangeSignature(string signature)
         {
             const string root = "SurfaceFooterHost/FloorRange";
@@ -1496,8 +1629,7 @@ namespace AnimalCafe.EditorTools.Phase6
         }
 
         private static IEnumerable<string> BuildComponentGraph(GameObject root)=>root.GetComponentsInChildren<Transform>(true)
-            .SelectMany(transform=>transform.GetComponents<Component>().Select(component=>GetRelativePath(root.transform,transform)+"|"+(component==null?"<missing>":component.GetType().FullName)))
-            .OrderBy(signature=>signature,StringComparer.Ordinal);
+            .SelectMany(transform=>transform.GetComponents<Component>().Select(component=>GetRelativePath(root.transform,transform)+"|"+(component==null?"<missing>":component.GetType().FullName)));
 
         private static string GetRelativePath(Transform root,Transform current)
         {if(current==root)return string.Empty;var names=new Stack<string>();while(current!=null&&current!=root){names.Push(current.name);current=current.parent;}return string.Join("/",names);}
@@ -1626,6 +1758,20 @@ namespace AnimalCafe.EditorTools.Phase6
             var instanceChildren = instance.Cast<Transform>().ToArray();
             var sourceChildren = source.Cast<Transform>().ToArray();
             var sourceNames = sourceChildren.Select(child => child.name).ToArray();
+            var comparableInstanceChildren = instanceChildren.Where(child =>
+                !(allowsPhase7FloorRange
+                    && instance.name == "SurfaceFooterHost"
+                    && child.name == "FloorRange"))
+                .ToArray();
+            if (!comparableInstanceChildren.Select(child => child.name)
+                    .SequenceEqual(sourceNames))
+            {
+                issues.Add(Issue(
+                    Phase6DecorationIssueCode.MissingUiReference,
+                    assetPath,
+                    ObjectPath(instance),
+                    "Task 6 Prefab-owned UI direct-child hierarchy or sibling order drifted."));
+            }
             foreach (var extra in instanceChildren.Where(child =>
                          !sourceNames.Contains(child.name, StringComparer.Ordinal)))
             {
@@ -1665,7 +1811,9 @@ namespace AnimalCafe.EditorTools.Phase6
                     Phase6DecorationIssueCode.MissingUiReference,
                     assetPath,
                     ObjectPath(instance),
-                    "Task 6 Prefab-owned UI state or transform drifted."));
+                    "Task 6 Prefab-owned UI state or transform drifted."
+                    + " Instance={" + DescribePrefabOwnedTransform(instance) + "}"
+                    + " Source={" + DescribePrefabOwnedTransform(source) + "}"));
             }
 
             foreach (var sourceChild in sourceChildren)
@@ -1690,6 +1838,32 @@ namespace AnimalCafe.EditorTools.Phase6
             }
         }
 
+        private static string DescribePrefabOwnedTransform(Transform value)
+        {
+            var state = "active=" + value.gameObject.activeSelf
+                + ", rotation=" + value.localRotation.ToString("F4")
+                + ", scale=" + value.localScale.ToString("F4");
+            if (!(value is RectTransform rect))
+                return state + ", position=" + value.localPosition.ToString("F4");
+
+            var driver = rect.drivenByObject;
+            var parentLayout = rect.parent?.GetComponent<HorizontalOrVerticalLayoutGroup>();
+            var selfFitter = rect.GetComponent<ContentSizeFitter>();
+            return state
+                + ", activeInHierarchy=" + rect.gameObject.activeInHierarchy
+                + ", anchorMin=" + rect.anchorMin.ToString("F4")
+                + ", anchorMax=" + rect.anchorMax.ToString("F4")
+                + ", pivot=" + rect.pivot.ToString("F4")
+                + ", anchoredPosition=" + rect.anchoredPosition.ToString("F4")
+                + ", sizeDelta=" + rect.sizeDelta.ToString("F4")
+                + ", drivenBy=" + (driver == null ? "<none>" : driver.GetType().Name + "/" + driver.name)
+                + ", parentLayout=" + (parentLayout == null ? "<none>" :
+                    parentLayout.GetType().Name + "/enabled=" + parentLayout.enabled
+                    + "/active=" + parentLayout.isActiveAndEnabled)
+                + ", selfFitter=" + (selfFitter == null ? "<none>" :
+                    "enabled=" + selfFitter.enabled + "/active=" + selfFitter.isActiveAndEnabled);
+        }
+
         private static bool HasPrefabOwnedTransformDrift(
             Transform instance,
             Transform source)
@@ -1697,13 +1871,76 @@ namespace AnimalCafe.EditorTools.Phase6
             if (instance is RectTransform instanceRect
                 && source is RectTransform sourceRect)
             {
-                return !Approximately(instanceRect.anchorMin, sourceRect.anchorMin)
-                    || !Approximately(instanceRect.anchorMax, sourceRect.anchorMax)
+                var drivesPosition = false;
+                var drivesWidth = false;
+                var drivesHeight = false;
+                if (instanceRect.drivenByObject is HorizontalOrVerticalLayoutGroup group)
+                {
+                    var sourceGroup = sourceRect.parent?.GetComponent<HorizontalOrVerticalLayoutGroup>();
+                    if (group.transform != instanceRect.parent
+                        || sourceGroup == null
+                        || PrefabUtility.GetCorrespondingObjectFromSource(group) != sourceGroup
+                        || !HasSameLayoutGroupConfiguration(group, sourceGroup))
+                        return true;
+                    drivesPosition = true;
+                    drivesWidth = group.childControlWidth;
+                    drivesHeight = group.childControlHeight;
+                }
+                else if (instanceRect.drivenByObject is ContentSizeFitter fitter)
+                {
+                    var sourceFitter = sourceRect.GetComponent<ContentSizeFitter>();
+                    if (fitter.transform != instanceRect
+                        || sourceFitter == null
+                        || PrefabUtility.GetCorrespondingObjectFromSource(fitter) != sourceFitter
+                        || fitter.enabled != sourceFitter.enabled
+                        || fitter.horizontalFit != sourceFitter.horizontalFit
+                        || fitter.verticalFit != sourceFitter.verticalFit)
+                        return true;
+                    drivesWidth = fitter.horizontalFit != ContentSizeFitter.FitMode.Unconstrained;
+                    drivesHeight = fitter.verticalFit != ContentSizeFitter.FitMode.Unconstrained;
+                }
+                else if (instanceRect.drivenByObject == null)
+                {
+                    // UGUI clears its tracker on disable/reload without restoring computed values.
+                    // Tracker 暂空不等于字段可编辑；仅按原 Prefab 的启用组件推导，不修改 live UI。
+                    var pendingGroup = instanceRect.parent?.GetComponent<HorizontalOrVerticalLayoutGroup>();
+                    var sourceGroup = sourceRect.parent?.GetComponent<HorizontalOrVerticalLayoutGroup>();
+                    var pendingFitter = instanceRect.GetComponent<ContentSizeFitter>();
+                    var sourceFitter = sourceRect.GetComponent<ContentSizeFitter>();
+                    if (pendingGroup != null && sourceGroup != null
+                        && pendingGroup.enabled && sourceGroup.enabled
+                        && IsIncludedLayoutChild(instanceRect) && IsIncludedLayoutChild(sourceRect))
+                    {
+                        if (PrefabUtility.GetCorrespondingObjectFromSource(pendingGroup) != sourceGroup
+                            || !HasSameLayoutGroupConfiguration(pendingGroup, sourceGroup))
+                            return true;
+                        drivesPosition = true;
+                        drivesWidth = pendingGroup.childControlWidth;
+                        drivesHeight = pendingGroup.childControlHeight;
+                    }
+                    else if (pendingFitter != null && sourceFitter != null
+                        && pendingFitter.enabled && sourceFitter.enabled)
+                    {
+                        if (PrefabUtility.GetCorrespondingObjectFromSource(pendingFitter) != sourceFitter
+                            || pendingFitter.horizontalFit != sourceFitter.horizontalFit
+                            || pendingFitter.verticalFit != sourceFitter.verticalFit)
+                            return true;
+                        drivesWidth = pendingFitter.horizontalFit != ContentSizeFitter.FitMode.Unconstrained;
+                        drivesHeight = pendingFitter.verticalFit != ContentSizeFitter.FitMode.Unconstrained;
+                    }
+                }
+
+                // Only canonical layout-owned values may differ; this does not recalculate layout.
+                // 只放行原布局组件负责计算的字段；其他字段仍按 Prefab 校验，不重建场景。
+                var comparableSize = instanceRect.sizeDelta;
+                if (drivesWidth) comparableSize.x = sourceRect.sizeDelta.x;
+                if (drivesHeight) comparableSize.y = sourceRect.sizeDelta.y;
+                return (!drivesPosition
+                        && (!Approximately(instanceRect.anchorMin, sourceRect.anchorMin)
+                            || !Approximately(instanceRect.anchorMax, sourceRect.anchorMax)
+                            || !Approximately(instanceRect.anchoredPosition, sourceRect.anchoredPosition)))
                     || !Approximately(instanceRect.pivot, sourceRect.pivot)
-                    || !Approximately(
-                        instanceRect.anchoredPosition,
-                        sourceRect.anchoredPosition)
-                    || !Approximately(instanceRect.sizeDelta, sourceRect.sizeDelta)
+                    || !Approximately(comparableSize, sourceRect.sizeDelta)
                     || Quaternion.Angle(instance.localRotation, source.localRotation) > .01f
                     || !Approximately(instance.localScale, source.localScale);
             }
@@ -1712,6 +1949,35 @@ namespace AnimalCafe.EditorTools.Phase6
                 || Quaternion.Angle(instance.localRotation, source.localRotation) > .01f
                 || !Approximately(instance.localScale, source.localScale);
         }
+
+        private static bool IsIncludedLayoutChild(RectTransform rect)
+        {
+            if (!rect.gameObject.activeSelf)
+                return false;
+            var ignorers = rect.GetComponents<Component>().OfType<ILayoutIgnorer>().ToArray();
+            // Match UGUI: no ignorer, or at least one that includes this child.
+            // 与 UGUI 一致：没有 ignorer，或至少一个明确参与布局。
+            return ignorers.Length == 0 || ignorers.Any(ignorer => !ignorer.ignoreLayout);
+        }
+
+        private static bool HasSameLayoutGroupConfiguration(
+            HorizontalOrVerticalLayoutGroup instance,
+            HorizontalOrVerticalLayoutGroup source) =>
+            instance.GetType() == source.GetType()
+            && instance.enabled == source.enabled
+            && instance.padding.left == source.padding.left
+            && instance.padding.right == source.padding.right
+            && instance.padding.top == source.padding.top
+            && instance.padding.bottom == source.padding.bottom
+            && Mathf.Approximately(instance.spacing, source.spacing)
+            && instance.childAlignment == source.childAlignment
+            && instance.childControlWidth == source.childControlWidth
+            && instance.childControlHeight == source.childControlHeight
+            && instance.childForceExpandWidth == source.childForceExpandWidth
+            && instance.childForceExpandHeight == source.childForceExpandHeight
+            && instance.childScaleWidth == source.childScaleWidth
+            && instance.childScaleHeight == source.childScaleHeight
+            && instance.reverseArrangement == source.reverseArrangement;
 
         private static void ValidateContractReferences(
             Transform[] transforms,

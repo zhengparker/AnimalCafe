@@ -166,6 +166,35 @@ namespace AnimalCafe.Layout
             return occupantByCell.TryGetValue(position, out instanceId);
         }
 
+        public bool IsInsideUnlockedRegion(GridPosition position)
+        {
+            return (!layoutBounds.HasValue || layoutBounds.Value.Contains(position)) &&
+                IsCellUnlocked(position);
+        }
+
+        public bool HasReservation(
+            GridPosition position,
+            LayoutReservationType type)
+        {
+            if (!Enum.IsDefined(typeof(LayoutReservationType), type))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(type),
+                    type,
+                    "Reservation type must be a known value.");
+            }
+
+            foreach (var reservation in reservations)
+            {
+                if (reservation.Type == type && reservation.Contains(position))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool TryGetFurnitureInstance(
             string instanceId,
             out FurnitureInstance instance)

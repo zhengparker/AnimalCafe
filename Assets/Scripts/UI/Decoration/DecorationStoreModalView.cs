@@ -137,6 +137,31 @@ namespace AnimalCafe.UI.Decoration
             modalView.Open();
         }
 
+        public void ShowFunctionalSurface(DecorationCatalogueItemKind kind)
+        {
+            var title = kind switch
+            {
+                DecorationCatalogueItemKind.CashRegister => "Store cash register?",
+                DecorationCatalogueItemKind.CoffeeMachine => "Store coffee machine?",
+                DecorationCatalogueItemKind.PickUpPoint => "Store pick-up point?",
+                _ => throw new ArgumentOutOfRangeException(nameof(kind), kind,
+                    "Store confirmation requires a functional surface item.")
+            };
+            completionConsumed = false;
+            if (titleLabel != null)
+            {
+                titleLabel.text = title;
+            }
+            if (bodyLabel != null)
+            {
+                bodyLabel.text = kind == DecorationCatalogueItemKind.PickUpPoint
+                    ? "This removes the pick-up point from this surface. You can add it again with the Pick-up Point button."
+                    : "This removes it from its current surface. You can place it again from the catalogue.";
+            }
+
+            modalView.Open();
+        }
+
         public bool TryHandleBack()
         {
             if (!IsEligible() || completionConsumed)

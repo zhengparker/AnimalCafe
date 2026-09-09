@@ -25,6 +25,8 @@ namespace AnimalCafe.Decoration
         private MaterialPropertyBlock propertyBlock;
         private bool isConfigured;
 
+        public Transform CurrentPreviewTransform => previewObject != null ? previewObject.transform : null;
+
         public void Configure(
             Transform root,
             DecorationGridSpace gridSpace,

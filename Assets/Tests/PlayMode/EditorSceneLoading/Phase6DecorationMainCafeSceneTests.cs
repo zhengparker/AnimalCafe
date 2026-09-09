@@ -415,6 +415,8 @@ namespace AnimalCafe.Tests.PlayMode
                             controller.State == DecorationSessionState.PreviewingNewFurniture
                             && previewRoot.childCount == 1,
                         2f, item.Id + " did not create a visible Preview.");
+                    yield return WaitUntil(() => CatalogueCollapsedAndSettled(catalogue),
+                        2f, item.Id + " Catalogue did not settle into Compact Preview before real Mouse drag.");
 
                     Assert.That(previewRoot.childCount, Is.EqualTo(1), item.Id);
                     Assert.That(previewRoot.GetChild(0).gameObject.activeInHierarchy, Is.True, item.Id);

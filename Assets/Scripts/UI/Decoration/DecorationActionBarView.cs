@@ -109,6 +109,39 @@ namespace AnimalCafe.UI.Decoration
             ApplyModePresentation(mode, existing);
         }
 
+        /// <summary>
+        /// Applies the Task 7 Furniture-tab action presentation without controller wiring.
+        /// 只设置 Task 7 Furniture tab 的 action 呈现，不连接业务 controller。
+        /// </summary>
+        public void SetCatalogueItemActions(DecorationCatalogueItemKind kind, bool existing)
+        {
+            if (kind != DecorationCatalogueItemKind.Furniture
+                && kind != DecorationCatalogueItemKind.CashRegister
+                && kind != DecorationCatalogueItemKind.CoffeeMachine
+                && kind != DecorationCatalogueItemKind.PickUpPoint)
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind), kind,
+                    "Only Furniture-tab item kinds have a Task 7 action presentation.");
+            }
+
+            currentMode = DecorationModeKind.Furniture;
+            IsVisible = true;
+            terminalConsumed = false;
+            EnsureOwnListeners();
+            var isPickUp = kind == DecorationCatalogueItemKind.PickUpPoint;
+            var labels = isPickUp
+                ? (existing ? new[] { "Store", "Cancel", "Confirm" } : new[] { "Cancel", "Confirm" })
+                : (existing ? new[] { "Store", "Cancel", "Rotate", "Confirm" } : new[] { "Cancel", "Rotate", "Confirm" });
+            VisibleActionLabels = labels;
+            Set(undoLastButton, false);
+            Set(applyAllButton, false);
+            Set(storeButton, Array.IndexOf(labels, "Store") >= 0);
+            Set(rotateButton, Array.IndexOf(labels, "Rotate") >= 0);
+            Set(cancelButton, true);
+            Set(confirmButton, true);
+            ApplyModePresentation(DecorationModeKind.Furniture, existing);
+        }
+
         public void SetFloorUtilityActionsEnabled(bool enabled)
         {
             SetInteractable(undoLastButton, enabled);
@@ -806,6 +839,8 @@ namespace AnimalCafe.UI.Decoration
                     return "Select a wall to edit";
                 case PlacementFeedbackKey.SelectFloorGridTarget:
                     return "Select a floor grid to edit";
+                case PlacementFeedbackKey.NoValidInteractionAnchor:
+                    return "Pick-up needs a free adjacent cell";
                 default:
                     return string.Empty;
             }

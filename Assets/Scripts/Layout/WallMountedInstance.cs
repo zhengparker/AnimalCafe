@@ -1,3 +1,5 @@
+using System;
+
 namespace AnimalCafe.Layout
 {
     public sealed class WallMountedInstance
@@ -18,6 +20,15 @@ namespace AnimalCafe.Layout
             ValidateId(instanceId, nameof(instanceId));
             ValidateId(definitionId, nameof(definitionId));
             ValidateId(surfaceId, nameof(surfaceId));
+
+            // default(WallFootprint) 绕过 struct constructor，必须在 instance boundary 拒绝。
+            if (footprint.Width < 1 || footprint.Height < 1)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(footprint),
+                    footprint,
+                    "Wall footprint width and height must each be at least one.");
+            }
 
             InstanceId = instanceId;
             DefinitionId = definitionId;

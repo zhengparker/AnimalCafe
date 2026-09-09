@@ -9,7 +9,16 @@ using UnityEngine;
 
 namespace AnimalCafe.UI.Decoration
 {
-    public enum DecorationCatalogueItemKind { Furniture, Floor, WallSurface, WallMounted }
+    public enum DecorationCatalogueItemKind
+    {
+        Furniture = 0,
+        CashRegister = 4,
+        CoffeeMachine = 5,
+        PickUpPoint = 6,
+        Floor = 1,
+        WallSurface = 2,
+        WallMounted = 3
+    }
     public enum DecorationCatalogueItemAvailability { Available }
 
     public enum DecorationCatalogueValidationIssueCode
@@ -117,14 +126,85 @@ namespace AnimalCafe.UI.Decoration
             });
         }
 
+        /// <summary>
+        /// Builds the three stable rows shown by the Furniture tab.
+        /// 为 Furniture tab 建立三个固定顺序的分类行。
+        /// </summary>
+        public static IReadOnlyList<DecorationCategoryModel> BuildFurnitureTab(
+            DecorationCatalogueAsset catalogue)
+        {
+            if (catalogue == null) throw new ArgumentNullException(nameof(catalogue));
+
+            var knownIds = new HashSet<string>(StringComparer.Ordinal);
+            var furniture = new List<DecorationCatalogueItemModel>();
+            var cashRegisters = new List<DecorationCatalogueItemModel>();
+            var coffeeMachines = new List<DecorationCatalogueItemModel>();
+            var entries = catalogue.Entries;
+            for (var index = 0; index < entries.Count; index++)
+            {
+                var entry = entries[index];
+                if (entry == null || entry.Definition == null)
+                    Throw(DecorationCatalogueValidationIssueCode.NullEntry, "furniture-tab", null);
+
+                var definition = entry.Definition;
+                ValidateStableId(definition.DefinitionId, "furniture-tab");
+                ValidateDisplayName(definition.DisplayName, "furniture-tab", definition.DefinitionId);
+
+                List<DecorationCatalogueItemModel> row;
+                DecorationCatalogueItemKind kind;
+                if (definition.AllowedPlacementSurfaces == PlacementSurfaceType.Floor
+                    && definition.FunctionType == FurnitureFunctionType.None)
+                {
+                    row = furniture;
+                    kind = DecorationCatalogueItemKind.Furniture;
+                }
+                else if (definition.AllowedPlacementSurfaces == PlacementSurfaceType.FurnitureSurface
+                    && definition.FunctionType == FurnitureFunctionType.CashRegister)
+                {
+                    row = cashRegisters;
+                    kind = DecorationCatalogueItemKind.CashRegister;
+                }
+                else if (definition.AllowedPlacementSurfaces == PlacementSurfaceType.FurnitureSurface
+                    && definition.FunctionType == FurnitureFunctionType.CoffeeMachine)
+                {
+                    row = coffeeMachines;
+                    kind = DecorationCatalogueItemKind.CoffeeMachine;
+                }
+                else
+                {
+                    Throw(DecorationCatalogueValidationIssueCode.WrongCategoryKind,
+                        "furniture-tab", definition.DefinitionId);
+                    return null;
+                }
+
+                if (definition.Prefab == null)
+                    Throw(DecorationCatalogueValidationIssueCode.MissingPrefab,
+                        "furniture-tab", definition.DefinitionId);
+                if (entry.Thumbnail == null)
+                    Throw(DecorationCatalogueValidationIssueCode.MissingThumbnail,
+                        "furniture-tab", definition.DefinitionId);
+                AddUniqueId(knownIds, "furniture-tab", definition.DefinitionId);
+                row.Add(new DecorationCatalogueItemModel(definition.DefinitionId,
+                    definition.DisplayName, entry.Thumbnail, kind, false, definition));
+            }
+
+            return Array.AsReadOnly(new[]
+            {
+                new DecorationCategoryModel("furniture", "Furniture", furniture),
+                new DecorationCategoryModel("cash-register", "Cash Register", cashRegisters),
+                new DecorationCategoryModel("coffee-machine", "Coffee Machine", coffeeMachines)
+            });
+        }
+
         private static IReadOnlyList<DecorationCatalogueItemModel> BuildFurniture(
             DecorationCatalogueAsset catalogue, string categoryId, ISet<string> knownIds)
         {
             if (catalogue == null) throw new ArgumentNullException(nameof(catalogue));
             var items = new List<DecorationCatalogueItemModel>();
-            for (var index = 0; index < catalogue.Entries.Count; index++)
+            var entries = catalogue.Entries;
+            for (var index = 0; index < entries.Count; index++)
             {
-                var entry = catalogue.Entries[index];
+                var entry = entries[index];
                 if (entry == null || entry.Definition == null) Throw(DecorationCatalogueValidationIssueCode.NullEntry, categoryId, null);
                 var definition = entry.Definition;
                 ValidateStableId(definition.DefinitionId, categoryId);

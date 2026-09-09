@@ -2380,11 +2380,19 @@ namespace AnimalCafe.Tests.PlayMode
             .OrderBy(item => item.InstanceId, StringComparer.Ordinal)
             .Select(item => $"{item.InstanceId}:{item.DefinitionId}:{item.Position.X},{item.Position.Y}:{item.Rotation}"));
 
-        private static DecorationCatalogueTileView[] ActiveTiles(DecorationCatalogueView view) =>
-            view.GetComponentsInChildren<DecorationCatalogueTileView>(false)
+        private static DecorationCatalogueTileView[] ActiveTiles(DecorationCatalogueView view)
+        {
+            var categoryContent = ReadPrivate<RectTransform>(view, "categoryContent");
+            Assert.That(categoryContent, Is.Not.Null,
+                "The canonical Catalogue must bind its categoryContent container.");
+            var furnitureRow = categoryContent.Find("CategoryRow_furniture");
+            Assert.That(furnitureRow, Is.Not.Null,
+                "The canonical Catalogue categoryContent must expose the legacy CategoryRow_furniture row.");
+            return furnitureRow.GetComponentsInChildren<DecorationCatalogueTileView>(false)
                 .Where(tile => tile.gameObject.activeInHierarchy && tile.Definition != null)
                 .OrderBy(tile => tile.name, StringComparer.Ordinal)
                 .ToArray();
+        }
 
         private static GridPosition FindValidFreeCell(
             CafeLayout layout,
