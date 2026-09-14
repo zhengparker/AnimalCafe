@@ -175,6 +175,20 @@ namespace AnimalCafe.Decoration.Input
                 }
             }
 
+            // A source frame is a complete snapshot. Device removal may omit a terminal record.
+            // 设备移除可能没有 Ended/Canceled；旧 primary 消失时按取消处理，绝不生成 tap。
+            if (primaryTouchId != NoTouchId && !primaryTerminal
+                && !TryFindActiveTouch(frame, primaryTouchId, out _))
+            {
+                primaryTerminal = true;
+                primaryCanceled = true;
+            }
+            if (secondaryTouchId != NoTouchId && !secondaryTerminal
+                && !TryFindActiveTouch(frame, secondaryTouchId, out _))
+            {
+                secondaryTerminal = true;
+            }
+
             // Primary terminal always wins over secondary replacement/new Began.
             // primary 结束优先，不能把剩余或新手指提升成新 gesture。
             if (primaryTerminal)
@@ -384,6 +398,16 @@ namespace AnimalCafe.Decoration.Input
             }
 
             return CurrentStateWithoutCommand();
+        }
+
+        public void CancelGesture()
+        {
+            // Keep the frame fence and wait for held pointers to release before a new gesture.
+            // 保留已处理 frame，旧指针全部抬起前不接管新的 Began。
+            var waitForRelease = primaryTouchId != NoTouchId
+                || secondaryTouchId != NoTouchId || isSuppressingUntilAllTouchesUp;
+            ClearGestureState();
+            isSuppressingUntilAllTouchesUp = waitForRelease;
         }
 
         public void Reset()

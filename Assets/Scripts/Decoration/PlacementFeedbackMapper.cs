@@ -26,6 +26,26 @@ namespace AnimalCafe.Decoration
 
     public static class PlacementFeedbackMapper
     {
+        public const string ValidEditingPosition = "位置有效，可以确认";
+        public const string FinishEditingFirst = "请先确认或取消当前编辑，再选择其他物件或模式";
+        public const string ReturnToEditing = "返回编辑";
+        public const string ChooseSurfaceStyle = "请选择样式或继续涂抹，再确认修改";
+        public const string SurfaceChangesReady = "已预览修改，可以确认";
+
+        public static string GetEditingMessage(string subject, string reason) =>
+            $"正在编辑：{subject} · 尚未确认\n{reason}";
+
+        public static string GetPlayerMessage(WallPlacementResult result) => result.FailureReason switch
+        {
+            WallPlacementFailureReason.None => ValidEditingPosition,
+            WallPlacementFailureReason.Overlap => "这个墙面位置已经被占用",
+            WallPlacementFailureReason.OutOfBounds => "这个位置超出墙面范围",
+            WallPlacementFailureReason.CrossCorner => "墙饰不能跨越墙角",
+            WallPlacementFailureReason.SurfaceMissing => "请将墙饰移到可用墙面",
+            WallPlacementFailureReason.SurfaceMismatch => "这个墙饰不能放在该墙面",
+            _ => "目前无法完成这个墙饰操作"
+        };
+
         public static PlacementFeedbackKey Map(PlacementResult result)
         {
             if (result == null)
@@ -126,7 +146,7 @@ namespace AnimalCafe.Decoration
                 FunctionalSurfacePlacementFailureReason.InstanceNotFound => "找不到这个物件",
                 FunctionalSurfacePlacementFailureReason.InvalidRotation => "这个旋转方向不可用",
                 FunctionalSurfacePlacementFailureReason.InvalidInstance => "这个物件资料无效",
-                FunctionalSurfacePlacementFailureReason.InvalidSurfaceSlotAddress => "摆放位置资料无效",
+                FunctionalSurfacePlacementFailureReason.InvalidSurfaceSlotAddress => "请将物件移到柜台上的摆放位",
                 FunctionalSurfacePlacementFailureReason.UnsupportedAction => "这个物件不支持此操作",
                 FunctionalSurfacePlacementFailureReason.NoValidInteractionAnchor => "取餐点周围没有可用的互动位置",
                 _ => "目前无法完成这个摆放操作"
@@ -195,19 +215,48 @@ namespace AnimalCafe.Decoration
                 : LayoutReadinessSeverity.Blocking;
             var failure = report.Failures.FirstOrDefault(item =>
                 item.Severity == preferredSeverity);
-            var summary = report.CanOpenForBusiness
+            var summary = (report.CanOpenForBusiness ? "已确认布局：已就绪\n" : "已确认布局：还需调整\n") + (report.CanOpenForBusiness
                 ? (failure == null
                     ? "布局已准备好，可以营业"
                     : $"可以营业，但{GetPlayerMessage(failure.Code)}")
                 : (failure == null
                     ? "暂时不能营业"
-                    : $"暂时不能营业：{GetPlayerMessage(failure.Code)}");
+                    : $"暂时不能营业：{GetPlayerMessage(failure.Code)}"));
             if (report.Failures.Count == 0 || (report.Failures.Count == 1 && failure?.InstanceId == null))
                 return summary;
 
             // Keep every cause beside its own station, role and cell; raw IDs stay in diagnostics.
             // 每项原因保留对应设备、角色及格子；原始 IDs 只保留在诊断数据中。
             return summary + "\n" + string.Join("\n", report.Failures.Select(FormatReadinessFailure));
+        }
+
+        public static string GetReadinessSummary(LayoutReadinessReport report)
+        {
+            if (report == null) throw new ArgumentNullException(nameof(report));
+            var severity = report.CanOpenForBusiness
+                ? LayoutReadinessSeverity.Warning : LayoutReadinessSeverity.Blocking;
+            var primary = report.Failures.FirstOrDefault(failure => failure.Severity == severity)
+                ?? report.Failures.FirstOrDefault();
+            if (report.CanOpenForBusiness)
+                return primary == null ? "已确认布局：可以营业"
+                    : $"已确认布局：可以营业，但{GetPlayerMessage(primary.Code)}";
+            return primary == null ? "已确认布局：暂时不能营业"
+                : $"已确认布局：暂时不能营业：{GetPlayerMessage(primary.Code)}";
+        }
+
+        public static string GetReadinessDetails(LayoutReadinessReport report)
+        {
+            if (report == null) throw new ArgumentNullException(nameof(report));
+            if (report.Failures.Count == 0) return string.Empty;
+            var only = report.Failures[0];
+            // A single room-level cause is already complete in the summary.
+            // 单一整体原因已在摘要说清，不生成重复的详情按钮。
+            if (report.Failures.Count == 1 && only.FunctionType == null
+                && only.Role == null && !only.Position.HasValue && only.InstanceId == null)
+                return string.Empty;
+            return string.Join("\n", report.Failures.Select(failure =>
+                (failure.Severity == LayoutReadinessSeverity.Blocking ? "阻挡：" : "提醒：")
+                + FormatReadinessFailure(failure)));
         }
 
         private static string FormatReadinessFailure(LayoutReadinessFailure failure)

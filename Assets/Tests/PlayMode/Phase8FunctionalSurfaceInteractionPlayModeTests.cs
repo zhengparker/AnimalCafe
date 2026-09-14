@@ -35,6 +35,62 @@ namespace AnimalCafe.Tests.PlayMode
         private const string PreviewPickUpIdA = "44444444444444444444444444444441";
         private const string PreviewPickUpIdB = "44444444444444444444444444444442";
 
+        [TestCase(DecorationCatalogueItemKind.CashRegister, RegisterDefinitionId)]
+        [TestCase(DecorationCatalogueItemKind.CoffeeMachine, CoffeeMachineDefinitionId)]
+        public void NewEquipment_StartsAtVisibleCenterSlot_WithoutMovingCameraOrPublishing(
+            DecorationCatalogueItemKind kind, string definitionId)
+        {
+            using var h = new FunctionalViewHarness();
+            h.Camera.transform.position = new Vector3(2.5f, 10f, .5f);
+            h.Camera.orthographicSize = .65f;
+            h.Camera.aspect = 1f;
+            var cameraPosition = h.Camera.transform.position;
+            var version = h.Runtime.ReadinessVersion;
+            Assert.That(h.SelectMountedCatalogueItem(kind, definitionId), Is.True);
+            Assert.That(h.Controller.ActiveFunctionalSurfacePreview.Address, Is.EqualTo(Address("slot.2")));
+            Assert.That(h.Controller.ActiveFunctionalSurfacePreview.CanConfirm, Is.True);
+            Assert.That(h.Camera.transform.position, Is.EqualTo(cameraPosition));
+            Assert.That(h.Runtime.ReadinessVersion, Is.EqualTo(version));
+            Assert.That(h.Scenario.Functional.MountedInstances, Is.Empty);
+        }
+
+        [Test]
+        public void NewEquipment_SkipsOccupiedCenter_AndBreaksEqualDistanceStably()
+        {
+            using var h = new FunctionalViewHarness();
+            Assert.That(h.Scenario.Functional.PlaceMounted(new SurfaceMountedInstance(
+                PreviewMountedIdA, RegisterDefinitionId, Address("slot.2"), FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            h.Camera.transform.position = new Vector3(2.5f, 10f, .5f);
+            h.Camera.orthographicSize = 2f;
+            h.Camera.aspect = 1f;
+            Assert.That(h.SelectMountedCatalogueItem(DecorationCatalogueItemKind.CoffeeMachine, CoffeeMachineDefinitionId), Is.True);
+            Assert.That(h.Controller.ActiveFunctionalSurfacePreview.Address, Is.EqualTo(Address("slot.1")));
+            Assert.That(h.Controller.ActiveFunctionalSurfacePreview.CanConfirm, Is.True);
+            Assert.That(h.Scenario.Functional.MountedInstances.Count, Is.EqualTo(1));
+        }
+
+        [TestCase(true)]
+        [TestCase(false)]
+        public void NewEquipment_NoVisibleCandidateOrCamera_UsesStableValidFallback(bool cameraAvailable)
+        {
+            using var h = new FunctionalViewHarness();
+            h.Camera.transform.position = new Vector3(100, 10, 100);
+            if (!cameraAvailable)
+            {
+                Set(h.Controller, "targetCamera", null);
+                // Only slot ranking permits a missing Camera; rendering an action bar requires one.
+                // 仅测试落点排序的 fallback，不在无 Camera 的 fixture 中渲染 ActionBar。
+                var args = new object[] { DecorationCatalogueItemKind.CashRegister, RegisterDefinitionId, default(SurfaceSlotAddress) };
+                var ranked = typeof(DecorationModeController).GetMethod("TryFindPreferredFunctionalSurfaceAddress",
+                    BindingFlags.Instance | BindingFlags.NonPublic).Invoke(h.Controller, args);
+                Assert.That(ranked, Is.True);
+                Assert.That(args[2], Is.EqualTo(Address("slot.0")));
+                return;
+            }
+            Assert.That(h.SelectMountedCatalogueItem(DecorationCatalogueItemKind.CashRegister, RegisterDefinitionId), Is.True);
+            Assert.That(h.Controller.ActiveFunctionalSurfacePreview.Address, Is.EqualTo(Address("slot.0")));
+        }
+
         [Test]
         public void Router_FunctionalSurfaceOwnsOnePointerSequence_AndCancelIsExplicit()
         {
@@ -211,8 +267,9 @@ namespace AnimalCafe.Tests.PlayMode
 
                 Assert.That(runtime.CurrentReadiness, Is.Not.SameAs(before));
                 Assert.That(runtime.ReadinessVersion, Is.EqualTo(beforeVersion + 1));
-                Assert.That(validation.IsVisible, Is.True,
-                    "Confirmed readiness must be visible to the player.");
+                Assert.That(validation.IsVisible,
+                    Is.EqualTo(presentationCase != ReadinessPresentationCase.Complete),
+                    "Only warning/blocking readiness occupies the HUD; healthy readiness stays available as data.");
                 switch (presentationCase)
                 {
                     case ReadinessPresentationCase.MissingCoffee:
@@ -223,8 +280,8 @@ namespace AnimalCafe.Tests.PlayMode
                         break;
                     case ReadinessPresentationCase.Complete:
                         Assert.That(runtime.CurrentReadiness.CanOpenForBusiness, Is.True);
-                        Assert.That(validation.CurrentMessage, Does.Contain("可以营业"));
-                        Assert.That(validation.CurrentMessage, Does.Not.Contain("但"));
+                        Assert.That(validation.FullReadinessMessage, Does.Contain("可以营业"));
+                        Assert.That(validation.FullReadinessMessage, Does.Not.Contain("但"));
                         Assert.That(validation.DiagnosticIds, Is.Empty);
                         AssertReadinessMessageSurvivesPreviewAndCancel(
                             controller,
@@ -771,7 +828,7 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [Test]
-        public void Controller_BlockedSupportStore_PublishesExactBlockerIdsToRealValidationView()
+        public void Controller_BlockedSupportStore_PreservesTopReadinessAndShowsLocalReasonWithExactDiagnostics()
         {
             using var fixture = new FunctionalViewHarness();
             var mounted = new SurfaceMountedInstance(
@@ -798,6 +855,10 @@ namespace AnimalCafe.Tests.PlayMode
             var validation = fixture.Root.AddComponent<ValidationMessageView>();
             validation.Configure(label);
             Set(fixture.Controller, "validationMessageView", validation);
+            var editingObject = new GameObject("EditingLabel", typeof(RectTransform), typeof(TextMeshProUGUI));
+            editingObject.transform.SetParent(fixture.Root.transform, false);
+            var editingLabel = editingObject.GetComponent<TMP_Text>();
+            Set(fixture.ActionBar, "feedbackLabel", editingLabel);
             Assert.That(fixture.OrdinarySession.BeginExisting(SupportInstanceId).Succeeded, Is.True);
             Assert.That(fixture.OrdinarySession.BeginStoreConfirmation(), Is.True);
 
@@ -805,24 +866,39 @@ namespace AnimalCafe.Tests.PlayMode
 
             Assert.That(fixture.OrdinarySession.State,
                 Is.EqualTo(DecorationSessionState.EditingExistingFurniture));
-            Assert.That(validation.IsVisible, Is.True);
-            Assert.That(validation.DiagnosticIds,
+            Assert.That(validation.IsVisible, Is.False, "Store failure must not publish a readiness report.");
+            Assert.That(fixture.Controller.EditingDiagnosticIds,
                 Is.EqualTo(new[] { mounted.InstanceId, coffee.InstanceId, pickUp.InstanceId }),
                 "The controller must snapshot blockers before dismissing the Store confirmation.");
-            Assert.That(validation.CurrentMessage, Does.Contain("收银机（1）"),
+            Assert.That(editingLabel.text, Does.Contain("收银机（1）"),
                 "Players need a readable list of the contents they must remove first.");
-            Assert.That(validation.CurrentMessage, Does.Contain("咖啡机（1）"));
-            Assert.That(validation.CurrentMessage, Does.Contain("取餐点（1）"));
-            Assert.That(label.text, Is.EqualTo(validation.CurrentMessage));
+            Assert.That(editingLabel.text, Does.Contain("咖啡机（1）"));
+            Assert.That(editingLabel.text, Does.Contain("取餐点（1）"));
+            Assert.That(label.text, Is.Empty);
             foreach (var internalId in new[]
                      { mounted.InstanceId, coffee.InstanceId, pickUp.InstanceId, SupportInstanceId })
             {
-                Assert.That(validation.CurrentMessage, Does.Not.Contain(internalId));
-                Assert.That(label.text, Does.Not.Contain(internalId));
+                Assert.That(editingLabel.text, Does.Not.Contain(internalId));
             }
             Assert.That(fixture.Scenario.Cafe.TryGetFurnitureInstance(SupportInstanceId, out _), Is.True);
             Assert.That(fixture.Scenario.Functional.MountedInstances, Is.EqualTo(new[] { mounted, coffee }));
             Assert.That(fixture.Scenario.Functional.PickUpPoints, Is.EqualTo(new[] { pickUp }));
+            var storeReason = editingLabel.text;
+            Invoke(fixture.Controller, "SubscribeViewEvents");
+            fixture.Catalogue.ShowCatalogue();
+            fixture.Catalogue.ShowCollapsedHandle();
+            Assert.That(editingLabel.text, Is.EqualTo(storeReason),
+                "The original collapse handle must preserve the Store failure just like Return to Editing.");
+            Assert.That(fixture.Controller.EditingDiagnosticIds,
+                Is.EqualTo(new[] { mounted.InstanceId, coffee.InstanceId, pickUp.InstanceId }));
+            fixture.ConfigureStoreModal();
+            Invoke(fixture.Controller, "HandleStoreRequested");
+            Assert.That(fixture.StoreModal.IsOpen, Is.True);
+            fixture.StoreCancel.onClick.Invoke();
+            Assert.That(editingLabel.text, Is.EqualTo(storeReason),
+                "Dismissing a repeated Store prompt must preserve the previous failed-operation reason.");
+            Assert.That(fixture.Controller.EditingDiagnosticIds,
+                Is.EqualTo(new[] { mounted.InstanceId, coffee.InstanceId, pickUp.InstanceId }));
         }
 
         [TestCase(DecorationCatalogueItemKind.CashRegister, RegisterDefinitionId)]
@@ -954,7 +1030,7 @@ namespace AnimalCafe.Tests.PlayMode
         [TestCase(DecorationModeKind.Floor)]
         [TestCase(DecorationModeKind.Wall)]
         [TestCase(DecorationModeKind.WallDecor)]
-        public void ModeSwitch_RejectsWhileFunctionalPreviewAwaitsConfirmOrCancel(
+        public void TabSwitch_FunctionalPreviewDiscardsOnlyWhenDestinationChanges(
             DecorationModeKind requestedMode)
         {
             var root = new GameObject("Phase8ModeSwitchCancel");
@@ -973,12 +1049,13 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(controller.TryMoveFunctionalSurfacePreview(Address("slot.1")), Is.True);
 
                 var preview = controller.ActiveFunctionalSurfacePreview;
-                Assert.That(controller.TryChangeMode(requestedMode), Is.False);
+                Assert.That(controller.TryChangeMode(requestedMode), Is.True);
 
-                Assert.That(controller.ActiveMode, Is.EqualTo(DecorationModeKind.Furniture));
-                Assert.That(controller.ActiveFunctionalSurfacePreview, Is.SameAs(preview));
-                Assert.That(controller.ActiveFunctionalSurfacePreview.Address,
-                    Is.EqualTo(Address("slot.1")));
+                Assert.That(controller.ActiveMode, Is.EqualTo(requestedMode));
+                if (requestedMode == DecorationModeKind.Furniture)
+                    Assert.That(controller.ActiveFunctionalSurfacePreview, Is.SameAs(preview));
+                else
+                    Assert.That(controller.ActiveFunctionalSurfacePreview, Is.Null);
                 Assert.That(scenario.Functional.PickUpPoints.Single().Address,
                     Is.EqualTo(Address("slot.0")));
             }
@@ -986,6 +1063,189 @@ namespace AnimalCafe.Tests.PlayMode
             {
                 UnityEngine.Object.DestroyImmediate(root);
             }
+        }
+
+        [Test]
+        public void TabSwitch_FunctionalPreviewRestoresConfirmedViewsWithoutPublishingReadiness(
+            [Values(DecorationCatalogueItemKind.CashRegister, DecorationCatalogueItemKind.CoffeeMachine,
+                DecorationCatalogueItemKind.PickUpPoint)] DecorationCatalogueItemKind kind,
+            [Values(false, true)] bool existing,
+            [Values(false, true)] bool invalid)
+        {
+            using var fixture = new FunctionalViewHarness();
+            if (kind == DecorationCatalogueItemKind.PickUpPoint) fixture.BeginPickUpPreview(existing);
+            else fixture.BeginMountedPreview(kind,
+                kind == DecorationCatalogueItemKind.CashRegister ? RegisterDefinitionId : CoffeeMachineDefinitionId,
+                existing);
+            var instanceId = fixture.Controller.ActiveFunctionalSurfacePreview.InstanceId;
+            fixture.Controller.TryMoveFunctionalSurfacePreview(invalid ? default : Address("slot.1"));
+            var version = fixture.Runtime.ReadinessVersion;
+            var report = fixture.Runtime.CurrentReadiness;
+            var furniture = fixture.Scenario.Cafe.FurnitureInstances.ToArray();
+
+            Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.Wall), Is.True);
+
+            Assert.That(fixture.Controller.ActiveFunctionalSurfacePreview, Is.Null);
+            Assert.That(fixture.MountedPreview.CurrentGhost, Is.Null);
+            Assert.That(fixture.PickUpIndicators.CurrentPreview, Is.Null);
+            Assert.That(fixture.Runtime.ReadinessVersion, Is.EqualTo(version));
+            Assert.That(fixture.Runtime.CurrentReadiness, Is.SameAs(report));
+            Assert.That(fixture.Scenario.Cafe.FurnitureInstances, Is.EqualTo(furniture));
+            Assert.That(fixture.Scenario.Functional.MountedInstances.Count + fixture.Scenario.Functional.PickUpPoints.Count,
+                Is.EqualTo(existing ? 1 : 0));
+            if (existing)
+            {
+                if (kind == DecorationCatalogueItemKind.PickUpPoint)
+                {
+                    Assert.That(fixture.Scenario.Functional.PickUpPoints.Single().Address, Is.EqualTo(Address("slot.0")));
+                    Assert.That(fixture.PickUpIndicators.TryGet(instanceId, out var restored), Is.True);
+                    Assert.That(restored.activeSelf, Is.True);
+                }
+                else
+                {
+                    Assert.That(fixture.Scenario.Functional.MountedInstances.Single().Address, Is.EqualTo(Address("slot.0")));
+                    Assert.That(fixture.MountedRegistry.TryGet(instanceId, out var restored), Is.True);
+                    Assert.That(restored.activeSelf, Is.True);
+                }
+            }
+        }
+
+        [Test]
+        public void TabSwitch_SupportPreviewRestoresBoundEquipmentAndPickUpWithoutPublishingReadiness()
+        {
+            using var fixture = new FunctionalViewHarness();
+            var register = new SurfaceMountedInstance(PreviewMountedIdA, RegisterDefinitionId,
+                Address("slot.0"), FurnitureRotation.Degrees90);
+            var coffeeMachine = new SurfaceMountedInstance(PreviewMountedIdB, CoffeeMachineDefinitionId,
+                Address("slot.1"), FurnitureRotation.Degrees270);
+            var pickUp = new PickUpPointInstance(PreviewPickUpIdA, Address("slot.2"));
+            Assert.That(fixture.Scenario.Functional.PlaceMounted(register).Succeeded, Is.True);
+            Assert.That(fixture.Scenario.Functional.PlaceMounted(coffeeMachine).Succeeded, Is.True);
+            Assert.That(fixture.Scenario.Functional.PlacePickUp(pickUp).Succeeded, Is.True);
+            fixture.RebuildAllConfirmedViews();
+            ConfigureRuntime(fixture.Runtime, fixture.Scenario);
+            var support = fixture.Scenario.Cafe.FurnitureInstances.Single();
+            var readiness = fixture.Runtime.CurrentReadiness;
+            var version = fixture.Runtime.ReadinessVersion;
+            Assert.That(fixture.MountedRegistry.TryGet(PreviewMountedIdA, out var registerView), Is.True);
+            Assert.That(fixture.MountedRegistry.TryGet(PreviewMountedIdB, out var coffeeView), Is.True);
+            Assert.That(fixture.PickUpIndicators.TryGet(PreviewPickUpIdA, out var pickUpView), Is.True);
+            var positions = new[] { registerView.transform.position, coffeeView.transform.position,
+                pickUpView.transform.position };
+            var rotations = new[] { registerView.transform.rotation, coffeeView.transform.rotation,
+                pickUpView.transform.rotation };
+
+            // Move and rotate the support's real preview: bound views must actually leave their saved positions.
+            // 先真实移动、旋转柜台预览，再确认切 Tab 能恢复设备与取餐点的已保存投影。
+            Invoke(fixture.Controller, "HandleFurnitureBegan", SupportInstanceId);
+            Invoke(fixture.Controller, "ApplyPreviewMove", new GridPosition(2, 2));
+            Invoke(fixture.Controller, "HandleRotateRequested");
+            Assert.That(fixture.OrdinarySession.ActivePreview, Is.Not.Null);
+            Assert.That(registerView.transform.position, Is.Not.EqualTo(positions[0]));
+            Assert.That(coffeeView.transform.position, Is.Not.EqualTo(positions[1]));
+            Assert.That(pickUpView.transform.position, Is.Not.EqualTo(positions[2]));
+
+            Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.Wall), Is.True);
+
+            Assert.That(fixture.OrdinarySession.ActivePreview, Is.Null);
+            Assert.That(fixture.FurniturePreview.CurrentPreviewTransform, Is.Null);
+            Assert.That(fixture.Scenario.Cafe.FurnitureInstances.Single(), Is.SameAs(support));
+            Assert.That(support.Position, Is.EqualTo(new GridPosition(0, 0)));
+            Assert.That(support.Rotation, Is.EqualTo(FurnitureRotation.Degrees0));
+            Assert.That(fixture.Scenario.Functional.MountedInstances, Is.EquivalentTo(new[] { register, coffeeMachine }));
+            Assert.That(fixture.Scenario.Functional.MountedInstances.Single(item => item.InstanceId == PreviewMountedIdA),
+                Is.SameAs(register));
+            Assert.That(fixture.Scenario.Functional.MountedInstances.Single(item => item.InstanceId == PreviewMountedIdB),
+                Is.SameAs(coffeeMachine));
+            Assert.That(register.Address, Is.EqualTo(Address("slot.0")));
+            Assert.That(coffeeMachine.Address, Is.EqualTo(Address("slot.1")));
+            Assert.That(register.Rotation, Is.EqualTo(FurnitureRotation.Degrees90));
+            Assert.That(coffeeMachine.Rotation, Is.EqualTo(FurnitureRotation.Degrees270));
+            Assert.That(fixture.Scenario.Functional.PickUpPoints.Single(), Is.SameAs(pickUp));
+            Assert.That(pickUp.Address, Is.EqualTo(Address("slot.2")));
+            Assert.That(fixture.MountedRegistry.TryGet(PreviewMountedIdA, out var restoredRegister), Is.True);
+            Assert.That(fixture.MountedRegistry.TryGet(PreviewMountedIdB, out var restoredCoffee), Is.True);
+            Assert.That(fixture.PickUpIndicators.TryGet(PreviewPickUpIdA, out var restoredPickUp), Is.True);
+            var restored = new[] { restoredRegister, restoredCoffee, restoredPickUp };
+            for (var index = 0; index < restored.Length; index++)
+            {
+                Assert.That(restored[index].activeSelf, Is.True);
+                Assert.That(restored[index].transform.position, Is.EqualTo(positions[index]));
+                Assert.That(restored[index].transform.rotation, Is.EqualTo(rotations[index]));
+            }
+            Assert.That(ActiveDirectChildCount(fixture.MountedRoot.transform), Is.EqualTo(2));
+            Assert.That(ActiveDirectChildCount(fixture.PickUpRoot.transform), Is.EqualTo(1));
+            Assert.That(fixture.Runtime.ReadinessVersion, Is.EqualTo(version));
+            Assert.That(fixture.Runtime.CurrentReadiness, Is.SameAs(readiness));
+        }
+
+        [TestCase(InputTouchPhase.Ended)]
+        [TestCase(InputTouchPhase.Canceled)]
+        [TestCase(InputTouchPhase.None)]
+        public void TabSwitch_ControllerConsumesOldAllUpBeforeAcceptingNextTouch(InputTouchPhase releasePhase)
+        {
+            using var fixture = new FunctionalViewHarness();
+            fixture.BeginPickUpPreview(false);
+            var source = new ControlledTouchSource();
+            Set(fixture.Controller, "touchSource", source);
+            var screen = fixture.Camera.WorldToScreenPoint(new Vector3(6.5f, 0f, 5.5f));
+            source.SetFrame(1, Point(71, screen.x, screen.y, InputTouchPhase.Began));
+            Invoke(fixture.Controller, "Update");
+            Assert.That(fixture.Router.PrimaryTouchId, Is.EqualTo(71));
+            Assert.That(fixture.Router.Owner, Is.EqualTo(DecorationGestureOwner.Camera));
+
+            // UI onClick can switch tabs before Controller.Update sees this release frame.
+            // 模拟同一帧先点击 Tab、后读取旧手指松开；必须经过 controller 的 device-family gate。
+            source.SetFrame(2, releasePhase == InputTouchPhase.None
+                ? Array.Empty<DecorationTouchPoint>()
+                : new[] { Point(71, screen.x, screen.y, releasePhase) });
+            Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.Wall), Is.True);
+            Assert.That(fixture.Router.IsSuppressingUntilAllTouchesUp, Is.True);
+            Invoke(fixture.Controller, "Update");
+
+            Assert.That(fixture.Router.IsSuppressingUntilAllTouchesUp, Is.False,
+                "The terminal-only/empty frame must reach the router even when it contains no new Began.");
+            Assert.That(fixture.Router.Owner, Is.EqualTo(DecorationGestureOwner.None));
+            Assert.That(fixture.Controller.ActiveFunctionalSurfacePreview, Is.Null);
+            source.SetFrame(3, Point(72, screen.x, screen.y, InputTouchPhase.Began));
+            Invoke(fixture.Controller, "Update");
+            Assert.That(fixture.Router.PrimaryTouchId, Is.EqualTo(72),
+                "The very next gesture must be accepted, not swallowed to retire the previous touch.");
+            Assert.That(fixture.Router.Owner, Is.EqualTo(DecorationGestureOwner.Camera));
+        }
+
+        [Test]
+        public void TabSwitch_AbortsOldPointerUntilAllTouchesRelease()
+        {
+            using var fixture = new FunctionalViewHarness();
+            fixture.BeginPickUpPreview(false);
+            var classifier = new FixedClassifier(new DecorationTouchHit(
+                DecorationTouchHitKind.FunctionalSurface, functionalSurfaceAddress: Address("slot.0")));
+            fixture.Router.ProcessFrame(Frame(1, Point(41, 10, 10, InputTouchPhase.Began)), classifier);
+            fixture.Controller.RouteTouchResultForActiveMode(fixture.Router.ProcessFrame(
+                Frame(2, Point(41, 30, 10, InputTouchPhase.Moved, 20, 0)), classifier));
+            Assert.That(fixture.Router.IsDragging, Is.True);
+
+            Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.Wall), Is.True);
+
+            Assert.That(fixture.Router.Owner, Is.EqualTo(DecorationGestureOwner.None));
+            Assert.That(fixture.Router.IsDragging, Is.False);
+            Assert.That(fixture.Router.IsSuppressingUntilAllTouchesUp, Is.True);
+            // A new finger must not promote while the old drag is still held.
+            // 旧拖拽尚未松手时，不让另一个 Began 接管新模式。
+            var held = fixture.Router.ProcessFrame(Frame(3,
+                Point(41, 30, 10, InputTouchPhase.Stationary),
+                Point(42, 50, 10, InputTouchPhase.Began)), classifier);
+            Assert.That(held.Owner, Is.EqualTo(DecorationGestureOwner.None));
+            var released = fixture.Router.ProcessFrame(Frame(4,
+                Point(41, 30, 10, InputTouchPhase.Ended),
+                Point(42, 50, 10, InputTouchPhase.Ended)), classifier);
+            Assert.That(released.TapReleased, Is.False);
+            Assert.That(released.FunctionalSurfaceDragRequested, Is.False);
+            Assert.That(fixture.Router.IsSuppressingUntilAllTouchesUp, Is.False);
+            Assert.That(fixture.Router.ProcessFrame(Frame(5,
+                Point(43, 10, 10, InputTouchPhase.Began)), classifier).Owner,
+                Is.EqualTo(DecorationGestureOwner.FunctionalSurface));
         }
 
         [TestCase(false)]
@@ -1932,17 +2192,21 @@ namespace AnimalCafe.Tests.PlayMode
             var published = runtime.CurrentReadiness;
             var version = runtime.ReadinessVersion;
             var message = validation.CurrentMessage;
+            var wasVisible = validation.IsVisible;
             var ids = validation.DiagnosticIds.ToArray();
             Assert.That(controller.TryBeginExistingFunctionalSurfacePreview(
                 FunctionalSurfacePreviewKind.MountedEquipment,
                 ReadinessCoffeeInstanceId), Is.True);
             Assert.That(validation.CurrentMessage, Is.EqualTo(message));
+            Assert.That(validation.IsVisible, Is.EqualTo(wasVisible));
             Assert.That(controller.TryMoveFunctionalSurfacePreview(
                 ReadinessAddress(ReadinessCashSupportId)), Is.False);
             Assert.That(validation.CurrentMessage, Is.EqualTo(message));
             Assert.That(validation.DiagnosticIds, Is.EqualTo(ids));
             controller.CancelFunctionalSurfacePreview();
             Assert.That(validation.CurrentMessage, Is.EqualTo(message));
+            Assert.That(validation.IsVisible, Is.EqualTo(wasVisible),
+                "Cancel must not resurrect a healthy readiness banner.");
             Assert.That(validation.DiagnosticIds, Is.EqualTo(ids));
             Assert.That(runtime.CurrentReadiness, Is.SameAs(published));
             Assert.That(runtime.ReadinessVersion, Is.EqualTo(version));
@@ -2125,6 +2389,18 @@ namespace AnimalCafe.Tests.PlayMode
                 new Vector2(x, y),
                 new Vector2(deltaX, deltaY),
                 phase);
+        }
+
+        private sealed class ControlledTouchSource : IDecorationTouchSource
+        {
+            private int frameNumber;
+            private DecorationTouchPoint[] points = Array.Empty<DecorationTouchPoint>();
+            public void SetFrame(int number, params DecorationTouchPoint[] touches)
+            {
+                frameNumber = number;
+                points = touches;
+            }
+            public DecorationTouchFrame ReadFrame() => new DecorationTouchFrame(frameNumber, points);
         }
 
         private sealed class FixedClassifier : IDecorationTouchHitClassifier

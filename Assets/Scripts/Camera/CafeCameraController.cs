@@ -9,6 +9,8 @@ namespace AnimalCafe.Camera
     /// </summary>
     public sealed class CafeCameraController : MonoBehaviour
     {
+        private const float PinchPixelsPerZoomStep = 40f;
+
         [SerializeField]
         private UnityEngine.Camera targetCamera;
 
@@ -19,6 +21,27 @@ namespace AnimalCafe.Camera
         private MonoBehaviour inputSourceBehaviour;
 
         private ICameraInputSource inputSource;
+
+        private void OnEnable()
+        {
+            CancelHeldTouch();
+        }
+
+        private void OnDisable()
+        {
+            CancelHeldTouch();
+        }
+
+        private void CancelHeldTouch()
+        {
+            // Decoration disables this consumer; held fingers must not carry over.
+            // 模式交接时取消旧 Touch，抬手后才接受新手势。
+            var source = inputSource ?? inputSourceBehaviour as ICameraInputSource;
+            if (source is MouseCameraInput pointerInput)
+            {
+                pointerInput.CancelTouchGesture();
+            }
+        }
 
         private void Start()
         {
@@ -46,6 +69,7 @@ namespace AnimalCafe.Camera
             var inputFrame = inputSource.ReadFrame();
             ApplyPan(inputFrame.PanDelta);
             ApplyZoom(inputFrame.ZoomDelta);
+            ApplyPinchZoom(inputFrame.PinchDistanceDelta);
         }
 
         public void Configure(
@@ -79,12 +103,32 @@ namespace AnimalCafe.Camera
 
         public void ApplyZoom(float scrollDelta)
         {
-            if (targetCamera == null || settings == null || Mathf.Approximately(scrollDelta, 0f))
+            if (float.IsNaN(scrollDelta) || float.IsInfinity(scrollDelta)
+                || Mathf.Approximately(scrollDelta, 0f))
             {
                 return;
             }
 
-            targetCamera.orthographicSize -= Mathf.Sign(scrollDelta) * settings.ZoomSpeed;
+            ApplyContinuousZoom(Mathf.Sign(scrollDelta));
+        }
+
+        public void ApplyPinchZoom(float pinchDistanceDelta)
+        {
+            ApplyContinuousZoom(pinchDistanceDelta / PinchPixelsPerZoomStep);
+        }
+
+        // Wheel uses whole steps; continuous gestures preserve their displacement.
+        // 滚轮保持整步缩放，连续手势保留实际位移，不按输入帧数累计整步。
+        public void ApplyContinuousZoom(float zoomSteps)
+        {
+            if (targetCamera == null || settings == null
+                || float.IsNaN(zoomSteps) || float.IsInfinity(zoomSteps)
+                || Mathf.Approximately(zoomSteps, 0f))
+            {
+                return;
+            }
+
+            targetCamera.orthographicSize -= zoomSteps * settings.ZoomSpeed;
             ClampToBounds();
         }
 

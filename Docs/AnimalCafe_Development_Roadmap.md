@@ -8,7 +8,7 @@
 >
 > 正式目标平台：Android 与 iOS
 >
-> 更新日期：2026-09-04
+> 更新日期：2026-09-11
 
 ## 1. 文档用途
 
@@ -775,19 +775,23 @@ Store Expansion 稳定后，高级结构编辑可复用 Surface ID、attachment 
 
 ### Status
 
-`In Progress` — 验收与收尾阶段（2026-09-08）。M1–M17 为 Studio Owner 人工 PASS；M18 经明确授权由 Codex 技术代测 PASS，专项 PlayMode 15/15、独立 QA 复查 PASS。不表示 Phase 8 完成，M6 incompatible Slot 子项仍未覆盖，旧 Touch 顺序验证问题仍开放。最新记录见 `Docs/Phase8_Beginner_Guide.md` 第 6 节。
+`In Progress`（2026-09-09）— 五项 bug 修复与前三项 UX 保留，后续批准的 UX2 选项 2–5 与半透明光感 footprint 已实现并技术核验，交回 **Ready for manual review**。完整 Editor PlayMode **813/813**（707 core + 106 Scene/Input）、全部 Phase 8 EditMode + SurfaceSession **235/235 PASS**，failed/skipped/inconclusive 均 0、exit 0；focused asset/font 8/8 已含在 235。独立 code 与 7 张视觉技术复核无未处理 Critical/Important；新增 7 项 Owner manual 全部 **Pending**，最终 XML 与步骤见 `Docs/Phase8_Beginner_Guide.md` 8.5。选项 1 保留 icon，Exit 不动。M1–M17 历史 Owner PASS、M18 technical PASS 保留；M6 incompatible Slot 子项仍未覆盖，不自动标为 Phase Completed。
+
+下表保留 UX2 前的历史 gate 证据；UX2 使用上段与 Guide 8.5 的 fresh evidence。本轮未执行 full EditMode、standalone Player 或 Android/iOS 真机；窄屏为 320 logical pixels runtime Prefab fixture。Footprint/font authoring 完成后的 1,393 个非 C# Assets + ProjectSettings 在 full regression 前后 hash 一致、changed/missing/unexpected 为 0；本轮仍有已批准的 shader/material、两份 footprint Prefab 与 P8 static font 修改，没有 Scene/ProjectSettings 改动。人工结果独立记录。
 
 | Gate | Status |
 |---|---|
-| Automated | **2026-09-04 baseline PASS**：full EditMode `1,689/1,689`、core PlayMode `647/647`、EditorSceneLoading `80/80`、Windows Player `619/619`，1,984 文件资产审计零差异。这是 M1/M2 修改前的全量记录；2026-09-08 focused / direct regression authority 见 `Docs/Phase8_Beginner_Guide.md` 第 6 节，不能用旧全量数字替代本次验证。 |
+| Automated | **2026-09-09 修复验证 PASS**：完整 PlayMode `781/781`（core679 + Scene102），直接 EditMode `83/83`，原 Touch control `26/26`。未重跑 full EditMode / Player。2026-09-04 full EditMode `1,689/1,689`、Windows Player `619/619` 仍是历史 baseline，不替代本轮验证；XML 见 Guide 第6节。 |
 | Engineering | **PASS** final independent department decision。 |
 | QA | **PASS** final independent department decision；P8-M-018 guide 可观察性 Minor 已修正。 |
 | Production | **PASS** final focused re-review；`0 Critical / 0 Important / 0 Minor`。 |
 | Studio Owner Manual / 授权代测 | **17 项 Owner manual PASS + 1 项 Codex technical PASS / 0 FAIL**：M1–M17 已由用户确认；M18 代测不计为 Owner 人工执行。M6 incompatible 子项仍未覆盖。 |
 
-2026-09-08 最新 M6 / 玩家提示修复验证：EditMode 75/75、Core 374/374、直接 Scene/Input 15/15 PASS；详见 Beginner Guide 第 6 节的 `phase8-manual-m6-20260908` XML 与截图。先前 M1/M2 的 Scene/Input 32/33 中，旧 Touch 顺序验证问题仍未解决（排除新增 M1 fixture 仍复现，独立 Touch fixture 18/18）；本轮没有重跑或关闭该旧问题。因此整体 Phase 自动化 gate 尚未重新 PASS。M1/M2 与 M6 的修复均已获 Studio Owner 人工复测接受。
+2026-09-08 历史 M6 / 玩家提示修复：EditMode75/75、Core374/374、直接Scene15/15 PASS，已获 Owner 复测接受；当时旧 Touch 顺序问题仍开放。2026-09-09 已确认是前序 Scene fixture 的 InputAction runtime cache 未清理，并以无诊断原始26-case control及完整PlayMode验证修复。最新独立 code review 无未处理 Critical / Important；新修复的手感尚待 targeted manual review。
 
-因此 Current Next Step 是处理 Phase 8 剩余验证问题与 closeout gate，不是 Phase 8R。
+Current Next Step：按 Guide 8.5 逐项人工复测 Catalogue 记忆/继续添加、readiness 摘要/详情、CR/CM 最近屏幕中心的合法 Slot、Floor 范围/真实格数及四路径半透明 footprint，7 项当前均 Pending。Pick-up 起点不变，Whole Room Undo 仍禁用，readiness 发布合同不变；白色取餐 icon/模型与入口蓝区保留。不自动批准 Phase 8R 或扩展系统。
+
+2026-09-09 红绿灯式 footprint 配色历史见 Guide **8.7**：brightness 6 / saturation 3 / light intensity 1.5，opacity 0.45 / softness 0.12 / bounds / depth 沿用。该轮 focused 15/15、PlayMode 84/84 保留为历史；最新 Preview authority 为 **8.8**：普通家具/CR/CM 保留原材质，墙饰仅 Preview 向室内额外悬浮 20 cm，Confirm 回原贴墙位置、底高与真实占格不变。直接 PlayMode **301/301 PASS**，failed/skipped/inconclusive 0、exit 0；三张近景独立技术复核无阻挡，**Ready for manual review**。8 项受保护文件 hash 不变，既有 dirty Invalid material 原样保留。Owner 四项新增 manual 与视觉偏好 Pending；本轮未执行 full Phase / EditMode / Player / 手机验证。
 
 ### Goal
 
@@ -2714,6 +2718,6 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 - **Phase 5 — UI Architecture & Design System** 已完成 approved design、TDD implementation、review hardening、Studio Owner `MT001–MT034` manual acceptance、PR #4 merge 与 merged-main regression，状态为 `Completed`。Merged-main evidence（2026-08-15）：EditMode `690 / 690`、Editor PlayMode `121 / 121`、Windows standalone PlayMode `103 / 103` passed；failed、skipped、inconclusive 均为 `0`。
 - **Phase 6 — Basic Decoration Mode** 已完成 approved design、TDD implementation、independent review、Studio Owner manual acceptance 与 fresh full regression，状态为 `Completed`。Merge-preparation evidence（2026-08-22）：EditMode `1136 / 1136`、Editor PlayMode `446 / 446` passed，failed、skipped、inconclusive 均为 `0`；Windows standalone build 为 `Success`，无 C# warning/error；Studio Owner applicable manual set 为 `29 / 29 PASS`。`P6-M-023` 的真实 Android + iOS two-finger Pinch 已按 scope decision 移至 Phase 51，不计入 Phase 6 denominator。
 - Phase 6 清理只删除 obsolete Phase 4 MainCafe manual-review setup 与两份 temporary materials；`ManualReviewPingPongMover` 及其 regression test 因仍有 Phase 5 live consumers 而保留。
-- **Current Next Step：Phase 8 — 确认剩余验证问题的处理，再完成 closeout 验证。** M1–M17 已由 Studio Owner 确认 PASS，M18 已授权 Codex 技术代测 PASS，独立 QA 复查 PASS。M6 incompatible 子项未覆盖，旧 Scene/Input 顺序验证问题仍开放；最新记录以 `Docs/Phase8_Beginner_Guide.md` 第 6 节为准。Phase 8 仍为 `In Progress`，不标 `Completed`；未 commit / push / merge，不自动进入 Phase 8R。Phase 8R 只 Review / Polish Phase 1–8，不加入新 system / feature，其余 TBD。
+- **Current Next Step：Phase 8 — 参考图 UI 排版已完成，Ready for manual review（2026-09-12）。** 两步已合并交付：56×56 logical 可见浮动按钮、约10 logical间距且无tooltip；左上HUD／右上装修入口；目录内嵌四类Tab／固定Pick-up。定向EditMode57/57、扩大PlayMode210/210、root独立完整Editor PlayMode849/849、专用截图流程13/13，均0failed／skipped／inconclusive；34图经最终独立复核。完整测试前后2393个Assets／ProjectSettings文件无漂移，154原始UI PNG保留。详见Guide第15节；历史45张测试截图＋3份metrics误覆盖的未恢复concern见15.6，不以新图冒充原证据。Owner／原生Overlay／真机接受Pending；M1–M17历史Owner PASS、M18 technical PASS及M6 incompatible未覆盖项保留。不关闭Phase 8、不推进后续gameplay，不commit／push／merge。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 cafe day loop、Customer / NPC movement、Order、Queue、NavMesh / pathfinding agents、economy 或 Save 等后续 gameplay scope。

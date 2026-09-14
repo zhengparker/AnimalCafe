@@ -21,99 +21,118 @@ namespace AnimalCafe.EditorTools.Phase8
         [MenuItem("Tools/AnimalCafe/Phase 8/Update Pick-up Indicator")]
         public static void UpdatePickUpIndicatorAssets()
         {
-            const string materialPath =
-                "Assets/UI/Phase8/Materials/M_PickUpPoint_Indicator.mat";
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("Exit Play Mode before updating the pick-up sign.");
+            RequireNoDirtyProjectAssets();
+            const string artworkPath = "Assets/UI/P8R/WorldMarkers/pickup_point.png";
+            const string materialPath = "Assets/UI/Phase8/Materials/M_PickUpPoint_Indicator.mat";
             var prefabPath = Phase8AssetPaths.PickUpPointIndicatorPrefabPath;
             RequireAsset<GameObject>(prefabPath, "Pick-up Point indicator Prefab");
-            var shader = Shader.Find("Universal Render Pipeline/Lit")
-                ?? throw new InvalidOperationException(
-                    "Pick-up Point indicator requires the URP Lit shader.");
+            var shader = Shader.Find("Universal Render Pipeline/Unlit")
+                ?? throw new InvalidOperationException("Pick-up sign requires the URP Unlit shader.");
+            if (!File.Exists(artworkPath)) throw new InvalidOperationException("Approved pick-up artwork is missing: " + artworkPath);
+
+            // Measure transparent padding without altering the approved PNG.
+            // 保留原图，只裁 mesh UV 的透明空白；底部尖角而非整张画布对准 Slot。
+            var source = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            Rect uv;
+            float aspect, tipFraction;
+            try
+            {
+                if (!source.LoadImage(File.ReadAllBytes(artworkPath))) throw new InvalidOperationException("Invalid pick-up PNG.");
+                var pixels = source.GetPixels32();
+                var minX = source.width; var minY = source.height; var maxX = -1; var maxY = -1;
+                for (var y = 0; y < source.height; y++) for (var x = 0; x < source.width; x++)
+                    if (pixels[y * source.width + x].a >= 32)
+                    { minX = Math.Min(minX, x); minY = Math.Min(minY, y); maxX = Math.Max(maxX, x); maxY = Math.Max(maxY, y); }
+                if (maxX < 0) throw new InvalidOperationException("Pick-up artwork is transparent.");
+                double tipX = 0, weight = 0;
+                for (var y = minY; y <= Math.Min(minY + 6, maxY); y++) for (var x = minX; x <= maxX; x++)
+                {
+                    var alpha = pixels[y * source.width + x].a;
+                    if (alpha < 32) continue;
+                    tipX += (x + .5) * alpha; weight += alpha;
+                }
+                minX = Math.Max(0, minX - 2); minY = Math.Max(0, minY - 2);
+                maxX = Math.Min(source.width, maxX + 3); maxY = Math.Min(source.height, maxY + 3);
+                uv = Rect.MinMaxRect((float)minX / source.width, (float)minY / source.height,
+                    (float)maxX / source.width, (float)maxY / source.height);
+                aspect = (float)(maxX - minX) / (maxY - minY);
+                tipFraction = (float)((tipX / weight - minX) / (maxX - minX));
+            }
+            finally { UnityEngine.Object.DestroyImmediate(source); }
+
+            AssetDatabase.ImportAsset(artworkPath, ImportAssetOptions.ForceSynchronousImport);
+            var importer = (TextureImporter)AssetImporter.GetAtPath(artworkPath);
+            importer.textureType = TextureImporterType.Default;
+            importer.alphaSource = TextureImporterAlphaSource.FromInput; importer.alphaIsTransparency = true;
+            importer.sRGBTexture = true; importer.npotScale = TextureImporterNPOTScale.None;
+            importer.mipmapEnabled = true; importer.mipmapFilter = TextureImporterMipFilter.BoxFilter;
+            importer.mipMapsPreserveCoverage = false; importer.mipMapBias = 0;
+            importer.filterMode = FilterMode.Trilinear; importer.wrapMode = TextureWrapMode.Clamp;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.maxTextureSize = 2048; importer.isReadable = false;
+            importer.SaveAndReimport();
+            var artwork = RequireAsset<Texture2D>(artworkPath, "Approved pick-up sign artwork");
 
             var root = PrefabUtility.LoadPrefabContents(prefabPath);
             try
             {
-                var pyramid = root.transform.Find("InvertedSquarePyramid")
-                    ?? throw new InvalidOperationException(
-                        "Pick-up Point Prefab is missing InvertedSquarePyramid.");
-                var filter = pyramid.GetComponent<MeshFilter>();
-                var renderer = pyramid.GetComponent<MeshRenderer>();
-                var mesh = filter != null ? filter.sharedMesh : null;
-                if (renderer == null || mesh == null
-                    || AssetDatabase.GetAssetPath(mesh) != prefabPath)
-                {
-                    throw new InvalidOperationException(
-                        "Pick-up Point pyramid requires its existing Prefab mesh subasset.");
-                }
-
-                EnsureFolder(Phase8AssetPaths.MaterialFolder);
-                var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
-                if (material == null)
-                {
-                    material = new Material(shader)
-                    {
-                        name = Path.GetFileNameWithoutExtension(materialPath)
-                    };
-                    AssetDatabase.CreateAsset(material, materialPath);
-                }
+                // Keep the legacy visual-slot name and mesh local ID: drag/selection references stay valid.
+                // 兼容原取餐拖动／选择路径；这个节点现在显示彩色牌，不再显示棱锥。
+                var visual = root.transform.Find("InvertedSquarePyramid")
+                    ?? throw new InvalidOperationException("Pick-up Prefab is missing its visual slot.");
+                var mesh = visual.GetComponent<MeshFilter>()?.sharedMesh;
+                var renderer = visual.GetComponent<MeshRenderer>();
+                if (renderer == null || mesh == null || AssetDatabase.GetAssetPath(mesh) != prefabPath)
+                    throw new InvalidOperationException("Pick-up sign requires the existing Prefab mesh subasset.");
+                var material = RequireAsset<Material>(materialPath, "Pick-up sign material");
                 material.shader = shader;
-                material.SetColor("_BaseColor", new Color(.82f, .82f, .82f, 1f));
-                material.SetFloat("_Metallic", 0f);
-                material.SetFloat("_Smoothness", .25f);
-                material.SetFloat("_Surface", 0f);
-                material.SetFloat("_AlphaClip", 0f);
-                material.SetFloat("_Cull", (float)UnityEngine.Rendering.CullMode.Back);
-                material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
-                material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.Zero);
-                material.SetFloat("_ZWrite", 1f);
-                material.DisableKeyword("_SURFACE_TYPE_TRANSPARENT");
-                material.DisableKeyword("_ALPHATEST_ON");
-                material.SetOverrideTag("RenderType", "Opaque");
-                material.SetShaderPassEnabled("ShadowCaster", true);
-                material.renderQueue = -1;
-                EditorUtility.SetDirty(material);
-                AssetDatabase.SaveAssetIfDirty(material);
+                material.SetTexture("_BaseMap", artwork); material.SetTextureScale("_BaseMap", Vector2.one);
+                material.SetTextureOffset("_BaseMap", Vector2.zero); material.SetColor("_BaseColor", Color.white);
+                material.SetFloat("_Surface", 1); material.SetFloat("_Blend", 0);
+                material.SetFloat("_AlphaClip", 0); material.SetFloat("_Cull", 0);
+                material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                material.SetFloat("_SrcBlendAlpha", (float)UnityEngine.Rendering.BlendMode.One);
+                material.SetFloat("_DstBlendAlpha", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                material.SetFloat("_ZWrite", 0);
+                material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+                material.DisableKeyword("_ALPHATEST_ON"); material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+                material.SetOverrideTag("RenderType", "Transparent");
+                material.SetShaderPassEnabled("ShadowCaster", false); material.SetShaderPassEnabled("DepthOnly", false);
+                material.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+                // Use the same validation as the URP inspector, including legacy texture/color aliases.
+                // 提前完成 Unity 自动校验，避免下次加载时留下未保存的材质修正。
+                BaseShaderGUI.SetMaterialKeywords(material);
+                EditorUtility.SetDirty(material); AssetDatabase.SaveAssetIfDirty(material);
 
-                var corners = new[]
-                {
-                    new Vector3(-.14f, .70f, -.14f),
-                    new Vector3(.14f, .70f, -.14f),
-                    new Vector3(.14f, .70f, .14f),
-                    new Vector3(-.14f, .70f, .14f),
-                    new Vector3(0f, .20f, 0f)
-                };
-                var faces = new[]
-                {
-                    0, 1, 4, 1, 2, 4, 2, 3, 4, 3, 0, 4,
-                    0, 3, 2, 0, 2, 1
-                };
-                // 每个面独立顶点：hard normals 让 Lit lighting 显出棱锥侧面。
-                // Update the existing subasset so its local ID and references survive.
+                const float height = .56f, bottom = .18f;
+                var width = height * aspect; var left = -width * tipFraction;
                 mesh.Clear();
-                mesh.vertices = faces.Select(index => corners[index]).ToArray();
-                mesh.triangles = Enumerable.Range(0, faces.Length).ToArray();
-                mesh.RecalculateNormals();
-                mesh.RecalculateBounds();
-                EditorUtility.SetDirty(mesh);
-                AssetDatabase.SaveAssetIfDirty(mesh);
-
-                pyramid.localPosition = Vector3.zero;
-                pyramid.localRotation = Quaternion.identity;
-                pyramid.localScale = Vector3.one;
+                mesh.vertices = new[] { new Vector3(left, bottom, 0), new Vector3(left + width, bottom, 0),
+                    new Vector3(left + width, bottom + height, 0), new Vector3(left, bottom + height, 0) };
+                mesh.uv = new[] { new Vector2(uv.xMin, uv.yMin), new Vector2(uv.xMax, uv.yMin),
+                    new Vector2(uv.xMax, uv.yMax), new Vector2(uv.xMin, uv.yMax) };
+                mesh.triangles = new[] { 0, 2, 1, 0, 3, 2 };
+                mesh.RecalculateNormals(); mesh.RecalculateBounds();
+                EditorUtility.SetDirty(mesh); AssetDatabase.SaveAssetIfDirty(mesh);
+                visual.localPosition = Vector3.zero; visual.localRotation = Quaternion.identity; visual.localScale = Vector3.one;
                 renderer.sharedMaterial = material;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; renderer.receiveShadows = false;
+                if (visual.GetComponent<AnimalCafe.UI.P8R.P8RPickUpSignBillboard>() == null)
+                    visual.gameObject.AddComponent<AnimalCafe.UI.P8R.P8RPickUpSignBillboard>();
                 PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
             }
-            finally
-            {
-                PrefabUtility.UnloadPrefabContents(root);
-            }
-
+            finally { PrefabUtility.UnloadPrefabContents(root); }
             AssetDatabase.ImportAsset(prefabPath, ImportAssetOptions.ForceSynchronousImport);
-            Debug.Log("Pick-up Point indicator geometry and material updated.");
+            Debug.Log("Approved colorful pick-up sign applied; slot, footprint and Prefab identity retained.");
         }
 
         [MenuItem("Tools/AnimalCafe/Phase 8/Build Assets")]
         public static void BuildAssets()
         {
+            RequireNoDirtyProjectAssets();
             EnsureFolder(Phase8AssetPaths.ThumbnailFolder);
             EnsureFolder(Phase8AssetPaths.CatalogueFolder);
             EnsureFolder(Phase8AssetPaths.MaterialFolder);
@@ -195,9 +214,25 @@ namespace AnimalCafe.EditorTools.Phase8
                     "Phase 8 mixed catalogue must build exactly Furniture, Cash Register, and Coffee Machine rows.");
             }
 
-            AssetDatabase.SaveAssets();
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             Debug.Log("Phase 8 assets built and validated.");
+        }
+
+        private static void RequireNoDirtyProjectAssets()
+        {
+            // Imports and Prefab saves may flush loaded assets; reject before any side effects.
+            // 先保护未保存的项目修改；下面各步骤只保存自己负责的目标资源。
+            var dirtyAssets = Resources.FindObjectsOfTypeAll<UnityEngine.Object>()
+                .Where(asset => asset != null && !(asset is SceneAsset)
+                    && EditorUtility.IsPersistent(asset) && EditorUtility.IsDirty(asset))
+                .Select(AssetDatabase.GetAssetPath)
+                .Where(path => !string.IsNullOrEmpty(path)
+                    && path.StartsWith("Assets/", StringComparison.Ordinal) && File.Exists(path))
+                .Distinct(StringComparer.Ordinal).OrderBy(path => path, StringComparer.Ordinal).ToArray();
+            if (dirtyAssets.Length != 0)
+                throw new InvalidOperationException(
+                    "Loaded assets are dirty. Save or revert these assets before Phase 8 Build Assets: "
+                    + string.Join(", ", dirtyAssets));
         }
 
         private static void EnsureCatalogueCompatibilityControls()

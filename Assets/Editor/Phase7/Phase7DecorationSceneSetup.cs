@@ -35,6 +35,7 @@ namespace AnimalCafe.EditorTools.Phase7
         [MenuItem("AnimalCafe/Phase 7/Migrate MainCafe")]
         public static void MigrateMainCafe()
         {
+            if (AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.GuardLegacyMainCafe()) return;
             if(!SceneContains<DecorationModeController>(Phase7AssetPaths.MainCafeScenePath))
                 Phase6DecorationSceneSetup.ConfigureMainCafe();
             ConfigureScene(Phase7AssetPaths.MainCafeScenePath);
@@ -50,6 +51,7 @@ namespace AnimalCafe.EditorTools.Phase7
             try
             {
                 var controller=FindAll<DecorationModeController>(scene).Single();
+                if (AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.GuardLegacy(controller)) return;
                 var authoring=FindAll<WallSurfaceAuthoring>(scene).OrderBy(x=>x.SurfaceId,StringComparer.Ordinal).ToArray();
                 if(authoring.Length!=2)throw new InvalidOperationException("Phase 7 requires exactly two canonical Wall Surface authoring components.");
                 foreach(var stale in controller.GetComponents<WallSurfaceRegistry>())UnityEngine.Object.DestroyImmediate(stale);

@@ -50,6 +50,7 @@ namespace AnimalCafe.Tests.PlayMode
         private float timeScaleBefore;
         private Vector2Int screenBefore;
         private Rect safeAreaBefore;
+        private EditorSceneLoading.P8RReferenceLayoutTests.NativeScreenSize screenOverride;
         private Scene activeSceneBefore;
         private Scene cleanupScene;
         private string cleanupSceneName;
@@ -83,6 +84,11 @@ namespace AnimalCafe.Tests.PlayMode
         [UnityTearDown]
         public IEnumerator RestoreFailureSafeBoundary()
         {
+            if (screenOverride != null)
+            {
+                screenOverride.Dispose(); screenOverride = null;
+                yield return null; // Native Screen restoration is applied on the next player frame.
+            }
             var cleanupFailures = new List<string>();
             try
             {
@@ -393,6 +399,8 @@ namespace AnimalCafe.Tests.PlayMode
         [UnityTest]
         public IEnumerator MainCafeRealTouch_UiBeganMoveAcrossWorldRetainsUiOwnerAndReleaseCannotSelectOrMove()
         {
+            screenOverride = new EditorSceneLoading.P8RReferenceLayoutTests.NativeScreenSize();
+            screenOverride.Resize(new Vector2(1080, 1920));
             yield return LoadMainCafe();
             var context = CaptureMainCafe();
             var touch = AddTouchscreen();
@@ -811,6 +819,10 @@ namespace AnimalCafe.Tests.PlayMode
                     GridCellScreenCenter(context, new GridPosition(6, 6))
                 };
                 var coveredId = 164;
+                var modalBlocker = ReadPrivate<Button>(context.StoreModal, "modalBlocker");
+                var cancellationPoint = new Vector2(Screen.width * .05f, Screen.height * .05f);
+                Assert.That(IsTopTarget(context.EventSystem, modalBlocker, cancellationPoint), Is.True,
+                    "Coverage probes need a real modal-blocker cancellation point away from Confirm/Cancel.");
                 foreach (var coveredPoint in coveredPoints)
                 {
                     var top = TopGraphicAt(context.EventSystem, coveredPoint);
@@ -818,7 +830,10 @@ namespace AnimalCafe.Tests.PlayMode
                     Assert.That(top.transform.IsChildOf(modalRoot), Is.True,
                         "Every covered Action/Scene/Furniture point must be owned by the top Modal hierarchy.");
                     yield return BeginUiContact(touch, coveredId, coveredPoint);
-                    yield return ReleaseUiContact(touch, coveredId, coveredPoint);
+                    // A lower-layer probe can coincide with Modal Cancel on a portrait screen.
+                    // 验证 Began 后移至 blocker 再取消；真正的 dismiss release 在下方单独验证。
+                    yield return MoveContact(touch, coveredId, cancellationPoint);
+                    yield return Cancel(touch, coveredId, cancellationPoint);
                     coveredId++;
                 }
                 Assert.That(context.Controller.State, Is.EqualTo(DecorationSessionState.ConfirmingStore));
@@ -917,6 +932,8 @@ namespace AnimalCafe.Tests.PlayMode
             try
             {
                 yield return EnterByTouch(context, touch, 171);
+                yield return TapButton(touch, 1711, FindNamed<Button>(context.Scene, "CollapseButton"));
+                yield return WaitUntil(() => CatalogueCollapsedAndSettled(context.Catalogue), 2f, "Pinch needs the actual collapsed world workspace.");
                 var orders = new[]
                 {
                     (PrimaryFirst: false, First: InputTouchPhase.Ended,
@@ -993,6 +1010,8 @@ namespace AnimalCafe.Tests.PlayMode
                 context.Controller.enabled = true;
                 yield return TapButton(touch, 222, context.HudButton);
                 Assert.That(context.Controller.IsOpen, Is.True);
+                yield return TapButton(touch, 2221, FindNamed<Button>(context.Scene, "CollapseButton"));
+                yield return WaitUntil(() => CatalogueCollapsedAndSettled(context.Catalogue), 2f, "Re-entry restores Expanded; collapse through Touch before world recovery.");
                 var recovered = UiFreeCell(context,
                     new[] { new GridPosition(6, 6), new GridPosition(0, 6), new GridPosition(6, 1) });
                 var beforeRecovered = context.Camera.transform.position;
@@ -1299,7 +1318,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(catalogueSelected, Is.EqualTo(2));
                 Assert.That(ActivePreviewObjectCount(context), Is.EqualTo(1));
 
-                var initialPoint = FormalFurnitureScreenPoint(context, InitialInstanceId);
+                var initialPoint = FormalFurnitureScreenPoint(context, InitialInstanceId, requireUiFree: true);
                 AssertWorldPointIsUiFree(context.EventSystem, initialPoint);
                 existingEditStartedAt = Time.unscaledTime;
                 yield return Tap(touch, 247, initialPoint);
@@ -1419,12 +1438,16 @@ namespace AnimalCafe.Tests.PlayMode
                     try
                     {
                         var handleCenter = ButtonCenter(collapsedHandle);
+                        // The current handle can be wider than the old 140px offset. Release outside it.
+                        // 真实 raycast 验证拖出终点，避免在同一个 Button 内松手触发合法 Click。
+                        var dragEnd = FindUiFreeDragEnd(context, handleCenter);
                         yield return BeginUiContact(touch, movingRawId, handleCenter);
                         var movingCompositeId = movingRecorder.CompositePointerIds.Single();
                         Assert.That(boundary.GetOwnership(movingCompositeId), Is.EqualTo(UiPointerOwnership.Ui),
                             "A moving real UI press must own its composite pointer throughout the contact.");
-                        yield return MoveContact(touch, movingRawId, handleCenter + Vector2.right * 140f);
-                        yield return ReleaseUiContact(touch, movingRawId, handleCenter + Vector2.right * 140f);
+                        yield return MoveContact(touch, movingRawId, dragEnd);
+                        AssertWorldPointIsUiFree(context.EventSystem, dragEnd);
+                        yield return ReleaseUiContact(touch, movingRawId, dragEnd);
                         Assert.That(movingRecorder.BeginDragCount, Is.GreaterThanOrEqualTo(1));
                         Assert.That(movingRecorder.DragCount, Is.GreaterThanOrEqualTo(1));
                         Assert.That(movingRecorder.EndDragCount, Is.EqualTo(1));
@@ -1515,12 +1538,69 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator MainCafeRealTouch_ExitModalSecondFingerHudClickRetiresHeldSceneGesture()
+        {
+            yield return LoadMainCafe();
+            var context = CaptureMainCafe();
+            var touch = AddTouchscreen();
+            try
+            {
+                yield return EnterByTouch(context, touch, 8901);
+                Assert.That(context.Controller.TryChangeMode(DecorationModeKind.WallDecor), Is.True);
+                Assert.That(context.Controller.TryBeginWallMountedPreview("wall-decor.wood-shelf.01",
+                    "wall.back-left", new WallSlotPosition(4, 0)), Is.True);
+                yield return WaitUntil(() => ReadPrivate<Coroutine>(context.Catalogue, "transitionCoroutine") == null, 2f,
+                    "The wall preview must settle before the held Scene gesture begins.");
+                var preview = context.Controller.ActiveWallMountedPreview;
+                var classifier = (IDecorationTouchHitClassifier)context.Controller;
+                Vector2? origin = null;
+                for (var y = .75f; y >= .45f && !origin.HasValue; y -= .05f)
+                for (var x = .7f; x >= .3f && !origin.HasValue; x -= .05f)
+                {
+                    var point = new Vector2(Screen.width * x, Screen.height * y);
+                    if (TopGraphicAt(context.EventSystem, point) != null) continue;
+                    var kind = classifier.ClassifyBegan(8902, point).Kind;
+                    if (kind == DecorationTouchHitKind.Scene || kind == DecorationTouchHitKind.FloorGrid
+                        || kind == DecorationTouchHitKind.WallSurface) origin = point;
+                }
+                Assert.That(origin.HasValue, Is.True, "The fixture needs a visible UI-free camera gesture origin.");
+                var start = origin.Value;
+                yield return BeginContact(touch, 8902, start);
+                yield return MoveContact(touch, 8902, start + Vector2.right * 40f);
+                var router = ReadPrivate<DecorationTouchRouter>(context.Controller, "touchRouter");
+                Assert.That(router.Owner, Is.EqualTo(DecorationGestureOwner.Camera));
+
+                // The second finger must travel through the real UI module with the fixture's early-frame pump.
+                // 第二指经真实 UI module 点击 HUD，记录完整 click，而非直接调用退出 API。
+                var recorder = context.HudButton.gameObject.AddComponent<PointerRecorder>();
+                yield return TapButton(touch, 8903, context.HudButton);
+                Assert.That(recorder.DownCount, Is.EqualTo(1));
+                Assert.That(recorder.UpCount, Is.EqualTo(1));
+                Assert.That(recorder.ClickCount, Is.EqualTo(1));
+                AssertRecorderNamespace(recorder, 8903);
+                var modal = FindAll<DecorationExitModalView>(context.Scene).Single();
+                Assert.That(modal.gameObject.activeInHierarchy, Is.True);
+                Assert.That(router.Owner, Is.EqualTo(DecorationGestureOwner.None));
+                var before = context.Camera.transform.position;
+                yield return MoveContact(touch, 8902, start + Vector2.right * 80f);
+                Assert.That(Vector3.Distance(context.Camera.transform.position, before), Is.LessThan(.0001f),
+                    "The first finger cannot move the Scene behind the exit modal.");
+                Assert.That(context.Controller.ActiveWallMountedPreview, Is.SameAs(preview));
+                yield return Release(touch, 8902, start + Vector2.right * 80f);
+            }
+            finally
+            {
+                CleanupTouchscreen(touch);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator MainCafeRealTouch_InvalidPreviewDisablesConfirmShowsSpecificNonColorFeedbackAndCancelCleans()
         {
             var branches = new[]
             {
-                (Reason: PlacementFailureReason.Overlap, Copy: "Space already occupied", Interruption: "Exit"),
-                (Reason: PlacementFailureReason.ReservedEntranceClearance, Copy: "Keep the entrance clear", Interruption: "Disable")
+                (Reason: PlacementFailureReason.Overlap, Copy: "这个位置已经被占用", Interruption: "Exit"),
+                (Reason: PlacementFailureReason.ReservedEntranceClearance, Copy: "这里需要保留入口通道", Interruption: "Disable")
             };
             var branch = 0;
             foreach (var invalidCase in branches)
@@ -1543,8 +1623,11 @@ namespace AnimalCafe.Tests.PlayMode
                         preview.ProposedPosition);
                     yield return MovePreviewDirectlyThroughTouch(context, touch, id + 2, target);
                     var confirm = FindNamed<Button>(context.Scene, "ConfirmButton");
-                    var feedback = context.ActionBar.transform.Find("FeedbackToast/Message").GetComponent<TMP_Text>();
-                    var stateShape = FindNamed<Transform>(context.Scene, "StateShape").gameObject;
+                    // P8R reparents the feedback panel; follow the view's actual serialized references.
+                    var feedback = ReadPrivate<TMP_Text>(context.ActionBar, "feedbackLabel");
+                    var stateShape = ReadPrivate<GameObject>(context.ActionBar, "feedbackStateShape");
+                    Assert.That(feedback, Is.Not.Null);
+                    Assert.That(stateShape, Is.Not.Null);
                     var invalid = ActivePreview(context.Controller);
                     Assert.That(invalid.ProposedPosition, Is.EqualTo(target),
                         $"{invalidCase.Interruption}: requested invalid cell " +
@@ -1553,8 +1636,17 @@ namespace AnimalCafe.Tests.PlayMode
                     Assert.That(invalid.PlacementResult.Succeeded, Is.False, invalidCase.Interruption);
                     Assert.That(invalid.PlacementResult.FailureReason, Is.EqualTo(invalidCase.Reason));
                     Assert.That(confirm.interactable, Is.False);
-                    Assert.That(feedback.text, Is.EqualTo(invalidCase.Copy));
-                    Assert.That(stateShape.activeInHierarchy, Is.True);
+                    var p8r = ReadPrivate<AnimalCafe.UI.P8R.P8RAppearance>(context.Controller, "p8rAppearance") != null;
+                    if (p8r)
+                    {
+                        var reason = invalidCase.Reason == PlacementFailureReason.Overlap
+                            ? "This space is occupied. Move to an empty space." : "Keep the entrance clear.";
+                        Assert.That(feedback.text, Is.EqualTo("Current Preview: Counter 2 x 3 - Not yet applied\n" + reason));
+                    }
+                    else Assert.That(feedback.text, Does.StartWith("正在编辑：").And.Contain("尚未确认")
+                        .And.EndWith("\n" + invalidCase.Copy));
+                    Assert.That(stateShape.activeInHierarchy, Is.EqualTo(!p8r));
+                    Assert.That(feedback.gameObject.activeInHierarchy, Is.EqualTo(!p8r));
                     var footprint = context.Layout.GetFurnitureFootprintCells(
                         invalid.DefinitionId, invalid.ProposedPosition, invalid.ProposedRotation);
                     Assert.That(footprint, Has.Count.EqualTo(6),
@@ -1736,14 +1828,24 @@ namespace AnimalCafe.Tests.PlayMode
         {
             yield return LoadFixtureScene(Phase5Path);
             var scene = SceneManager.GetActiveScene();
-            var eventSystem = FindAll<EventSystem>(scene).Single();
-            Assert.That(eventSystem.GetComponent<InputSystemUIInputModule>(), Is.Not.Null);
-            var selector = FindNamed<Button>(scene, "Feedback Page Selector");
-            yield return TapButton(touch, id, selector);
-            var toastButton = FindNamed<Button>(scene, "Show Toast Button");
-            yield return TapButton(touch, id + 1, toastButton);
-            Assert.That(FindAll<ToastView>(scene).Single().GetComponentInChildren<TMP_Text>(true).text,
-                Does.Contain("Saved"));
+            try
+            {
+                var eventSystem = FindAll<EventSystem>(scene).Single();
+                Assert.That(eventSystem.GetComponent<InputSystemUIInputModule>(), Is.Not.Null);
+                var selector = FindNamed<Button>(scene, "Feedback Page Selector");
+                yield return TapButton(touch, id, selector);
+                var toastButton = FindNamed<Button>(scene, "Show Toast Button");
+                yield return TapButton(touch, id + 1, toastButton);
+                Assert.That(FindAll<ToastView>(scene).Single().GetComponentInChildren<TMP_Text>(true).text,
+                    Does.Contain("Saved"));
+            }
+            finally
+            {
+                // Normal camera input now owns EnhancedTouch too; release this route's leases before checking baseline.
+                // Phase5 的普通镜头也持有 EnhancedTouch，必须在路线结束时对称释放。
+                foreach (var adapter in FindAll<AnimalCafe.Input.MouseCameraInput>(scene)) adapter.enabled = false;
+                foreach (var source in FindAll<InputSystemDecorationTouchSource>(scene)) source.enabled = false;
+            }
         }
 
         private IEnumerator ExerciseMainCafeRoute(Touchscreen touch, int id)
@@ -2099,6 +2201,145 @@ namespace AnimalCafe.Tests.PlayMode
             yield return Release(device, touchId, position);
         }
 
+        [UnityTest]
+        public IEnumerator MainCafeRealTouch_HeldCompactActionAcrossSheetCompletionStaysUnderFingerAndClicksOnce()
+        {
+            yield return LoadMainCafe();
+            var context = CaptureMainCafe(); var touch = AddTouchscreen();
+            try
+            {
+                yield return EnterByTouch(context, touch, 901);
+                var tile = ActiveTiles(context.Catalogue)[0].GetComponent<Button>();
+                yield return TapButton(touch, 902, tile);
+                var rotate = FindNamed<Button>(context.Scene, "RotateButton");
+                Assert.That(ReadPrivate<Coroutine>(context.Catalogue, "transitionCoroutine"), Is.Not.Null,
+                    "The actual preview-triggered collapse must still be running when this press starts.");
+                Assert.That(IsTopButton(context.EventSystem, rotate), Is.True);
+                var point = ButtonCenter(rotate); var calls = 0;
+                Action counted = () => calls++; context.ActionBar.RotateRequested += counted;
+                try
+                {
+                    yield return BeginUiContact(touch, 903, point);
+                    yield return new WaitForSecondsRealtime(.22f);
+                    Assert.That(CatalogueCollapsedAndSettled(context.Catalogue), Is.True);
+                    var heldPoint = ButtonCenter(rotate);
+                    yield return ReleaseUiContact(touch, 903, point);
+                    Assert.That(Vector2.Distance(heldPoint, point), Is.LessThan(.5f), "Sheet completion must not move the actively pressed compact target.");
+                    Assert.That(calls, Is.EqualTo(1), "Real held Touch must release into exactly one Rotate callback.");
+                    AssertPointerBoundaryClean(ReadPrivate<UiPointerBoundary>(context.Controller, "pointerBoundary"));
+                }
+                finally { context.ActionBar.RotateRequested -= counted; }
+            }
+            finally { CleanupTouchscreen(touch); }
+        }
+
+        [UnityTest]
+        public IEnumerator MainCafeRealTouch_ReleaseOutsideOrCancelFlushesDeferredActionWithoutFreshInput()
+        {
+            // This short landscape profile makes the sheet boundary clamp the action position.
+            // 短横屏产生真实待处理位移；纵屏的首选点可能始终合法，正确 flush 也无需移动。
+            screenOverride = new EditorSceneLoading.P8RReferenceLayoutTests.NativeScreenSize();
+            screenOverride.Resize(new Vector2(640, 480));
+            foreach (var canceled in new[] { false, true })
+            {
+                yield return LoadMainCafe(); var context = CaptureMainCafe(); var touch = AddTouchscreen();
+                try
+                {
+                    yield return EnterByTouch(context, touch, 911);
+                    yield return TapButton(touch, 912, ActiveTiles(context.Catalogue)[0].GetComponent<Button>());
+                    var rotate = FindNamed<Button>(context.Scene, "RotateButton"); var point = ButtonCenter(rotate);
+                    Assert.That(ReadPrivate<Coroutine>(context.Catalogue, "transitionCoroutine"), Is.Not.Null);
+                    var calls = 0; Action counted = () => calls++; context.ActionBar.RotateRequested += counted;
+                    try
+                    {
+                        yield return BeginUiContact(touch, 913, point);
+                        yield return new WaitForSecondsRealtime(.22f);
+                        var held = ButtonCenter(rotate);
+                        Assert.That(ReadPrivate<bool>(context.ActionBar, "hasDeferredPresentation"), Is.True,
+                            "Sheet completion must leave a real deferred presentation while the action is held.");
+                        var outside = point + Vector2.right * 120f;
+                        yield return MoveContact(touch, 913, outside);
+                        if (canceled) yield return Cancel(touch, 913, outside);
+                        else yield return ReleaseUiContact(touch, 913, outside);
+                        yield return null; yield return null; // No new input is queued after terminal delivery.
+                        var idle = ButtonCenter(rotate);
+                        // Read-only presentation oracle: an extra refresh must have no work left after terminal input.
+                        typeof(DecorationModeController).GetMethod("UpdateActionPresentation", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(context.Controller, null);
+                        Assert.That(Vector2.Distance(ButtonCenter(rotate), idle), Is.LessThan(.5f), "Release/cancel must flush the latest deferred layout before idle, without another pointer frame.");
+                        Assert.That(Vector2.Distance(held, idle), Is.GreaterThan(1f), "The fixture must exercise a real sheet-boundary displacement.");
+                        Assert.That(calls, Is.Zero); Assert.That(ActivePreview(context.Controller), Is.Not.Null);
+                        AssertPointerBoundaryClean(ReadPrivate<UiPointerBoundary>(context.Controller, "pointerBoundary"));
+                    }
+                    finally { context.ActionBar.RotateRequested -= counted; }
+                }
+                finally { CleanupTouchscreen(touch); }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator MainCafeRealTouch_ModuleDisableDuringActionHoldClearsPresentationLockAndReentryWorks()
+        {
+            yield return LoadMainCafe(); var context = CaptureMainCafe(); var touch = AddTouchscreen();
+            try
+            {
+                yield return EnterByTouch(context, touch, 921);
+                yield return SelectTileByTouch(context, touch, 922, 0);
+                var rotate = FindNamed<Button>(context.Scene, "RotateButton");
+                var hook = rotate.GetComponent<DecorationPointerBoundaryEventHook>();
+                var recorder = rotate.gameObject.AddComponent<PointerRecorder>();
+                var boundary = ReadPrivate<UiPointerBoundary>(context.Controller, "pointerBoundary");
+                yield return BeginUiContact(touch, 923, ButtonCenter(rotate));
+                Assert.That(hook.HasActivePress, Is.True);
+                var module = context.EventSystem.GetComponent<InputSystemUIInputModule>(); module.enabled = false;
+                var cleared = !hook.HasActivePress;
+                foreach (var id in recorder.CompositePointerIds.Distinct())
+                {
+                    Assert.That(boundary.GetOwnership(id), Is.EqualTo(UiPointerOwnership.Ui), "Presentation-only cleanup must not change registrar ownership.");
+                    boundary.ReleasePointer(id); // Fixture cleanup for the module's documented Exit-without-Up purge.
+                }
+                context.Controller.enabled = false;
+                yield return Cancel(touch, 923, ButtonCenter(rotate));
+                module.enabled = true; context.Controller.enabled = true;
+                yield return EnterByTouch(context, touch, 924);
+                yield return SelectTileByTouch(context, touch, 925, 0);
+                yield return TapButton(touch, 926, FindNamed<Button>(context.Scene, "CancelButton"));
+                Assert.That(cleared, Is.True, "Module terminal purge must clear presentation-only hold even without PointerUp.");
+                Assert.That(ActivePreview(context.Controller), Is.Null);
+                AssertPointerBoundaryClean(ReadPrivate<UiPointerBoundary>(context.Controller, "pointerBoundary"));
+            }
+            finally { CleanupTouchscreen(touch); }
+        }
+
+        [UnityTest]
+        public IEnumerator MainCafeRealTouch_DeviceRemovalDuringActionHoldClearsOnlyPresentationLock()
+        {
+            yield return LoadMainCafe(); var context = CaptureMainCafe(); var touch = AddTouchscreen();
+            try
+            {
+                yield return EnterByTouch(context, touch, 931);
+                yield return SelectTileByTouch(context, touch, 932, 0);
+                var rotate = FindNamed<Button>(context.Scene, "RotateButton");
+                var hook = rotate.GetComponent<DecorationPointerBoundaryEventHook>();
+                var recorder = rotate.gameObject.AddComponent<PointerRecorder>();
+                var boundary = ReadPrivate<UiPointerBoundary>(context.Controller, "pointerBoundary");
+                yield return BeginUiContact(touch, 933, ButtonCenter(rotate));
+                Assert.That(hook.HasActivePress, Is.True);
+                InputSystem.RemoveDevice(touch);
+                activeTouchIds.Clear(); activeTouchPositions.Clear();
+                InputSystem.Update(); yield return null; yield return null;
+                var cleared = !hook.HasActivePress;
+                Assert.That(context.EventSystem.GetComponent<InputSystemUIInputModule>().isActiveAndEnabled, Is.True);
+                foreach (var id in recorder.CompositePointerIds.Distinct())
+                {
+                    Assert.That(boundary.GetOwnership(id), Is.EqualTo(UiPointerOwnership.Ui), "Device purge must not change the existing registrar ownership policy.");
+                    boundary.ReleasePointer(id); // Fixture-only cleanup of Exit-without-Up composite IDs.
+                }
+                context.Controller.enabled = false;
+                Assert.That(cleared, Is.True, "An actual removed device must not leave a presentation hold behind.");
+            }
+            finally { CleanupTouchscreen(touch); }
+        }
+
         private IEnumerator TapButton(Touchscreen device, int touchId, Button button)
         {
             Assert.That(button, Is.Not.Null);
@@ -2106,7 +2347,11 @@ namespace AnimalCafe.Tests.PlayMode
                 button.name + " did not become the actual top actionable target before Touch.");
             var position = ButtonCenter(button);
             yield return BeginUiContact(device, touchId, position);
+            var afterBegan = ButtonCenter(button);
             yield return ReleaseUiContact(device, touchId, position);
+            if (new[] { "RotateButton", "ConfirmButton", "CancelButton", "StoreButton" }.Contains(button.name)
+                && button.GetComponentInParent<DecorationActionBarView>() != null)
+                Assert.That(Vector2.Distance(afterBegan, position), Is.LessThan(.5f), "A settled floating action must not jump under a real Touch Began.");
             // Let production observe Ended, then flush the terminal slot before a fresh UI Touch.
             yield return null;
             InputSystem.Update();
@@ -2309,7 +2554,25 @@ namespace AnimalCafe.Tests.PlayMode
             return context.Camera.WorldToScreenPoint(world);
         }
 
-        private static Vector2 FormalFurnitureScreenPoint(MainCafeContext context, string instanceId)
+        private static Vector2 FindUiFreeDragEnd(MainCafeContext context, Vector2 start)
+        {
+            var viewport = context.Camera.pixelRect;
+            var threshold = context.EventSystem.pixelDragThreshold;
+            for (var y = 1; y < 10; y++)
+            for (var x = 1; x < 10; x++)
+            {
+                var point = new Vector2(
+                    Mathf.Lerp(viewport.xMin, viewport.xMax, x / 10f),
+                    Mathf.Lerp(viewport.yMin, viewport.yMax, y / 10f));
+                if (Vector2.Distance(start, point) > threshold
+                    && TopGraphicAt(context.EventSystem, point) == null) return point;
+            }
+            Assert.Fail("A real UI drag requires an on-screen release outside all UI and beyond the drag threshold.");
+            return default;
+        }
+
+        private static Vector2 FormalFurnitureScreenPoint(
+            MainCafeContext context, string instanceId, bool requireUiFree = false)
         {
             var registry = FindAll<FurnitureSceneRegistry>(context.Scene).Single();
             Assert.That(registry.TryGet(instanceId, out var representation), Is.True,
@@ -2319,11 +2582,33 @@ namespace AnimalCafe.Tests.PlayMode
                 "Formal furniture selection requires its real production Collider.");
             foreach (var collider in colliders)
             {
-                var point = (Vector2)context.Camera.WorldToScreenPoint(collider.bounds.center);
-                var hits = Physics.RaycastAll(context.Camera.ScreenPointToRay(point), Mathf.Infinity,
-                    ~0, QueryTriggerInteraction.Collide);
-                if (hits.Any(hit => hit.collider == collider))
+                var candidates = new List<Vector3> { collider.bounds.center };
+                if (requireUiFree)
                 {
+                    // Sample the real collider bounds without waiting for the rapid transition to finish.
+                    // 快速切换时从当前可见几何选点，不改变 UI，也不延长 transition 测试时序。
+                    var bounds = collider.bounds;
+                    var samples = new[] { .1f, .3f, .5f, .7f, .9f };
+                    foreach (var x in samples)
+                    foreach (var y in samples)
+                    foreach (var z in samples)
+                        candidates.Add(new Vector3(Mathf.Lerp(bounds.min.x, bounds.max.x, x),
+                            Mathf.Lerp(bounds.min.y, bounds.max.y, y), Mathf.Lerp(bounds.min.z, bounds.max.z, z)));
+                }
+                foreach (var candidate in candidates)
+                {
+                    var projected = context.Camera.WorldToScreenPoint(candidate);
+                    var point = (Vector2)projected;
+                    if (requireUiFree && (projected.z <= 0f || !context.Camera.pixelRect.Contains(point)
+                        || TopGraphicAt(context.EventSystem, point) != null)) continue;
+                    var hits = Physics.RaycastAll(context.Camera.ScreenPointToRay(point), Mathf.Infinity,
+                        ~0, QueryTriggerInteraction.Collide);
+                    if (!hits.Any(hit => hit.collider == collider)) continue;
+                    if (requireUiFree)
+                    {
+                        var hit = ((IDecorationTouchHitClassifier)context.Controller).ClassifyBegan(-1, point);
+                        if (hit.Kind != DecorationTouchHitKind.Furniture || hit.FurnitureInstanceId != instanceId) continue;
+                    }
                     return point;
                 }
             }

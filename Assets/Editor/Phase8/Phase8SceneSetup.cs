@@ -77,6 +77,18 @@ namespace AnimalCafe.EditorTools.Phase8
             {
                 if (!wasLoaded)
                     scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
+                // The old authoring command must never silently replace approved P8R copies.
+                // 已严格连接 P8R 时只验证，保留当前 UI；前置 dirty 检查仍然执行。
+                if (scenePath == Phase8AssetPaths.MainCafeScenePath
+                    && AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.GuardLegacy(
+                        FindAll<DecorationModeController>(scene).SingleOrDefault()))
+                {
+                    SceneManager.SetActiveScene(scene);
+                    ValidateCandidate(scenePath);
+                    mayRemoveBackup = true;
+                    Debug.Log("MainCafe uses approved P8R UI. Legacy Phase 8 authoring kept its references unchanged.");
+                    return;
+                }
                 var changed = ConfigureSceneGraph(scene, debugAnchors);
                 SceneManager.SetActiveScene(scene);
                 ValidateCandidate(scenePath);
@@ -243,6 +255,11 @@ namespace AnimalCafe.EditorTools.Phase8
             var controller = FindAll<DecorationModeController>(scene).SingleOrDefault()
                 ?? throw new InvalidOperationException(
                     $"'{scene.path}' must already contain one DecorationModeController.");
+            if (AnimalCafe.EditorTools.P8R.P8RFurnitureUiBuilder.HasAnyP8RWiring(controller))
+            {
+                AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.GuardLegacy(controller);
+                return false;
+            }
             if (FindAll<DecorationModeController>(scene).Length != 1)
             {
                 throw new InvalidOperationException(

@@ -27,8 +27,10 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             SceneManager.SetActiveScene(cleanup);
             if (active.IsValid() && active.isLoaded && active != cleanup)
             {
+                var inputAssets = Phase8SceneInputTestCleanup.CaptureAssets(active);
                 var unload = SceneManager.UnloadSceneAsync(active);
                 while (unload != null && !unload.isDone) yield return null;
+                Phase8SceneInputTestCleanup.DisposeReleasedAssets(inputAssets);
             }
         }
 

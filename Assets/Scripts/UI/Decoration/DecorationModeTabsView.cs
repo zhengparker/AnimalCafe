@@ -8,12 +8,17 @@ namespace AnimalCafe.UI.Decoration
 {
     public sealed class DecorationModeTabsView : MonoBehaviour
     {
+        [SerializeField] private AnimalCafe.UI.P8R.P8RAppearance appearance;
+        [SerializeField] private Sprite categoryIdleSprite;
+        [SerializeField] private Sprite categorySelectedSprite;
+        [SerializeField] private Sprite categoryUnavailableSprite;
         [SerializeField] private Button furnitureButton;
         [SerializeField] private Button floorButton;
         [SerializeField] private Button wallButton;
         [SerializeField] private Button wallDecorButton;
         [SerializeField,Min(1f)] private float activeRaiseOffset=12f;
         private readonly Dictionary<Button,float> inactiveAnchoredY=new Dictionary<Button,float>();
+        private Vector2 lastP8RButtonSize = Vector2.negativeInfinity;
         public event Action<DecorationModeKind> Selected;
         public event Func<DecorationModeKind, bool> ModeRequested;
         public DecorationModeKind ActiveMode { get; private set; } = DecorationModeKind.Furniture;
@@ -43,8 +48,25 @@ namespace AnimalCafe.UI.Decoration
             wallDecorButton?.onClick.AddListener(HandleWallDecorSelected);
             ApplyActiveVisual(DecorationModeKind.Furniture);
         }
-        private void OnEnable()=>ApplyActiveVisual(ActiveMode);
-        private void OnDisable()=>RestoreInactivePositions();
+        private void OnEnable()
+        {
+            lastP8RButtonSize = Vector2.negativeInfinity;
+            ApplyP8RWidth(); ApplyActiveVisual(ActiveMode);
+            if (appearance != null) Canvas.willRenderCanvases += ApplyP8RWidth;
+        }
+        private void OnRectTransformDimensionsChange() => ApplyP8RWidth();
+        private void ApplyP8RWidth()
+        {
+            if (appearance == null || transform is not RectTransform rect || transform.parent is not RectTransform parent) return;
+            // Catalogue owns the row width/position. Tabs only lay out their own icon and label.
+            // 避免两个组件争夺row宽度；同一布局只由一个owner计算。
+            var size = furnitureButton != null ? ((RectTransform)furnitureButton.transform).rect.size : Vector2.zero;
+            if (size == lastP8RButtonSize) return;
+            lastP8RButtonSize = size;
+            foreach (var button in new[] { furnitureButton, floorButton, wallButton, wallDecorButton })
+                AnimalCafe.UI.P8R.P8RButtonLayout.StackedButton(button);
+        }
+        private void OnDisable(){ Canvas.willRenderCanvases -= ApplyP8RWidth; RestoreInactivePositions(); }
         private void OnDestroy()
         {
             furnitureButton?.onClick.RemoveListener(HandleFurnitureSelected);
@@ -59,8 +81,37 @@ namespace AnimalCafe.UI.Decoration
                 if(candidate!=null)
                 {
                     var rect=candidate.transform as RectTransform;if(rect!=null&&!inactiveAnchoredY.ContainsKey(candidate))inactiveAnchoredY[candidate]=rect.anchoredPosition.y;
-                    if(rect!=null&&inactiveAnchoredY.TryGetValue(candidate,out var baseline)){var position=rect.anchoredPosition;position.y=baseline+(candidate==button?activeRaiseOffset:0f);rect.anchoredPosition=position;}
-                    if(candidate.image!=null)candidate.image.color=candidate==button?new Color(.28f,.48f,.34f,1f):new Color(.86f,.82f,.70f,1f);
+                    if(rect!=null&&inactiveAnchoredY.TryGetValue(candidate,out var baseline)){var position=rect.anchoredPosition;position.y=appearance != null ? 0f : baseline+(candidate==button?activeRaiseOffset:0f);rect.anchoredPosition=position;}
+                    if (appearance != null)
+                    {
+                        appearance.Paint(candidate.image, candidate == button ? "tab_selected" : "tab_idle");
+                        // Private category frames keep speed/range controls on their shared B palette.
+                        // 旧 prefab 没有专用引用时，仍安全使用原 tab 底板。
+                        var idle = categoryIdleSprite != null ? categoryIdleSprite : appearance.Sprite("tab_idle");
+                        var selected = categorySelectedSprite != null ? categorySelectedSprite : appearance.Sprite("tab_selected");
+                        var unavailable = categoryUnavailableSprite != null ? categoryUnavailableSprite : appearance.Sprite("tab_unavailable");
+                        candidate.image.sprite = candidate == button ? selected : idle;
+                        candidate.transition = Selectable.Transition.SpriteSwap;
+                        candidate.spriteState = new SpriteState { pressedSprite = selected,
+                            selectedSprite = selected, disabledSprite = unavailable };
+                        candidate.image.canvasRenderer.SetColor(Color.white);
+                        foreach (var label in candidate.GetComponentsInChildren<TMPro.TMP_Text>(true))
+                            appearance.Typography(label, candidate == button);
+                        var underline = candidate.transform.Find("SelectedUnderline");
+                    if (underline != null) underline.gameObject.SetActive(false);
+                        // Rebind existing scene overrides as well; tab state changes only the face, not artwork tint.
+                        // 已有场景实例也从同一 Appearance 取图；禁用态仍保留原图颜色。
+                        var action = candidate == furnitureButton ? "furniture" : candidate == floorButton ? "floor"
+                            : candidate == wallButton ? "wall" : "wall_decor";
+                        var icon = candidate.transform.Find("Icon")?.GetComponent<Image>();
+                        if (icon != null)
+                        {
+                            appearance.Paint(icon, action + "_cocoa", false);
+                            icon.canvasRenderer.SetColor(Color.white);
+                        }
+                        AnimalCafe.UI.P8R.P8RButtonLayout.StackedButton(candidate);
+                    }
+                    else if(candidate.image!=null)candidate.image.color=candidate==button?new Color(.28f,.48f,.34f,1f):new Color(.86f,.82f,.70f,1f);
                 }
             if (button != null) button.transform.SetSiblingIndex(transform.childCount - 1);
         }

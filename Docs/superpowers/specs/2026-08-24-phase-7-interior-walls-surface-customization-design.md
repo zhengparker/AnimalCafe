@@ -6,6 +6,8 @@
 >
 > 本文档记录 Studio Owner 已批准的 Phase 7 设计。Implementation 必须先遵循对应 implementation plan 与 TDD gate，不得静默扩展 scope。
 
+> 本轮 Preview 外观与墙面悬浮补充的 Studio Owner manual acceptance：`Pending`；不改写原 Phase 7 验收记录。
+
 ## 1. Goal
 
 在固定墙体结构中扩展现有 `Decoration Mode`，让玩家能够：
@@ -85,8 +87,8 @@ Surface 没有数量限制。Surface 卡片以 swatch 本身为主要内容，�
 ### 2.4 Preview 与 Tab switching
 
 - 系统一次只允许一个 active Preview transaction。
-- 有尚未 Confirm 的 Preview 时切换 Mode Tab，玩家必须先 `Confirm` 或 `Cancel`。
-- 系统不自动保存，也不因切换 Tab 静默丢弃 Preview。
+- 2026-09-12 P8R follow-up：有尚未 Confirm 的 Preview 时，可以直接切换到另一个 Mode Tab；系统先完整 Cancel 当前 Preview，再打开目标分类，不自动 Confirm 或保存。已确认 Layout 不变。
+- 重复点击当前 Tab 保留 Preview、target 和 Catalogue 状态；Store / Exit 确认弹窗仍独占输入。跨 Tab 取消会停止旧拖拽，旧 pointer 的后续移动／抬手不能在新分类继续编辑。
 - 普通点击当前 Mode 不支持的 Scene object 不会切换 Mode，也不会打断 Preview。
 - 每次新进入 Decoration Mode 默认打开 `Furniture`；同一次 Decoration Mode 内记住当前 Tab，退出后不跨 session 保存。
 - 有 active Preview 时尝试退出 Decoration Mode，显示 `Continue Editing / Discard Changes` confirmation；绝不自动 Confirm。
@@ -148,7 +150,7 @@ Wall geometry
 - 玩家可以分别修改 Back-left 与 Back-right Wall。
 - 进入 Wall Tab 后先在 Scene 点击目标墙；目标墙显示 selection highlight，Catalogue 的绿色 Using check 反映当前目标墙的 confirmed styles。
 - 只选中目标、尚未产生修改时，可以直接点击另一面墙切换 target。
-- 当前墙已有未确认修改时锁定 target；点击另一面墙或切换 Mode 必须先 Confirm 或 Cancel，不能静默切换或丢弃 Preview。
+- 当前墙已有未确认修改时仍锁定墙 target；点击另一面墙必须先 Confirm 或 Cancel。切到其他 Mode Tab 按 2.4 的新版规则取消当前 Preview，不提交墙面修改。
 - Wall Mode 不提供 `Apply All`；一次 Wall transaction 只修改当前明确选中的一面 wall segment。
 
 ### 3.3 Wall Preview transaction
@@ -287,7 +289,7 @@ Studio Owner 制作：
 - 新物品 Confirm 后 Catalogue 保持 `Compact Preview`，刚提交的物品必须在下一次 tap 立即可选；不要求先切换 Mode 或点击其他区域刷新。
 - Preview 可以从一面墙直接拖到另一面墙；pointer 经过墙角或无有效 Slot 区域时显示 Invalid。
 - 最终 Confirm 时 object 必须完整位于同一面墙，不能横跨墙角。
-- Preview ghost 的姿态由 confirmed target wall 的 local axes 决定：它必须垂直于地面、正面平行墙面，并沿墙面法线向房间轻微悬浮；不得平躺或吸附在 Floor plane。
+- Preview ghost 的姿态由 confirmed target wall 的 local axes 决定：它必须垂直于地面、正面平行墙面；以正式贴墙位置为基准，沿 `-wall.forward` 向室内额外悬浮 `0.20 m`。只改变墙面法线方向的 Preview offset，底部高度与实际 Wall Slot footprint 不变；不得平躺或吸附在 Floor plane。Confirm 后恢复 Base Wall Surface 原有的 `1 mm` contact offset。
 - ghost 使用对应 Catalogue entry 的真实 prefab renderer；五个首批 Wall Decor / Window prefabs 都必须验证 visible renderer bounds、墙面朝向与 footprint 对齐。
 
 ## 7. Placement feedback
@@ -295,7 +297,7 @@ Studio Owner 制作：
 - Wall Decor / Window Preview 投影显示在目标墙面上。
 - Valid 使用绿色 Wall Footprint projection 与中央绿色 `✓`；Confirm 可用。
 - Invalid 使用红色 Wall Footprint projection 与中央红色 `×`；Confirm disabled。
-- Footprint projection 始终位于当前可见 Wall/Wainscoting/rail/baseboard 的最外侧，仅 projection 前移；真实 prefab ghost 与 confirmed item 仍贴紧 Base Wall Surface。这样绿色/红色不因被墙饰遮挡而忽深忽浅，也不会让模型整体悬浮。
+- Footprint projection 始终位于当前可见 Wall/Wainscoting/rail/baseboard 的最外侧，维持原有饰条避让平面，不随 ghost 的 `20 cm` 悬浮移动；实际 Wall Slot 占格保持不变。Confirmed item 仍保持 Base Wall Surface 原有的 `1 mm` contact offset。这样绿色/红色不因被墙饰遮挡而忽深忽浅。
 - Surface footer / Wall Decor actions 区域上方显示具体 Invalid reason，例如 `Overlaps another wall item`、`Outside wall bounds` 或 `Cannot cross wall corner`。
 - Valid / Invalid 同时使用颜色、icon shape 与文字 reason，不只依赖色相。
 - Surface Preview 只改变 appearance，不影响 attachment、occupancy 或 Navigation。

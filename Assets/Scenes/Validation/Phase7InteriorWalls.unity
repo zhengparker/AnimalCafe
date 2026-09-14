@@ -2248,6 +2248,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 188fea80fe5d45ab8219de2b40c599f4, type: 3}
   m_Name:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Decoration.DecorationFloorRangeView
+  appearance: {fileID: 0}
   wholeRoomButton: {fileID: 1896358740}
   singleGridButton: {fileID: 1726784371}
 --- !u!1 &799590496
@@ -3214,6 +3215,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ea6081061b352bf4abaeae4b96df8f2c, type: 3}
   m_Name:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.TimeControlPanel
+  appearance: {fileID: 0}
+  modeBadgeLabel: {fileID: 0}
   gameTimeService: {fileID: 182183930}
   pauseButton: {fileID: 81189963}
   normalButton: {fileID: 1206651199}
@@ -4878,9 +4881,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd3cd1b16b2cf2747856877782eabba6, type: 3}
   m_Name:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Decoration.DecorationModeController
+  p8rAppearance: {fileID: 0}
   layoutRuntime: {fileID: 1772319706}
   contentCatalog: {fileID: 11400000, guid: f5a3ceba61ecaf949aa330a98e4df68f, type: 2}
   catalogueAsset: {fileID: 11400000, guid: f3e6bd456ce1cea46821a7f42a21c32a, type: 2}
+  phase8FurnitureCatalogueAsset: {fileID: 0}
   floorStyleCatalogue: {fileID: 11400000, guid: 816d3c1338e9ca547a895e0bad58466f, type: 2}
   wallpaperStyleCatalogue: {fileID: 11400000, guid: f38a16ffc36b6e842b5e357b1cafc792, type: 2}
   paintStyleCatalogue: {fileID: 11400000, guid: d66fb355f76978e47824a8c7d20f7de5, type: 2}
@@ -4906,6 +4911,20 @@ MonoBehaviour:
   previewView: {fileID: 1772319703}
   gridView: {fileID: 1772319702}
   cameraDriver: {fileID: 1772319700}
+  surfaceMountedSceneRegistry: {fileID: 0}
+  surfaceMountedPreviewView: {fileID: 0}
+  pickUpPointIndicatorView: {fileID: 0}
+  validationMessageView: {fileID: 0}
+  surfaceMountedRepresentationRoot: {fileID: 0}
+  functionalSurfacePreviewRoot: {fileID: 0}
+  pickUpPointIndicatorRoot: {fileID: 0}
+  functionalSurfacePreviewPrefab: {fileID: 0}
+  pickUpPointIndicatorPrefab: {fileID: 0}
+  interactionAnchorDebugView: {fileID: 0}
+  interactionAnchorDebugRoot: {fileID: 0}
+  employeeAnchorDebugMaterial: {fileID: 0}
+  customerAnchorDebugMaterial: {fileID: 0}
+  interactionAnchorDebugVisible: 0
   catalogueView: {fileID: 376363945}
   actionBarView: {fileID: 1074844111}
   storeModalView: {fileID: 899853797}

@@ -15,6 +15,44 @@ namespace AnimalCafe.Tests.EditMode.Phase8
 {
     public sealed class Phase8AssetBuilderTests
     {
+        [Test]
+        public void ReviewFix_BuildAssetsRejectsUnrelatedDirtyMaterialWithoutSavingIt()
+        {
+            var folder = "Assets/Phase8ReviewDirty_" + System.Guid.NewGuid().ToString("N");
+            AssetDatabase.CreateFolder("Assets", Path.GetFileName(folder));
+            var path = folder + "/Unrelated.mat";
+            try
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Lit");
+                Assert.That(shader, Is.Not.Null);
+                var material = new Material(shader) { name = "Unrelated", color = Color.white };
+                AssetDatabase.CreateAsset(material, path);
+                AssetDatabase.SaveAssetIfDirty(material);
+                var savedAsset = File.ReadAllBytes(path);
+                var savedMeta = File.ReadAllBytes(path + ".meta");
+                material.color = Color.magenta;
+                EditorUtility.SetDirty(material);
+
+                var failure = Assert.Throws<System.InvalidOperationException>(() =>
+                    Phase8AssetBuilder.BuildAssets());
+
+                Assert.That(failure.Message, Does.Contain("dirty").IgnoreCase);
+                Assert.That(failure.Message, Does.Contain(path));
+                Assert.That(material, Is.Not.Null);
+                Assert.That(EditorUtility.IsDirty(material), Is.True,
+                    "拒绝构建不能替用户保存或撤销无关的未保存编辑。");
+                Assert.That(material.color, Is.EqualTo(Color.magenta));
+                Assert.That(File.ReadAllBytes(path), Is.EqualTo(savedAsset));
+                Assert.That(File.ReadAllBytes(path + ".meta"), Is.EqualTo(savedMeta));
+            }
+            finally
+            {
+                // This GUID folder belongs only to this test, even on the expected RED path.
+                // 只清理本测试创建的临时资源，绝不使用全局 SaveAssets。
+                AssetDatabase.DeleteAsset(folder);
+            }
+        }
+
         [TestCase("builder", nameof(Phase8AssetBuilder.BuildAssets),
             "Tools/AnimalCafe/Phase 8/Build Assets")]
         [TestCase("setup", nameof(Phase8SceneSetup.ConfigureValidationScene),
@@ -189,8 +227,9 @@ namespace AnimalCafe.Tests.EditMode.Phase8
                 Is.EqualTo(meshId), "Existing mesh subasset references must survive authoring.");
             Assert.That(AssetDatabase.LoadAllAssetsAtPath(path).OfType<Mesh>().Count(),
                 Is.EqualTo(1), "Repeated authoring must not accumulate mesh subassets.");
-            Assert.That(rebuiltMesh.bounds.size.x, Is.EqualTo(.28f).Within(.001f));
-            Assert.That(rebuiltMesh.bounds.size.y, Is.EqualTo(.5f).Within(.001f));
+            Assert.That(rebuiltMesh.bounds.size.x, Is.InRange(.4f, .65f));
+            Assert.That(rebuiltMesh.bounds.size.y, Is.EqualTo(.56f).Within(.001f));
+            Assert.That(rebuiltMesh.vertexCount, Is.EqualTo(4));
             Assert.That(rebuiltFootprint.GetComponent<MeshFilter>().sharedMesh,
                 Is.SameAs(footprintMesh));
             Assert.That(rebuiltFootprint.GetComponent<Renderer>().sharedMaterial,
@@ -199,8 +238,10 @@ namespace AnimalCafe.Tests.EditMode.Phase8
             Assert.That(rebuiltFootprint.localScale, Is.EqualTo(footprintScale));
             Assert.That(AssetDatabase.GetAssetPath(rebuiltMaterial), Is.EqualTo(materialPath));
             Assert.That(AssetDatabase.AssetPathToGUID(materialPath), Is.EqualTo(materialGuid));
-            Assert.That(rebuiltMaterial.shader.name, Is.EqualTo("Universal Render Pipeline/Lit"));
-            Assert.That(rebuiltMaterial.GetFloat("_Surface"), Is.Zero);
+            Assert.That(rebuiltMaterial.shader.name, Is.EqualTo("Universal Render Pipeline/Unlit"));
+            Assert.That(rebuiltMaterial.GetFloat("_Surface"), Is.EqualTo(1));
+            Assert.That(AssetDatabase.GetAssetPath(rebuiltMaterial.GetTexture("_BaseMap")),
+                Is.EqualTo("Assets/UI/P8R/WorldMarkers/pickup_point.png"));
             for (var index = 0; index < protectedPaths.Length; index++)
             {
                 Assert.That(File.ReadAllBytes(protectedPaths[index]),

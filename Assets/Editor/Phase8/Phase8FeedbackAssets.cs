@@ -18,6 +18,19 @@ namespace AnimalCafe.EditorTools.Phase8
     {
         private const string SourceFontPath = "Assets/UI/Phase5/Fonts/NotoSansSC-Regular.otf";
 
+        // A bounded authoring entry point: update only the P8 font, never rebuild Scenes or Prefabs.
+        // 仅更新 P8 字库；不重建 Scene、Prefab，也不保存其他 dirty assets。
+        public static void RefreshEditingFeedbackFont()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("Exit Play Mode before updating the P8 font.");
+            var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(Phase8AssetPaths.UiFontPath);
+            if (font != null && AssetDatabase.LoadAllAssetsAtPath(Phase8AssetPaths.UiFontPath).Any(EditorUtility.IsDirty))
+                throw new InvalidOperationException("Save or discard your P8 font edits before refreshing glyphs.");
+            EnsureFont();
+            Debug.Log("P8 editing feedback font refreshed; no Scene or Prefab was rebuilt.");
+        }
+
         public static TMP_FontAsset EnsureFont()
         {
             var required = RequiredCharacters();
@@ -95,7 +108,15 @@ namespace AnimalCafe.EditorTools.Phase8
                 "Assets/UI/Phase6/Fonts/NotoSansSC-Phase6 SDF.asset");
             var legacyCharacters = legacy == null ? string.Empty : string.Concat(legacy.characterTable
                 .Select(character => char.ConvertFromUtf32((int)character.unicode)));
-            var text = legacyCharacters + string.Join(" ", functional.Concat(readiness).Concat(floor))
+            var wall = Enum.GetValues(typeof(WallPlacementFailureReason)).Cast<WallPlacementFailureReason>()
+                .Select(reason => PlacementFeedbackMapper.GetPlayerMessage(reason == WallPlacementFailureReason.None
+                    ? WallPlacementResult.Success() : WallPlacementResult.Failure(reason)));
+            var editing = PlacementFeedbackMapper.GetEditingMessage("地板墙面墙饰家具", PlacementFeedbackMapper.ValidEditingPosition)
+                + PlacementFeedbackMapper.FinishEditingFirst + PlacementFeedbackMapper.ReturnToEditing
+                + PlacementFeedbackMapper.ChooseSurfaceStyle + PlacementFeedbackMapper.SurfaceChangesReady
+                + "已确认布局：已就绪还需调整"
+                + "继续添加查看详情收起详情提醒阻挡整个房间逐格涂抹已改格撤销仅影响本次预览取消可放弃铺满整个房间撤销上一步确认本次修改";
+            var text = legacyCharacters + editing + string.Join(" ", functional.Concat(readiness).Concat(floor).Concat(wall))
                 + "布局已准备好，可以营业但暂时不能营业 收银机 咖啡机 取餐点 员工 客人 Employee Customer 承托 设备 位置 格子（）【】：，。"
                 + new string(Enumerable.Range(32, 95).Select(value => (char)value).ToArray());
             return new string(text.Where(c => !char.IsControl(c)).Distinct().OrderBy(c => c).ToArray());
@@ -123,6 +144,8 @@ namespace AnimalCafe.EditorTools.Phase8
 
         public static bool ConfigureMessageView(ValidationMessageView view)
         {
+            var controller = view.gameObject.scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<DecorationModeController>(true)).SingleOrDefault();
+            if (AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.GuardLegacy(controller)) return false;
             var before = Capture(view);
             var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(Phase8AssetPaths.UiFontPath)
                 ?? throw new InvalidOperationException("Run Phase 8 / Build Assets before configuring feedback.");

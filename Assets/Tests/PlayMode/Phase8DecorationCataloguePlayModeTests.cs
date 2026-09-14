@@ -535,6 +535,233 @@ namespace AnimalCafe.Tests.PlayMode
             button.onClick.Invoke();
         }
 
+        [Test]
+        public void RuntimeReturnToEditing_RebindsOwnershipOnce_AndRestoresViewportWhenPreviewEnds()
+        {
+            var fixture = CreateRuntimeCatalogueFixture();
+            var scrollObject = RuntimeUiObject("VerticalScroll", fixture.Root.transform);
+            var scroll = scrollObject.AddComponent<ScrollRect>();
+            var scrollRect = (RectTransform)scrollObject.transform;
+            var originalOffset = new Vector2(-17, -29);
+            scrollRect.offsetMax = originalOffset;
+            SetField(fixture.View, "verticalScroll", scroll);
+            var oldBoundary = new UiPointerBoundary();
+            var boundary = new UiPointerBoundary();
+            var requests = 0;
+            fixture.View.ReturnToEditingRequested += () => requests++;
+            fixture.View.Configure(oldBoundary, new UiTransitionRunner(() => true));
+            fixture.View.SetEditingContext("正在编辑：取餐点 · 尚未确认\n位置有效，可以确认", true);
+            fixture.View.Configure(boundary, new UiTransitionRunner(() => true));
+            fixture.View.Configure(boundary, new UiTransitionRunner(() => true));
+            fixture.View.ShowCatalogue();
+            var button = fixture.View.GetComponentsInChildren<Button>(true).Single(item => item.name == "ReturnToEditing");
+            var hook = button.GetComponent<DecorationPointerBoundaryEventHook>();
+            var pointer = new PointerEventData(null) { pointerId = 803 };
+            hook.OnPointerDown(pointer);
+            Assert.That(oldBoundary.CanProcessScenePointer(803), Is.True);
+            Assert.That(boundary.CanProcessScenePointer(803), Is.False);
+            hook.OnPointerUp(pointer);
+            Click(button, hook, boundary, 804);
+            Assert.That(requests, Is.EqualTo(1));
+            Assert.That(scrollRect.offsetMax.y, Is.LessThan(originalOffset.y));
+            fixture.View.SetEditingContext("正在编辑：地板 · 尚未确认\n请选择样式", false);
+            Assert.That(button.gameObject.activeSelf, Is.False, "Surface style browsing remains inline, with no forced Return.");
+            fixture.View.SetEditingContext(null, false);
+            Assert.That(scrollRect.offsetMax, Is.EqualTo(originalOffset));
+            button.onClick.Invoke();
+            Assert.That(requests, Is.EqualTo(1), "Cleared context must not react to a stale callback.");
+        }
+
+        [UnityTest]
+        public IEnumerator BrowsingMemory_RestoresEachTabAndCategoryAfterRowsChangeOrder()
+        {
+            var fixture = CreateScrollingCatalogueFixture();
+            BindBrowsingTab(fixture.View, "Furniture", BrowsingCategories("chairs", "tables"));
+            SetBrowsingGeometry(fixture.View);
+            yield return null;
+            fixture.View.VerticalScroll.verticalNormalizedPosition = .3f;
+            BrowsingRow(fixture.View, "chairs").horizontalNormalizedPosition = .7f;
+            BrowsingRow(fixture.View, "tables").horizontalNormalizedPosition = .2f;
+            BindBrowsingTab(fixture.View, "Wall", BrowsingCategories("chairs", "paint"));
+            SetBrowsingGeometry(fixture.View);
+            yield return null;
+            fixture.View.VerticalScroll.verticalNormalizedPosition = .8f;
+            BrowsingRow(fixture.View, "chairs").horizontalNormalizedPosition = .4f;
+
+            BindBrowsingTab(fixture.View, "Furniture", BrowsingCategories("tables", "chairs"));
+            SetBrowsingGeometry(fixture.View);
+            yield return null;
+            Assert.That(fixture.View.VerticalScroll.verticalNormalizedPosition, Is.EqualTo(.3f).Within(.002f));
+            Assert.That(BrowsingRow(fixture.View, "chairs").horizontalNormalizedPosition, Is.EqualTo(.7f).Within(.002f),
+                "The saved row belongs to CategoryId, not its current list index.");
+            Assert.That(BrowsingRow(fixture.View, "tables").horizontalNormalizedPosition, Is.EqualTo(.2f).Within(.002f));
+            BindBrowsingTab(fixture.View, "Wall", BrowsingCategories("paint", "chairs"));
+            SetBrowsingGeometry(fixture.View);
+            yield return null;
+            Assert.That(fixture.View.VerticalScroll.verticalNormalizedPosition, Is.EqualTo(.8f).Within(.002f));
+            Assert.That(BrowsingRow(fixture.View, "chairs").horizontalNormalizedPosition, Is.EqualTo(.4f).Within(.002f),
+                "Matching CategoryIds in different tabs must not overwrite each other.");
+        }
+
+        [UnityTest]
+        public IEnumerator BrowsingMemory_ClampsElasticOverscrollAfterReplacementLayoutSettles()
+        {
+            var fixture = CreateScrollingCatalogueFixture();
+            BindBrowsingTab(fixture.View, "Furniture", BrowsingCategories("chairs"));
+            SetBrowsingGeometry(fixture.View);
+            yield return null;
+            fixture.View.VerticalScroll.verticalNormalizedPosition = -.2f;
+            BrowsingRow(fixture.View, "chairs").horizontalNormalizedPosition = 1.25f;
+            BindBrowsingTab(fixture.View, "Wall", BrowsingCategories("paint"));
+            SetBrowsingGeometry(fixture.View);
+            yield return null;
+            BindBrowsingTab(fixture.View, "Furniture", BrowsingCategories("chairs"));
+            // Simulate smaller content from the next Canvas layout pass; clamp elastic overscroll.
+            // 重建后内容变短；只恢复合法范围，不把弹性越界带回新列表。
+            SetBrowsingGeometry(fixture.View, 600f, 650f);
+            yield return null;
+            Assert.That(fixture.View.VerticalScroll.verticalNormalizedPosition, Is.EqualTo(0f).Within(.002f));
+            Assert.That(BrowsingRow(fixture.View, "chairs").horizontalNormalizedPosition, Is.EqualTo(1f).Within(.002f));
+            Assert.That(fixture.View.VerticalScroll.velocity, Is.EqualTo(Vector2.zero));
+            Assert.That(BrowsingRow(fixture.View, "chairs").velocity, Is.EqualTo(Vector2.zero));
+        }
+
+        [UnityTest]
+        public IEnumerator BrowsingMemory_NewSessionResetsCurrentPositionAndCannotRecapturePreviousTab()
+        {
+            var fixture = CreateScrollingCatalogueFixture();
+            BindBrowsingTab(fixture.View, "Furniture", BrowsingCategories("chairs"));
+            SetBrowsingGeometry(fixture.View);
+            yield return null;
+            fixture.View.VerticalScroll.verticalNormalizedPosition = .25f;
+            BrowsingRow(fixture.View, "chairs").horizontalNormalizedPosition = .65f;
+            ResetBrowsingSession(fixture.View);
+            Assert.That(fixture.View.VerticalScroll.verticalNormalizedPosition, Is.EqualTo(1f).Within(.002f));
+            Assert.That(BrowsingRow(fixture.View, "chairs").horizontalNormalizedPosition, Is.EqualTo(0f).Within(.002f));
+            BindBrowsingTab(fixture.View, "Wall", BrowsingCategories("paint"));
+            SetBrowsingGeometry(fixture.View);
+            yield return null;
+            BindBrowsingTab(fixture.View, "Furniture", BrowsingCategories("chairs"));
+            SetBrowsingGeometry(fixture.View);
+            yield return null;
+            Assert.That(fixture.View.VerticalScroll.verticalNormalizedPosition, Is.EqualTo(1f).Within(.002f));
+            Assert.That(BrowsingRow(fixture.View, "chairs").horizontalNormalizedPosition, Is.EqualTo(0f).Within(.002f));
+        }
+
+        [Test]
+        public void BrowsingMemory_SwitchingTabEndsNestedDragAndStopsOutgoingScrollInertia()
+        {
+            var fixture = CreateScrollingCatalogueFixture();
+            BindBrowsingTab(fixture.View, "Furniture", BrowsingCategories("chairs"));
+            SetBrowsingGeometry(fixture.View);
+            var outgoingRow = BrowsingRow(fixture.View, "chairs");
+            fixture.View.BeginNestedDrag(outgoingRow);
+            Assert.That(fixture.View.UpdateNestedDrag(new Vector2(2f, 30f)), Is.EqualTo("Vertical"));
+            outgoingRow.velocity = new Vector2(120f, 0f);
+            fixture.View.VerticalScroll.velocity = new Vector2(0f, 90f);
+            BindBrowsingTab(fixture.View, "Wall", BrowsingCategories("paint"));
+            Assert.That(fixture.View.NestedDragOwner, Is.Null);
+            Assert.That(fixture.View.IsSceneDragBlocked, Is.False);
+            Assert.That(outgoingRow.horizontal, Is.True);
+            Assert.That(outgoingRow.velocity, Is.EqualTo(Vector2.zero), "A replaced row must not retain a fling.");
+            Assert.That(fixture.View.VerticalScroll.velocity, Is.EqualTo(Vector2.zero));
+        }
+
+        [Test]
+        public void CollapsedHandle_OffersContinueAddingOnlyWhenPreviewHasEndedAndExpandsOnlyOnClick()
+        {
+            var fixture = CreateRuntimeCatalogueFixture();
+            var collapsed = Reference<GameObject>(fixture.View, "collapsedRoot");
+            var handle = CreateRuntimeButton("CatalogueHandle", collapsed.transform);
+            var label = RuntimeUiObject("Label", handle.transform).AddComponent<TextMeshProUGUI>();
+            label.text = "Catalogue";
+            var icon = RuntimeUiObject("Icon", handle.transform).AddComponent<Image>();
+            icon.sprite = CreateSprite("ExistingHandleIcon");
+            var originalIcon = icon.sprite;
+            var originalSize = ((RectTransform)handle.transform).sizeDelta;
+            SetField(fixture.View, "collapsedHandleButton", handle);
+            fixture.View.Configure(new UiPointerBoundary(), new UiTransitionRunner(() => true));
+            fixture.View.ShowCatalogue();
+            fixture.View.SetEditingContext("正在编辑：椅子 · 尚未确认", true);
+            // Match the Controller Preview-begin path: collapse the Catalogue state, then its Sheet presentation.
+            // Controller 先收起 Catalogue，再切换 Sheet；SetSheetState 本身不更新 Catalogue State。
+            fixture.View.ShowCollapsedHandle();
+            fixture.View.SetSheetState(DecorationSheetState.CompactPreview, hasActivePreview: true);
+            Assert.That(label.text, Is.EqualTo("Catalogue"));
+            fixture.View.SetEditingContext(null, false);
+            fixture.View.SetSheetState(DecorationSheetState.CompactPreview, hasActivePreview: false);
+            Assert.That(label.text, Is.EqualTo("继续添加"));
+            Assert.That(fixture.View.State, Is.EqualTo(DecorationCatalogueState.Collapsed),
+                "Finishing a Preview must not open the Catalogue automatically.");
+            Assert.That(icon.sprite, Is.SameAs(originalIcon));
+            Assert.That(((RectTransform)handle.transform).sizeDelta, Is.EqualTo(originalSize));
+            handle.onClick.Invoke();
+            Assert.That(fixture.View.State, Is.EqualTo(DecorationCatalogueState.Expanded));
+            fixture.View.SetEditingContext("正在编辑：椅子 · 尚未确认", true);
+            fixture.View.ShowCollapsedHandle();
+            Assert.That(label.text, Is.EqualTo("Catalogue"), "A later Preview must restore the browsing label.");
+        }
+
+        private RuntimeCatalogueFixture CreateScrollingCatalogueFixture()
+        {
+            var fixture = CreateRuntimeCatalogueFixture();
+            var expanded = Reference<GameObject>(fixture.View, "expandedRoot");
+            var viewport = RuntimeUiObject("BrowsingViewport", expanded.transform).GetComponent<RectTransform>();
+            SetTopLeftRect(viewport, 300f, 320f);
+            var scroll = viewport.gameObject.AddComponent<ScrollRect>();
+            scroll.viewport = viewport;
+            scroll.content = fixture.CategoryContent;
+            scroll.movementType = ScrollRect.MovementType.Elastic;
+            fixture.CategoryContent.SetParent(viewport, false);
+            SetField(fixture.View, "verticalScroll", scroll);
+            fixture.View.Configure(new UiPointerBoundary(), new UiTransitionRunner(() => true));
+            fixture.View.ShowCatalogue();
+            return fixture;
+        }
+
+        private static DecorationCategoryModel[] BrowsingCategories(params string[] categoryIds)
+        {
+            return categoryIds.Select(id => new DecorationCategoryModel(
+                id, id, Array.Empty<DecorationCatalogueItemModel>())).ToArray();
+        }
+
+        private static ScrollRect BrowsingRow(DecorationCatalogueView view, string categoryId)
+        {
+            return view.CategoryRows.Single(row => row.HorizontalScroll.name == "CategoryRow_" + categoryId).HorizontalScroll;
+        }
+
+        private static void SetBrowsingGeometry(DecorationCatalogueView view, float contentHeight = 900f, float rowWidth = 1200f)
+        {
+            SetTopLeftRect(view.VerticalScroll.content, 300f, contentHeight);
+            foreach (var row in view.CategoryRows)
+            {
+                var scroll = row.HorizontalScroll;
+                SetTopLeftRect((RectTransform)scroll.transform, 300f, 128f);
+                SetTopLeftRect(scroll.viewport, 300f, 128f);
+                // Fixture geometry is input; real ScrollRects calculate bounds and normalized positions.
+                scroll.content.GetComponent<HorizontalLayoutGroup>().enabled = false;
+                SetTopLeftRect(scroll.content, rowWidth, 128f);
+            }
+        }
+
+        private static void SetTopLeftRect(RectTransform rect, float width, float height)
+        {
+            rect.anchorMin = rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0f, 1f);
+            rect.sizeDelta = new Vector2(width, height);
+            rect.anchoredPosition = Vector2.zero;
+        }
+
+        private static void BindBrowsingTab(DecorationCatalogueView view, string key, IReadOnlyList<DecorationCategoryModel> categories)
+        {
+            view.BindCategories(key, categories, _ => { });
+        }
+
+        private static void ResetBrowsingSession(DecorationCatalogueView view)
+        {
+            view.ResetBrowsingMemory();
+        }
+
         private static string RowLabel(Transform row)
         {
             return row.Find("CategoryLabel")?.GetComponent<TMP_Text>()?.text;

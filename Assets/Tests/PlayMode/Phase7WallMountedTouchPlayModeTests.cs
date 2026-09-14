@@ -292,7 +292,7 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [Test]
-        public void Controller_RealSurfaceSessionOwnsGlobalGate_FloorTapBeginsPreview_AndUnchangedWallTargetCanRetarget()
+        public void Controller_FloorTapBeginsPreview_UnsupportedSceneHitsPreserveIt_AndUnchangedWallTargetCanRetarget()
         {
             var go = new GameObject("Task8RealSurfaceIntegration");
             var owned = new List<UnityEngine.Object>();
@@ -321,7 +321,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(controller.ActiveSurfacePreview, Is.Not.Null);
                 Assert.That(controller.ActiveSurfacePreview.Scope, Is.EqualTo(SurfaceEditScope.SingleGridFloor));
                 Assert.That(controller.ActiveSurfacePreview.SelectedFloorPosition, Is.EqualTo(new GridPosition(2, 3)));
-                Assert.That(controller.TryChangeMode(DecorationModeKind.Wall), Is.False);
+                Assert.That(controller.TryChangeMode(DecorationModeKind.Floor), Is.True);
                 var unsupportedRouter = new DecorationTouchRouter(8f, 0f);
                 var unsupportedClassifier = new FixedClassifier(new DecorationTouchHit(
                     DecorationTouchHitKind.WallSurface,
@@ -414,7 +414,8 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(Vector3.Distance(
                     projectionView.CurrentGhost.transform.position,
                     projectionView.CurrentProjection.transform.position
-                        - leftWall.transform.up * (definition.Footprint.Height * leftWall.SlotSize * .5f)),
+                        - leftWall.transform.up * (definition.Footprint.Height * leftWall.SlotSize * .5f)
+                        - leftWall.transform.forward * .2f),
                     Is.LessThan(.0001f));
 
                 Assert.That(controller.TryHandleSceneDrag(new DecorationTouchHit(
@@ -436,7 +437,8 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(Vector3.Distance(
                     projectionView.CurrentGhost.transform.position,
                     projectionView.CurrentProjection.transform.position
-                        - rightWall.transform.up * (definition.Footprint.Height * rightWall.SlotSize * .5f)),
+                        - rightWall.transform.up * (definition.Footprint.Height * rightWall.SlotSize * .5f)
+                        - rightWall.transform.forward * .2f),
                     Is.LessThan(.0001f));
 
                 Assert.That(controller.TryHandleSceneDrag(new DecorationTouchHit(
@@ -473,6 +475,11 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(mountedRegistry.TryGet(
                     confirmedInstance.InstanceId,
                     out var confirmedRepresentation), Is.True);
+                Assert.That(Vector3.Dot(
+                        previewRootPosition - confirmedRepresentation.transform.position,
+                        -rightWall.transform.forward),
+                    Is.EqualTo(.2f).Within(.0001f),
+                    "Confirm removes only the temporary 20 cm outward Preview hover.");
                 Assert.That(Mathf.Abs(Vector3.Dot(
                         previewRootPosition - confirmedRepresentation.transform.position,
                         rightWall.transform.up)),
@@ -536,7 +543,7 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [Test]
-        public void Controller_OptionalUiWiringBlocksTabsAndRangeDuringPreview_ContinuePreserves_DiscardCancels()
+        public void Controller_OptionalUiWiringKeepsRangeGuard_ContinuePreserves_DiscardCancels()
         {
             var controllerRoot = new GameObject("Task8UiController");
             var uiRoot = new GameObject("Task8Ui", typeof(RectTransform));
@@ -594,7 +601,7 @@ namespace AnimalCafe.Tests.PlayMode
                     DecorationTouchHitKind.FloorGrid,
                     floorPosition: new GridPosition(1, 2))), Is.True);
 
-                Assert.That(tabs.RequestMode(DecorationModeKind.Wall), Is.False);
+                Assert.That(tabs.RequestMode(DecorationModeKind.Floor), Is.True);
                 whole.onClick.Invoke();
                 Assert.That(controller.ActiveMode, Is.EqualTo(DecorationModeKind.Floor));
                 Assert.That(controller.FloorRange, Is.EqualTo(SurfaceEditScope.SingleGridFloor));
@@ -803,6 +810,28 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [Test]
+        public void Controller_FloorGridRotateWithoutStyle_RefreshesRealConfirmButton()
+        {
+            // Catches the controller refreshing Floor visuals but leaving Confirm in its stale disabled state.
+            using var fixture = new EnterControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.Floor), Is.True);
+            Assert.That(fixture.Controller.TrySelectFloorRange(
+                SurfaceEditScope.SingleGridFloor), Is.True);
+            Assert.That(fixture.Controller.TryHandleSceneTap(new DecorationTouchHit(
+                DecorationTouchHitKind.FloorGrid,
+                floorPosition: new GridPosition(2, 3))), Is.True);
+            Assert.That(fixture.Controller.ActiveSurfacePreview.ArmedStyleId, Is.Null);
+            Assert.That(fixture.Confirm.interactable, Is.False);
+
+            fixture.Rotate.onClick.Invoke();
+
+            Assert.That(fixture.Controller.ActiveSurfacePreview.HasChanges, Is.True);
+            Assert.That(fixture.Confirm.interactable, Is.True,
+                "The real Confirm button must enable immediately after Rotate creates a Floor change.");
+        }
+
+        [Test]
         public void Controller_Phase7ActionBarButtonsDriveLiveFloorSessionAndRestoreCatalogue()
         {
             var root = new GameObject("Task8Round2ActionController");
@@ -996,7 +1025,7 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [Test]
-        public void Controller_ModeSpecificCatalogueRebindsAndPreviewGatePreservesCurrentRows()
+        public void Controller_ModeSpecificCatalogueRebindsAfterDiscardingPreview()
         {
             var root = new GameObject("Task8Round2CatalogueController");
             var catalogueRoot = new GameObject("Catalogue", typeof(RectTransform));
@@ -1030,9 +1059,10 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(rows.transform.Find("CategoryRow_paint"), Is.Null);
                 Assert.That(controller.TrySelectCatalogueItem(new DecorationCatalogueItemModel(
                     "floor.cream", "Floor", null, DecorationCatalogueItemKind.Floor, false)), Is.True);
-                Assert.That(controller.TryChangeMode(DecorationModeKind.Wall), Is.False);
-                Assert.That(rows.transform.Find("CategoryRow_floor"), Is.Not.Null);
-                Assert.That(rows.transform.Find("CategoryRow_paint"), Is.Null);
+                Assert.That(controller.TryChangeMode(DecorationModeKind.Wall), Is.True);
+                Assert.That(controller.ActiveSurfacePreview, Is.Null);
+                Assert.That(rows.transform.Find("CategoryRow_floor").gameObject.activeSelf, Is.False);
+                Assert.That(rows.transform.Find("CategoryRow_paint"), Is.Not.Null);
             }
             finally
             {
@@ -1257,23 +1287,23 @@ namespace AnimalCafe.Tests.PlayMode
 
             var cases = new[]
             {
-                (new DecorationTouchHit(DecorationTouchHitKind.WallSlot, surfaceId: "wall.back-left", wallSlotPosition: new WallSlotPosition(4, 0)), "Wall space already occupied"),
-                (new DecorationTouchHit(DecorationTouchHitKind.WallSlot, surfaceId: "wall.back-left", wallSlotPosition: new WallSlotPosition(8, 0)), "Outside wall area"),
-                (default(DecorationTouchHit), "Place the item fully on one wall"),
-                (new DecorationTouchHit(DecorationTouchHitKind.WallSlot, surfaceId: "wall.missing", wallSlotPosition: new WallSlotPosition(0, 0)), "Wall surface unavailable")
+                (new DecorationTouchHit(DecorationTouchHitKind.WallSlot, surfaceId: "wall.back-left", wallSlotPosition: new WallSlotPosition(4, 0)), "这个墙面位置已经被占用"),
+                (new DecorationTouchHit(DecorationTouchHitKind.WallSlot, surfaceId: "wall.back-left", wallSlotPosition: new WallSlotPosition(8, 0)), "这个位置超出墙面范围"),
+                (default(DecorationTouchHit), "墙饰不能跨越墙角"),
+                (new DecorationTouchHit(DecorationTouchHitKind.WallSlot, surfaceId: "wall.missing", wallSlotPosition: new WallSlotPosition(0, 0)), "请将墙饰移到可用墙面")
             };
             foreach (var item in cases)
             {
                 Assert.That(fixture.Controller.TryHandleSceneDrag(item.Item1), Is.False);
                 Assert.That(fixture.Confirm.interactable, Is.False);
-                Assert.That(fixture.Feedback.text, Is.EqualTo(item.Item2));
+                Assert.That(fixture.Feedback.text, Is.EqualTo("正在编辑：墙饰 · 尚未确认\n" + item.Item2));
             }
 
             Assert.That(fixture.Controller.TryHandleSceneDrag(new DecorationTouchHit(
                 DecorationTouchHitKind.WallSlot, surfaceId: "wall.back-right",
                 wallSlotPosition: new WallSlotPosition(2, 1))), Is.True);
             Assert.That(fixture.Confirm.interactable, Is.True);
-            Assert.That(fixture.Feedback.text, Is.Empty);
+            Assert.That(fixture.Feedback.text, Is.EqualTo("正在编辑：墙饰 · 尚未确认\n位置有效，可以确认"));
         }
 
         [Test]
@@ -1536,7 +1566,7 @@ namespace AnimalCafe.Tests.PlayMode
                 .Single(item => item.ItemId == fixture.FurnitureItem.ItemId
                     && item.gameObject.activeInHierarchy);
             tile.GetComponent<Button>().onClick.Invoke();
-            Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.Wall), Is.False,
+            Assert.That(TabSwitchField<DecorationSession>(fixture.Controller, "session").ActivePreview, Is.Not.Null,
                 "The rebound Furniture tile must be clickable and start a real furniture preview.");
         }
 
@@ -1571,7 +1601,7 @@ namespace AnimalCafe.Tests.PlayMode
 
         [TestCase("wall.back-left", false)]
         [TestCase("wall.back-right", true)]
-        public void Controller_PreviewAndConfirmMountWallDecorFlushToBaseSurfaceOnBothWalls(
+        public void Controller_PreviewHoversOutwardAndConfirmMountsFlushOnBothWalls(
             string surfaceId,
             bool rotateWall)
         {
@@ -1614,15 +1644,17 @@ namespace AnimalCafe.Tests.PlayMode
                 "The footprint must render outside the outer rail so its fixed green never appears faded or hidden.");
             var previewLocalPosition = wall.transform.InverseTransformPoint(
                 fixture.Projection.CurrentGhost.transform.position);
-            Assert.That(previewLocalPosition.z, Is.EqualTo(-.091f).Within(.0001f),
-                "Preview must sit 1 mm outside the Base Wall Surface; a decorative rail must not float the whole item away from the wall.");
+            Assert.That(previewLocalPosition.z, Is.EqualTo(-.291f).Within(.0001f),
+                "Preview must hover 20 cm outward from the unchanged Base Wall contact plane.");
             Assert.That(fixture.Controller.TryConfirmPhase7Preview(), Is.True);
 
             var confirmed = wall.transform.Cast<Transform>()
                 .Single(item => item.name.StartsWith("WallMounted_", StringComparison.Ordinal));
             var confirmedLocalPosition = wall.transform.InverseTransformPoint(confirmed.position);
             Assert.That(confirmedLocalPosition.z, Is.EqualTo(-.091f).Within(.0001f),
-                "Confirmed wall decor must keep the same flush Base Wall contact plane as its preview ghost.");
+                "Confirmed wall decor must return to the original flush Base Wall contact plane.");
+            Assert.That(confirmedLocalPosition.x, Is.EqualTo(previewLocalPosition.x).Within(.0001f));
+            Assert.That(confirmedLocalPosition.y, Is.EqualTo(previewLocalPosition.y).Within(.0001f));
         }
 
         [Test]
@@ -1714,6 +1746,130 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(fixture.Rotate.gameObject.activeSelf, Is.False,
                 "Wall Decor follows Furniture move controls but never exposes Rotate.");
         }
+
+        [TestCase(DecorationModeKind.Furniture, DecorationModeKind.Floor)]
+        [TestCase(DecorationModeKind.Furniture, DecorationModeKind.Wall)]
+        [TestCase(DecorationModeKind.Furniture, DecorationModeKind.WallDecor)]
+        [TestCase(DecorationModeKind.Floor, DecorationModeKind.Furniture)]
+        [TestCase(DecorationModeKind.Floor, DecorationModeKind.Wall)]
+        [TestCase(DecorationModeKind.Floor, DecorationModeKind.WallDecor)]
+        [TestCase(DecorationModeKind.Wall, DecorationModeKind.Furniture)]
+        [TestCase(DecorationModeKind.Wall, DecorationModeKind.Floor)]
+        [TestCase(DecorationModeKind.Wall, DecorationModeKind.WallDecor)]
+        [TestCase(DecorationModeKind.WallDecor, DecorationModeKind.Furniture)]
+        [TestCase(DecorationModeKind.WallDecor, DecorationModeKind.Floor)]
+        [TestCase(DecorationModeKind.WallDecor, DecorationModeKind.Wall)]
+        public void TabSwitch_DiscardsPendingPreviewAcrossEveryModePair(
+            DecorationModeKind source, DecorationModeKind destination)
+        {
+            using var fixture = new EnterControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            var room = TabSwitchField<RoomSurfaceLayout>(fixture.Controller, "phase7RoomSurfaceLayout");
+            var roomBefore = JsonUtility.ToJson(room.CaptureSnapshot());
+            var wallBefore = JsonUtility.ToJson(fixture.WallLayout.CaptureSnapshot());
+            var runtime = TabSwitchField<CafeLayoutRuntime>(fixture.Controller, "layoutRuntime");
+            var furnitureBefore = runtime.Layout.FurnitureInstances.ToArray();
+            BeginTabSwitchPreview(fixture, source);
+
+            Assert.That(fixture.Tabs.RequestMode(destination), Is.True);
+
+            Assert.That(fixture.Controller.ActiveMode, Is.EqualTo(destination));
+            Assert.That(fixture.Tabs.ActiveMode, Is.EqualTo(destination));
+            Assert.That(TabSwitchField<DecorationSession>(fixture.Controller, "session").ActivePreview, Is.Null);
+            Assert.That(fixture.Controller.ActiveSurfacePreview, Is.Null);
+            Assert.That(fixture.Controller.ActiveWallMountedPreview, Is.Null);
+            Assert.That(fixture.Controller.ActiveFunctionalSurfacePreview, Is.Null);
+            Assert.That(JsonUtility.ToJson(room.CaptureSnapshot()), Is.EqualTo(roomBefore));
+            Assert.That(JsonUtility.ToJson(fixture.WallLayout.CaptureSnapshot()), Is.EqualTo(wallBefore));
+            Assert.That(runtime.Layout.FurnitureInstances, Is.EqualTo(furnitureBefore));
+            Assert.That(fixture.ExistingRepresentation.activeSelf, Is.True);
+            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(DecorationSheetState.Expanded));
+            Assert.That(fixture.Controller.SelectedFloorTarget, Is.Null);
+            Assert.That(fixture.Catalogue.GetComponentsInChildren<DecorationCatalogueTileView>(true)
+                .Where(tile => tile.gameObject.activeInHierarchy)
+                .Any(tile => tile.transform.Find("PreviewOutline").gameObject.activeSelf), Is.False);
+        }
+
+        [TestCase(DecorationModeKind.Furniture)]
+        [TestCase(DecorationModeKind.Floor)]
+        [TestCase(DecorationModeKind.Wall)]
+        [TestCase(DecorationModeKind.WallDecor)]
+        public void TabSwitch_SameTabKeepsPendingPreviewTargetsAndChrome(DecorationModeKind mode)
+        {
+            using var fixture = new EnterControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            BeginTabSwitchPreview(fixture, mode);
+            var ordinary = TabSwitchField<DecorationSession>(fixture.Controller, "session").ActivePreview;
+            var surface = JsonUtility.ToJson(fixture.Controller.ActiveSurfacePreview?.ProposedSnapshot);
+            var mounted = fixture.Controller.ActiveWallMountedPreview;
+            var floorTarget = fixture.Controller.SelectedFloorTarget;
+            var wallTarget = TabSwitchField<string>(fixture.Controller, "selectedWallTarget");
+            var sheet = fixture.Catalogue.SheetState;
+            var actionVisible = fixture.Action.IsVisible;
+            var actionParent = fixture.Action.transform.parent;
+            var rows = fixture.Catalogue.GetComponentsInChildren<DecorationCatalogueTileView>(true);
+
+            Assert.That(fixture.Tabs.RequestMode(mode), Is.True);
+
+            Assert.That(TabSwitchField<DecorationSession>(fixture.Controller, "session").ActivePreview, Is.SameAs(ordinary));
+            Assert.That(JsonUtility.ToJson(fixture.Controller.ActiveSurfacePreview?.ProposedSnapshot), Is.EqualTo(surface));
+            Assert.That(fixture.Controller.ActiveWallMountedPreview, Is.SameAs(mounted));
+            Assert.That(fixture.Controller.SelectedFloorTarget, Is.EqualTo(floorTarget));
+            Assert.That(TabSwitchField<string>(fixture.Controller, "selectedWallTarget"), Is.EqualTo(wallTarget));
+            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(sheet));
+            Assert.That(fixture.Action.IsVisible, Is.EqualTo(actionVisible));
+            Assert.That(fixture.Action.transform.parent, Is.SameAs(actionParent));
+            Assert.That(fixture.Catalogue.GetComponentsInChildren<DecorationCatalogueTileView>(true), Is.EqualTo(rows));
+        }
+
+        [Test]
+        public void TabSwitch_ExitModalKeepsOwnershipUntilContinueThenAllowsDiscardSwitch()
+        {
+            using var fixture = new EnterControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            BeginTabSwitchPreview(fixture, DecorationModeKind.WallDecor);
+            var preview = fixture.Controller.ActiveWallMountedPreview;
+            Assert.That(fixture.Controller.TryRequestExit(), Is.False);
+            Assert.That(fixture.Tabs.RequestMode(DecorationModeKind.Floor), Is.False);
+            Assert.That(fixture.Tabs.RequestMode(DecorationModeKind.WallDecor), Is.False);
+            Assert.That(fixture.Controller.ActiveWallMountedPreview, Is.SameAs(preview));
+            fixture.Continue.onClick.Invoke();
+
+            Assert.That(fixture.Tabs.RequestMode(DecorationModeKind.Floor), Is.True);
+            Assert.That(fixture.Controller.ActiveWallMountedPreview, Is.Null);
+            Assert.That(fixture.ExistingRepresentation.activeSelf, Is.True);
+        }
+
+        private static void BeginTabSwitchPreview(EnterControllerFixture fixture, DecorationModeKind mode)
+        {
+            Assert.That(fixture.Tabs.RequestMode(mode), Is.True);
+            switch (mode)
+            {
+                case DecorationModeKind.Furniture:
+                    Assert.That(fixture.Controller.TrySelectCatalogueItem(fixture.FurnitureItem), Is.True);
+                    break;
+                case DecorationModeKind.Floor:
+                    Assert.That(fixture.Controller.TrySelectFloorRange(SurfaceEditScope.SingleGridFloor), Is.True);
+                    Assert.That(fixture.Controller.TryHandleSceneTap(new DecorationTouchHit(
+                        DecorationTouchHitKind.FloorGrid, floorPosition: new GridPosition(2, 3))), Is.True);
+                    Assert.That(fixture.Controller.TrySelectCatalogueItem(fixture.FloorItem), Is.True);
+                    Assert.That(fixture.Controller.TryHandleSceneTap(new DecorationTouchHit(
+                        DecorationTouchHitKind.FloorGrid, floorPosition: new GridPosition(3, 3))), Is.True);
+                    break;
+                case DecorationModeKind.Wall:
+                    Assert.That(fixture.Controller.TryHandleSceneTap(new DecorationTouchHit(
+                        DecorationTouchHitKind.WallSurface, surfaceId: "wall.back-left")), Is.True);
+                    Assert.That(fixture.Controller.TrySelectCatalogueItem(fixture.PaintItem), Is.True);
+                    break;
+                case DecorationModeKind.WallDecor:
+                    Assert.That(fixture.Controller.TryHandleSceneTap(new DecorationTouchHit(
+                        DecorationTouchHitKind.WallMounted, targetId: "decor.existing")), Is.True);
+                    break;
+            }
+        }
+
+        private static T TabSwitchField<T>(object owner, string name) => (T)owner.GetType()
+            .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(owner);
 
         private static string[] GetActionLabels(EnterControllerFixture fixture) =>
             ((DecorationActionBarView)fixture.Store.GetComponentInParent<DecorationActionBarView>())

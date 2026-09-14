@@ -983,6 +983,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 33edef3a2d2d2694eb1df862a0ef7dd9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Decoration.DecorationCatalogueTileView
+  appearance: {fileID: 0}
   button: {fileID: 4151739124190216887}
   thumbnailImage: {fileID: 6095141248972809285}
   nameLabel: {fileID: 8089936049355864220}
@@ -1137,6 +1138,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 188fea80fe5d45ab8219de2b40c599f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Decoration.DecorationFloorRangeView
+  appearance: {fileID: 0}
   wholeRoomButton: {fileID: 6346690488478844692}
   singleGridButton: {fileID: 2356178708229995989}
 --- !u!1 &4523252687155621512
@@ -1439,6 +1441,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ae4947aa106bcbb4db2aa4f937009efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Decoration.DecorationModeTabsView
+  appearance: {fileID: 0}
+  categoryIdleSprite: {fileID: 0}
+  categorySelectedSprite: {fileID: 0}
+  categoryUnavailableSprite: {fileID: 0}
   furnitureButton: {fileID: 939774399957673868}
   floorButton: {fileID: 4468562027229125808}
   wallButton: {fileID: 8571667276828343971}
@@ -3745,6 +3751,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bddb2496df3daed4b9f1ffe808cc1f0f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Decoration.DecorationCatalogueView
+  appearance: {fileID: 0}
   verticalScroll: {fileID: 947251438854121890}
   categoryContent: {fileID: 7854201977118094070}
   categoryRowTemplate: {fileID: 6375818521169026194}

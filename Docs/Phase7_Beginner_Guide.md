@@ -2,6 +2,8 @@
 
 > 当前状态：Phase 7 implementation、merge-review fixes、Studio Owner manual acceptance 与 merge 均已完成；post-merge remediation 已在 local `main` working tree 验证完成，commit/push closeout 尚待单独授权。PR #6 已于 2026-09-01 以 merge commit `925213af6132597592aa60d815434259b18b8ed1` 合入 `main`；2026-09-02 fresh local evidence：standalone committed-state preflight `1/1`、EditMode `1451/1451`、PlayMode `638/638`、MT-001–MT-034 `34/34 PASS`。下一步是 Phase 8 design gate，不代表 Phase 8 implementation 已获授权。
 
+> 本轮 Preview 外观与墙面悬浮调整的 Studio Owner manual acceptance：`Pending`。既有 PASS 数字是历史验收记录，不代表本轮视觉调整已获验收。
+
 ## 2026-08-26 Manual review adjustments
 
 - Catalogue 卡片使用约 `128 px` 的暖色圆角卡片，卡片间距 `8 px`，每一行仍然独立 horizontal scroll。
@@ -32,6 +34,10 @@ Timeline package 的 immutable-package warning 属于 Unity package 自身提示
 
 被选中的 Tab 应在最前方并向上突出。横向滑动浏览同一 category 的 items；纵向滑动浏览不同 categories。
 
+普通 Furniture ghost 保留原材质、颜色、纹理与已有外观属性；valid / invalid 的红绿反馈由 footprint 和现有 symbol 承担，具体原因与 Confirm validation 不变。
+
+Wall Decor / Window Preview 以正式贴墙位置为基准，沿 `-wall.forward` 向室内额外悬浮 `20 cm`；Confirm 后恢复 Base Wall Surface 原有的 `1 mm` contact offset。底部高度、footprint 的实际 Wall Slots，以及避开 Wainscoting / rail / baseboard 的 projection 平面都不随这次悬浮改变。
+
 ## 3. 正式 Phase 7 素材
 
 Wall Decor catalogue 应显示五个正式模型：
@@ -59,13 +65,13 @@ Phase 7 只有 **session-only persistence**：同一次 Play session 内 Confirm
 3. Floor：分别测试 `Whole Room`、`Single Grid`、Rotate、Undo Last、Apply All、Cancel、Confirm。
 4. Wall：测试 Wallpaper、Paint、Wainscoting 和 `None`；每次选择一整面墙，在同一 Preview 中组合 Base + Wainscoting，再用一次 Confirm 或 Cancel 完成；Wall 不提供 Apply All。
 5. Texture seams：查看 Wallpaper、Floor、Wainscoting 横向拼接和墙高填充。
-6. Wall Decor：依次放置五个正式模型；检查 valid/invalid projection、green check/red cross，以及跟随ghost的小圆`×/✓`；Wall Decor无`R`。
+6. Wall Decor：依次放置五个正式模型；检查 valid/invalid projection、green check/red cross，以及跟随ghost的小圆`×/✓`；Wall Decor无`R`。检查 Preview 额外向外悬浮 `20 cm`、Confirm 恢复原 `1 mm` contact，底部高度与实际占格不变，projection 仍在饰条最外侧。
 7. Wall boundary：在MainCafe用Wood Shelf `2×1`测试水平越界、Window `1×2`测试垂直越界；invalid时Confirm disabled。`2×2/3×2`精确规则由AT-011/AT-012覆盖。
 8. Cross-wall drag：把已有 item 从一面墙移到另一面墙后 Confirm；invalid placement 不得改变 confirmed layout。
 9. Store：Dismiss 后 item 保留，Confirm 后 item 消失；重新载入 Scene 后，本次 session Confirm 的 Window 不会恢复。
 10. Fade：墙挡住 selected wall item 时应淡化；退出、取消、切换 target 后 Material/opacity 恢复。
 11. Responsive：检查普通 portrait、窄 portrait、landscape；Confirm/Cancel 可见、可点击、不重叠 safe area。
-12. Exit discard：有未确认 Preview 时退出，选择 Continue 应保持编辑；选择 Discard 应恢复进入 Decoration Mode 前状态。
+12. Exit discard：有未确认 Preview 时退出，选择 Continue 应保持同一个 Preview；选择 Discard 只取消当前未确认 Preview 后退出，已经 Confirm 的布局修改应保留。P8R 按钮显示为 Continue Editing / Discard Preview；这里不是撤销整次 Decoration session。
 13. 最终 Console：无 unexpected Error / Exception / unexplained Warning；退出后 Game Time 正常恢复。
 
 ## 6. Manual review evidence

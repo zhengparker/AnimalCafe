@@ -3394,6 +3394,8 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                     .ToArray();
                 selection = Selection.objects.Select(SelectionEntry.Capture).ToArray();
                 activeIndex = Array.IndexOf(Selection.objects, Selection.activeObject);
+                try { LegacyMainCafeFixture.Install(MainCafePath); }
+                catch { Dispose(); throw; }
             }
 
             public void RegisterOwnedAsset(string path, UnityEngine.Object asset)

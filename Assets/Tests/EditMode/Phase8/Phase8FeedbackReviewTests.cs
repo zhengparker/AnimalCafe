@@ -25,6 +25,15 @@ namespace AnimalCafe.Tests.EditMode.Phase8
         const string Unreachable = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
         [Test]
+        public void Phase8Font_CoversCatalogueDisclosureAndFloorScopeCopy()
+        {
+            var font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>("Assets/UI/Phase8/Fonts/NotoSansSC-Phase8 SDF.asset");
+            const string corpus = "继续添加查看详情收起详情提醒阻挡整个房间逐格涂抹已改格撤销仅影响本次预览取消可放弃铺满整个房间撤销上一步确认本次修改";
+            var missing = corpus.Where(c => !font.HasCharacter(c)).Distinct().ToArray();
+            Assert.That(missing, Is.Empty, "Missing visible UI glyphs: " + new string(missing));
+        }
+
+        [Test]
         public void PickUpWithoutAnchor_ActionBarExplainsAdjacentCellRequirement()
         {
             var root = new GameObject("Feedback", typeof(RectTransform));
@@ -90,6 +99,9 @@ namespace AnimalCafe.Tests.EditMode.Phase8
                 view.Configure(root.GetComponent<TextMeshProUGUI>());
 
                 view.ShowReadiness(MixedFailureReport());
+                view.GetComponentsInChildren<Button>(true).Single(button => button.name == "ReadinessDetails")
+                    .onClick.Invoke();
+                Assert.That(view.IsDetailsExpanded, Is.True);
 
                 Assert.That(view.DiagnosticIds, Is.EquivalentTo(new[]
                     { Cash, Blocked, Unreachable, new string('1', 32), new string('4', 32), new string('2', 32), "slot.center" }));
@@ -118,6 +130,22 @@ namespace AnimalCafe.Tests.EditMode.Phase8
                 Assert.That(label.font.atlasPopulationMode, Is.EqualTo(AtlasPopulationMode.Static),
                     "Runtime must not mutate the shared font atlas to repair missing characters.");
             });
+        }
+
+        [Test]
+        public void Phase8Font_CoversApprovedPersistentEditingFeedback()
+        {
+            var font = UnityEditor.AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(
+                "Assets/UI/Phase8/Fonts/NotoSansSC-Phase8 SDF.asset");
+            var corpus = PlacementFeedbackMapper.GetEditingMessage("地板墙面墙饰家具", PlacementFeedbackMapper.ValidEditingPosition)
+                + PlacementFeedbackMapper.FinishEditingFirst + PlacementFeedbackMapper.ReturnToEditing
+                + PlacementFeedbackMapper.ChooseSurfaceStyle + PlacementFeedbackMapper.SurfaceChangesReady
+                + "已确认布局：已就绪还需调整"
+                + string.Join(" ", Enum.GetValues(typeof(WallPlacementFailureReason)).Cast<WallPlacementFailureReason>()
+                    .Select(reason => PlacementFeedbackMapper.GetPlayerMessage(reason == WallPlacementFailureReason.None
+                        ? WallPlacementResult.Success() : WallPlacementResult.Failure(reason))));
+            var missing = corpus.Where(c => !char.IsWhiteSpace(c) && !font.HasCharacter(c)).Distinct().ToArray();
+            Assert.That(missing, Is.Empty, "Missing editing glyphs: " + new string(missing));
         }
 
         [Test]
@@ -235,9 +263,9 @@ namespace AnimalCafe.Tests.EditMode.Phase8
         {
             var path = "Assets/__Phase8FeedbackReview_" + Guid.NewGuid().ToString("N") + ".unity";
             var original = SceneManager.GetActiveScene();
-            Assert.That(AssetDatabase.CopyAsset(Phase8AssetPaths.MainCafeScenePath, path), Is.True);
             try
             {
+                LegacyMainCafeFixture.Install(path);
                 Phase8AssetBuilder.BuildAssets();
                 typeof(Phase8SceneSetup).GetMethod("ConfigureScene", PrivateStatic)
                     .Invoke(null, new object[] { path, false });

@@ -1296,8 +1296,8 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(ghost, Is.Not.Null, expectedDefinitionId);
             Assert.That(ghost.name, Does.StartWith(definition.Prefab.name), expectedDefinitionId);
             var ghostLocalPosition = wall.transform.InverseTransformPoint(ghost.transform.position);
-            Assert.That(ghostLocalPosition.z, Is.EqualTo(-.091f).Within(.0001f),
-                expectedDefinitionId + " ghost must sit 1 mm outside the Base Wall Surface instead of floating at the decorative rail depth.");
+            Assert.That(ghostLocalPosition.z, Is.EqualTo(-.291f).Within(.0001f),
+                expectedDefinitionId + " ghost must hover 20 cm outward from the unchanged Base Wall contact plane.");
             var projectionLocalPosition = wall.transform.InverseTransformPoint(
                 view.CurrentProjection.transform.position);
             Assert.That(ghostLocalPosition.x,

@@ -15,7 +15,8 @@ namespace AnimalCafe.Input
             Vector2 pointerPosition,
             int pointerId = -1,
             bool pointerPressed = false,
-            bool pointerReleased = false)
+            bool pointerReleased = false,
+            float pinchDistanceDelta = 0f)
         {
             PanDelta = panDelta;
             ZoomDelta = zoomDelta;
@@ -24,11 +25,16 @@ namespace AnimalCafe.Input
             PointerId = pointerId;
             PointerPressed = pointerPressed;
             PointerReleased = pointerReleased || tapReleased;
+            PinchDistanceDelta = pinchDistanceDelta;
         }
 
         public Vector2 PanDelta { get; }
 
         public float ZoomDelta { get; }
+
+        // Raw pinch travel in pixels; wheel ZoomDelta keeps its whole-step mapping.
+        // pinch 保留像素位移，避免小幅移动被当作整步滚轮。
+        public float PinchDistanceDelta { get; }
 
         public bool TapReleased { get; }
 

@@ -16,6 +16,8 @@ namespace AnimalCafe.Decoration
             new Dictionary<string, GameObject>(StringComparer.Ordinal);
         private readonly Dictionary<string, PickUpPointInstance> bindingsById =
             new Dictionary<string, PickUpPointInstance>(StringComparer.Ordinal);
+        private readonly Dictionary<string, GameObject> confirmedHiddenByPreview =
+            new Dictionary<string, GameObject>(StringComparer.Ordinal);
 
         private FurnitureSceneRegistry furnitureRegistry;
         private Transform indicatorRoot;
@@ -181,17 +183,50 @@ namespace AnimalCafe.Decoration
                     ? theme.Colors.Accent
                     : theme.Colors.Destructive);
 
+            // Show one state at this slot; keep the occupied data and controller-owned source unchanged.
+            // 同一 Slot 只显示 Preview；占用数据不变，正在编辑的原件仍由 controller 管理。
+            if (hasSlot)
+            {
+                foreach (var pair in bindingsById)
+                {
+                    if (!pair.Value.Address.Equals(preview.Address)
+                        || (!preview.IsNew && string.Equals(pair.Key, preview.InstanceId, StringComparison.Ordinal))
+                        || !confirmedById.TryGetValue(pair.Key, out var confirmed)
+                        || confirmed == null || !confirmed.activeSelf)
+                    {
+                        continue;
+                    }
+
+                    confirmedHiddenByPreview.Add(pair.Key, confirmed);
+                    confirmed.SetActive(false);
+                }
+            }
+
             // Lift only the authored model; the footprint stays on the target surface.
             // 只悬浮形体，Footprint 保持贴在桌面或地面。
             var model = CurrentPreview.transform.Find("InvertedSquarePyramid");
             if (model != null)
             {
-                model.position += hoverOffset;
+                var sign = model.GetComponent<AnimalCafe.UI.P8R.P8RPickUpSignBillboard>();
+                if (sign != null) sign.SetHoverOffset(hoverOffset);
+                else model.position += hoverOffset;
             }
         }
 
         public void HidePreview()
         {
+            // Restore only representations this view hid, including when the preview was destroyed elsewhere.
+            // 只恢复本 View 临时隐藏的对象，不恢复 controller 隐藏的原件或 Rebuild 前的旧对象。
+            foreach (var pair in confirmedHiddenByPreview)
+            {
+                if (decorationModeVisible && pair.Value != null
+                    && confirmedById.TryGetValue(pair.Key, out var current) && current == pair.Value)
+                {
+                    pair.Value.SetActive(true);
+                }
+            }
+            confirmedHiddenByPreview.Clear();
+
             if (CurrentPreview == null)
             {
                 return;
@@ -232,8 +267,8 @@ namespace AnimalCafe.Decoration
 
             foreach (var renderer in indicator.GetComponentsInChildren<Renderer>(true))
             {
-                // Keep the model's neutral material; validity belongs only to Footprint.
-                // 形体保留固定灰白材质，只有 Footprint 显示有效/无效状态色。
+                // Keep the authored artwork colors; validity belongs only to Footprint.
+                // 保留原素材颜色（新彩色牌）；状态色只用于 Footprint。
                 if (!string.Equals(renderer.gameObject.name, "Footprint", StringComparison.Ordinal))
                 {
                     continue;
@@ -276,6 +311,8 @@ namespace AnimalCafe.Decoration
 
         private void ClearAll()
         {
+            // Rebuild/exit replaces these objects; do not revive them before destruction.
+            confirmedHiddenByPreview.Clear();
             HidePreview();
             foreach (var representation in confirmedById.Values)
             {

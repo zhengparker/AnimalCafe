@@ -1,6 +1,6 @@
 # Phase 8 — Functional Furniture & Layout Readiness Test Cases
 
-> 状态：Approved Phase 8 Baseline；Task 10 / Phase 8 `In Progress`
+> 状态：Approved Phase 8 Baseline；Task 10 / Phase 8 `In Progress`；2026-09-09 UX2 见第 9 节，automated PASS / Ready for manual review，新增 manual Pending
 >
 > 日期：2026-09-02
 > 对应 Design：`Docs/superpowers/specs/2026-09-02-phase-8-functional-furniture-layout-readiness-design.md`
@@ -551,7 +551,7 @@ Phase 8 的执行证据分三类：
 
 上表各套的 failed / skipped / inconclusive 均为 `0`；完整 EditMode 包含并通过上表 `190` 项 Phase 8 与 `372` 项 Phase 6 子集。历史 `p8r-final-full-editmode.xml` 的 67 项失败与 `p8r-final-full-editmode-verified.xml` 的 2 项失败均不能计为 GREEN；共同原因及 tracker 生命周期已修复，Phase 6 共新增 23 项 guards。最终全量只以 `p8r-final-full-editmode-round3.xml` 为准。最终资产审计为 `p8r-final-side-effect-audit.csv` / `p8r-final-side-effect-summary.csv`：1,984 files、0 hash difference / missing / unexpected；37 个测试副作用已备份并恢复。旧 Task 10 report、RED 和 interrupted runs 只保留为历史证据。
 
-### Remaining independent gates
+### Historical remaining independent gates（2026-09-08；当前状态见第 8–9 节）
 
 - Automated verification（2026-09-08）: **partial / open issue**。M1/M2 focused、direct EditMode / Core PASS；Scene/Input 32/33，旧顺序问题未解决；资产核对 PASS。见 Beginner Guide 第 6 节。
 - Engineering independent review: **PASS**.
@@ -615,4 +615,42 @@ Phase 收尾至少需要：
 
 ## 8. Lifecycle Gate
 
-本 test-cases 文档与 Phase 8 design 已获批，作为当前 baseline。`Approved` 不等于 manual PASS 或 Phase 完成。2026-09-08 Studio Owner 已确认 M1–M17 PASS；M18 授权 Codex 技术代测 PASS，最终专项 PlayMode 15/15、独立 QA 复查 PASS。M6 incompatible 子项未覆盖，旧 Scene/Input 顺序验证问题仍开放。M6 修复自动化为 EditMode 75/75、Core 374/374、直接 Scene/Input 15/15 PASS（与 M18 不同一轮，XML 见 Beginner Guide 第 6 节），与人工接受分开记录。剩余问题处理并完成 Phase closeout 验证后，才能决定 Phase 8 完成。
+2026-09-09 三项 UX 的历史交回：UX-01–UX-06 cases、RED/GREEN 与 6 步 manual 操作保存在 `Docs/Phase8_Beginner_Guide.md` 8.4。当时完整 PlayMode **789/789**（686 core + 103 Scene/Input）、Phase 8 EditMode + surface sessions **227/227** PASS，failed/skipped/inconclusive 均为 0。XML：`TestResults/ux-20260909-all-play-verified.xml`、`ux-20260909-edit-verified.xml`。当时独立审查无未处理 Critical/Important，Owner manual Pending，交回 Ready for manual review。当前后续 UX2 见第 9 节；789/227 与以下 781/83/26 都不能当作 UX2 PASS。
+
+本 test-cases 文档与 Phase 8 design 已获批，作为当前 baseline。`Approved` 不等于 manual PASS 或 Phase 完成。2026-09-08 Studio Owner 已确认 M1–M17 PASS；M18 授权 Codex 技术代测 PASS，最终专项 PlayMode 15/15、独立 QA 复查 PASS。M6 incompatible 子项仍未覆盖。
+
+2026-09-09 review 修复最新 authority：完整 PlayMode 781/781、直接 EditMode 83/83、原始 Touch control 26/26（无临时诊断）PASS，failed / skipped / inconclusive 均为0；原 Touch 顺序问题已解决。五项修复的 test cases、RED/GREEN XML、独立 review 与待人工复测步骤集中保存于 `Docs/Phase8_Beginner_Guide.md` 第6节。没有改写上方历史 Owner manual ledger，也不将新修复的 automated PASS 当作 Owner 已复测；Phase closeout 另行决定。
+
+## 9. UX2 Additional Verification / Manual Ledger（2026-09-09）
+
+对应批准合同为 design 9.5 与 Beginner Guide 8.5：选项 2–5 加半透明光感 footprint；选项 1 保留 icon，Exit 不动。本轮 automated **PASS**：完整 Editor PlayMode **813/813**（707 core + 106 Scene/Input），`TestResults/ux2-20260909-all-play-verified.xml`；全部 Phase 8 EditMode + SurfaceSession **235/235**，`TestResults/ux2-20260909-edit-verified.xml`。两套 failed/skipped/inconclusive 均 0、exit 0；asset/font focused 8/8（`ux2-20260909-assets-green.xml`）已包含在 235 内，不重复相加。独立 code 与 7 张截图复核无未处理 Critical/Important，交回 **Ready for manual review**。下列新增 manual 全部 Pending，与历史 M1–M18 分开，不覆盖 M6 incompatible Slot 未执行子项。
+
+表中 Automated PASS 仅表示该验收项对应的自动化覆盖已经通过，不表示左栏所有人工场景、视觉条件或手机组合均已逐项观察。窄屏使用 runtime 真实 Prefab 的 320 logical pixels fixture；本轮未执行 full EditMode、standalone Player 或 Android/iOS 真机。中间 810/813 非 GREEN；Floor Confirm 文案、展开详情后检查原因、Quad 在父空间的旋转后 `1 × 1` 几何三处旧预期已迁移，原行为断言保留，最终完整重跑通过。
+
+| Case | Automated 核验点 | Automated | Owner manual |
+|---|---|---|---|
+| UX2-M-001 | Tab 竖向 / CategoryId 横向位置分别恢复；内容变化后 clamp；切换终止 drag/惯性；新 session 清空，不写 Save。 | PASS | Pending |
+| UX2-M-002 | 无 Preview 显示“继续添加”，有 Preview 恢复 Catalogue / Return 限制；Confirm 不自动展开，入口只在点击时展开，不自动新建。 | PASS | Pending |
+| UX2-M-003 | summary + 完整 blocking/warnings details；单一整体原因无多余按钮；新报告默认收起；展开/清理不发布 readiness、不透传输入；窄屏可滚动。 | PASS | Pending |
+| UX2-M-004 | 新 CR/CM 优先屏幕内最近中心的合法空 Slot，跳过占用/不兼容；同距、无可见候选和缺 Camera/marker 的 stable fallback；Pick-up 原起点不变，Camera/confirmed 数据不变。 | PASS | Pending |
+| UX2-M-005 | Floor 真实 delta count，重复涂抹不增加；Apply All / Undo 只改 Preview；Whole Room Undo 仍禁用；中文 footer 可读。 | PASS | Pending |
+| UX2-M-006 | 家具地面 / 墙饰 / CR/CM / Pick-up 四路径半透明绿红 footprint，原占用尺寸/姿态和有效性不变；白 icon、模型、入口蓝区保留。 | PASS | Pending |
+| UX2-M-007 | 小窗口 notice / Catalogue / Floor 文案与输入边界；Cancel、退出、重进清理，不残留 Preview/详情/Console exception。 | PASS | Pending |
+
+具体 7 步玩家操作及已查看的 7 张截图链接以 `Docs/Phase8_Beginner_Guide.md` 8.5 为准；每项实际反馈后才更新 Owner manual。截图在 `outputs/ux2-20260909/`，均为真实 MainCafe 640×480 临时 ScreenSpaceCamera。资产 audit `TestResults/ux2-20260909-assets-audit.json` 验证 authoring 后的 1,393 文件基线在 full regression 前后零漂移，不等于本轮无资产修改。既有 Android/iOS 真机 gate 不因 Windows automated 或截图通过而提前完成。技术核验和本表 manual 完成均不自动授权 Phase closeout、Phase 8R、commit / push / merge。
+
+### Footprint brightness follow-up（2026-09-09，8.6 历史；最新见下节）
+
+本节 813/235 现在是提亮前 UX2 baseline。仅提亮 footprint 的最新视觉复测见 Beginner Guide **8.6**，原 UX2-M-006 / 007 与新增亮色检查全部 manual **Pending**。真实 ThemeValid / ThemeInvalid / WallValid 像素测试加旧 7 项共 **10/10 PASS**，`TestResults/footprint-bright-20260909-edit-green.xml`；有效 RED 为 7 PASS + 3 预期亮度 FAIL，最初 Assert.Multiple 编译错误不计 RED。直接 PlayMode **84/84 PASS**，`TestResults/footprint-bright-20260909-play-green.xml`（MainCafe 10 + WallTouch 58 + FootprintLight 2 + FunctionalSurfaceView 14）。两套 failed/skipped/inconclusive 均 0、exit 0；本次未重跑 full Phase。WallInvalid 未独立单测保留 Minor；新目录 `outputs/footprint-bright-20260909/` 的 4 组前后截图已由根代理和独立 UX reviewer 技术复核，无阻挡，Guide 8.6 提供链接，旧图保留。Ready for manual review 不等于每个状态组合、Owner 偏好或手机验收通过。
+
+### Signal-light follow-up（2026-09-09，配色沿用；最新 Preview 见下节）
+
+Owner 批准红绿灯式发光；最终参数 6 / 3 / 1.5、opacity 0.45 / softness 0.12。Beginner Guide **8.7** 集中记录完成的 test cases 与截图：四种真实 tint（含补齐 WallInvalid）、HDR 截断前透明/柔边、亮灰/暖底 LDR 防泛白、旧材质/mesh/depth/dirty guard/幂等检查全部 PASS。Focused **15/15**：`TestResults/footprint-signal-20260909-edit-final-green.xml`；直接 PlayMode **84/84**：`TestResults/footprint-signal-20260909-play-green.xml`，两套 failed/skipped/inconclusive 0、exit 0。RED 11/15、中间 11/15 与 14/15 如实留在 Guide，不算 GREEN；未降低测试阈值，未重跑 full Phase / Player / 手机。
+
+4 组新旧截图独立技术复核无阻挡，新图 `outputs/footprint-signal-20260909/`、旧图保留。所有新增人工项目及 Owner 色彩偏好仍 **Pending**：四路径红绿光、亮暗底纹/刺眼、拖动/Confirm/Cancel/退出无残留。原人工历史结果不改。Ready for manual review 不授权 Phase closeout 或 Git 操作。
+
+### Natural Preview follow-up（2026-09-09，最新 authority）
+
+合同 design 9.6；Guide **8.8** 保存 NP-001–004 已完成 test cases 与 manual 操作：普通家具原材质/MPB 与 footprint 状态恢复；CR/CM 同样原色及事务隔离；墙饰 20 cm Preview 悬浮、跨墙、Confirm 原 contact/同高度、Cancel；五个真实 prefab 与 MainCafe 相框/搁板实际占格/cleanup。直接 PlayMode **301/301 PASS**，`TestResults/preview-natural-20260909-play-green.xml`，failed/skipped/inconclusive 0、exit 0。旧中间 RED/15-of-16 如实记录在 Guide，focused 不重复计数；本轮没有 full Phase、EditMode、Player 或手机验收。
+
+NP-001–004 的 Automated 均 PASS，**Owner manual 全部 Pending**。三个真实近景截图在 `outputs/preview-natural-20260909/`，旧图保留；临时 Camera close-up 不改变游戏相机配置，不能替代手感验收。UX2-M-006 的原“模型保持”以本轮批准的原色/墙饰悬浮为准；其余 ledger、M6 incompatible Slot 未覆盖子项与 Phase/Git gate 均不变。

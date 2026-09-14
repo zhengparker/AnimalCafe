@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using AnimalCafe.Content;
 using AnimalCafe.UI.Components;
 using AnimalCafe.UI.Foundation;
@@ -14,6 +15,7 @@ namespace AnimalCafe.UI.Decoration
     /// </summary>
     public sealed class DecorationStoreModalView : MonoBehaviour
     {
+        [SerializeField] private AnimalCafe.UI.P8R.P8RAppearance appearance;
         private const float TransitionDuration = 0.16f;
 
         [SerializeField] private AnimalCafeModalView modalView;
@@ -31,9 +33,13 @@ namespace AnimalCafe.UI.Decoration
             UiOutsideDismissPolicy.NotDismissible);
         private UiNavigationCoordinator navigation;
         private bool completionConsumed;
+        private Coroutine presentationClosedRoutine;
+        private bool refreshingMobileLayout;
+        private AnimalCafe.UI.P8R.P8RModalSafeAreaHost mobileSafeAreaHost;
 
         public event Action ConfirmRequested;
         public event Action DismissRequested;
+        public event Action PresentationClosed;
 
         public bool IsOpen => view.IsOpen;
         public RectTransform ContentRect => titleLabel != null
@@ -72,6 +78,7 @@ namespace AnimalCafe.UI.Decoration
             }
 
             // Register wrapper listeners first. The shared modal closes after our event fires.
+            BindMobileSafeAreaHost();
             EnsureOwnListeners();
             modalView.Configure(
                 navigation,
@@ -86,6 +93,11 @@ namespace AnimalCafe.UI.Decoration
                 canvasGroup,
                 transitionRunner,
                 TransitionDuration);
+            // These listeners run after the shared modal has actually closed.
+            // 只通知展示层重算位置，不重复 Confirm/Cancel 的业务事件。
+            CancelPresentationClosedNotification();
+            ReplaceListener(confirmButton, QueuePresentationClosed);
+            ReplaceListener(cancelButton, QueuePresentationClosed);
 
             foreach (var hook in GetComponentsInChildren<DecorationPointerBoundaryEventHook>(true))
             {
@@ -103,16 +115,18 @@ namespace AnimalCafe.UI.Decoration
             completionConsumed = false;
             if (titleLabel != null)
             {
-                titleLabel.text = "Store furniture?";
+                titleLabel.text = appearance != null ? appearance.Text("store.title").Replace("{item}",
+                    appearance.ItemName(definition, definition.DisplayName)) : "Store furniture?";
             }
 
             if (bodyLabel != null)
             {
-                bodyLabel.text =
+                bodyLabel.text = appearance != null ? appearance.Text("store.body") :
                     "This removes it from the current layout. You can place it again from the catalogue.";
             }
 
             modalView.Open();
+            RefreshP8RContentLayout();
         }
 
         public void ShowWallMounted(WallMountedDefinitionAsset definition)
@@ -125,16 +139,18 @@ namespace AnimalCafe.UI.Decoration
             completionConsumed = false;
             if (titleLabel != null)
             {
-                titleLabel.text = "Store wall decoration?";
+                titleLabel.text = appearance != null ? appearance.Text("store.title").Replace("{item}",
+                    appearance.ItemName(definition.DefinitionId, definition.DisplayName)) : "Store wall decoration?";
             }
 
             if (bodyLabel != null)
             {
-                bodyLabel.text =
+                bodyLabel.text = appearance != null ? appearance.Text("store.body") :
                     "This removes it from the current wall. You can place it again from the catalogue.";
             }
 
             modalView.Open();
+            RefreshP8RContentLayout();
         }
 
         public void ShowFunctionalSurface(DecorationCatalogueItemKind kind)
@@ -150,17 +166,65 @@ namespace AnimalCafe.UI.Decoration
             completionConsumed = false;
             if (titleLabel != null)
             {
-                titleLabel.text = title;
+                titleLabel.text = appearance != null ? appearance.Text("store.title").Replace("{item}",
+                    appearance.Text(kind == DecorationCatalogueItemKind.PickUpPoint ? "catalogue.pickup" :
+                        kind == DecorationCatalogueItemKind.CashRegister ? "item.cash_register" : "item.coffee_machine")) : title;
             }
             if (bodyLabel != null)
             {
                 bodyLabel.text = kind == DecorationCatalogueItemKind.PickUpPoint
                     ? "This removes the pick-up point from this surface. You can add it again with the Pick-up Point button."
                     : "This removes it from its current surface. You can place it again from the catalogue.";
+                if (appearance != null) bodyLabel.text = appearance.Text(kind == DecorationCatalogueItemKind.PickUpPoint
+                    ? "store.pickup_body" : "store.body");
             }
 
             modalView.Open();
+            RefreshP8RContentLayout();
         }
+
+        private void RefreshP8RContentLayout()
+        {
+            if (appearance == null || refreshingMobileLayout) return;
+            refreshingMobileLayout = true;
+            try { AnimalCafe.UI.P8R.P8RButtonLayout.Modal(ContentRect, titleLabel, bodyLabel, cancelButton, confirmButton); }
+            finally { refreshingMobileLayout = false; }
+        }
+
+        private void BindMobileSafeAreaHost()
+        {
+            if (!Application.isPlaying || appearance == null || ContentRect == null) return;
+            var area = ContentRect.GetComponentInParent<SafeAreaContainer>(true);
+            if (area == null) return;
+            var host = area.GetComponent<AnimalCafe.UI.P8R.P8RModalSafeAreaHost>()
+                ?? area.gameObject.AddComponent<AnimalCafe.UI.P8R.P8RModalSafeAreaHost>();
+            if (mobileSafeAreaHost != host)
+            {
+                UnbindMobileSafeAreaHost();
+                mobileSafeAreaHost = host;
+            }
+            // Reuse the existing inner safe area; backdrop and input ownership stay on the root.
+            // 只监听原有内部安全区，不新增容器、不移动card或全屏遮罩；重复Configure不累积回调。
+            mobileSafeAreaHost.RectChanged -= HandleMobileSafeAreaChanged;
+            if (isActiveAndEnabled) mobileSafeAreaHost.RectChanged += HandleMobileSafeAreaChanged;
+        }
+
+        private void UnbindMobileSafeAreaHost()
+        {
+            if (mobileSafeAreaHost != null) mobileSafeAreaHost.RectChanged -= HandleMobileSafeAreaChanged;
+        }
+
+        private void HandleMobileSafeAreaChanged()
+        {
+            if (this != null && isActiveAndEnabled && IsOpen) RefreshP8RContentLayout();
+        }
+
+        private void OnEnable()
+        {
+            AnimalCafe.UI.P8R.P8RMobileMetrics.Changed += RefreshP8RContentLayout;
+            BindMobileSafeAreaHost();
+        }
+        private void OnRectTransformDimensionsChange() { if (IsOpen) RefreshP8RContentLayout(); }
 
         public bool TryHandleBack()
         {
@@ -177,11 +241,13 @@ namespace AnimalCafe.UI.Decoration
             }
 
             DismissRequested?.Invoke();
+            QueuePresentationClosed();
             return true;
         }
 
         public void CloseForOwnerShutdown()
         {
+            CancelPresentationClosedNotification();
             if (modalView != null && view.IsOpen)
             {
                 // The shared modal's own handle can close a covered registration safely.
@@ -194,6 +260,27 @@ namespace AnimalCafe.UI.Decoration
                     modalView.enabled = true;
                 }
             }
+        }
+
+        private void QueuePresentationClosed()
+        {
+            if (appearance == null || !isActiveAndEnabled || IsOpen || !completionConsumed) return;
+            CancelPresentationClosedNotification();
+            presentationClosedRoutine = StartCoroutine(NotifyPresentationClosedNextFrame());
+        }
+
+        private IEnumerator NotifyPresentationClosedNextFrame()
+        {
+            yield return null;
+            presentationClosedRoutine = null;
+            if (isActiveAndEnabled && !IsOpen) PresentationClosed?.Invoke();
+        }
+
+        private void CancelPresentationClosedNotification()
+        {
+            if (presentationClosedRoutine == null) return;
+            StopCoroutine(presentationClosedRoutine);
+            presentationClosedRoutine = null;
         }
 
         private void HandleConfirm()
@@ -246,14 +333,19 @@ namespace AnimalCafe.UI.Decoration
 
         private void OnDisable()
         {
+            AnimalCafe.UI.P8R.P8RMobileMetrics.Changed -= RefreshP8RContentLayout;
+            UnbindMobileSafeAreaHost();
             CloseForOwnerShutdown();
         }
 
         private void OnDestroy()
         {
+            UnbindMobileSafeAreaHost();
             CloseForOwnerShutdown();
             confirmButton?.onClick.RemoveListener(HandleConfirm);
             cancelButton?.onClick.RemoveListener(HandleCancel);
+            confirmButton?.onClick.RemoveListener(QueuePresentationClosed);
+            cancelButton?.onClick.RemoveListener(QueuePresentationClosed);
         }
     }
 }

@@ -292,8 +292,7 @@ namespace AnimalCafe.Tests.EditMode.Phase8
                 ScenePath = folder + "/Candidate.unity";
                 try
                 {
-                    if (!AssetDatabase.CopyAsset(Phase8AssetPaths.MainCafeScenePath, ScenePath))
-                        throw new InvalidOperationException("Could not copy the temporary test Scene.");
+                    LegacyMainCafeFixture.Install(ScenePath);
                     // The test runner may own an unsaved Untitled Scene. Like Phase 6,
                     // create an independent Scene asset without saving that caller Scene.
                     var createScene = typeof(EditorSceneManager).GetMethod("CreateSceneAsset",
@@ -340,6 +339,12 @@ namespace AnimalCafe.Tests.EditMode.Phase8
 
     public sealed class Phase8MainCafeMigrationTests
     {
+        private LegacyMainCafeFixture legacy;
+        [SetUp] public void SetUpLegacy()
+        {
+            legacy = new LegacyMainCafeFixture();
+        }
+        [TearDown] public void RestoreLegacy() { legacy?.Dispose(); legacy = null; }
         [Test]
         public void ConfigureMainCafe_Twice_IsByteStableWithOneRuntimeOwnerAndStableReferences()
         {

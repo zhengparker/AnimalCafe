@@ -48,7 +48,7 @@ namespace AnimalCafe.UI.Decoration
     {
         public DecorationCatalogueItemModel(string itemId, string displayName, Sprite thumbnail,
             DecorationCatalogueItemKind kind, bool isNoneOption,
-            FurnitureDefinitionAsset furnitureDefinition = null)
+            FurnitureDefinitionAsset furnitureDefinition = null, Color? paintSwatchColor = null)
         {
             ItemId = itemId;
             DisplayName = displayName;
@@ -57,6 +57,7 @@ namespace AnimalCafe.UI.Decoration
             IsNoneOption = isNoneOption;
             Availability = DecorationCatalogueItemAvailability.Available;
             FurnitureDefinition = furnitureDefinition;
+            PaintSwatchColor = paintSwatchColor;
         }
 
         public string ItemId { get; }
@@ -66,6 +67,7 @@ namespace AnimalCafe.UI.Decoration
         public bool IsNoneOption { get; }
         public DecorationCatalogueItemAvailability Availability { get; }
         public FurnitureDefinitionAsset FurnitureDefinition { get; }
+        public Color? PaintSwatchColor { get; }
     }
 
     public sealed class DecorationCategoryModel
@@ -236,10 +238,19 @@ namespace AnimalCafe.UI.Decoration
                 if (definition == null) Throw(DecorationCatalogueValidationIssueCode.NullEntry, categoryId, null);
                 ValidateSurface(definition, categoryId, expectedKind);
                 AddUniqueId(knownIds, categoryId, definition.StyleId);
+                // A paint sample reflects its real material color, never a tile/grid thumbnail.
+                // 纯色油漆使用实际材质颜色；没有颜色属性时保留缩略图 fallback。
+                Color? paintColor = null;
+                if (expectedKind == SurfaceStyleKind.Paint && definition.Material != null)
+                {
+                    var material = definition.Material;
+                    if (material.HasProperty("_BaseColor")) paintColor = material.GetColor("_BaseColor");
+                    else if (material.HasProperty("_Color")) paintColor = material.GetColor("_Color");
+                }
                 items.Add(new DecorationCatalogueItemModel(definition.StyleId, definition.DisplayName,
                     definition.Thumbnail, expectedKind == SurfaceStyleKind.Floor
                         ? DecorationCatalogueItemKind.Floor : DecorationCatalogueItemKind.WallSurface,
-                    definition.IsNoneOption));
+                    definition.IsNoneOption, paintSwatchColor: paintColor));
             }
 
             return Array.AsReadOnly(items.ToArray());

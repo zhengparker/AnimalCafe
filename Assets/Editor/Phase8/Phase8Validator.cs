@@ -299,9 +299,10 @@ namespace AnimalCafe.EditorTools.Phase8
                     .FindProperty("pickUpPointIndicatorPrefab")
                     ?.objectReferenceValue)
                     != Phase8AssetPaths.PickUpPointIndicatorPrefabPath;
+            var usesP8R = AnimalCafe.EditorTools.P8R.P8RFurnitureUiBuilder.HasP8RWiring(controller);
             if (invalidSceneReferences
                 || invalidPrefabReferences
-                || mixedPath != Phase8AssetPaths.FurnitureCataloguePath
+                || mixedPath != (usesP8R ? AnimalCafe.EditorTools.P8R.P8RFurnitureUiPaths.Catalogue : Phase8AssetPaths.FurnitureCataloguePath)
                 || legacyPath != Phase8AssetPaths.LegacyDecorationCataloguePath
                 || contentPath != Phase8AssetPaths.ProductionContentCataloguePath)
             {
@@ -310,9 +311,9 @@ namespace AnimalCafe.EditorTools.Phase8
             }
 
             ValidatePrefabReference(serialized, "catalogueView",
-                Phase8AssetPaths.CataloguePrefabPath, scene.path, issues);
+                usesP8R ? AnimalCafe.EditorTools.P8R.P8RFurnitureUiPaths.CataloguePrefab : Phase8AssetPaths.CataloguePrefabPath, scene.path, issues);
             ValidatePrefabReference(serialized, "actionBarView",
-                Phase8AssetPaths.ActionBarPrefabPath, scene.path, issues);
+                usesP8R ? AnimalCafe.EditorTools.P8R.P8RFurnitureUiPaths.ActionPrefab : Phase8AssetPaths.ActionBarPrefabPath, scene.path, issues);
 
             var expectsDebug = scene.path == Phase8AssetPaths.ValidationScenePath;
             var debugVisible = serialized.FindProperty("interactionAnchorDebugVisible")?.boolValue
@@ -416,7 +417,8 @@ namespace AnimalCafe.EditorTools.Phase8
                     || GetRelativePath(catalogues[0].transform, ranges[0].transform)
                         != "SurfaceFooterHost/FloorRange"
                     || AssetDatabase.GetAssetPath(rangeSource)
-                        != Phase8AssetPaths.CataloguePrefabPath
+                        != (AnimalCafe.EditorTools.P8R.P8RFurnitureUiBuilder.HasP8RWiring(controller)
+                            ? AnimalCafe.EditorTools.P8R.P8RFurnitureUiPaths.CataloguePrefab : Phase8AssetPaths.CataloguePrefabPath)
                     || !buttons.Select(button => button.name).OrderBy(name => name)
                         .SequenceEqual(new[] { "SingleGridButton", "WholeRoomButton" })
                     || rangeSerialized.FindProperty("wholeRoomButton")?.objectReferenceValue

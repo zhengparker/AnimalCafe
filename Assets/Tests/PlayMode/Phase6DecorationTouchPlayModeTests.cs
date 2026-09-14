@@ -1310,6 +1310,55 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(fixture.CameraObject.transform.position.z, Is.InRange(-2f, 2f));
         }
 
+        [TestCase(1, 40f, 9.25f)]
+        [TestCase(4, 10f, 9.25f)]
+        [TestCase(10, 4f, 9.25f)]
+        [TestCase(1, -40f, 10.75f)]
+        [TestCase(4, -10f, 10.75f)]
+        [TestCase(10, -4f, 10.75f)]
+        public void ReviewFix_PinchEqualDistanceDoesNotDependOnFrameCount(
+            int frames, float distancePerFrame, float expectedSize)
+        {
+            using var fixture = new CameraFixture();
+            fixture.Settings.ZoomSpeed = .75f;
+            fixture.Camera.orthographicSize = 10f;
+
+            for (var frame = 0; frame < frames; frame++)
+                fixture.Driver.ApplyPinchZoom(distancePerFrame);
+
+            // Equal travel must not turn into one full wheel step per frame.
+            // 相同双指移动距离，无论分成多少帧，最终缩放都相同。
+            Assert.That(fixture.Camera.orthographicSize, Is.EqualTo(expectedSize).Within(.0001f));
+        }
+
+        [TestCase(.4f, 9.9925f)]
+        [TestCase(-.4f, 10.0075f)]
+        [TestCase(0f, 10f)]
+        public void ReviewFix_PinchSmallMotionProducesOnlyProportionalZoom(
+            float distance, float expectedSize)
+        {
+            using var fixture = new CameraFixture();
+            fixture.Settings.ZoomSpeed = .75f;
+            fixture.Camera.orthographicSize = 10f;
+
+            fixture.Driver.ApplyPinchZoom(distance);
+
+            Assert.That(fixture.Camera.orthographicSize, Is.EqualTo(expectedSize).Within(.0001f));
+        }
+
+        [TestCase(1f)]
+        [TestCase(120f)]
+        public void ReviewFix_MouseWheelRetainsItsExistingStep(float wheelDelta)
+        {
+            using var fixture = new CameraFixture();
+            fixture.Settings.ZoomSpeed = .75f;
+            fixture.Camera.orthographicSize = 10f;
+
+            fixture.Controller.ApplyZoom(wheelDelta);
+
+            Assert.That(fixture.Camera.orthographicSize, Is.EqualTo(9.25f).Within(.0001f));
+        }
+
         [Test]
         public void Driver_DelegatesPinchAndPreservesExistingZoomBounds()
         {

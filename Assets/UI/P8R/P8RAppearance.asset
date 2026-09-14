@@ -1,0 +1,326 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 63ceb39811a00a84b94a30acbb7de3c9, type: 3}
+  m_Name: P8RAppearance
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.P8R.P8RAppearance
+  sprites:
+  - key: divider_horizontal
+    value: {fileID: 21300000, guid: d7860fe0f56297943ab235c99011e7f6, type: 3}
+  - key: modal_scrim
+    value: {fileID: 21300000, guid: b1a7549a71e9ad64a9b42b2704dacc69, type: 3}
+  - key: paper_grain_tile
+    value: {fileID: 21300000, guid: a93a48da74b7cc440a7b89ece03cdabe, type: 3}
+  - key: preview_dash_tile_h
+    value: {fileID: 21300000, guid: 0028cc8ddc1bf4f45a166f7ed1cb186f, type: 3}
+  - key: preview_dash_tile_v
+    value: {fileID: 21300000, guid: c668c96e08fc03e438f3613bbbd6cc14, type: 3}
+  - key: scroll_thumb_normal
+    value: {fileID: 21300000, guid: e60c31af75567ae4980859ca8dbad99c, type: 3}
+  - key: scroll_thumb_pressed
+    value: {fileID: 21300000, guid: 9a48732b56c8fe941974c7071af52a88, type: 3}
+  - key: scroll_track
+    value: {fileID: 21300000, guid: 29b23b9df07c25b4092c253ba1ecc533, type: 3}
+  - key: sheet_handle
+    value: {fileID: 21300000, guid: 8bf4d135848e081489fbddff88bc50d4, type: 3}
+  - key: tab_underline
+    value: {fileID: 21300000, guid: 71a237d4c9fe4d846b74bac9d5c2f379, type: 3}
+  - key: tooltip_pointer_down
+    value: {fileID: 21300000, guid: 8874e85e425ae95428837b97a180820c, type: 3}
+  - key: button_destructive_normal
+    value: {fileID: 21300000, guid: d6f71ab3a7a800d4da93dbcd441c4884, type: 3}
+  - key: button_destructive_pressed
+    value: {fileID: 21300000, guid: 8272a51944c51a54f9f34459bbd50dba, type: 3}
+  - key: button_disabled
+    value: {fileID: 21300000, guid: 40120efe2952ceb40889abb33c1bd506, type: 3}
+  - key: button_primary_normal
+    value: {fileID: 21300000, guid: 9413c0cc52a94c04e82db3fa4e23706e, type: 3}
+  - key: button_primary_pressed
+    value: {fileID: 21300000, guid: 35c4556648bf23e4cb7d1e70296c235d, type: 3}
+  - key: button_secondary_normal
+    value: {fileID: 21300000, guid: b83044dbc90a9914d8a78dd904e4b822, type: 3}
+  - key: button_secondary_pressed
+    value: {fileID: 21300000, guid: cf4b9b254ca77f24e9d4840a8c3afc6f, type: 3}
+  - key: badge_applied
+    value: {fileID: 21300000, guid: da9c9f379db75954da1679692c2c4997, type: 3}
+  - key: card_base
+    value: {fileID: 21300000, guid: 031ff04c0ae3d0348a34431e1f35352b, type: 3}
+  - key: card_preview_dash
+    value: {fileID: 21300000, guid: 6810e7621b4e1ad4397f3b59e587be81, type: 3}
+  - key: card_preview_outline
+    value: {fileID: 21300000, guid: e35ed9439474ccd44912ec8ae4c109fb, type: 3}
+  - key: card_well
+    value: {fileID: 21300000, guid: 6f6e487b88520c243ad8aced373ebb2f, type: 3}
+  - key: tab_idle
+    value: {fileID: 21300000, guid: c9d60e98ec6b0fb409f4bd225b01780a, type: 3}
+  - key: tab_selected
+    value: {fileID: 21300000, guid: 0313c354434891f4fbf327bc4ae8093d, type: 3}
+  - key: tab_unavailable
+    value: {fileID: 21300000, guid: ccfa4899f29fd9041a710fd5e4e9097c, type: 3}
+  - key: notice_error
+    value: {fileID: 21300000, guid: 966e621cada5abe45b51d709b69dd372, type: 3}
+  - key: notice_info
+    value: {fileID: 21300000, guid: 15fa21ef79893e747834a7f34c98e8a3, type: 3}
+  - key: notice_preview
+    value: {fileID: 21300000, guid: ba1ee2e85a4aea64b8f013ad975e4b3a, type: 3}
+  - key: notice_success
+    value: {fileID: 21300000, guid: 03549349d57c1d64988abd58a9bbe442, type: 3}
+  - key: notice_warning
+    value: {fileID: 21300000, guid: 355dfe4e44cc4ff47ac79bd5601e489d, type: 3}
+  - key: status_error
+    value: {fileID: 21300000, guid: 328d62f612c21ae48ba1a93e74b3fa8f, type: 3}
+  - key: status_info
+    value: {fileID: 21300000, guid: 87a3d0b8835831c408020659a2ea7c11, type: 3}
+  - key: status_preview
+    value: {fileID: 21300000, guid: 771b404d13c2f2045bcb5c535adb2db8, type: 3}
+  - key: status_success
+    value: {fileID: 21300000, guid: 485f22c75fc8e784f8301b867bd6cc09, type: 3}
+  - key: status_warning
+    value: {fileID: 21300000, guid: 0b3fabea60b2aca4a940abf8bbe07a6e, type: 3}
+  - key: add_cocoa
+    value: {fileID: 21300000, guid: 231b597718829c848b42607ca7951190, type: 3}
+  - key: add_ivory
+    value: {fileID: 21300000, guid: e81a6ab2d32e31a429e768050ddbfd1b, type: 3}
+  - key: add_muted
+    value: {fileID: 21300000, guid: 87d8c90be173ce34293be12778031f1b, type: 3}
+  - key: apply_all_cocoa
+    value: {fileID: 21300000, guid: 3687c8bdbab692a458357bcb30c675fb, type: 3}
+  - key: apply_all_ivory
+    value: {fileID: 21300000, guid: 56d34a763932e204997caa94144358d5, type: 3}
+  - key: apply_all_muted
+    value: {fileID: 21300000, guid: e0ddaba748bf31b41b18245f7bffb669, type: 3}
+  - key: back_cocoa
+    value: {fileID: 21300000, guid: a16a0993c466f074aa2b8c72fb9dd365, type: 3}
+  - key: back_ivory
+    value: {fileID: 21300000, guid: 3d593ec8c9daec44ea0dafdff96bd532, type: 3}
+  - key: back_muted
+    value: {fileID: 21300000, guid: ac4f8e27662488b4b884482bb6df29b1, type: 3}
+  - key: cancel_cocoa
+    value: {fileID: 21300000, guid: 5f44c29a9db90b34d8d94921eee2895f, type: 3}
+  - key: cancel_ivory
+    value: {fileID: 21300000, guid: b598ed4e2b4e6134a96c6e31e25c6ab2, type: 3}
+  - key: cancel_muted
+    value: {fileID: 21300000, guid: 100614918102f72469eb061762cd9a0a, type: 3}
+  - key: catalogue_cocoa
+    value: {fileID: 21300000, guid: 028676a7dc008fa40a58e57927793060, type: 3}
+  - key: catalogue_ivory
+    value: {fileID: 21300000, guid: c336f6f772cdacb4588171b513ccc358, type: 3}
+  - key: catalogue_muted
+    value: {fileID: 21300000, guid: e0cb4e59bac015f4eb43b61bee95053d, type: 3}
+  - key: chevron_down_cocoa
+    value: {fileID: 21300000, guid: 3fe72225047f25f4ea4a219353c127f8, type: 3}
+  - key: chevron_down_ivory
+    value: {fileID: 21300000, guid: 0c393ade722d009458fddfa1d30ada2d, type: 3}
+  - key: chevron_down_muted
+    value: {fileID: 21300000, guid: e198bfa248ef79140b1d67c4a380738a, type: 3}
+  - key: chevron_left_cocoa
+    value: {fileID: 21300000, guid: 26b3865045e88da459695019f3a7039e, type: 3}
+  - key: chevron_left_ivory
+    value: {fileID: 21300000, guid: 9de7aa09a8b143949a7530b16b1567fc, type: 3}
+  - key: chevron_left_muted
+    value: {fileID: 21300000, guid: 8115ea7d623bd7147989452a04decc37, type: 3}
+  - key: chevron_right_cocoa
+    value: {fileID: 21300000, guid: e28996aa3040d5c40929d0251c05da01, type: 3}
+  - key: chevron_right_ivory
+    value: {fileID: 21300000, guid: d4c2ac23d99b62b43a1addb18959c451, type: 3}
+  - key: chevron_right_muted
+    value: {fileID: 21300000, guid: 8cfad3e9e017b724f84fd2032a2b2110, type: 3}
+  - key: chevron_up_cocoa
+    value: {fileID: 21300000, guid: 9a5bf7ef1efa4d44b8369f2ce4ce4517, type: 3}
+  - key: chevron_up_ivory
+    value: {fileID: 21300000, guid: a7cc3978883df544b8c839a9becf2a52, type: 3}
+  - key: chevron_up_muted
+    value: {fileID: 21300000, guid: 701193518d16593409960fd815b3310d, type: 3}
+  - key: clock_cocoa
+    value: {fileID: 21300000, guid: 938f5ff11bf003848b3e5878ff053c32, type: 3}
+  - key: clock_ivory
+    value: {fileID: 21300000, guid: cdb5fbf3fcb589b4fad9be134aa7a7da, type: 3}
+  - key: clock_muted
+    value: {fileID: 21300000, guid: a52cfc6b49a091e4583ba8e6445a3d11, type: 3}
+  - key: confirm_cocoa
+    value: {fileID: 21300000, guid: 70d4511ad9324044aa1d38b9d086dc68, type: 3}
+  - key: confirm_ivory
+    value: {fileID: 21300000, guid: b2067b205de95c54698dcbbf3e04a3f5, type: 3}
+  - key: confirm_muted
+    value: {fileID: 21300000, guid: c82b7642d30cd89448420026df35fc19, type: 3}
+  - key: decorate_cocoa
+    value: {fileID: 3015364618287857307, guid: efd01b2b25d2aa945837743eaa5be4dc, type: 3}
+  - key: decorate_ivory
+    value: {fileID: 21300000, guid: 3ad997aee6fdc8d4cb9ddbcc1c5c8e37, type: 3}
+  - key: decorate_muted
+    value: {fileID: 21300000, guid: a335a26c4f6ac6e4d82aebcdb7881a8f, type: 3}
+  - key: error_cocoa
+    value: {fileID: 21300000, guid: f5c19f173f7bdd64fafa4ec15be5ec42, type: 3}
+  - key: error_ivory
+    value: {fileID: 21300000, guid: 7f4391bdd1cebb844b1e9d462d76733d, type: 3}
+  - key: error_muted
+    value: {fileID: 21300000, guid: 39efe985c7fa27a408b8d3f738fa9d9e, type: 3}
+  - key: exit_cocoa
+    value: {fileID: 8435866594665331281, guid: b23e3f0a296da2c499845ddb4ac5b769, type: 3}
+  - key: exit_ivory
+    value: {fileID: 21300000, guid: b92814be9eac14f4db689aa0b22ff6fa, type: 3}
+  - key: exit_muted
+    value: {fileID: 21300000, guid: 4402d4aac048c774c95c9ede14d43e75, type: 3}
+  - key: fast_forward_cocoa
+    value: {fileID: 21300000, guid: cb46d1cd4a33b9249adbe4066fe7cd56, type: 3}
+  - key: fast_forward_ivory
+    value: {fileID: 21300000, guid: b5b363a6707fb3341895e3f15d07536d, type: 3}
+  - key: fast_forward_muted
+    value: {fileID: 21300000, guid: ecd5a13b1ef96f24bb86b26f587cbd6a, type: 3}
+  - key: floor_cocoa
+    value: {fileID: 4261986013965542708, guid: 05f6edfba15b63140b4433d8e47052d4, type: 3}
+  - key: floor_ivory
+    value: {fileID: 21300000, guid: edcc7b1be1bb1c14ca45c9a9056fca2e, type: 3}
+  - key: floor_muted
+    value: {fileID: 21300000, guid: f300274460c63504a96a98f5878002d3, type: 3}
+  - key: furniture_cocoa
+    value: {fileID: 6948573655699426284, guid: c8dbbed3261047a498e569a9af28e1f5, type: 3}
+  - key: furniture_ivory
+    value: {fileID: 21300000, guid: 2cb16df24768f6b408727f05ab92dc7c, type: 3}
+  - key: furniture_muted
+    value: {fileID: 21300000, guid: 6c73b2cbc61420241a3f0174ccc31596, type: 3}
+  - key: info_cocoa
+    value: {fileID: 21300000, guid: 32c641f4e8a81d34b877c8613de19f67, type: 3}
+  - key: info_ivory
+    value: {fileID: 21300000, guid: bb6f39eda3bfdd042918312edd49d34a, type: 3}
+  - key: info_muted
+    value: {fileID: 21300000, guid: 70c3032921dd7c84199ecd46a4171169, type: 3}
+  - key: lock_cocoa
+    value: {fileID: 21300000, guid: e126dfd95786634439f633f34896bc01, type: 3}
+  - key: lock_ivory
+    value: {fileID: 21300000, guid: 28c7dc6489f0142409367f4fcae926a9, type: 3}
+  - key: lock_muted
+    value: {fileID: 21300000, guid: 86191594dc58eec499acea311e75d603, type: 3}
+  - key: none_cocoa
+    value: {fileID: 21300000, guid: 13df318d2ef24344a95f3a86dd310abf, type: 3}
+  - key: none_ivory
+    value: {fileID: 21300000, guid: eb2029e9f16a4be4586bd552e678389c, type: 3}
+  - key: none_muted
+    value: {fileID: 21300000, guid: 4a37b8f29a2a6ad49a54254c8e1b4f3e, type: 3}
+  - key: pause_cocoa
+    value: {fileID: 21300000, guid: caacb7b45bf84a94fbf8e11f56b5ff3c, type: 3}
+  - key: pause_ivory
+    value: {fileID: 21300000, guid: e46330a08cb9c704ca5d0178f1561f4b, type: 3}
+  - key: pause_muted
+    value: {fileID: 21300000, guid: 78e8dbe7fb9e55947a8ba078d3340070, type: 3}
+  - key: pickup_cocoa
+    value: {fileID: 4959952904766335315, guid: 4f8c9dbc78e86d34da164718a1304dab, type: 3}
+  - key: pickup_ivory
+    value: {fileID: 21300000, guid: f2b20ca5149d1ed4abae6e5fd8e65d1a, type: 3}
+  - key: pickup_muted
+    value: {fileID: 21300000, guid: 26bf5e06d702cc943a48eb1d59de8253, type: 3}
+  - key: resume_cocoa
+    value: {fileID: 21300000, guid: 468cc5f22f0e53b4a98eaa55c6948fdc, type: 3}
+  - key: resume_ivory
+    value: {fileID: 21300000, guid: 864ffbe263ecf684b9d3a126f506dad3, type: 3}
+  - key: resume_muted
+    value: {fileID: 21300000, guid: 25287546d9ea5de489e9d161bafd85c4, type: 3}
+  - key: rotate_cocoa
+    value: {fileID: 21300000, guid: 8c60c83aa968a7b4fa13c495a88c6fe3, type: 3}
+  - key: rotate_ivory
+    value: {fileID: 21300000, guid: d1314d82ae06c2947b2b4ebc0654f5a2, type: 3}
+  - key: rotate_muted
+    value: {fileID: 21300000, guid: 6245f3003c33c6249ba1280c72f0650f, type: 3}
+  - key: single_grid_cocoa
+    value: {fileID: -1197664756938110554, guid: ee58ba5cf97e3fc448c6475b65ffaed0, type: 3}
+  - key: single_grid_ivory
+    value: {fileID: 21300000, guid: ec8c7e434dd9dff4ab6c8180af80fd89, type: 3}
+  - key: single_grid_muted
+    value: {fileID: 21300000, guid: 657bc5b03ef664842968b7c74b169b1f, type: 3}
+  - key: store_cocoa
+    value: {fileID: 21300000, guid: c18248ca6d4ea7542881a54ef8c354f9, type: 3}
+  - key: store_ivory
+    value: {fileID: 21300000, guid: 2d00244feb30ac74f98f7e13b10d04e9, type: 3}
+  - key: store_muted
+    value: {fileID: 21300000, guid: 860eec22ba5dd454a9336bc36071ff78, type: 3}
+  - key: undo_cocoa
+    value: {fileID: 21300000, guid: 3649d6942f170da42b23ccef31de2bff, type: 3}
+  - key: undo_ivory
+    value: {fileID: 21300000, guid: fac07ac35e3b9344d995495a3ba5daae, type: 3}
+  - key: undo_muted
+    value: {fileID: 21300000, guid: 6fb14b40176629243b364d13bd556bf2, type: 3}
+  - key: wall_cocoa
+    value: {fileID: 7866591513662836999, guid: 08e21b29c0a2c4143b8c73dd2571a8a6, type: 3}
+  - key: wall_decor_cocoa
+    value: {fileID: -7124483638467059152, guid: 47bb69b3ff531ca48beedb0bb01b1804, type: 3}
+  - key: wall_decor_ivory
+    value: {fileID: 21300000, guid: 91fdfeab4bdbb95479d0b218c697546e, type: 3}
+  - key: wall_decor_muted
+    value: {fileID: 21300000, guid: a43188d1cbfa89f43b659c97e86c0d19, type: 3}
+  - key: wall_ivory
+    value: {fileID: 21300000, guid: 536f42c063c72214997aaab73e80f76d, type: 3}
+  - key: wall_muted
+    value: {fileID: 21300000, guid: 2081ca02039fa09469dce6a3a47ced82, type: 3}
+  - key: warning_cocoa
+    value: {fileID: 21300000, guid: cbf04a57d905a6d4aa0ce0521009827d, type: 3}
+  - key: warning_ivory
+    value: {fileID: 21300000, guid: 0ad0a41acb37e1745bc734e95a5d5874, type: 3}
+  - key: warning_muted
+    value: {fileID: 21300000, guid: bafefae3c7b06234b958dc5fd33b6dc7, type: 3}
+  - key: whole_room_cocoa
+    value: {fileID: -1198104406461710100, guid: 43766323fe83f4f4d86f8e6749ca0d51, type: 3}
+  - key: whole_room_ivory
+    value: {fileID: 21300000, guid: 3583631ebb82bb24d82e3a472eeaa9cb, type: 3}
+  - key: whole_room_muted
+    value: {fileID: 21300000, guid: a04a2135704c44e42a34cae444803e4b, type: 3}
+  - key: panel_cream
+    value: {fileID: 21300000, guid: f1e7f35df3445ab49b24d420e0f38eae, type: 3}
+  - key: panel_inset
+    value: {fileID: 21300000, guid: ff3046fdb45ae484dbc439378db5058f, type: 3}
+  - key: panel_light
+    value: {fileID: 21300000, guid: 6de64f9060a6fcc489a29f4465fc7c38, type: 3}
+  - key: TH_CounterPreset_1x1
+    value: {fileID: 21300000, guid: d705c23bf2b51e5429cdda9917487d16, type: 3}
+  - key: TH_CounterPreset_1x2
+    value: {fileID: 21300000, guid: 5dd688e8918c46a41bbaf4eb0c75ec91, type: 3}
+  - key: TH_CounterPreset_1x3
+    value: {fileID: 21300000, guid: 4ab5e035ebed7a848bfabfffb9690dc0, type: 3}
+  - key: TH_CounterPreset_2x3
+    value: {fileID: 21300000, guid: 38b9f2a8d6e50104f9fe662ac913fe59, type: 3}
+  - key: TH_Equipment_CashRegister_01
+    value: {fileID: 21300000, guid: ace3457606d3de84a882e858279fde1d, type: 3}
+  - key: TH_Equipment_CoffeeMachine_01
+    value: {fileID: 21300000, guid: 829ce668b320add458f54aae05a64a36, type: 3}
+  - key: TH_floor_dark_stone
+    value: {fileID: 21300000, guid: df6af9153794472418c4491540df4413, type: 3}
+  - key: TH_floor_light_tile
+    value: {fileID: 21300000, guid: 2d29c8378ea35374d92fc88438da2a54, type: 3}
+  - key: TH_floor_warm_wood
+    value: {fileID: 21300000, guid: 04073916a8f335141a2e07fbd4906715, type: 3}
+  - key: TH_paint_cream
+    value: {fileID: 21300000, guid: d4d5fdedd7adddf4e87609a30c2ae030, type: 3}
+  - key: TH_paint_sage
+    value: {fileID: 21300000, guid: fc762b902d7b0fe4cb6a888f88a79376, type: 3}
+  - key: TH_paint_terracotta
+    value: {fileID: 21300000, guid: bf7ca4bf5a17d164ea17d862f6270644, type: 3}
+  - key: TH_wainscoting_none
+    value: {fileID: 21300000, guid: c7307b2443630e349931c6fb08913497, type: 3}
+  - key: TH_wainscoting_sage_plain
+    value: {fileID: 21300000, guid: 3d65a2e6b66696145bff97fdb45342be, type: 3}
+  - key: TH_wainscoting_warm_white_rail
+    value: {fileID: 21300000, guid: 0aa4381c07e194e4fb698b3178cf9e66, type: 3}
+  - key: TH_wall_decor_monitor_01
+    value: {fileID: 21300000, guid: 6177d365567e2964485a98c13698b458, type: 3}
+  - key: TH_wall_decor_shiba_painting_01
+    value: {fileID: 21300000, guid: 600386ddae7a5d048b8fcc5c80024c43, type: 3}
+  - key: TH_wall_decor_wood_shelf_01
+    value: {fileID: 21300000, guid: 59dc3f18daf57ca4f811d091ab99d2ba, type: 3}
+  - key: TH_wallpaper_cream_floral
+    value: {fileID: 21300000, guid: f437257286a1c264f8211530de81617a, type: 3}
+  - key: TH_wallpaper_sage_sprig
+    value: {fileID: 21300000, guid: 1c8161968d82e094098339f0bb8fc7c0, type: 3}
+  - key: TH_window_canonical_phase4
+    value: {fileID: 21300000, guid: 72dc99ca132d1f24e85eaf3c3e206280, type: 3}
+  - key: TH_window_tall_glass_1x2_01
+    value: {fileID: 21300000, guid: 0e0a5a4d6f19fd641a2077df6c509b7a, type: 3}
+  english: {fileID: 4900000, guid: ed20f36bbcf021c4b9ec5ca7af66f8f8, type: 3}
+  font: {fileID: 11400000, guid: a3b9ac8f9e4d3dc419deee4369b6dbcb, type: 2}
+  refinedB: 1

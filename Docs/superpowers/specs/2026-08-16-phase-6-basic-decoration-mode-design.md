@@ -7,6 +7,8 @@
 > Required reviews: Production、Engineering、QA & Player Research
 > Implementation status: Not started
 
+> 本轮 Preview 外观补充的 Studio Owner manual acceptance：`Pending`；不改写原 Phase 6 验收记录。
+
 ## 1. Goal
 
 Phase 6 让玩家在手机优先的 Decoration Mode 中安全地放置、选择、拖动、旋转、确认、取消和收起普通 Floor Furniture。
@@ -25,7 +27,7 @@ Phase 6 让玩家在手机优先的 Decoration Mode 中安全地放置、选择�
 
 玩家从正常 HUD 进入 Decoration Mode 后，游戏自动 Pause，并显示 Furniture Catalogue Bottom Sheet。Catalogue 以家具缩略图格子展示当前可用的 Counter presets。
 
-玩家点击一个 Catalogue tile 后，对应家具出现在 Camera 画面中央附近的最近 Grid cell，立即进入悬空 Preview。玩家可以单指拖动、旋转并查看完整 footprint。绿色表示可以放置；红色表示不能放置，并显示具体原因。玩家必须单件 `Confirm` 或 `Cancel`。
+玩家点击一个 Catalogue tile 后，对应家具出现在 Camera 画面中央附近的最近 Grid cell，立即进入悬空 Preview。玩家可以单指拖动、旋转并查看完整 footprint。footprint 及现有 symbol 的绿色表示可以放置；红色表示不能放置，并显示具体原因。家具模型保留原外观。玩家必须单件 `Confirm` 或 `Cancel`。
 
 玩家也可以点击已摆放家具，使其立即悬空并进入同一套编辑流程。`Store` 需要二次确认。
 
@@ -213,6 +215,9 @@ Closed
 - Bottom Sheet、Modal 与 Safe Area 必须遵守 Phase 5 contracts。
 
 ## 10. Selecting and previewing furniture
+
+- 普通家具 ghost 保留 Prefab 原材质 reference、颜色、纹理与已有 `MaterialPropertyBlock`；valid / invalid 切换不染色模型，也不覆盖或清除已有外观属性。
+- 红绿 placement feedback 由 footprint 和现有 symbol 承担；具体 invalid reason、完整 footprint validation 与 Confirm availability 继续遵守 §12.3。
 
 ### 10.1 New furniture
 

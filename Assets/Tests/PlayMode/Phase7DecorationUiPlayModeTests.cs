@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using AnimalCafe.Decoration;
 using AnimalCafe.Content;
+using AnimalCafe.Layout;
 using AnimalCafe.UI.Decoration;
 using AnimalCafe.UI.Foundation;
 using AnimalCafe.UI.Components;
@@ -246,7 +247,8 @@ namespace AnimalCafe.Tests.Phase7
                 Assert.That(rootRect.offsetMin, Is.EqualTo(Vector2.zero));
                 Assert.That(rootRect.offsetMax, Is.EqualTo(Vector2.zero));
                 Assert.That(fixture.Label("cancelButton").text, Is.EqualTo("Cancel"));
-                Assert.That(fixture.Label("confirmButton").text, Is.EqualTo("Confirm"));
+                Assert.That(fixture.Label("confirmButton").text,
+                    Is.EqualTo(mode == DecorationModeKind.Floor ? "确认本次修改" : "Confirm"));
                 Assert.That(fixture.GetButton("cancelButton").GetComponent<RectTransform>().rect.width,
                     Is.GreaterThanOrEqualTo(136f));
                 Assert.That(fixture.GetButton("confirmButton").GetComponent<RectTransform>().rect.width,
@@ -410,21 +412,45 @@ namespace AnimalCafe.Tests.Phase7
             var catalogueRoot = Ui("CatalogueSheet");
             var surfaceFooter = Ui("SurfaceFooterHost", catalogueRoot.transform).GetComponent<RectTransform>();
             var nonSurfaceHost = Ui("NonSurfaceActionHost").GetComponent<RectTransform>();
+            var noneStyle = ScriptableObject.CreateInstance<SurfaceStyleDefinitionAsset>();
+            var noneIcon = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 1, 1), Vector2.zero);
             using var action = new ActionFixture();
             try
             {
                 var controller = controllerRoot.AddComponent<DecorationModeController>();
                 var catalogue = catalogueRoot.AddComponent<DecorationCatalogueView>();
+                Set(noneStyle, "styleId", "wains.none");
+                Set(noneStyle, "kind", SurfaceStyleKind.Wainscoting);
+                Set(noneStyle, "isNoneOption", true);
+                Set(noneStyle, "thumbnail", noneIcon);
+                var surfaceLayout = new RoomSurfaceLayout("room.main", new[]
+                {
+                    new WallAppearance("wall.left", "paint.cream", null),
+                    new WallAppearance("wall.right", "paint.cream", null)
+                }, Enumerable.Range(0, 64).Select(index => new FloorTileAppearance(
+                    new GridPosition(index % 8, index / 8), "floor.wood", SurfaceRotation.Degrees0)));
+                var surfaces = new SurfaceDecorationSession(surfaceLayout, new[] { noneStyle });
+                Set(controller, "surfaceSession", surfaces);
                 Set(catalogue, "surfaceFooterHost", surfaceFooter);
                 action.Root.transform.SetParent(nonSurfaceHost, false);
                 Set(controller, "catalogueView", catalogue);
                 Set(controller, "actionBarView", action.View);
 
                 Assert.That(controller.TryChangeMode(DecorationModeKind.Floor), Is.True);
+                Assert.That(action.View.transform.parent, Is.SameAs(nonSurfaceHost),
+                    "Without a preview the instruction owner must remain outside the collapsible footer.");
+                Assert.That(surfaces.BeginWholeRoomFloor().Succeeded, Is.True);
+                Invoke(controller, "ShowPhase7ActionForActivePreview");
                 Assert.That(action.View.transform.parent, Is.SameAs(surfaceFooter));
                 Assert.That(controller.TryChangeMode(DecorationModeKind.Wall), Is.True);
+                Assert.That(surfaces.ActivePreview, Is.Null, "Changing tabs cancels only the unconfirmed surface preview.");
+                Assert.That(action.View.transform.parent, Is.SameAs(nonSurfaceHost),
+                    "Waiting to select a wall must not attach the instruction owner to an inactive footer.");
+                Assert.That(surfaces.BeginWall("wall.left").Succeeded, Is.True);
+                Invoke(controller, "ShowPhase7ActionForActivePreview");
                 Assert.That(action.View.transform.parent, Is.SameAs(surfaceFooter));
                 Assert.That(controller.TryChangeMode(DecorationModeKind.WallDecor), Is.True);
+                Assert.That(surfaces.ActivePreview, Is.Null);
                 Assert.That(action.View.transform.parent, Is.SameAs(nonSurfaceHost));
                 Assert.That(controller.TryChangeMode(DecorationModeKind.Furniture), Is.True);
                 Assert.That(action.View.transform.parent, Is.SameAs(nonSurfaceHost));
@@ -445,6 +471,8 @@ namespace AnimalCafe.Tests.Phase7
                 UnityEngine.Object.DestroyImmediate(controllerRoot);
                 UnityEngine.Object.DestroyImmediate(catalogueRoot);
                 UnityEngine.Object.DestroyImmediate(nonSurfaceHost.gameObject);
+                UnityEngine.Object.DestroyImmediate(noneStyle);
+                UnityEngine.Object.DestroyImmediate(noneIcon);
             }
         }
 

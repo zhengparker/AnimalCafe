@@ -386,10 +386,19 @@ namespace AnimalCafe.Tests.PlayMode
             AssertVector(pickUpUnaffected.transform.position, new Vector3(10f, 0.72f, 21.5f));
         }
 
-        [Test]
-        public void SurfaceMountedPreviewView_UsesPreviewOnlyAndShowsCurrentValidity()
+        [TestCase(MountedDefinitionId, FurnitureFunctionType.CashRegister)]
+        [TestCase("equipment.coffee-machine.task6", FurnitureFunctionType.CoffeeMachine)]
+        public void SurfaceMountedPreviewView_ValidityChangesOnlyFootprintAndPreservesAuthoredModel(
+            string definitionId,
+            FurnitureFunctionType functionType)
         {
-            var fixture = CreateFunctionalFixture();
+            var originalColor = new Color(0.61f, 0.42f, 0.26f, 1f);
+            material.color = originalColor;
+            var originalTexture = new Texture2D(2, 2);
+            owned.Add(originalTexture);
+            material.mainTexture = originalTexture;
+            var fixture = CreateFunctionalFixture(definitionId, functionType);
+            Assert.That(fixture.Catalog.TryGetDefinitionAsset(definitionId, out var definition), Is.True);
             var previewTemplate = CreateFunctionalPreviewTemplate();
             var previewRoot = CreateObject("FunctionalPreviewRoot");
             var view = CreateObject("FunctionalPreviewView")
@@ -403,7 +412,7 @@ namespace AnimalCafe.Tests.PlayMode
             var session = new FunctionalSurfaceDecorationSession(fixture.FunctionalLayout);
 
             Assert.That(session.BeginCreateMounted(
-                MountedDefinitionId,
+                definitionId,
                 new SurfaceSlotAddress(SupportId, "slot.0")).Succeeded,
                 Is.True);
             view.Show(session.ActivePreview);
@@ -414,6 +423,8 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(view.CurrentFootprint, Is.Not.Null);
             AssertVector(view.CurrentGhost.transform.position, SlotWorldPosition(fixture, "slot.0"));
             AssertColor(ActiveRenderers(view.CurrentFootprint).First(), theme.Colors.Accent);
+            AssertAuthoredModelAppearance(view.CurrentGhost, originalColor, originalTexture);
+            AssertAuthoredModelAppearance(definition.Prefab, originalColor, originalTexture);
 
             Assert.That(fixture.FunctionalLayout.PlacePickUp(new PickUpPointInstance(
                 PickUpIdA,
@@ -427,6 +438,19 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(view.CurrentGhost, Is.Not.Null);
             AssertVector(view.CurrentGhost.transform.position, SlotWorldPosition(fixture, "slot.1"));
             AssertColor(ActiveRenderers(view.CurrentFootprint).First(), theme.Colors.Destructive);
+            AssertAuthoredModelAppearance(view.CurrentGhost, originalColor, originalTexture);
+            AssertAuthoredModelAppearance(definition.Prefab, originalColor, originalTexture);
+            Assert.That(fixture.FunctionalLayout.MountedInstances, Is.Empty);
+            Assert.That(fixture.FunctionalLayout.PickUpPoints, Has.Count.EqualTo(1));
+
+            Assert.That(session.MovePreview(
+                new SurfaceSlotAddress(SupportId, "slot.0")).Succeeded,
+                Is.True);
+            view.Show(session.ActivePreview);
+            AssertVector(view.CurrentGhost.transform.position, SlotWorldPosition(fixture, "slot.0"));
+            AssertColor(ActiveRenderers(view.CurrentFootprint).First(), theme.Colors.Accent);
+            AssertAuthoredModelAppearance(view.CurrentGhost, originalColor, originalTexture);
+            AssertAuthoredModelAppearance(definition.Prefab, originalColor, originalTexture);
             Assert.That(fixture.FunctionalLayout.MountedInstances, Is.Empty);
             Assert.That(fixture.FunctionalLayout.PickUpPoints, Has.Count.EqualTo(1));
         }
@@ -574,6 +598,134 @@ namespace AnimalCafe.Tests.PlayMode
                 "Confirmed and Preview indicators must both stay hidden outside Decoration Mode.");
         }
 
+        [Test]
+        public void PickUpOverlap_InvalidPreviewHidesOnlyOccupiedSlotAndCancelRestoresIt()
+        {
+            var fixture = CreatePickUpOverlapFixture(out var view, out _);
+            view.TryGet(PickUpIdA, out var first);
+            view.TryGet(PickUpIdB, out var second);
+            var session = new FunctionalSurfaceDecorationSession(fixture.FunctionalLayout);
+            var address = new SurfaceSlotAddress(SupportId, "slot.0");
+            Assert.That(session.BeginCreatePickUp(address).Succeeded, Is.False);
+            view.ShowPreview(session.ActivePreview);
+
+            Assert.That(VisiblePickUpRenderers(first), Is.Empty,
+                "The occupied slot must show only the red preview, without a second sign or green footprint.");
+            Assert.That(VisiblePickUpRenderers(second), Has.Length.EqualTo(2));
+            Assert.That(VisiblePickUpRenderers(view.CurrentPreview), Has.Length.EqualTo(2));
+            AssertPickUpStateColor(view.CurrentPreview, theme.Colors.Destructive);
+            Assert.That(session.ActivePreview.CanConfirm, Is.False);
+            Assert.That(session.Confirm().Succeeded, Is.False, "Visual hiding must not free the occupied slot.");
+            Assert.That(fixture.FunctionalLayout.PickUpPoints.Select(point => point.InstanceId),
+                Is.EquivalentTo(new[] { PickUpIdA, PickUpIdB }));
+            Assert.That(fixture.FunctionalLayout.PickUpPoints.Single(point => point.InstanceId == PickUpIdA).Address,
+                Is.EqualTo(address));
+
+            session.Cancel();
+            view.HidePreview();
+            view.HidePreview();
+            Assert.That(view.CurrentPreview, Is.Null);
+            Assert.That(VisiblePickUpRenderers(first), Has.Length.EqualTo(2));
+            Assert.That(VisiblePickUpRenderers(second), Has.Length.EqualTo(2));
+            AssertPickUpStateColor(first, theme.Colors.Accent);
+        }
+
+        [Test]
+        public void PickUpOverlap_MovingPreviewRestoresPreviousSlot()
+        {
+            var fixture = CreatePickUpOverlapFixture(out var view, out _);
+            view.TryGet(PickUpIdA, out var first);
+            view.TryGet(PickUpIdB, out var second);
+            var session = new FunctionalSurfaceDecorationSession(fixture.FunctionalLayout);
+            session.BeginCreatePickUp(new SurfaceSlotAddress(SupportId, "slot.0"));
+            view.ShowPreview(session.ActivePreview);
+            Assert.That(VisiblePickUpRenderers(first), Is.Empty);
+
+            Assert.That(session.MovePreview(new SurfaceSlotAddress(SupportId, "slot.1")).Succeeded, Is.False);
+            view.ShowPreview(session.ActivePreview);
+            view.ShowPreview(session.ActivePreview);
+            Assert.That(VisiblePickUpRenderers(first), Has.Length.EqualTo(2));
+            Assert.That(VisiblePickUpRenderers(second), Is.Empty);
+            Assert.That(session.MovePreview(new SurfaceSlotAddress(SupportId, "slot.2")).Succeeded, Is.True);
+            view.ShowPreview(session.ActivePreview);
+            Assert.That(VisiblePickUpRenderers(first), Has.Length.EqualTo(2));
+            Assert.That(VisiblePickUpRenderers(second), Has.Length.EqualTo(2));
+        }
+
+        [Test]
+        public void PickUpOverlap_HidePreviewDoesNotRestoreControllerHiddenSource()
+        {
+            var fixture = CreatePickUpOverlapFixture(out var view, out _);
+            view.TryGet(PickUpIdA, out var source);
+            view.TryGet(PickUpIdB, out var target);
+            var session = new FunctionalSurfaceDecorationSession(fixture.FunctionalLayout);
+            Assert.That(session.BeginMovePickUp(PickUpIdA).Succeeded, Is.True);
+            // Controller hides its source before refreshing visuals. Only it may restore that source.
+            // 保持真实调用顺序；View 不得恢复 controller 已隐藏的原件。
+            source.SetActive(false);
+            view.ShowPreview(session.ActivePreview);
+            Assert.That(session.MovePreview(new SurfaceSlotAddress(SupportId, "slot.1")).Succeeded, Is.False);
+            source.SetActive(false);
+            view.HidePreview();
+            view.ShowPreview(session.ActivePreview);
+            Assert.That(VisiblePickUpRenderers(target), Is.Empty);
+            view.ShowPreview(session.ActivePreview);
+            view.HidePreview();
+            Assert.That(source.activeSelf, Is.False, "Preview cleanup must not revive the controller's source.");
+            Assert.That(VisiblePickUpRenderers(target), Has.Length.EqualTo(2));
+        }
+
+        [UnityTest]
+        public IEnumerator PickUpOverlap_RebuildAndModeExitDiscardOldVisibilityOwnership()
+        {
+            var fixture = CreatePickUpOverlapFixture(out var view, out var root);
+            view.TryGet(PickUpIdA, out var oldConfirmed);
+            var session = new FunctionalSurfaceDecorationSession(fixture.FunctionalLayout);
+            session.BeginCreatePickUp(new SurfaceSlotAddress(SupportId, "slot.0"));
+            view.ShowPreview(session.ActivePreview);
+            Assert.That(VisiblePickUpRenderers(oldConfirmed), Is.Empty);
+            view.Rebuild(fixture.FunctionalLayout.PickUpPoints, true);
+            Assert.That(view.TryGet(PickUpIdA, out var rebuilt), Is.True);
+            Assert.That(rebuilt, Is.Not.SameAs(oldConfirmed));
+            view.HidePreview();
+            Assert.That(oldConfirmed.activeSelf, Is.False, "Rebuild must not revive old representations.");
+            Assert.That(VisiblePickUpRenderers(rebuilt), Has.Length.EqualTo(2));
+            view.ShowPreview(session.ActivePreview);
+            Assert.That(VisiblePickUpRenderers(rebuilt), Is.Empty);
+            view.Rebuild(fixture.FunctionalLayout.PickUpPoints, false);
+            view.HidePreview();
+            view.ShowPreview(session.ActivePreview);
+            Assert.That(view.CurrentPreview, Is.Null);
+            Assert.That(view.TryGet(PickUpIdA, out _), Is.False);
+            Assert.That(VisiblePickUpRenderers(root), Is.Empty);
+            yield return null;
+            Assert.That(root.transform.childCount, Is.Zero);
+            view.Rebuild(fixture.FunctionalLayout.PickUpPoints, true);
+            Assert.That(view.TryGet(PickUpIdA, out var reentered), Is.True);
+            Assert.That(VisiblePickUpRenderers(reentered), Has.Length.EqualTo(2));
+            Assert.That(fixture.FunctionalLayout.PickUpPoints.Count, Is.EqualTo(2));
+        }
+
+        private FunctionalFixture CreatePickUpOverlapFixture(out PickUpPointIndicatorView view, out GameObject root)
+        {
+            var fixture = CreateFunctionalFixture();
+            Assert.That(fixture.FunctionalLayout.PlacePickUp(new PickUpPointInstance(
+                PickUpIdA, new SurfaceSlotAddress(SupportId, "slot.0"))).Succeeded, Is.True);
+            Assert.That(fixture.FunctionalLayout.PlacePickUp(new PickUpPointInstance(
+                PickUpIdB, new SurfaceSlotAddress(SupportId, "slot.1"))).Succeeded, Is.True);
+            root = CreateObject("PickUpOverlapRoot");
+            view = CreateObject("PickUpOverlapView").AddComponent<PickUpPointIndicatorView>();
+            view.Configure(fixture.FurnitureRegistry, root.transform, CreatePickUpIndicatorTemplate(), theme);
+            view.Rebuild(fixture.FunctionalLayout.PickUpPoints, true);
+            return fixture;
+        }
+
+        private static Renderer[] VisiblePickUpRenderers(GameObject target)
+        {
+            return target.GetComponentsInChildren<Renderer>(true)
+                .Where(renderer => renderer.enabled && renderer.gameObject.activeInHierarchy).ToArray();
+        }
+
         [UnityTest]
         public IEnumerator PickUpPointIndicatorView_RepeatedPreviewHideAndModeExitLeaveOnlyExpectedOwnedChildren()
         {
@@ -686,8 +838,9 @@ namespace AnimalCafe.Tests.PlayMode
             var pyramid = AssertRenderChild(prefab.transform, "InvertedSquarePyramid");
             Assert.That(footprint, Is.Not.SameAs(pyramid));
             AssertExactOneByOneFootprint(footprint);
-            AssertInvertedSquarePyramid(pyramid, footprint, prefab.transform);
-            AssertNeutralLitPyramid(pyramid, footprint);
+            Assert.That(pyramid.GetComponent<MeshFilter>().sharedMesh.vertexCount, Is.EqualTo(4));
+            Assert.That(pyramid.GetComponent<Renderer>().sharedMaterial.GetTexture("_BaseMap"), Is.Not.Null);
+            Assert.That(pyramid.GetComponent<AnimalCafe.UI.P8R.P8RPickUpSignBillboard>(), Is.Not.Null);
             AssertNoPhysicsOrNavigationComponents(prefab);
 
             var fixture = CreateFunctionalFixture();
@@ -820,7 +973,9 @@ namespace AnimalCafe.Tests.PlayMode
                 supportPrefab.GetComponentInChildren<SurfaceSlotMarker>(true));
         }
 
-        private FunctionalFixture CreateFunctionalFixture()
+        private FunctionalFixture CreateFunctionalFixture(
+            string mountedDefinitionId = MountedDefinitionId,
+            FurnitureFunctionType mountedFunctionType = FurnitureFunctionType.CashRegister)
         {
             var supportPrefab = CreateSupportPrefab(
                 "Task6SupportPrefab",
@@ -839,11 +994,11 @@ namespace AnimalCafe.Tests.PlayMode
                 FurnitureFunctionType.None,
                 supportPrefab);
             var mountedDefinition = CreateDefinition(
-                MountedDefinitionId,
+                mountedDefinitionId,
                 1,
                 1,
                 PlacementSurfaceType.FurnitureSurface,
-                FurnitureFunctionType.CashRegister,
+                mountedFunctionType,
                 equipmentPrefab);
             var catalog = CreateContentCatalog(supportDefinition, mountedDefinition);
             var definitions = catalog.BuildRuntimeCatalog();
@@ -1106,10 +1261,16 @@ namespace AnimalCafe.Tests.PlayMode
 
         private static void AssertExactOneByOneFootprint(Transform footprint)
         {
-            var meshSize = footprint.GetComponent<MeshFilter>().sharedMesh.bounds.size;
-            var actualSize = Vector3.Scale(meshSize, Absolute(footprint.lossyScale));
-            Assert.That(actualSize.x, Is.EqualTo(1f).Within(Epsilon));
-            Assert.That(actualSize.z, Is.EqualTo(1f).Within(Epsilon));
+            // Measure the occupied parent-space surface, including the flat Quad's rotation.
+            // 将真实顶点转换到父级空间，保留旋转后严格的 1 x 1 占用范围检查。
+            var points = footprint.GetComponent<MeshFilter>().sharedMesh.vertices
+                .Select(vertex => footprint.parent.InverseTransformPoint(footprint.TransformPoint(vertex)))
+                .ToArray();
+            Assert.That(points, Is.Not.Empty);
+            Assert.That(points.Max(point => point.x) - points.Min(point => point.x),
+                Is.EqualTo(1f).Within(Epsilon));
+            Assert.That(points.Max(point => point.z) - points.Min(point => point.z),
+                Is.EqualTo(1f).Within(Epsilon));
         }
 
         private static void AssertInvertedSquarePyramid(
@@ -1231,11 +1392,33 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(footprint.GetComponent<MeshRenderer>(), Is.Not.Null);
             var mesh = pyramid.GetComponent<MeshFilter>().sharedMesh;
             Assert.That(mesh, Is.Not.Null);
-            Assert.That(mesh.vertices.Distinct().Count(), Is.EqualTo(5));
+            Assert.That(mesh.vertices.Distinct().Count(), Is.EqualTo(
+                pyramid.GetComponent<AnimalCafe.UI.P8R.P8RPickUpSignBillboard>() != null ? 4 : 5),
+                "Production sign is a quad; isolated legacy fixtures still exercise generic view ownership.");
             Assert.That(mesh.vertices.Min(vertex => vertex.y),
                 Is.LessThan(mesh.vertices.Max(vertex => vertex.y)),
                 "The pyramid tip must point down toward the separate footprint.");
             Assert.That(indicator.GetComponentsInChildren<Collider>(true), Is.Empty);
+        }
+
+        private void AssertAuthoredModelAppearance(GameObject model, Color expectedColor, Texture expectedTexture)
+        {
+            var renderers = model.GetComponentsInChildren<Renderer>(true);
+            Assert.That(renderers, Is.Not.Empty);
+            foreach (var renderer in renderers)
+            {
+                Assert.That(renderer.sharedMaterial, Is.SameAs(material));
+                var actualColor = renderer.sharedMaterial.color;
+                Assert.That(actualColor.r, Is.EqualTo(expectedColor.r).Within(Epsilon));
+                Assert.That(actualColor.g, Is.EqualTo(expectedColor.g).Within(Epsilon));
+                Assert.That(actualColor.b, Is.EqualTo(expectedColor.b).Within(Epsilon));
+                Assert.That(actualColor.a, Is.EqualTo(expectedColor.a).Within(Epsilon));
+                Assert.That(renderer.sharedMaterial.mainTexture, Is.SameAs(expectedTexture));
+                var block = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(block);
+                Assert.That(block.isEmpty, Is.True,
+                    "Slot validity must color only the footprint and preserve the model's authored appearance.");
+            }
         }
 
         private static void AssertColor(Renderer renderer, Color expected)

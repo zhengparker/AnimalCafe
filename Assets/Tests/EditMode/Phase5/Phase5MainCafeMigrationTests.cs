@@ -22,15 +22,35 @@ namespace AnimalCafe.Tests.Phase5
     public sealed class Phase5MainCafeMigrationTests
     {
         private const string MainCafePath = "Assets/Scenes/MainCafe.unity";
+        private AnimalCafe.Tests.EditMode.LegacyMainCafeFixture legacy;
 
         [SetUp]
-        public void SetUp() => Phase5UiAssetBuilder.BuildAll();
+        public void SetUp()
+        {
+            Assert.That(AssetDatabase.LoadAssetAtPath<AnimalCafeUiTheme>(Phase5UiAssetPaths.ThemePath), Is.Not.Null);
+            Assert.That(AssetDatabase.LoadAssetAtPath<GameObject>(Phase5UiAssetPaths.UiRootPrefabPath), Is.Not.Null);
+            Assert.That(AssetDatabase.LoadAssetAtPath<AnimalCafe.Camera.CameraSettings>("Assets/Config/DefaultCameraSettings.asset"), Is.Not.Null);
+            legacy = new AnimalCafe.Tests.EditMode.LegacyMainCafeFixture();
+        }
+        [TearDown] public void RestoreLegacy() { legacy?.Dispose(); legacy = null; }
 
         [Test]
-        public void ConfigurePhase0Scene_MigratesTimeControlsIntoOneThemedPhase5UiRoot()
+        public void ConfigurePhase0Target_MigratesTimeControlsIntoOneThemedPhase5UiRoot()
         {
-            Phase0SceneSetup.ConfigurePhase0Scene();
-            var scene = EditorSceneManager.OpenScene(MainCafePath, OpenSceneMode.Single);
+            var scene = EditorSceneManager.OpenScene(MainCafePath, OpenSceneMode.Additive);
+            var assetPath = "Assets/__Phase5Caller_" + Guid.NewGuid().ToString("N") + ".mat";
+            try
+            {
+            var callerMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            AssetDatabase.CreateAsset(callerMaterial, assetPath);
+            AssetDatabase.SaveAssetIfDirty(callerMaterial);
+            AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+            callerMaterial = AssetDatabase.LoadAssetAtPath<Material>(assetPath);
+            var callerBytes = System.IO.File.ReadAllBytes(assetPath);
+            callerMaterial.color = Color.magenta;
+            EditorUtility.SetDirty(callerMaterial);
+            Assert.That(EditorUtility.IsDirty(callerMaterial), Is.True, "Fixture must reach target configuration dirty.");
+            Phase0SceneSetup.ConfigurePhase0Scene(scene);
             var uiRoot = FindAll(scene, "UI Root").Single();
             var theme = AssetDatabase.LoadAssetAtPath<AnimalCafeUiTheme>(Phase5UiAssetPaths.ThemePath);
 
@@ -62,17 +82,25 @@ namespace AnimalCafe.Tests.Phase5
                 "MainCafe time controls must use the reusable Phase 5 Button presentation.");
             Assert.That(timeButtons.All(button => button.GetComponent<Shadow>() != null), Is.True,
                 "MainCafe time controls must keep the Phase 5 elevation cue.");
+            Assert.That(EditorUtility.IsDirty(callerMaterial), Is.True, "Target configuration must not save unrelated assets.");
+            Assert.That(callerMaterial.color, Is.EqualTo(Color.magenta));
+            Assert.That(System.IO.File.ReadAllBytes(assetPath), Is.EqualTo(callerBytes));
+            }
+            finally { AssetDatabase.DeleteAsset(assetPath); }
         }
 
         [Test]
-        public void ConfigurePhase0Scene_Twice_KeepsOneUiRootAndOneInfrastructureInstance()
+        public void ConfigurePhase0Target_Twice_KeepsOneUiRootAndOneInfrastructureInstance()
         {
-            Phase0SceneSetup.ConfigurePhase0Scene();
-            var first = EditorSceneManager.OpenScene(MainCafePath, OpenSceneMode.Single);
+            var first = EditorSceneManager.OpenScene(MainCafePath, OpenSceneMode.Additive);
+            Phase0SceneSetup.ConfigurePhase0Scene(first);
             var firstInventory = CaptureSingletonInventory(first);
 
-            Phase0SceneSetup.ConfigurePhase0Scene();
-            var second = EditorSceneManager.OpenScene(MainCafePath, OpenSceneMode.Single);
+            Phase0SceneSetup.ConfigurePhase0Scene(first);
+            Assert.That(EditorSceneManager.SaveScene(first), Is.True,
+                "This test explicitly persists its owned target before checking the reload.");
+            EditorSceneManager.CloseScene(first, true);
+            var second = EditorSceneManager.OpenScene(MainCafePath, OpenSceneMode.Additive);
 
             Assert.That(CaptureSingletonInventory(second), Is.EqualTo(firstInventory));
             Assert.That(FindAll(second, "UI Root"), Has.Length.EqualTo(1));

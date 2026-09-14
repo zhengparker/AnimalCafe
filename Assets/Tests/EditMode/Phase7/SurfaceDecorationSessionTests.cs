@@ -290,6 +290,46 @@ namespace AnimalCafe.Tests.Phase7
             Assert.That(fixture.Session.ActivePreview.PreviewStyleId, Is.EqualTo("floor.tile"));
         }
 
+        [TestCase(SurfaceRotation.Degrees90, SurfaceRotation.Degrees180)]
+        [TestCase(SurfaceRotation.Degrees180, SurfaceRotation.Degrees270)]
+        [TestCase(SurfaceRotation.Degrees270, SurfaceRotation.Degrees0)]
+        [Category("Regression")]
+        public void RotateUnarmedExistingSingleGrid_AdvancesFromConfirmedRotationAndRecoveryPreservesConfirmed(
+            SurfaceRotation confirmedRotation,
+            SurfaceRotation expectedRotation)
+        {
+            // Catches rotating from the default 0 degrees instead of the selected tile's confirmed rotation.
+            using var fixture = new Fixture();
+            var position = new GridPosition(3, 2);
+            fixture.Layout.ReplaceFloor(new FloorTileAppearance(
+                position,
+                "floor.stone",
+                confirmedRotation));
+            AssertSucceeded(fixture.Session.BeginSingleGridFloor(position));
+
+            AssertSucceeded(fixture.Session.RotateFloor());
+
+            var rotated = Floor(fixture.Session.ActivePreview.ProposedSnapshot, 3, 2);
+            Assert.That(rotated.StyleId, Is.EqualTo("floor.stone"));
+            Assert.That(rotated.Rotation, Is.EqualTo(expectedRotation));
+            Assert.That(Floor(fixture.Layout.CaptureSnapshot(), 3, 2).Rotation,
+                Is.EqualTo(confirmedRotation),
+                "Preview rotation must not mutate confirmed Floor data.");
+
+            Assert.That(fixture.Session.UndoLast(), Is.True);
+            var restored = Floor(fixture.Session.ActivePreview.ProposedSnapshot, 3, 2);
+            Assert.That(restored.StyleId, Is.EqualTo("floor.stone"));
+            Assert.That(restored.Rotation, Is.EqualTo(confirmedRotation));
+            Assert.That(fixture.Session.ActivePreview.HasChanges, Is.False);
+
+            AssertSucceeded(fixture.Session.RotateFloor());
+            fixture.Session.Cancel();
+            Assert.That(fixture.Session.ActivePreview, Is.Null);
+            Assert.That(Floor(fixture.Layout.CaptureSnapshot(), 3, 2).Rotation,
+                Is.EqualTo(confirmedRotation),
+                "Cancel must preserve the tile's confirmed rotation.");
+        }
+
         [Test]
         [Category("Boundary")]
         public void AT045_Rotate_ChangesCurrentAndFutureTapsButNotEarlierPreviewCells()

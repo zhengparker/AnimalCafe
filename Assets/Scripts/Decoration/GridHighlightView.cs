@@ -24,6 +24,7 @@ namespace AnimalCafe.Decoration
         private Transform visualRoot;
         private DecorationGridSpace gridSpace;
         private Material materialTemplate;
+        private Material footprintLightMaterial;
         private AnimalCafeUiTheme theme;
         private MaterialPropertyBlock propertyBlock;
         private Mesh quadMesh;
@@ -54,10 +55,22 @@ namespace AnimalCafe.Decoration
             visualRoot = root;
             this.gridSpace = gridSpace;
             this.materialTemplate = materialTemplate;
+            footprintLightMaterial = null;
             this.theme = theme;
             propertyBlock = new MaterialPropertyBlock();
             quadMesh = CreateQuadMesh();
             isConfigured = true;
+        }
+
+        /// <summary>Use the P8 light only for fills; the base grid and white marks keep their material.</summary>
+        public void ConfigureFootprintLight(Material material)
+        {
+            EnsureConfigured();
+            if (material == null) throw new ArgumentNullException(nameof(material));
+            if (!material.HasProperty("_FootprintOpacity"))
+                throw new ArgumentException("A footprint light material is required.", nameof(material));
+            footprintLightMaterial = material;
+            foreach (var cell in footprintCells) ApplyFootprintLight(cell.Fill);
         }
 
         public void ShowGrid(GridSettings settings)
@@ -206,6 +219,7 @@ namespace AnimalCafe.Decoration
                     1f,
                     gridSpace.Settings.CellSize * 0.88f));
             fill.transform.localPosition = Vector3.zero;
+            ApplyFootprintLight(fill.GetComponent<Renderer>());
 
             var geometryMark = new GameObject("GeometryMark");
             geometryMark.transform.SetParent(root.transform, false);
@@ -285,6 +299,15 @@ namespace AnimalCafe.Decoration
                 throw new InvalidOperationException(
                     "GridHighlightView must be configured before use.");
             }
+        }
+
+        private void ApplyFootprintLight(Renderer fill)
+        {
+            if (footprintLightMaterial == null) return;
+            // 只替换 Fill；pool、占用范围和状态图形保持原有行为。
+            fill.sharedMaterial = footprintLightMaterial;
+            fill.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            fill.receiveShadows = false;
         }
 
         private void ReleaseOwnedVisuals()

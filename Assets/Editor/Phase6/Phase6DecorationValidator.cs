@@ -269,6 +269,21 @@ namespace AnimalCafe.EditorTools.Phase6
             return new Phase6DecorationValidationReport(issues);
         }
 
+        internal static Phase6DecorationValidationReport ValidateP8RNonPresentation(Scene scene)
+        {
+            var issues = new List<Phase6DecorationValidationIssue>();
+            var transforms = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true)).ToArray();
+            // Reuse the strict domain graph contract. Only appearance is a new generation.
+            ValidateNamedRoots(transforms, MainCafePath, Phase6SceneSetupTarget.MainCafe, issues);
+            ValidateBaseServices(transforms, MainCafePath, issues);
+            ValidateEnvironment(transforms, MainCafePath, issues);
+            ValidateDecoration(transforms, MainCafePath, issues);
+            ValidateContent(transforms, MainCafePath, issues);
+            ValidateCleanInitialState(transforms, MainCafePath, issues);
+            ValidateMissingScripts(scene, MainCafePath, issues);
+            return new Phase6DecorationValidationReport(issues);
+        }
+
         private static void ValidateNamedRoots(
             Transform[] transforms,
             string assetPath,
@@ -1662,6 +1677,7 @@ namespace AnimalCafe.EditorTools.Phase6
 
             if (controller == null)
                 return;
+            var p8r = AnimalCafe.EditorTools.P8R.P8RFurnitureUiBuilder.HasP8RWiring(controller);
             var expected = new (string Field, UnityEngine.Object Value)[]
             {
                 ("contentCatalog", canonicalContent),
@@ -1687,11 +1703,11 @@ namespace AnimalCafe.EditorTools.Phase6
                 ("gridView", owner.GetComponent<GridHighlightView>()),
                 ("cameraDriver", owner.GetComponent<DecorationCameraDriver>()),
                 ("catalogueView", transforms.FirstOrDefault(transform =>
-                    transform.name == "PF_UI_DecorationCatalogue")?.GetComponent<DecorationCatalogueView>()),
+                    transform.name == (p8r ? "PF_UI_P8RCatalogue" : "PF_UI_DecorationCatalogue"))?.GetComponent<DecorationCatalogueView>()),
                 ("actionBarView", transforms.FirstOrDefault(transform =>
-                    transform.name == "PF_UI_DecorationActionBar")?.GetComponent<DecorationActionBarView>()),
+                    transform.name == (p8r ? "PF_UI_P8RActionBar" : "PF_UI_DecorationActionBar"))?.GetComponent<DecorationActionBarView>()),
                 ("storeModalView", transforms.FirstOrDefault(transform =>
-                    transform.name == "PF_UI_DecorationStoreModal")?.GetComponent<DecorationStoreModalView>()),
+                    transform.name == (p8r ? "PF_UI_P8RPutAwayModal" : "PF_UI_DecorationStoreModal"))?.GetComponent<DecorationStoreModalView>()),
                 ("decorationModeButton", transforms.FirstOrDefault(transform =>
                     transform.name == "DecorationModeButton")?.GetComponent<Button>()),
                 ("decorationModeButtonLabel", transforms.FirstOrDefault(transform =>

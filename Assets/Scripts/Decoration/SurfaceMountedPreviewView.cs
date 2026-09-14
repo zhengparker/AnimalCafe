@@ -101,7 +101,8 @@ namespace AnimalCafe.Decoration
                 ? theme.Colors.Accent
                 : theme.Colors.Destructive;
             SetColor(CurrentFootprint, color);
-            SetColor(CurrentGhost, color);
+            // Keep CR/CM materials intact; only the footprint carries validity color.
+            // 设备本体保持原色，仅 footprint 显示有效/无效颜色。
         }
 
         public void Hide()

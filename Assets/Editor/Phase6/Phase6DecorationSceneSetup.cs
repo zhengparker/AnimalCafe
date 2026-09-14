@@ -215,6 +215,10 @@ namespace AnimalCafe.EditorTools.Phase6
                 ValidateDependencyAssets(dependencies);
                 transaction.RefuseDirtyLoadedTarget();
                 transaction.RefuseSelectedTemporaryFixture();
+                // Approved presentation cannot bypass the original dependency/dirty/selection preflight.
+                // P8R 只保护外观，不跳过原有依赖与用户工作保护。
+                if (target == Phase6SceneSetupTarget.MainCafe
+                    && AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.GuardLegacyMainCafe()) return;
                 transaction.CreateBackup();
                 FaultInjectorForTests?.Invoke(Phase6SceneSetupStage.BeforeMutation);
                 transaction.OpenCandidate(dependencies);
@@ -1188,6 +1192,8 @@ namespace AnimalCafe.EditorTools.Phase6
             GameTimeService gameTime,
             AnimalCafeUiTheme theme)
         {
+            var p8rController = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<DecorationModeController>(true)).SingleOrDefault();
+            if (AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.GuardLegacy(p8rController)) return false;
             var changed = false;
             var rail = safeArea.Find("RightRail")?.gameObject;
             if (rail == null)

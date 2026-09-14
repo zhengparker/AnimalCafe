@@ -2,6 +2,8 @@
 
 > 状态：`Completed`。本文件同时保存原 manual-review Excel 和 intermediate reports 中的最终验收结论。
 
+> 本轮 Preview 外观调整的 Studio Owner manual acceptance：`Pending`。下方 PASS 数字保留原 Phase 6 验收记录，不代表本轮视觉调整已获验收。
+
 ## 1. Phase 6 做了什么
 
 Phase 6 让玩家在 `MainCafe` 进入 Decoration Mode，浏览四种 Counter，选择、拖动、旋转、Confirm、Cancel 和 Store 家具，并看到合法或非法摆放反馈。
@@ -12,6 +14,7 @@ Phase 6 让玩家在 `MainCafe` 进入 Decoration Mode，浏览四种 Counter，
 
 - 进入 Decoration Mode 暂停 Game Time，退出时恢复进入前的速度。
 - Preview 是临时状态，不能提前修改正式 Layout。
+- 普通家具 ghost 保留原材质、颜色、纹理与已有外观属性；valid / invalid 的红绿反馈由 footprint 和现有 symbol 承担，具体原因与 Confirm validation 不变。
 - Furniture footprint 来自 `FurnitureDefinition`，UI 不重复定义规则。
 - Rotate 后 footprint width/depth 与 visual 一起更新。
 - Illegal、overlap、locked 或越界 placement 不能 Confirm。
