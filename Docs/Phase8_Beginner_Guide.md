@@ -2406,3 +2406,21 @@ Owner 已批准先修复回归失败，再重新测试并 commit／push 到现�
 独立代码／QA 复核无 Critical／Important。保留三个非阻塞的测试增强项：单独注入 Tab raycast 漂移、在 compact utility 测试里直接要求 Icon 节点存在、在真实 dirty 拒绝测试中先验证 clean baseline 并核对报错路径。当前实现的相应条件已检查正确；这些建议不扩展本轮 UI 行为。
 
 提交边界：只收录本次功能、回归修复与本指南；排除原有 23 份 Phase 7 材质序列化差异、`AssetPipelineReadability.unity` 的既有差异，以及测试输出／截图目录。测试前保留文本资源与 metadata 副本，测试生成的额外资源变化应精确恢复，不覆盖原有编辑。没有新的手机真机或视觉验收结论。
+
+### 36.12 PR 前的 Prefab Mode 保护修复（2026-09-16）
+
+最终 review 发现：完整 UI／Refined B 刷新只检查 persistent assets，不能覆盖 Prefab Mode 内尚未保存的编辑对象。Owner 已批准补上保护、回归测试，然后 commit／push 并创建 PR；不合并 main，不改变 Phase 或视觉验收状态。
+
+- `P8RCompleteUiBuilder.cs`：两个 core 入口首先检查当前 PrefabStage。Catalogue、ActionBar、PutAwayModal 或 Exit 正在 Prefab Mode 中时，在打开 Scene、加载依赖和写文件之前拒绝操作，提示具体路径。先自行保存或放弃修改并关闭 Prefab Mode，再执行刷新；工具不替用户保存或清除 dirty。
+- `P8RCompleteUiTests.cs`：新增 17 项检查。4 个目标 × 2 个入口分别覆盖 dirty MainCafe 与 clean MainCafe；断言未保存内容、对象身份、dirty／Auto Save、Scene setup、selection，以及 12 个文件的 bytes／时间戳不变。另用独立 GUID 的无关 Prefab clone 检查不误拦截；先加载测试自己的 MainCafe，隔离 Unity 打开 Scene 时切换 Stage 的既有行为。
+- 清理只处理测试自行创建的 Stage、Scene 和 clone，恢复 Auto Save 与选择状态；已有调用方 Stage／MainCafe 时跳过并要求隔离补跑。没有修改 Scene／Prefab／PNG 或 runtime UI 规则。
+
+验证证据：
+
+- [安全 RED](../TestResults/p8-prefab-stage-red.xml)：8 个预期失败。旧入口跳过 Prefab Mode 检查，随后被测试的 dirty MainCafe 拦住；这是检查顺序的真实复现，不是实际数据丢失复现，生产资源未改写。
+- [首轮定向回归](../TestResults/p8-prefab-stage-focused-green.xml)：57 PASS／1 FAIL，仅作诊断。无关 Prefab 测试未预载 MainCafe，触发 Unity 保存询问；修正测试前置条件，不压制日志或改变生产刷新行为。
+- [最终定向回归](../TestResults/p8-prefab-stage-focused-green-r2.xml)：58 PASS／0 FAIL／0 SKIP，新增 17 项全部通过。独立 Editor safety review 无 Critical／Important／Minor。
+- [完整 EditMode](../TestResults/p8-prefab-stage-full-editmode.xml)：1755 PASS／0 FAIL／355 场景保护跳过。三组独立补测分别为 [validator 194 PASS](../TestResults/p8-prefab-stage-phase6-validator.xml)、[migration 160 PASS](../TestResults/p8-prefab-stage-phase6-migration.xml)、[single-Scene 1 PASS](../TestResults/p8-prefab-stage-single-scene.xml)。完整用例名称逐项比对，355 项无缺漏、无多项，合计覆盖 2110 个不同用例。
+- [完整 PlayMode](../TestResults/p8-prefab-stage-full-playmode.xml)：1015 PASS／0 FAIL／2 opt-in 截图项跳过。未声称新增截图、Player build 或手机真机验收。
+
+两份源码在完整测试期间保持冻结；测试生成的 8 份资源变化留副本并恢复到测试前字节，原有 24 份资源修改保持不变。本次提交仅包含上述两份源码与本指南，不收录本地截图、测试报告或既有资源差异。

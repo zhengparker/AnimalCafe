@@ -22,6 +22,171 @@ namespace AnimalCafe.Tests.EditMode.P8R
     public sealed class P8RCompleteUiTests
     {
         private const string Root = "Assets/UI/P8R/";
+
+        [Test, Combinatorial]
+        public void Refresh_WithUnsavedTargetPrefab_RejectsBeforeDirtyMainCafe(
+            [Values(false, true)] bool refinedB,
+            [Values("PF_UI_P8RCatalogue", "PF_UI_P8RActionBar", "PF_UI_P8RPutAwayModal", "PF_UI_P8RExitModal")] string prefabName)
+        {
+            AssertRefreshPreservesUnsavedPrefab(refinedB, prefabName, true);
+        }
+
+        [Test, Combinatorial]
+        public void Refresh_WithUnsavedTargetPrefab_PreservesStageAndAllTargetFiles(
+            [Values(false, true)] bool refinedB,
+            [Values("PF_UI_P8RCatalogue", "PF_UI_P8RActionBar", "PF_UI_P8RPutAwayModal", "PF_UI_P8RExitModal")] string prefabName)
+        {
+            AssertRefreshPreservesUnsavedPrefab(refinedB, prefabName, false);
+        }
+
+        [Test]
+        public void CompleteBuild_WithUnrelatedPrefabMode_PreservesEditingContext()
+        {
+            if (PrefabStageUtility.GetCurrentPrefabStage() != null
+                || SceneManager.GetSceneByPath("Assets/Scenes/MainCafe.unity").IsValid())
+                Assert.Ignore("Preserve caller-owned Prefab Mode/MainCafe; rerun in an isolated Editor.");
+            AnimalCafe.EditorTools.P8R.P8RFurnitureUiBuilder.RequireCleanLoadedAssets();
+            var path = "Assets/__P8RUnrelatedPrefab_" + System.Guid.NewGuid().ToString("N") + ".prefab";
+            var active = SceneManager.GetActiveScene();
+            var selection = Selection.objects;
+            var selected = Selection.activeObject;
+            var autoSave = typeof(PrefabStage).GetProperty("autoSave", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            Assert.That(autoSave, Is.Not.Null);
+            Scene scene = default;
+            PrefabStage stage = null;
+            var originalAutoSave = false;
+            var capturedAutoSave = false;
+            try
+            {
+                scene = EditorSceneManager.OpenScene("Assets/Scenes/MainCafe.unity", OpenSceneMode.Additive);
+                Assert.That(AssetDatabase.CopyAsset(Root + "Prefabs/PF_UI_P8RCatalogue.prefab", path), Is.True);
+                var before = System.IO.File.ReadAllBytes(path);
+                stage = PrefabStageUtility.OpenPrefab(path);
+                Assert.That(stage, Is.Not.Null);
+                originalAutoSave = (bool)autoSave.GetValue(stage);
+                capturedAutoSave = true;
+                autoSave.SetValue(stage, false);
+                var child = stage.prefabContentsRoot.transform.GetChild(0).gameObject;
+                child.name = "Unrelated unsaved edit";
+                EditorUtility.SetDirty(child);
+                EditorSceneManager.MarkSceneDirty(stage.scene);
+
+                Assert.That(() => AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.BuildApprovedCompleteUi(), Throws.Nothing);
+                Assert.That(PrefabStageUtility.GetCurrentPrefabStage(), Is.SameAs(stage));
+                Assert.That(child.name, Is.EqualTo("Unrelated unsaved edit"));
+                Assert.That(stage.scene.isDirty, Is.True);
+                Assert.That(autoSave.GetValue(stage), Is.EqualTo(false));
+                Assert.That(System.IO.File.ReadAllBytes(path), Is.EqualTo(before));
+            }
+            finally
+            {
+                if (stage != null && PrefabStageUtility.GetCurrentPrefabStage() == stage)
+                {
+                    stage.ClearDirtiness();
+                    if (capturedAutoSave) autoSave.SetValue(stage, originalAutoSave);
+                    StageUtility.GoToMainStage();
+                }
+                if (scene.IsValid()) EditorSceneManager.CloseScene(scene, true);
+                AssetDatabase.DeleteAsset(path); // Only this fixture's independent GUID clone.
+                if (active.IsValid() && active.isLoaded) SceneManager.SetActiveScene(active);
+                Selection.objects = selection;
+                Selection.activeObject = selected;
+            }
+        }
+
+        private static void AssertRefreshPreservesUnsavedPrefab(bool refinedB, string prefabName, bool dirtyMainCafe)
+        {
+            const string mainPath = "Assets/Scenes/MainCafe.unity";
+            if (PrefabStageUtility.GetCurrentPrefabStage() != null || SceneManager.GetSceneByPath(mainPath).IsValid())
+                Assert.Ignore("Preserve caller-owned Prefab Mode/MainCafe; rerun in an isolated Editor.");
+            AnimalCafe.EditorTools.P8R.P8RFurnitureUiBuilder.RequireCleanLoadedAssets();
+            var paths = new[] { Root + "Prefabs/PF_UI_P8RCatalogue.prefab", Root + "Prefabs/PF_UI_P8RActionBar.prefab",
+                Root + "Prefabs/PF_UI_P8RPutAwayModal.prefab", Root + "Prefabs/PF_UI_P8RExitModal.prefab",
+                Root + "P8RAppearance.asset", mainPath }.SelectMany(path => new[] { path, path + ".meta" }).ToArray();
+            var bytes = paths.ToDictionary(path => path, System.IO.File.ReadAllBytes);
+            var times = paths.ToDictionary(path => path, System.IO.File.GetLastWriteTimeUtc);
+            var active = SceneManager.GetActiveScene();
+            var selection = Selection.objects;
+            var selected = Selection.activeObject;
+            var autoSave = typeof(PrefabStage).GetProperty("autoSave", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            Assert.That(autoSave, Is.Not.Null, "This Editor must expose the Prefab Mode Auto Save setting.");
+            Scene scene = default;
+            PrefabStage stage = null;
+            var originalAutoSave = false;
+            var capturedAutoSave = false;
+            try
+            {
+                scene = EditorSceneManager.OpenScene(mainPath, OpenSceneMode.Additive);
+                if (dirtyMainCafe)
+                {
+                    // Safe RED: the old implementation must stop at MainCafe, never write production assets.
+                    // 安全复现：旧入口会被本测试的 dirty Scene 拦住，不让缺少保护的代码写生产资源。
+                    var sentinel = new GameObject("Test-owned unsaved MainCafe sentinel");
+                    SceneManager.MoveGameObjectToScene(sentinel, scene);
+                    EditorSceneManager.MarkSceneDirty(scene);
+                }
+                var prefabPath = Root + "Prefabs/" + prefabName + ".prefab";
+                stage = PrefabStageUtility.OpenPrefab(prefabPath);
+                Assert.That(stage, Is.Not.Null);
+                originalAutoSave = (bool)autoSave.GetValue(stage);
+                capturedAutoSave = true;
+                autoSave.SetValue(stage, false);
+                var root = stage.prefabContentsRoot;
+                var child = root.transform.GetChild(0).gameObject;
+                child.name = "Unsaved artist edit";
+                EditorUtility.SetDirty(child);
+                EditorSceneManager.MarkSceneDirty(stage.scene);
+                Assert.That(EditorUtility.IsPersistent(child), Is.False, "Exercise the objects missed by the persistent-asset guard.");
+                var setup = EditorSceneManager.GetSceneManagerSetup().Select(item => item.path + "|" + item.isLoaded + "|" + item.isActive).ToArray();
+                var stageActive = SceneManager.GetActiveScene();
+                var stageSelection = Selection.objects;
+                var stageSelected = Selection.activeObject;
+
+                var error = Assert.Throws<System.InvalidOperationException>(() =>
+                {
+                    if (refinedB) AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.RefreshApprovedRefinedBStyle();
+                    else AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.RefreshApprovedCompleteUi();
+                });
+                Assert.That(error.Message, Does.Contain("Prefab Mode").And.Contain(prefabPath));
+                Assert.That(PrefabStageUtility.GetCurrentPrefabStage(), Is.SameAs(stage));
+                Assert.That(stage.prefabContentsRoot, Is.SameAs(root));
+                Assert.That(root.transform.GetChild(0).gameObject, Is.SameAs(child));
+                Assert.That(child.name, Is.EqualTo("Unsaved artist edit"));
+                Assert.That(stage.scene.isDirty, Is.True);
+                Assert.That(autoSave.GetValue(stage), Is.EqualTo(false));
+                Assert.That(scene.isDirty, Is.EqualTo(dirtyMainCafe));
+                Assert.That(EditorSceneManager.GetSceneManagerSetup().Select(item => item.path + "|" + item.isLoaded + "|" + item.isActive), Is.EqualTo(setup));
+                Assert.That(SceneManager.GetActiveScene(), Is.EqualTo(stageActive));
+                Assert.That(Selection.objects, Is.EqualTo(stageSelection));
+                Assert.That(Selection.activeObject, Is.SameAs(stageSelected));
+                foreach (var path in paths)
+                {
+                    Assert.That(System.IO.File.ReadAllBytes(path), Is.EqualTo(bytes[path]), path);
+                    Assert.That(System.IO.File.GetLastWriteTimeUtc(path), Is.EqualTo(times[path]), path + " must not be saved.");
+                }
+            }
+            finally
+            {
+                // Only discard this fixture's stage; never close or clear a caller-owned editing context.
+                // 仅丢弃本测试创建的编辑现场，先清 dirty 再恢复 Auto Save，避免误存测试修改。
+                if (stage != null && PrefabStageUtility.GetCurrentPrefabStage() == stage)
+                {
+                    stage.ClearDirtiness();
+                    if (capturedAutoSave) autoSave.SetValue(stage, originalAutoSave);
+                    StageUtility.GoToMainStage();
+                }
+                if (scene.IsValid()) EditorSceneManager.CloseScene(scene, true);
+                foreach (var path in paths.Where(path => !System.IO.File.ReadAllBytes(path).SequenceEqual(bytes[path])))
+                {
+                    System.IO.File.WriteAllBytes(path, bytes[path]);
+                    if (!path.EndsWith(".meta")) AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                }
+                if (active.IsValid() && active.isLoaded) SceneManager.SetActiveScene(active);
+                Selection.objects = selection;
+                Selection.activeObject = selected;
+            }
+        }
+
         [Test]
         public void Polish_PrepareDisablesBothLegacyHighlightNamesWithoutDisablingOtherArt()
         {

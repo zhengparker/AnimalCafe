@@ -72,6 +72,7 @@ namespace AnimalCafe.EditorTools.P8R
         [MenuItem("Tools/AnimalCafe/P8R/Apply Approved Refined B Style Only")]
         public static void RefreshApprovedRefinedBStyle()
         {
+            RequireClosedTargetPrefabStage();
             RequireCleanLoadedAssets();
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play Mode before B migration.");
             var appearance = Require<P8RAppearance>(P8RFurnitureUiPaths.Appearance);
@@ -194,6 +195,7 @@ namespace AnimalCafe.EditorTools.P8R
 
         private static void Build(bool refresh, bool referenceLayoutOnly = false)
         {
+            RequireClosedTargetPrefabStage();
             RequireCleanLoadedAssets();
             var appearance = Require<P8RAppearance>(P8RFurnitureUiPaths.Appearance);
             ValidateResources(appearance);
@@ -453,6 +455,16 @@ namespace AnimalCafe.EditorTools.P8R
             if (!Reference<TMP_Text>(controller, "decorationModeButtonLabel").transform.IsChildOf(hud.transform)
                 || readiness.GetComponent<ScrollRect>()?.viewport == null || readiness.GetComponent<Image>() == null)
                 throw new InvalidOperationException("P8R HUD or Readiness hierarchy is incomplete.");
+        }
+
+        private static void RequireClosedTargetPrefabStage()
+        {
+            // Prefab Mode objects are non-persistent; the loaded-asset dirty guard cannot protect them.
+            // Prefab Mode 的编辑对象不是 persistent asset，必须在打开场景或写文件前独立检查。
+            var stage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (stage != null && new[] { P8RFurnitureUiPaths.CataloguePrefab, P8RFurnitureUiPaths.ActionPrefab,
+                    P8RFurnitureUiPaths.StorePrefab, ExitPrefab }.Contains(stage.assetPath))
+                throw new InvalidOperationException("Close Prefab Mode before P8R authoring: " + stage.assetPath);
         }
 
         private static void ValidatePrefabTargets()
