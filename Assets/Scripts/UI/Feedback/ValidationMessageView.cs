@@ -29,6 +29,7 @@ namespace AnimalCafe.UI.Feedback
         private TMP_Text disclosureLabel;
         private string readinessSummary = string.Empty;
         private string readinessDetails = string.Empty;
+        private bool hasPendingPreview;
         private RectTransform disclosureViewport;
         private Vector2 viewportOffsetBeforeDisclosure;
         private bool refreshingLayout;
@@ -103,10 +104,11 @@ namespace AnimalCafe.UI.Feedback
             ShowMessage(message);
         }
 
-        private void ShowMessage(string message)
+        private void ShowMessage(string message, bool richText = false)
         {
             // Keep the player message readable; detached IDs remain available for diagnostics.
             // 玩家只看说明文字；独立保存原始 IDs，供排查问题使用。
+            messageLabel.richText = richText;
             messageLabel.text = message;
             messageLabel.enabled = true;
             if (background != null) background.enabled = true;
@@ -125,8 +127,8 @@ namespace AnimalCafe.UI.Feedback
             if (appearance != null)
             {
                 readinessSummary = appearance.ReadinessSummary(report);
-                readinessDetails = appearance.ReadinessDetails(report);
-                FullReadinessMessage = readinessSummary + (readinessDetails.Length == 0 ? string.Empty : "\n" + readinessDetails);
+                readinessDetails = appearance.ReadinessDetails(report, richText: true);
+                FullReadinessMessage = appearance.ReadinessDiagnosticMessage(report);
             }
             IsDetailsExpanded = false;
             // IDs remain available to diagnostics without appearing in player-facing text.
@@ -154,7 +156,7 @@ namespace AnimalCafe.UI.Feedback
                 messageLabel.color = AnimalCafe.UI.P8R.P8RAppearance.Cocoa;
             }
             SetDisclosureVisible(readinessDetails.Length != 0);
-            ShowMessage(appearance != null ? readinessSummary.Split('\n')[0] : readinessSummary);
+            RefreshReadinessMessage();
             // P8R publishes only when its actual screen bounds change; legacy has no bounds publisher.
             // P8R 由真实屏幕边界变化通知；legacy 没有该路径，保留显式通知。
             if (appearance == null) DetailsVisibilityChanged?.Invoke();
@@ -168,10 +170,36 @@ namespace AnimalCafe.UI.Feedback
                 return;
             IsDetailsExpanded = !IsDetailsExpanded;
             disclosureLabel.text = DisclosureText;
-            ShowMessage(IsDetailsExpanded ? readinessSummary + "\n" + readinessDetails
-                : appearance != null ? readinessSummary.Split('\n')[0] : readinessSummary);
+            RefreshReadinessMessage();
             RefreshDisclosureIcon();
             if (appearance == null) DetailsVisibilityChanged?.Invoke();
+        }
+
+        // Preview changes only this note, never the confirmed report or disclosure state.
+        // Preview 只切换这条备注，不修改已确认报告，也不自动展开/收起。
+        public void SetPreviewPending(bool pending)
+        {
+            if (this == null || hasPendingPreview == pending) return;
+            hasPendingPreview = pending;
+            if (appearance != null && IsVisible && IsDetailsExpanded && readinessSummary.Length > 0)
+                RefreshReadinessMessage();
+        }
+
+        private void RefreshReadinessMessage()
+        {
+            if (appearance == null)
+            {
+                ShowMessage(IsDetailsExpanded ? readinessSummary + "\n" + readinessDetails : readinessSummary);
+                return;
+            }
+            if (!IsDetailsExpanded)
+            {
+                ShowMessage(readinessSummary);
+                return;
+            }
+            var text = readinessSummary + "\n\n" + readinessDetails;
+            if (hasPendingPreview) text += "\n\n" + appearance.Text("readiness.preview_hint");
+            ShowMessage(text, richText: true);
         }
 
         private void SetDisclosureVisible(bool visible)
@@ -280,6 +308,7 @@ namespace AnimalCafe.UI.Feedback
         private void ResetReadinessDisclosure()
         {
             readinessSummary = readinessDetails = FullReadinessMessage = string.Empty;
+            hasPendingPreview = false;
             IsDetailsExpanded = false;
             SetDisclosureVisible(false);
         }
@@ -353,7 +382,6 @@ namespace AnimalCafe.UI.Feedback
             rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
             messageLabel.fontSize = metrics.Units(14);
             messageLabel.textWrappingMode = TextWrappingModes.Normal;
-            messageLabel.richText = false;
             ReserveDisclosureSpace(readinessDetails.Length > 0);
             var textWidth = width - metrics.Units(readinessDetails.Length > 0 ? 92 : 48);
             var preferred = messageLabel.GetPreferredValues(messageLabel.text, Mathf.Max(1, textWidth), Mathf.Infinity);

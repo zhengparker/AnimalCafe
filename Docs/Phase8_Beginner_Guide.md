@@ -2175,3 +2175,234 @@ Owner 已批准处理上一轮 review 的四项输入／验证问题与一项 UI
 3. Furniture 中滚动到 Cash Register：模型应更易辨认，卡片／字体／配色不变。对比 Coffee Machine 与 Counter，确认没有一起放大。
 
 本轮使用 systematic-debugging／TDD 分离真实输入缺陷与过期 fixture；两个 game UI skills 用于保持 Refined B、实际可见主体占比和原点击区／卡片几何。自动注入 Touch 和原生 Editor 截图不是 Android／iOS 真机手感验收；第28节限高例外、Phase7恢复核查、已记录的两项 Phase7MainCafeSceneTests 既有失败及全项目Ready边界不变。
+
+## 34. 四项 UI 一致性收尾（2026-09-14）
+
+Owner 批准四项一起修改；继续使用现有 Refined B，不恢复旧的长 Preview 说明，不重画 PNG，也不修改正式布局或保存交易规则。本节更新第28节的受限高度处理，历史截图和失败记录保留。
+
+- Floor／Wall 的 Apply、Cancel 共用12 logical字号、32可见高度、每侧6留白；Apply按最终显示文字测量，不再按临时Confirm留宽。透明点击根节点仍至少48。
+- 等待选择地板格／墙面的正常指引使用既有 `status_info`；Blocked仍用warning，错误保持独立语义。
+- 展开面板遵守Safe Area的45%上限。正常尺寸沿用固定工具布局；短宽屏将Return／Pickup放进同一header，极短屏放不下的原有工具随目录滚动。收起、换tab、重新展开和旋转时恢复原父级，不复制按钮。分类名称和卡片／字体规格保留，仅必要时收紧首行留白。
+- Floor tab图标的最长边20→23，等比补偿15%；其他三个tab、PNG、导入设置及点击区域不变。
+
+生产文件：`DecorationActionBarView.cs`负责按钮和提示；`P8RSurfaceFooterLayout.cs`统一文案测量；`DecorationCatalogueView.cs`负责高度与工具重排；`P8RButtonLayout.cs`只补偿Floor图案。原生截图另发现嵌套ActionBar重复应用safe area，`SafeAreaContainer.cs`增加可选的父级管理规则；默认行为不变，ActionBar挂入宿主后由外层统一管理边界。没有修改Scene／Prefab。测试新增`P8RConsistencyChromeTests.cs`，扩展Compact／Reference、CompleteFlow、安全区和触控回归。
+
+### 34.1 验证与边界
+
+最终[限定范围回归](../TestResults/p8r-consistency-ui-final-green.xml)470/470通过，零失败、零跳过；[安全区定向测试](../TestResults/p8r-consistency-safe-area-green.xml)9/9、六项关键集成测试6/6通过。不能把本节当作全项目或真机验收；具体RED／GREEN和未通过的早期尝试记录在 `outputs/p8r-consistency-20260914/progress.md`。首组原生截图曾发现Apply右侧裁切，已新增晚改变safe area的回归并修复重复inset，旧图不计最终视觉通过。[替换原生验收](../TestResults/p8r-consistency-native-final.xml)4/4通过，五种尺寸的109张PNG位于 `outputs/p8r-mobile-ui-20260913/consistency-final2`；已目视复核手机Floor／Wall／信息指引及短横屏Apply／Furniture／Pickup。原生、定向和完整回归存在测试重叠，不累加成新的总数。独立review无生产阻塞，最终diff-check通过；按钮测试要求topmost raycast，避免被挡住仍误判可点。
+
+完整回归早期467/470中的三项InputRecovery失败，已用最小顺序组合复现并定位到测试时钟：模拟输入13.20秒落在Unity保留的Editor切换区间12.32522–15.6999511，被当作旧事件丢弃。仅在fixture reset后校准模拟时钟，未修改生产输入、原断言或事件处理顺序，临时诊断已删除；同一顺序组合随后7/7、独立运行3/3通过。没有用放宽断言或跳过测试来掩盖失败。
+
+### 34.2 你可以怎样检查
+
+1. MainCafe进入装修，分别编辑Floor和Wall，比较Apply／Cancel文字与底板；切到Single Grid或尚未选墙面时，指引应是中性信息图标。
+2. 用普通手机和短横屏尺寸展开目录，建立未确认Preview后再打开目录；面板应不继续变高，短屏中滚动可以找到所有工具。
+3. 收起再展开、切换tab、横竖屏切换：按钮不消失，Return仍回到原Preview；换tab仍按既有规则取消未确认Preview。对比四个tab，Floor更易辨认但没有变形。
+
+本轮不自动commit／push；Phase7既有恢复核查、Android／iOS真机验收和全项目Ready边界不变。game-ui-design／game-ui-ux用于维持B风格、响应式和真实点击范围；TDD与独立review用于区分产品问题与旧测试前提。
+
+## 35. Furniture／Wall Decor 浮动按钮进一步收紧（2026-09-14）
+
+Owner 批准可见间距从约12缩到约9.4 logical单位。只修改 `DecorationActionBarView.cs` 的 P8R floating 分支：透明点击根节点宽48→44，高度仍48；可见底板仍30×30，icon ink仍18，B配色、PNG和导入设置不变。2／3／4按钮分别保持等距、整组居中；实际间距9.390625，四按钮最外侧底板仍完整落在自己的点击区内。Floor／Wall footer、时间控制、目录tabs和legacy UI不变。
+
+对应更新七个既有P8R测试文件的floating预期：FloatingTightSpacing、ActionGeometry、CompactChrome、CompleteFlow、WallDecorActionAvoidance、ReferenceLayout、MobileLayoutIntegration。通用helper默认仍检查48宽，仅明确的floating调用使用44；保留safe area、按钮不重叠、图标大小、禁用规则、顶层raycast、透明留白边缘点击，以及墙饰模型／Pickup标志避让检查。未修改Scene／Prefab或预览交易、拖动逻辑。
+
+### 35.1 验证记录
+
+- [有效RED](../TestResults/p8r-floating-gap94-red.xml)：3项全部在旧宽48与新目标44不符处失败；实施后这3项通过。
+- [第一轮集成](../TestResults/p8r-floating-gap94-green1.xml)：24/28通过，4项失败均为旧48宽预期；[扩大回归](../TestResults/p8r-floating-gap94-regression.xml)：248/249通过，剩余小屏floating support也沿用旧48预期。仅更新对应floating断言，未放宽其他控件或删掉行为检查。
+- [旧版四尺寸真实触控](../TestResults/p8r-floating-gap94-touch-red.xml)：1/1通过，未修改测试。文件名预留为touch-red，但实际结果为PASS；它加载appearance为空的Phase6 prefab，仍合法使用48×48。
+- 最终同版代码[限定回归](../TestResults/p8r-floating-gap94-final-green.xml)：**250/250通过，失败0、跳过0，Unity CLI exit0**。覆盖P8R、Phase7墙饰触控／legacy UI和两项Phase6触控检查，不代表全仓库或真机验收。
+- [正常Editor原生截图验证](../TestResults/p8r-floating-gap94-native.xml)：1/1通过。五种尺寸109张PNG位于 `outputs/p8r-mobile-ui-20260913/floating-gap94`；主agent实际检查480×854与1600×720各2／3／4按钮三张，独立review检查1080×1920对应三张，共9张目视，不冒充全部109张逐张验收。间距与尺寸一致，未见本轮新增边缘裁切；PNG未重新绘制。此用例与250项重叠，不额外累加。
+
+独立代码／测试及上述视觉review未发现本轮新增问题。TDD和game UI检查用于保留B风格、独立点击归属及响应式边界；仍需Owner确认实机手感。
+
+### 35.2 你可以怎样检查
+
+重新Play MainCafe，分别新建Wall Decor、新建Furniture、选择已摆放Furniture，对比2／3／4按钮组；应更紧凑，底板和icon不变大。点取消／旋转／确认及按钮留白边缘，再拖动墙饰，确认仍点到预期目标。原生例图：[手机四按钮](../outputs/p8r-mobile-ui-20260913/floating-gap94/480x854/18-furniture-actions.png)、[横屏三按钮](../outputs/p8r-mobile-ui-20260913/floating-gap94/1600x720/12-furniture-preview.png)。
+
+本轮没有commit／push，保留此前未提交修改及既有Material／验证Scene变动；不扩大第34节与既有Phase8验收边界。
+
+## 36. Cash Register 两侧提示（2026-09-14）
+
+Owner 批准在截图方案基础上实现一个可运行版本。沿用现有 B 风格：Employee 使用鼠尾草绿围裙，Customer 使用杏橙色购物袋。**当前版本已按 2026-09-15 的批准稿改为地面小箭头与上方悬浮 icon，见 36.4；36.1–36.3 保留为旧文字标牌版的验证记录，不再代表当前外观。** 只解释设备两侧，不表示可用站位或队列格，也不修改现有朝向、交易、Save 或 pointer ownership。
+
+### 36.1 本次文件与行为
+
+- 新增 `Assets/Scripts/UI/Decoration/CashRegisterSideIndicatorView.cs`：从当前 ghost 的 `CashRegisterSideMarker` 读取侧向，使用已经包含设备与 Counter 旋转的 world pose；标签保持正立，成对寻找模型／按钮外侧的 safe-area 空位。极端空间不足时隐藏提示，不覆盖操作。所有 Graphic 不接收 raycast，整组 CanvasGroup 不可交互；连线使用带透明边缘的 mesh，绘制顺序位于操作按钮后。
+- 修改 `Assets/Scripts/Decoration/DecorationModeController.cs`：只接入 Cash Register 当前 preview 的显示与清理。Confirm、Cancel、Store、换 tab、其他设备、退出装修及 disable 后不残留；modal／展开目录时隐藏，返回编辑时恢复。没有修改 Scene、Prefab 或 layout domain 代码。
+- 新增 `Assets/Resources/UI/P8R/RoleIcons/employee-apron.png`、`customer-bag.png`，以及专用 `Assets/Editor/P8RCashRoleIconImporter.cs`：只约束这两张新素材的透明、mipmap、Trilinear、无压缩导入，不改变既有图标。
+- 新增 `Assets/Tests/PlayMode/EditorSceneLoading/P8RCashRegisterSideIndicatorTests.cs`：检查四向旋转、旋转的 Counter、invalid floor fallback、preview 生命周期、真实 UI raycast、可见性、连线 mesh 与大小屏避让；另有显式启用的原生截图测试。
+
+### 36.2 验证记录与限制
+
+- [初始 RED](../TestResults/p8r-cash-side-red.xml)：4/4 因缺少提示层失败。后续测试暴露先放一个标签占掉另一侧空位，以及短横屏候选不足；已改为成对选位，并增加整组 action row 外侧候选。测试明确要求 alpha 可见，不能用隐藏旧坐标通过。
+- 首次原生截图虽然用例通过，目视却发现连接线没有绘制，因此不算最终视觉通过。[连线 RED](../TestResults/p8r-cash-side-leader-red.xml)1/1 精确失败于缺少 CanvasRenderer；补上必需组件，并增加 renderer-owned mesh 的实际顶点与非裁剪断言。测试 API 按本机 Unity 6 的无参数 GetMesh 校正，只读该 mesh，不销毁它。
+- 最终同版代码[定向回归](../TestResults/p8r-cash-side-final-regression.xml)：139 PASS、0 FAIL，另1项原生截图测试按 opt-in 忽略，Unity CLI exit0。覆盖本功能以及 Surface View／Interaction／Catalogue、floating spacing 和 input recovery；不是全仓库测试。
+- [最终正常 Editor 原生截图](../TestResults/p8r-cash-side-native-final.xml)：1/1 PASS，零跳过。六张 PNG 位于 `outputs/p8r-cash-side-indicators-20260914/native-20260915-035600-3773655`，包含480×854与1600×720的0°、90°、Confirm后隐藏。主 agent 逐张目视检查了六张；图片保持真实 GameView、Overlay 和生产画质，没有重绘或合成。首版目录保留作历史证据。
+- 独立只读 review 检查了最终旋转、生命周期、成对避让、Renderer 与绘制层级，未发现阻塞。UI skills 用于维持 B 风格、安全区与不挡操作，TDD 区分了逻辑通过和真实可见；外观偏好与 Android／iOS 真机手感仍由 Owner 验收。
+
+### 36.3 你可以怎样检查
+
+旧版操作记录：重新 Play MainCafe → Decoration → Furniture → Cash Register；放到 Counter 后旋转，观察 Employee／Customer 连线是否始终指向设备相应侧。试拖动设备、打开并取消 Store 弹窗、返回目录再继续；Confirm／Cancel／换 tab 后标签应消失。[旧横屏示例](../outputs/p8r-cash-side-indicators-20260914/native-20260915-035600-3773655/landscape-1600x720-cash-0.png)、[旧竖屏示例](../outputs/p8r-cash-side-indicators-20260914/native-20260915-035600-3773655/portrait-480x854-cash-0.png)。本轮没有 commit／push，不改变此前 Phase8 验收边界。
+
+### 36.4 贴地小箭头首版＋正上方悬浮 icon（2026-09-15；高度规则由 36.5 更新）
+
+Owner 批准先做游戏内可运行版本。修改范围只有显示层、对应测试与本节记录：
+
+- `CashRegisterSideIndicatorView.cs`：替换文字底板／连线，复用原围裙与购物袋 PNG；箭头是带柔边的 runtime mesh，使用现有 FootprintLight 的独立 Material 副本。角色色不表示 placement validity。箭头高度沿用 `GridHighlightView.FootprintHeight`，不浮在 Counter 顶面，也不修改共享材质。
+- 箭头小于一格，沿真实设备侧向朝内；固定斜视角下结合相机射线深度判断 Counter 遮挡，仅将真正被挡住的后侧箭头沿原侧向最小外移，前侧保持紧凑。icon 的 x 始终对准箭头中心，约半格高，随镜头缩放并有轻微浮动；空间紧张时只抬高避让真实 Button Image 底板及 safe area。透明点击留白仍保留，icon 无 raycast，arrow 无 Collider。
+- `DecorationModeController.cs`：只额外传入既有 footprint Material、gridRoot 和 cell size。Confirm／Cancel／Store／展开目录／切 tab／退出装修／disable 的生命周期规则不变；销毁时释放独立 world root、mesh 与两份 Material。
+- `P8RCashRegisterSideIndicatorTests.cs`：以新视觉行为替换旧标签断言，增加贴地、icon 垂直对齐、真实 4–12 zoom、柜台遮挡、横屏近看底栏遮挡与 world renderer 清理检查。无 Scene、Prefab、Save、domain 或既有 icon 资源修改。
+
+验证：初始 [RED](../TestResults/p8r-cash-ground-red.xml) 精确失败于缺少两支 world arrow；原生截图另暴露后侧箭头被 Counter 遮住，专门的 [遮挡 RED](../TestResults/p8r-cash-ground-occlusion-red.xml) 复现后再修正。随后独立截图 review 发现横屏近看时前侧箭头被过度外移到底栏后方，由[底栏遮挡 RED](../TestResults/p8r-cash-ground-catalogue-red2.xml)复现，再加入真实深度判断。最终同版代码[直接回归](../TestResults/p8r-cash-ground-final-regression3.xml)为 **142 PASS、0 FAIL、1 opt-in 截图项忽略**；该截图项已在[正常 Editor 单独通过](../TestResults/p8r-cash-ground-native-final3.xml)，**1 PASS、0 FAIL、0 跳过**，生成 10 张原生 PNG，包含竖屏／横屏的 0°、90°、4／12 zoom 及 Confirm 后隐藏。最终竖屏近看与独立横屏近看视觉复查未见上述遮挡。不是全仓库回归或真机验收。
+
+现在可重新 Play MainCafe → Decoration → Furniture → Cash Register，放上 Counter 后旋转、缩放、取消再试；重点判断两侧 icon 的尺寸、距离和含义是否直观。[竖屏近看](../outputs/p8r-cash-side-indicators-20260914/native-20260915-133028-7864889/portrait-480x854-zoom-4.png)、[横屏近看](../outputs/p8r-cash-side-indicators-20260914/native-20260915-133028-7864889/landscape-1600x720-zoom-4.png)。极远镜头下图标会随场景变小；按钮密集时 icon 可能抬高。其他家具／墙体的遮挡仍需实际布局体验。Technical checks 与 Owner 外观接受分开：**视觉验收待 Owner 确认**。本轮未 commit／push，保留所有此前未提交修改。
+
+### 36.5 提亮箭头、成对等高、整条操作栏避让（2026-09-15；站位规则由 36.6 更新）
+
+Owner 指出箭头偏暗，以及一枚 icon 被单独抬过按钮后与另一枚高度不一致，并确认了本次方案。修改仅涉及两份 runtime C#、对应 PlayMode tests 与本节记录；不改 Scene、Prefab、PNG、共用 Material、Save、方向语义或其他家具按钮的排版规则。
+
+- `CashRegisterSideIndicatorView.cs`：独立箭头 Material 的 `_LightIntensity` 从 1.0 调为 1.3、`_FootprintOpacity` 从 0.52 调为 0.65；颜色、尺寸、贴地位置和柔边不变，不新增 Light 或 Bloom。两枚 icon 使用同一个 arrow-relative 高度和 bob，保留各自箭头的屏幕 x，不能再单独跳到按钮上方。
+- View 提供包含完整 bob 上下范围的稳定避让区域；只在布局变化时通知，不随浮动重排按钮。先让操作栏避让；极拥挤时只对两枚 icon 共同作安全范围内的高度调整，完全没有空间时沿用整组隐藏规则。
+- `DecorationModeController.cs`：用 CR 独立分支把 icon 区域加入现有 `avoidScreenRect`，先布局标记再安排操作栏，并清理事件订阅。`DecorationActionBarView.cs` 本轮未修改，保留既有整条避让及按住按钮时延迟移动的保护，未借用 pickup sign 的额外高度偏移。
+- `P8RCashRegisterSideIndicatorTests.cs`：覆盖四个朝向、default／4／12 zoom 的等高与实际按钮不重叠；校验独立材质提亮而共用材质不变；增加 bob 不推动操作栏、PointerDown 后缩放不移动按压目标及 PointerUp 后恢复布局的真实组件回归。
+
+证据：[RED](../TestResults/p8r-cash-equal-hover-red.xml) 的 2 个测试真实失败，分别测出约 98 对 32 px、58 对 19 px 的不一致相对高度；修正后[首轮定向回归](../TestResults/p8r-cash-equal-hover-green1.xml)为 8 PASS、0 FAIL、1 opt-in 忽略。[最终直接相关回归](../TestResults/p8r-cash-equal-hover-regression1.xml)为 **146 PASS、0 FAIL、1 opt-in 截图项忽略**，涵盖 CR 指示、功能家具 View／Interaction、Catalogue、紧凑按钮、input recovery 与 wall decor 避让。该 opt-in 项随后在[正常 Editor 原生截图测试](../TestResults/p8r-cash-equal-hover-native1.xml)中单独 **1 PASS、0 FAIL、0 跳过**，生成 10 张横竖屏 PNG。不是全仓库回归或手机真机验收。
+
+实际查看：[竖屏默认距离](../outputs/p8r-cash-side-indicators-20260914/native-20260915-150422-0827661/portrait-480x854-cash-0.png)、[竖屏近看](../outputs/p8r-cash-side-indicators-20260914/native-20260915-150422-0827661/portrait-480x854-zoom-4.png)、[横屏近看](../outputs/p8r-cash-side-indicators-20260914/native-20260915-150422-0827661/landscape-1600x720-zoom-4.png)。均来自真实 GameView，无重绘或合成；主代理查看竖屏默认／近看，独立 reviewer 查看横屏默认／近看，未发现本次高度或底栏遮挡问题。操作栏按可用空间优先上下避让，必要时整条移到侧方。极远镜头的小 icon、其他家具／墙体遮挡仍需实际布局体验。
+
+UI design skill 用于保持当前 B 配色、箭头与 icon 的空间对应及操作区域清晰；TDD 与独立 review 用于检查布局、材质隔离和输入保护。Technical checks 与 Owner 感官验收分开，**外观待 Owner 确认**。重新 Play MainCafe → Decoration → Furniture → Cash Register，旋转、缩放并确认／取消，即可检查新版。本轮未 commit／push，保留此前所有未提交修改。
+
+### 36.6 当前版：真实站位固定箭头＋逐角色 invalid 标志（2026-09-15）
+
+Owner 已批准暖红色圆圈＋斜线的样式，并明确要求箭头紧邻 CR 的真实员工／顾客站位，不得被推到整排 Counter 外沿。本节替代 36.4 的 renderer 外轮廓定位与遮挡外移；36.5 的箭头亮度、成对等高、轻微 bob 和整条操作栏避让继续保留。
+
+本轮修改的 files：
+
+- `Assets/Scripts/Decoration/CafeLayoutRuntime.cs`：增加 readonly preview anchor 查询，用临时 `SurfaceMountedInstance` 复用正式 `InteractionAnchorResolver`，不把 preview 加入 confirmed layout，也不重算或发布 confirmed readiness。
+- `Assets/Scripts/Layout/LayoutReadinessEvaluator.cs`：抽取共用 `GetAnchorObstruction`，沿用 outside 优先、再检查 Blocked reservation／floor occupant 的原规则。没有增加 flood-fill 或改变营业条件；`AnchorUnreachable` 不属于本次红圈提示范围。
+- `Assets/Scripts/Decoration/DecorationModeController.cs`：将真实 anchors 与每个 role 的阻挡状态传给 View。桌面 `SlotOccupied` 仍由原 placement feedback 处理，不能误报成双侧站位受阻；没有 anchor 的无支撑 fallback 双侧显示 invalid。`CanConfirm` 规则不变。
+- `Assets/Scripts/UI/Decoration/CashRegisterSideIndicatorView.cs`：箭头使用真实 cell center／Facing，包含 support 与 equipment 旋转；删除按整块 Counter 大小和遮挡外移的算法。红圈作为原 icon 的子层，valid 后移除；始终预留 1.2 倍包围区域以防切换时高度或按钮跳动。
+- 新增 `Assets/Scripts/UI/P8R/P8RInvalidRoleGraphic.cs`（及 Unity 自动生成的 `.meta`）：用原生 UI mesh 绘制暖红色 `#B95640` 圆圈斜线，透明内底、96 段圆环与约一屏幕像素 AA fringe。沿用原 apron／bag PNG，不重绘角色；禁止符号不需要额外低分辨率 PNG。所有新增 Graphic 均无 raycast。
+- `Assets/Tests/PlayMode/EditorSceneLoading/P8RCashRegisterSideIndicatorTests.cs`：覆盖逐角色状态、四方向、旋转 1x3 Counter 的中间 Slot、blocked reservation、out-of-bounds、无支撑 fallback、占用桌面不误报、confirmed report/version 不变、取消／确认清理，并增加实际阻挡／旋转恢复的原生截图。
+
+验证记录：
+
+- [初始 RED](../TestResults/p8r-cash-invalid-red.xml)：2 个测试真实失败，分别为箭头偏离真实相邻 cell 约 0.47 格、缺少禁止标志。
+- [复核问题 RED](../TestResults/p8r-cash-invalid-slot-red.xml)：占用桌面导致两角色误标 invalid；修正后纳入最终回归。
+- [Domain 回归](../TestResults/p8r-cash-invalid-domain-regression.xml)：**77 PASS、0 FAIL、0 跳过**，覆盖 readiness、anchor resolver、functional layout 与 preview session。
+- [最终直接相关 PlayMode 回归](../TestResults/p8r-cash-invalid-final-regression.xml)：**150 PASS、0 FAIL、1 opt-in 截图项忽略**，覆盖 CR 指示、家具 View／Interaction、Catalogue、输入恢复、紧凑操作栏和 wall decor 避让。
+- 该 opt-in 项随后在[正常 Editor 原生截图测试](../TestResults/p8r-cash-invalid-native.xml)中 **1 PASS、0 FAIL、0 跳过**，生成 14 张真实 GameView PNG。主代理检查竖屏受阻／恢复两张，独立 reviewer 检查横屏对应两张；图形边缘平顺、角色可辨认、按钮不重叠，代码与视觉复核未发现 blocker。不是全仓库回归或 Android／iOS 真机验收。
+
+实际效果：[竖屏两侧受阻](../outputs/p8r-cash-side-indicators-20260914/native-20260915-211207-1953285/portrait-480x854-both-blocked.png)、[竖屏旋转恢复](../outputs/p8r-cash-side-indicators-20260914/native-20260915-211207-1953285/portrait-480x854-rotated-recovered.png)、[横屏两侧受阻](../outputs/p8r-cash-side-indicators-20260914/native-20260915-211207-1953285/landscape-1600x720-both-blocked.png)、[横屏旋转恢复](../outputs/p8r-cash-side-indicators-20260914/native-20260915-211207-1953285/landscape-1600x720-rotated-recovered.png)。均为实际游戏截图，无重绘／合成。
+
+注意：真实站位被 Counter 占用时，贴地箭头会被模型遮挡；即使站位有效，远侧箭头也可能因透视被 Counter 遮住。它们不再为了可见而移动到错误位置，上方角色 icon 仍说明对应侧，受阻时有红圈。没有改深度绘制规则或让箭头穿透墙体。
+
+你可以重新 Play MainCafe → Decoration → Furniture → Cash Register，在连排的三个 Counter 中间放置 CR，旋转查看红圈出现／消失；再试取消、确认、切 tab。原来的确认规则不变，红圈是角色站位提示，不代替整店营业检查。保持当前 B 配色、不抢按钮输入；本轮没有修改 Scene／Prefab／Save／现有 PNG／共享 Material，也没有 commit／push。**技术验证通过，外观接受仍待 Owner 实际查看。**
+
+### 36.7 CR 标志抬高至常驻 Pickup 的近似视觉高度（2026-09-15）
+
+Owner 已确认：以未拖动的常驻 Pick Up Point 为高度参考，只提高两个角色 icon 与其 invalid 圈；地面箭头、大小、轻微浮动和摆放规则保持不变。
+
+- `CashRegisterSideIndicatorView.cs`：自然目标高度由 `0.62` 调为 `1.4 × cellSize`，保留共享相对高度、完整红圈／bob 包围区域及 safe-area／按钮避让。此值按当前 Counter Slot `0.72`、Pickup lift `0.112`、billboard 牌面中心 `camera.up × 0.46` 和 MainCafe 相机投影近似对齐；不包含 Pickup preview 的额外拖动抬高。以后若更换相机倾角或柜台高度，需要重新校准。前后两个标志仍随各自地面站位投影，不强行对齐绝对屏幕 Y。
+- `P8RCashRegisterSideIndicatorTests.cs`：新增真实 confirmed Pickup renderer 对比，在 zoom `4 / 6 / 12` 检查相对各自地面的视觉高度；通用按钮／safe-area 检查改为量完整 `InvalidOverlay` 外沿，而非较小的 icon Rect。
+- 本节记录范围和证据；没有改 Scene、Prefab、Save、PNG、共享 Material，也没有 commit／push。
+
+[RED](../TestResults/p8r-cash-pickup-height-red.xml) 真实失败：zoom 6 的常驻 Pickup 相对地面约 `113.66 px`，旧 CR 约 `59.00 px`。[最终直接相关回归](../TestResults/p8r-cash-pickup-height-final.xml)：**40 PASS、0 FAIL、1 opt-in 截图项忽略**，覆盖高度、四方向、缩放、完整红圈、安全区域、紧凑按钮、输入恢复及功能家具 View。[正常 Editor 原生截图测试](../TestResults/p8r-cash-pickup-height-native.xml) 随后单独 **1 PASS、0 FAIL、0 跳过**，生成 14 张真实 GameView PNG。
+
+新版截图：[竖屏受阻](../outputs/p8r-cash-side-indicators-20260914/native-20260915-223206-3411897/portrait-480x854-both-blocked.png)、[竖屏旋转恢复](../outputs/p8r-cash-side-indicators-20260914/native-20260915-223206-3411897/portrait-480x854-rotated-recovered.png)、[横屏受阻](../outputs/p8r-cash-side-indicators-20260914/native-20260915-223206-3411897/landscape-1600x720-both-blocked.png)。图像未经重绘或合成。重新 Play MainCafe → Decoration → Furniture → Cash Register，旋转与缩放即可复核。技术验证不等同全仓库回归或手机真机验收，最终视觉接受仍由 Owner 判断。
+
+### 36.8 桌面物件拖拽下沉修复（2026-09-15）
+
+Owner 已批准：桌面范围内稳定吸附；拖过 UI 时保留原位置；真正离开柜台才进入无效地面 preview。旧逻辑把任何无 Slot 地址的拖拽帧都清成 `default`，包括 UI 帧；此外只用 Slot 中心 72 px 圆形范围，近看时会漏掉台面边角。失去 Slot 后 ghost 从台面 `0.72 + hover 0.35` 降至地面 `0 + hover 0.35`，形成埋入柜台的效果。
+
+本轮修改 4 个 files：
+
+- `DecorationModeController.cs`：UI 或既无 Slot、也无 FloorPosition 的帧保留原 pose；有明确 FloorPosition 的无 Slot 拖拽仍走原 floor fallback。命中判断优先使用 Slot 台面平面与 support 的 right/forward 半格范围，支持柜台旋转及镜头缩放；多个真实台面按 ray distance 选择，同深度优先当前 Slot。原 72 px 只作为未命中台面的兼容吸附。
+- `Phase8FunctionalSurfaceInteractionPlayModeTests.cs`：真实 UI raycast／Router 测试覆盖 CR、Coffee Machine、Pick Up Point 的新增与编辑；桌面角落覆盖 0°／90°，明确断言 CurrentHit 的 Slot，避免仅因保留旧位置而误通过。
+- `P8RCashRegisterSideIndicatorTests.cs`：MainCafe 正式 Router／classifier 在 zoom 4／12 下经过真实 rotate 按钮，再回到台面角落；验证 ghost 高度、address、owner 释放及 confirmed readiness/version 不变。原生截图流程复用该输入路径。
+- 本节记录修复及证据。没有修改 Router ownership、Confirm 规则、View 高度、Scene、Prefab、Save、PNG 或共享 Material；也未 commit／push。
+
+有效 [RED](../TestResults/p8r-mounted-drag-red3.xml)：3 个测试在旧实现下真实失败，分别为 UI 清空绑定与两个朝向的台面角落漏吸附；之前两轮包含测试 fixture 初始化问题，不作为产品 RED 证据。修复后 [Interaction/View](../TestResults/p8r-mounted-drag-green.xml) **114 PASS**；[最终直接相关回归](../TestResults/p8r-mounted-drag-final.xml) **155 PASS、0 FAIL、1 opt-in 截图项忽略**。该项随后在[正常 Editor 原生截图测试](../TestResults/p8r-mounted-drag-native.xml)中单独 **1 PASS、0 FAIL、0 跳过**，输出 16 张真实 GameView PNG。独立代码与测试复核通过；不是全仓库回归或手机真机验收。
+
+实际画面：[竖屏拖拽后](../outputs/p8r-cash-side-indicators-20260914/native-20260916-010711-4513373/portrait-480x854-drag-ui-and-table-edge.png)、[竖屏放大](../outputs/p8r-cash-side-indicators-20260914/native-20260916-010711-4513373/portrait-480x854-zoom-4.png)、[横屏拖拽后](../outputs/p8r-cash-side-indicators-20260914/native-20260916-010711-4513373/landscape-1600x720-drag-ui-and-table-edge.png)。未重绘或合成。重新 Play MainCafe → Decoration → Furniture，分别拖动 CR／Coffee Machine／Pick Up Point 经过按钮、台面边缘和空地，再试拖回、取消与确认。
+
+保留边界：真正离开 Counter 的地面 invalid preview 仍可见、不能 Confirm；台面外的旧 72 px 吸附容错没有整体重设计。当前正式 Counter 与 grid hierarchy 为单位 scale；以后若允许非单位缩放，需要同步调整台面范围。最终实际操作手感仍待 Owner 验收。
+
+### 36.9 Wall Decor 拖拽目标与遮挡保护（2026-09-15）
+
+Owner 已批准修复诊断中的三处问题。Wall Decor 原有 last-display fallback 不会像桌面物件一样掉到地面，但 UI 帧会清空墙面目标；拖过已有墙饰会被其 Collider 截断；目标丢失又会恢复遮挡物的不透明材质，造成错误 invalid 或看似穿模。
+
+本轮仅修改 4 个 files：
+
+- `DecorationModeController.cs`：`TryHandleSceneDrag` 对 UI 帧直接保留 preview，包括原来已经 invalid 的状态；`ClassifyPrimaryHit` 在 active preview 的 Current 阶段跳过 confirmed wall-decor Collider，继续检测后方真实墙格，正常报告 `Overlap`。Began 仍能选中已有墙饰。`UpdateWallMountedProjection` 根据实际显示墙面保留 occlusion fade，不再使用可能为空的逻辑目标；Cancel 等结束路径照常恢复材质。
+- `P8RWallDecorDragAccessTests.cs`：新增 MainCafe 新建／已有墙饰经过真实 Cancel button 后恢复拖拽的测试，以及经过已确认 monitor 后报告 `Overlap`、invalid 经过 UI 不改变原因、拖回空格恢复的测试。使用真实 Camera、Collider、UI raycast、Router 和 Controller；不关闭 UI 来绕过浮动按钮。恢复取点可在同一指定墙格内避开按钮中心。
+- `Phase7WallMountedTouchPlayModeTests.cs`：新增真实 blocker／wall／Camera／fade Materials 的目标丢失测试，验证 ghost pose 保留、Confirm 被拒绝、fade 保留及 Cancel 后恢复原材质。
+- 本节记录修复与测试证据。没有修改 Scene、Prefab、PNG、模型高度、Save 或共享 Material；不改变手势起点归属和 Confirm 才提交的规则，未 commit／push。
+
+有效 [拖拽 RED](../TestResults/p8r-wall-drag-red2.xml) 为 **3 个真实失败**：新建／已有 preview 经过 UI 后 SurfaceId 被清空，confirmed wall decor 抢先返回 `WallMounted` 而非后方 `WallSlot`。[遮挡 RED](../TestResults/p8r-wall-drag-fade-red.xml) 为 **1 个真实失败**：失去目标后 fade Material 被恢复。先期测试字段编译问题、恢复取点被按钮遮挡的问题已修正，不作为产品 bug 证据。
+
+修复后 [focused GREEN](../TestResults/p8r-wall-drag-green.xml) **7 PASS、0 FAIL**；[最终直接相关回归](../TestResults/p8r-wall-drag-final.xml) **218 PASS、0 FAIL、1 opt-in CR 截图项忽略**，覆盖墙饰／跨墙角／动作按钮避让／输入恢复／桌面物件与 CR indicator。该截图项本轮未运行；本次是 MainCafe 自动交互与场景 fixture 检查，不是新截图、全仓库回归或手机真机验收。
+
+独立代码与测试复核：**0 Critical、0 Important，无交付 blocker**。记录一个非阻塞测试增强项：以后可增加“墙饰外表面与后方墙面映射到不同 Slot”的明确 fixture，以更强地保护跳过整个 Collider hit 的 `continue`；当前实现已正确跳过。
+
+手动复核：重新 Play MainCafe → Decoration → Wall Decor；新放或选中已有墙饰，拖过 Cancel／Confirm 按钮，再回到墙上；拖到另一件墙饰处应提示占用，拖回空墙应恢复；真正离墙仍为 invalid，不能 Confirm；取消后原物件位置及遮挡材质应恢复。最终操作手感仍待 Owner 验收。
+
+### 36.10 营业提示改为短状态和处理清单（2026-09-15）
+
+Owner 已确认：保留当前暖色提示栏的位置、尺寸上限和滚动方式，精简信息，不更改营业判定。
+
+- 收起只显示 `Can't open yet · N issues`；可营业但有 warning 时显示 `Can open · N suggestions`。完全健康时继续隐藏。
+- 展开按“加粗物件／角色 + 一句处理动作”排列，例如 `Cash Register · Customer side` / `Clear space for the customer.`。移除玩家正文中的重复原因、`Blocking:` 和坐标；warnings 单独放在 `Suggestions` 下。
+- 完全重复的问题去重计数，不合并不同实例、角色、位置或原因；同类多个实例使用编号区分。完整原始记录、坐标及原始原因仍保留在诊断接口，detached IDs 不丢失。
+- 有未确认 preview 时，展开详情底部显示 `Updates after confirmation.`。确认、取消、切 tab、退出后同步清除；备注变化不重算 confirmed readiness，也不改变展开状态。仍只有 Confirm 写入布局。
+
+本轮 files：
+
+- `P8RAppearance.cs`、`P8REnglish.json`：独立玩家短文案和完整诊断 formatter，覆盖 12 种 failure。
+- `ValidationMessageView.cs`：受控 rich text 标题、短摘要和 preview 备注；generic status / legacy 仍为 plain text。
+- `DecorationModeController.cs`：在既有 preview 事件和退出 cleanup 后同步备注，不增加逐帧 gameplay 轮询。
+- `CashRegisterSideIndicatorView.cs`：回归发现普通场景卸载可能先销毁 invalid overlay；补充 Unity-null 检查，避免清理时访问已销毁对象，不改变 indicator 的外观或摆放规则。
+- 新增 `P8RReadinessCopyTests.cs`；扩展 `P8RReadinessSafeAreaTests.cs`，调整 `P8RCompleteUiTests.cs` 与 `Phase8MainCafeSceneTests.cs` 的旧文案断言。本节记录范围和验收方法。
+
+验证证据：
+
+- [文案 RED](../TestResults/p8r-readiness-copy-red.xml)：旧实现 25 FAIL / 1 PASS；[真实 UI RED](../TestResults/p8r-readiness-ui-red.xml)：缺少 rich text 和 preview 备注，2 FAIL。
+- [退出 RED](../TestResults/p8r-readiness-exit-red2.xml)：直接退出 Furniture preview 时备注真实残留；正常 UI Discard 本身无此缺陷。修复在 `session.Exit()` 之后同步 pending。
+- [文案／诊断 GREEN](../TestResults/p8r-readiness-copy-green.xml)：**42 PASS、0 FAIL**。[最终相关 UI 回归](../TestResults/p8r-readiness-ui-final.xml)：**75 PASS、0 FAIL、2 opt-in 截图项忽略**，覆盖安全区、展开／收起、滚轮隔离、Floor confirm、Wall cancel、WallDecor cancel／tab switch、Furniture discard／direct exit、MainCafe 重载与 CR 指示。未通过修改 fixture 绕开场景卸载异常。
+- Readiness opt-in 随后在[最终原生截图测试](../TestResults/p8r-readiness-native-final.xml)中 **1 PASS、0 FAIL**；本轮不重跑 CR 的 opt-in 图集。使用真实 `RealGameViewSize`，同时验证 Screen、Camera 和输出 PNG 尺寸一致；早期 `033720` 目录存在切屏尺寸错配，不作为验收证据。
+
+最终原生截图：[手机收起](../Artifacts/readiness-checklist-20260916-034124/phone-collapsed.png)、[手机展开](../Artifacts/readiness-checklist-20260916-034124/phone-expanded.png)、[preview 备注](../Artifacts/readiness-checklist-20260916-034124/phone-preview-note.png)、[横屏展开](../Artifacts/readiness-checklist-20260916-034124/landscape-expanded.png)。主代理逐张检查，文字可读、按钮未覆盖正文，详情超出高度时继续滚动；不是合成图或手机真机验收。
+
+独立代码复核在修复退出遗漏后无 Critical / Important。保留一个 Minor：未来文案若加入 `&` 或 `< >`，当前 HTML entity escaping 会被 TMP 原样显示，需要届时补实际 parsed-text 测试并调整转义；当前英文没有这些字符，不影响本轮显示。
+
+你可以重新 Play MainCafe，展开提示栏；查看每项的物件／角色与处理动作，再开始、确认或取消 preview，检查备注出现和消失。还可滚动详情确认镜头不同时缩放。game-ui-design / game-ui-ux 用于保持现有视觉和输入边界；TDD 与独立 review 用于验证呈现、状态清理和诊断保留。本轮未改 Scene／Prefab／Save／现有 PNG，未 commit／push；视觉接受仍待 Owner 实际查看。
+
+### 36.11 Push 前回归修复与重新验证（2026-09-16）
+
+Owner 已批准先修复回归失败，再重新测试并 commit／push 到现有 P8 分支；不合并 main，不改变已接受的紧凑 UI 外观。
+
+- `SafeAreaContainer.cs`：父级持有 Safe Area 的标记仅属于运行时，改为非序列化，避免污染 Scene／Prefab 或被独立 clone 继承。新增 clone 回归先观察到真实失败，再验证修复；保留父级安全区行为。
+- `P8RColoredTabAssets.cs`：重复应用已正确的彩色 Tab 时，先检查素材、状态和 raycast 绑定，不因运行时排版重新保存 Prefab。回归同时保护 16 个目标的 bytes 与时间戳；测试恢复先还原全部素材／meta，再统一 import，避免残留错误 importer 状态。
+- 旧 UI 测试与已批准的 20 logical action ink、20／23 logical Tab ink、Floor icon-only utility 及 Cash Register 缩略图裁切对齐；保留字体、完整名称、disabled 状态、点击区和确认生命周期检查，不用放大 UI 来迎合旧断言。
+- 新 `ProjectAssetEditSafety.cs`：识别 Unity 动态 Font 自动生成的只读 glyph atlas。三个 Editor 工具在把对象转成文件路径前，仅排除属于该 Font 的精确 atlas；主 Font、Font Material、Importer、TMP SDF atlas 和其他真实 dirty 资产仍阻止写入。生产代码不会替用户保存、清理 dirty 或 reimport 源字体。
+- 全量回归另发现 `ApplyApproved` 跨导入操作持有的 Appearance native 引用可能失效：写入前重新从固定路径取得当前实例，并再次拒绝 missing／dirty 资源。确定性测试只卸载独立 GUID 的测试 clone；原 Appearance 通过 MoveAsset 暂存并原样移回，验证原 instance、GUID、bytes、meta 均恢复，不卸载原生产资产。
+
+验证记录：
+
+- [字体缓存 RED](../TestResults/p8-prepush-font-cache-guard-red.xml)：**12 PASS、3 预期 FAIL**。三个入口均因动态 glyph atlas 误报 `.otf` 未保存；没有编译错误。
+- [修复后混合回归](../TestResults/p8-prepush-resume-focused-green.xml)：**103 PASS、0 FAIL、0 跳过**，包含全部新增 dirty 保护组合、上一轮 UI 修复、Phase 6 字体使用和 Phase 8 builder 的加载顺序回归。
+- [首轮完整回归](../TestResults/p8-prepush-retest-full-editmode.xml)：**1736 PASS、1 FAIL、355 跳过**，仅作为诊断记录；唯一失败为上述 stale Appearance。跳过来自 dirty caller Scene 保护（Phase 6 validator 194、migration 160、Phase 8 single-Scene 1），不是 opt-in，必须独立补测。测试额外改写的 8 个资源已留副本并恢复测试前字节，原有修改保留。
+- [安全隔离的生命周期 RED](../TestResults/p8-prepush-appearance-owned-red2.xml)：**1 个预期失败**，准确复现相同 `SerializedObject` 空引用，原资产恢复断言通过。先期直接卸载原资产的诊断测试已替换；不支持的 NUnit 并行标记已移除，未增加 dependencies。
+- [最终定向回归](../TestResults/p8-prepush-lifetime-focused-green.xml)：**104 PASS、0 FAIL、0 跳过**。此前因场景保护跳过的 355 项随后分别独立补跑：[validator 194 PASS](../TestResults/p8-prepush-final-phase6-validator.xml)、[migration 160 PASS](../TestResults/p8-prepush-final-phase6-migration.xml)、[single-Scene 1 PASS](../TestResults/p8-prepush-final-single-scene.xml)，按完整测试名称对照，没有漏项。
+- [首次完整 PlayMode](../TestResults/p8-prepush-final-full-playmode.xml)：**1009 PASS、6 FAIL、2 opt-in 截图项跳过**，仅作为诊断记录。Phase 7 的 5 项涉及旧 UI 断言／测试取点；Phase 5 的 1 项是前一触摸 fixture 未卸载场景造成的输入系统污染。[Round2 独立运行](../TestResults/p8-prepush-phase5-input-diagnostic.xml) **10 PASS**，而[两 fixture 顺序 RED](../TestResults/p8-prepush-phase5-input-sequence-red.xml) **10 PASS、1 个同样失败**，证实该顺序依赖。修复仅清理 RealTouch fixture 自己创建的场景与输入资源，不改生产触摸逻辑。
+- `Phase7MainCafeSceneTests.cs` 的兼容修复保留 legacy 分支；新版断言使用已绑定的 category Sprite、真实 root raycast 和独立 Modal Safe Area host。收起栏检查固定的 48 logical 触控高度、8 logical Tab/handle 间距与 24 logical 贴底留白，不用放宽屏幕百分比。墙饰首次确认后的取点仅依据可见 UI 与真实 Collider，保留同帧和准确实例 ID，不关闭 UI、不调用 classifier 筛答案、不手动同步 Physics。
+- [关联 PlayMode 回归](../TestResults/p8-prepush-playmode-compat-focused-green.xml)：**36 PASS、0 FAIL、0 跳过**。随后落实 review 的 GraphicRaycaster 精确筛选与卸载后引用清理，再冻结最终 61 个非文档候选文件的 SHA256。
+- [最终完整 PlayMode](../TestResults/p8-prepush-final-full-playmode-r2.xml)：**1015 PASS、0 FAIL、2 opt-in 截图项跳过**；两项分别是 CR 角色图集与 Readiness 原生截图，没有把它们算作 PASS。本轮不声称新图像或手机真机验收。
+- [最终完整 EditMode](../TestResults/p8-prepush-final-full-editmode.xml)：**1738 PASS、0 FAIL、355 场景保护跳过**。与上述 3 份独立补测按完整用例名称逐项比对，355 项全部已有本轮 PASS；合计覆盖 **2093 个不同用例，无失败、无遗漏**。不是把 skipped 当作通过，也没有移除 dirty Scene 保护。
+- 最终测试后，8 个测试生成的资源变化再次留副本并恢复到测试前 SHA256；原有修改完整保留。最终 61 个非文档候选文件的哈希全部匹配冻结版本，加本指南共 **62 个提交文件**，与完整 PlayMode／EditMode 的源码一致。
+
+独立代码／QA 复核无 Critical／Important。保留三个非阻塞的测试增强项：单独注入 Tab raycast 漂移、在 compact utility 测试里直接要求 Icon 节点存在、在真实 dirty 拒绝测试中先验证 clean baseline 并核对报错路径。当前实现的相应条件已检查正确；这些建议不扩展本轮 UI 行为。
+
+提交边界：只收录本次功能、回归修复与本指南；排除原有 23 份 Phase 7 材质序列化差异、`AssetPipelineReadability.unity` 的既有差异，以及测试输出／截图目录。测试前保留文本资源与 metadata 副本，测试生成的额外资源变化应精确恢复，不覆盖原有编辑。没有新的手机真机或视觉验收结论。

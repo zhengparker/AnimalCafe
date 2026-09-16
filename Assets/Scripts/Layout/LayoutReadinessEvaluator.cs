@@ -349,6 +349,17 @@ namespace AnimalCafe.Layout
             return true;
         }
 
+        // Shared by confirmed readiness and preview-only role badges. No mutation or pathfinding.
+        // 已确认布局与 preview 共用的站位阻挡规则；这里只读，不改变营业状态。
+        internal static LayoutReadinessFailureCode? GetAnchorObstruction(CafeLayout layout, GridPosition position)
+        {
+            if (layout == null) throw new ArgumentNullException(nameof(layout));
+            if (!layout.IsInsideUnlockedRegion(position)) return LayoutReadinessFailureCode.AnchorOutOfBounds;
+            if (layout.HasReservation(position, LayoutReservationType.Blocked)
+                || layout.TryGetOccupant(position, out _)) return LayoutReadinessFailureCode.AnchorBlocked;
+            return null;
+        }
+
         private void ValidateAnchors(
             StationCandidate candidate,
             CafeLayout cafeLayout,
@@ -360,7 +371,8 @@ namespace AnimalCafe.Layout
 
             foreach (var anchor in candidate.Anchors.Anchors)
             {
-                if (!cafeLayout.IsInsideUnlockedRegion(anchor.Position))
+                var obstruction = GetAnchorObstruction(cafeLayout, anchor.Position);
+                if (obstruction == LayoutReadinessFailureCode.AnchorOutOfBounds)
                 {
                     candidate.AddFailure(
                         LayoutReadinessFailureCode.AnchorOutOfBounds,
@@ -370,10 +382,7 @@ namespace AnimalCafe.Layout
                     continue;
                 }
 
-                if (cafeLayout.HasReservation(
-                        anchor.Position,
-                        LayoutReservationType.Blocked) ||
-                    cafeLayout.TryGetOccupant(anchor.Position, out _))
+                if (obstruction == LayoutReadinessFailureCode.AnchorBlocked)
                 {
                     candidate.AddFailure(
                         LayoutReadinessFailureCode.AnchorBlocked,

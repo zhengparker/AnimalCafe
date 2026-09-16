@@ -21,6 +21,14 @@ namespace AnimalCafe.Tests.EditMode.P8R
         private const string MonoRoot = "Assets/UI/P8R/RefinedB/Icons";
         private static readonly string[] Actions = { "decorate", "exit", "pickup" };
         private readonly List<Object> owned = new();
+        private Vector2? previousLogicalViewport;
+
+        [SetUp]
+        public void SetUp()
+        {
+            previousLogicalViewport = P8RMobileMetrics.EditorLogicalViewportOverride;
+            P8RMobileMetrics.EditorLogicalViewportOverride = null;
+        }
 
         [TearDown]
         public void TearDown()
@@ -28,6 +36,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
             foreach (var item in owned.AsEnumerable().Reverse())
                 if (item != null) Object.DestroyImmediate(item);
             owned.Clear();
+            P8RMobileMetrics.EditorLogicalViewportOverride = previousLogicalViewport;
         }
 
         [TestCase("decorate")]
@@ -160,8 +169,8 @@ namespace AnimalCafe.Tests.EditMode.P8R
                     Assert.That(AssetDatabase.GetAssetPath(icon.sprite), Is.EqualTo(
                         interactable ? PathFor(action) : MonoRoot + "/" + action + "_muted.png"));
                     Assert.That(label.gameObject.activeSelf, Is.False, action + " remains icon-only in every state.");
-                    // No-Canvas authoring uses 3 UI units per logical unit; action ink is 24 logical.
-                    AssertVisibleInk(icon, 24f * 3f, Vector2.zero);
+                    // No-Canvas authoring uses 3 UI units per logical unit; compact action ink is 20 logical.
+                    AssertVisibleInk(icon, 20f * 3f, Vector2.zero);
                     Assert.That(RectGeometry((RectTransform)button.transform), Is.EqualTo(buttonGeometry));
                 }
             }
@@ -178,7 +187,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
                     interactable ? PathFor("pickup") : MonoRoot + "/pickup_muted.png"));
                 Assert.That(label.gameObject.activeSelf, Is.True, "Pickup keeps its existing readable text.");
                 Assert.That(label.text, Is.EqualTo(appearance.Text("action.pickup")));
-                AssertVisibleInk(icon, 24f * 3f, null);
+                AssertVisibleInk(icon, 20f * 3f, null);
                 Assert.That(RectGeometry((RectTransform)pickup.transform), Is.EqualTo(pickupGeometry));
             }
         }

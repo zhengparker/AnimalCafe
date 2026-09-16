@@ -15,6 +15,97 @@ namespace AnimalCafe.Tests.EditMode.Phase8
 {
     public sealed class Phase8AssetBuilderTests
     {
+        private const string SourceFontPath = "Assets/UI/Phase5/Fonts/NotoSansSC-Regular.otf";
+
+        [TestCase("builder")]
+        [TestCase("scene")]
+        [TestCase("p8r")]
+        public void DirtyAssetGuard_AllowsGeneratedFontAtlasWithoutSavingOrClearingIt(string entry)
+        {
+            var font = AssetDatabase.LoadAssetAtPath<Font>(SourceFontPath);
+            Assert.That(font, Is.Not.Null);
+            Assert.That(font.dynamic, Is.True);
+            var atlas = font.material.mainTexture;
+            Assert.That(atlas, Is.TypeOf<Texture2D>());
+            Assert.That(AssetDatabase.IsSubAsset(atlas), Is.True);
+            Assert.That(atlas.hideFlags & HideFlags.NotEditable, Is.Not.EqualTo(HideFlags.None));
+            var savedAsset = File.ReadAllBytes(SourceFontPath);
+            var savedMeta = File.ReadAllBytes(SourceFontPath + ".meta");
+            var wasDirty = EditorUtility.IsDirty(atlas);
+            try
+            {
+                EditorUtility.SetDirty(atlas);
+                Assert.DoesNotThrow(() => InvokeDirtyAssetGuard(entry));
+                Assert.That(EditorUtility.IsDirty(atlas), Is.True,
+                    "检查只能识别动态字形缓存，不能自动保存或清除它。");
+                Assert.That(File.ReadAllBytes(SourceFontPath), Is.EqualTo(savedAsset));
+                Assert.That(File.ReadAllBytes(SourceFontPath + ".meta"), Is.EqualTo(savedMeta));
+            }
+            finally
+            {
+                if (!wasDirty) EditorUtility.ClearDirty(atlas);
+            }
+        }
+
+        [Test]
+        public void DirtyAssetGuard_StillRejectsRealFontMaterialImporterAndTmpAtlasEdits(
+            [Values("builder", "scene", "p8r")] string entry,
+            [Values("font", "material", "importer", "tmp-atlas")] string editedObject)
+        {
+            var font = AssetDatabase.LoadAssetAtPath<Font>(SourceFontPath);
+            UnityEngine.Object target;
+            switch (editedObject)
+            {
+                case "font": target = font; break;
+                case "material": target = font.material; break;
+                case "importer": target = AssetImporter.GetAtPath(SourceFontPath); break;
+                default:
+                    target = AssetDatabase.LoadAssetAtPath<TMPro.TMP_FontAsset>(Phase8AssetPaths.UiFontPath)
+                        .atlasTextures[0];
+                    break;
+            }
+            Assert.That(target, Is.Not.Null);
+            var path = AssetDatabase.GetAssetPath(target);
+            var savedAsset = File.ReadAllBytes(path);
+            var savedMeta = File.ReadAllBytes(path + ".meta");
+            var wasDirty = EditorUtility.IsDirty(target);
+            try
+            {
+                EditorUtility.SetDirty(target);
+                var failure = Assert.Throws<System.InvalidOperationException>(() => InvokeDirtyAssetGuard(entry));
+                Assert.That(failure.Message, Does.Contain("dirty").IgnoreCase);
+                Assert.That(EditorUtility.IsDirty(target), Is.True,
+                    "拒绝时保留真实未保存编辑，不能自动保存或清除 dirty 状态。");
+                Assert.That(File.ReadAllBytes(path), Is.EqualTo(savedAsset));
+                Assert.That(File.ReadAllBytes(path + ".meta"), Is.EqualTo(savedMeta));
+            }
+            finally
+            {
+                // Restore only the flag this test introduced; preserve pre-existing edits.
+                if (!wasDirty) EditorUtility.ClearDirty(target);
+            }
+        }
+
+        private static void InvokeDirtyAssetGuard(string entry)
+        {
+            var type = entry == "builder" ? typeof(Phase8AssetBuilder)
+                : entry == "scene" ? typeof(Phase8SceneSetup)
+                : typeof(AnimalCafe.EditorTools.P8R.P8RFurnitureUiBuilder);
+            var name = entry == "builder" ? "RequireNoDirtyProjectAssets"
+                : entry == "scene" ? "RequireConfigurationPreconditions" : "RequireCleanLoadedAssets";
+            var method = type.GetMethod(name, BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.That(method, Is.Not.Null);
+            try
+            {
+                method.Invoke(null, entry == "scene"
+                    ? new object[] { Phase8AssetPaths.MainCafeScenePath, false } : null);
+            }
+            catch (TargetInvocationException exception) when (exception.InnerException != null)
+            {
+                throw exception.InnerException;
+            }
+        }
+
         [Test]
         public void ReviewFix_BuildAssetsRejectsUnrelatedDirtyMaterialWithoutSavingIt()
         {

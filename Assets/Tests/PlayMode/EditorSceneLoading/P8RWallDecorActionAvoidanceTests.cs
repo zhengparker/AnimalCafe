@@ -100,7 +100,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                         Assert.That(hit.Overlaps(model), Is.False,
                             pixels + " zoom=" + zoom + " x=" + horizontal + " " + button.name
                             + " transparent touch root covers wall preview. hit=" + hit + " model=" + model);
-                        Assert.That(hit.width / density, Is.GreaterThanOrEqualTo(47.99f));
+                        Assert.That(hit.width / density, Is.EqualTo(44f).Within(.01f));
                         Assert.That(hit.height / density, Is.GreaterThanOrEqualTo(47.99f));
                         Assert.That(UiBounds(button.image.rectTransform).width / density, Is.EqualTo(30f).Within(.1f),
                             "Do not solve occlusion by changing the approved button style.");

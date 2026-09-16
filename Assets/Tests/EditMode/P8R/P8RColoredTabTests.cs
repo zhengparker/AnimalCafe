@@ -24,12 +24,21 @@ namespace AnimalCafe.Tests.EditMode.P8R
         private static readonly string[] Actions = { "furniture", "floor", "wall", "wall_decor" };
         private static readonly string[] Fields = { "furnitureButton", "floorButton", "wallButton", "wallDecorButton" };
         private readonly List<Object> owned = new();
+        private Vector2? previousLogicalViewport;
+
+        [SetUp]
+        public void SetUp()
+        {
+            previousLogicalViewport = P8RMobileMetrics.EditorLogicalViewportOverride;
+            P8RMobileMetrics.EditorLogicalViewportOverride = null;
+        }
 
         [TearDown]
         public void TearDown()
         {
             foreach (var item in owned.AsEnumerable().Reverse()) if (item != null) Object.DestroyImmediate(item);
             owned.Clear();
+            P8RMobileMetrics.EditorLogicalViewportOverride = previousLogicalViewport;
         }
 
         [TestCase("furniture")]
@@ -161,8 +170,9 @@ namespace AnimalCafe.Tests.EditMode.P8R
                     Assert.That(labels[i].fontSize, Is.EqualTo(fontSizes[i]));
                     Assert.That(labels[i].gameObject.activeSelf, Is.False, "Mode/disabled changes must not revive " + Actions[i] + " text.");
                     var height = ((RectTransform)button.transform).rect.height;
-                    // 28 logical = 84 authoring units; these wide tabs clamp against two 8-unit margins.
-                    AssertIconOnlyGeometry(button, Mathf.Min(28f * 3f, height - 16f));
+                    // Approved compact tabs are 20 logical; Floor alone receives a 15% visual-mass lift to 23.
+                    var approvedExtent = Actions[i] == "floor" ? 23f * 3f : 20f * 3f;
+                    AssertIconOnlyGeometry(button, Mathf.Min(approvedExtent, height - 16f));
                 }
             }
             foreach (var source in sourceHashes) Assert.That(Hash(source.Key), Is.EqualTo(source.Value), source.Key);
@@ -182,8 +192,9 @@ namespace AnimalCafe.Tests.EditMode.P8R
                 {
                     rect.sizeDelta = new Vector2(220, height);
                     var geometry = RectGeometry(rect);
-                    // The 84-unit logical target is height-limited: 80 - 16 = 64, 96 - 16 = 80.
-                    var extent = height == 80 ? 64f : 80f;
+                    // Compact tabs target 60 authoring units; Floor targets 69, still clamped by 8-unit margins.
+                    var approvedExtent = action == "floor" ? 23f * 3f : 20f * 3f;
+                    var extent = Mathf.Min(approvedExtent, height - 16f);
                     for (var repeat = 0; repeat < 2; repeat++)
                     {
                         P8RButtonLayout.StackedButton(button);

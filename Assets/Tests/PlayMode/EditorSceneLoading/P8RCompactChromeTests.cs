@@ -230,10 +230,10 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     .Where(button => button != null && button.gameObject.activeInHierarchy)
                     .OrderBy(button => Box(button).xMin).ToArray();
                 var density = P8RMobileMetrics.For(action).PixelsPerLogicalUnit;
-                AssertTargets(buttons, density, profile.SafePixels);
+                AssertTargets(buttons, density, profile.SafePixels, floating: true);
                 AssertNoOverlap(buttons);
                 foreach (var button in buttons) AssertFace(button, 30f, density);
-                AssertVisibleGaps(buttons, density, 12.2f);
+                AssertVisibleGaps(buttons, density, 9.6f);
             }
         }
 
@@ -435,7 +435,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 .OrderBy(button => Box(button).xMin)
                 .ToArray();
             Assert.That(buttons.Length, Is.GreaterThanOrEqualTo(3), profile.Name);
-            AssertTargets(buttons, density, profile.SafePixels);
+            AssertTargets(buttons, density, profile.SafePixels, floating: true);
             AssertNoOverlap(buttons);
             foreach (var button in buttons)
             {
@@ -696,12 +696,15 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(text.isTextOverflowing, Is.False, profile + ": " + text.name + " overflows.");
         }
 
-        private static void AssertTargets(Button[] buttons, float density, Rect safe)
+        private static void AssertTargets(Button[] buttons, float density, Rect safe, bool floating = false)
         {
             foreach (var button in buttons)
             {
                 var root = Box(button);
-                Assert.That(root.width / density, Is.GreaterThanOrEqualTo(47.9f), button.name + " target width");
+                if (floating)
+                    Assert.That(root.width / density, Is.EqualTo(44f).Within(.1f), button.name + " floating target width");
+                else
+                    Assert.That(root.width / density, Is.GreaterThanOrEqualTo(47.9f), button.name + " target width");
                 Assert.That(root.height / density, Is.GreaterThanOrEqualTo(47.9f), button.name + " target height");
                 AssertInside(root, safe, button.name + " target inside safe area");
                 var hitGraphic = button.GetComponent<Graphic>();

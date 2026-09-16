@@ -81,12 +81,12 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                         Assert.That(buttons[i].GetComponent<Image>().color.a, Is.Zero);
                         var face = ScreenRect(camera, buttons[i].image.rectTransform);
                         var density = AnimalCafe.UI.P8R.P8RMobileMetrics.For(buttons[i]).PixelsPerLogicalUnit;
-                        Assert.That(face.width / density, Is.EqualTo(30f).Within(.1f), "Approved compact face remains separate from the unchanged mobile hit target.");
+                        Assert.That(face.width / density, Is.EqualTo(30f).Within(.1f), "Approved compact face stays unchanged inside the floating 44x48 hit target.");
                         var corners = new Vector3[4]; ((RectTransform)buttons[i].transform).GetWorldCorners(corners);
                         var logical = corners.Select(corner => root.transform.InverseTransformPoint(corner)).ToArray();
-                        Assert.That(logical.Max(p => p.x) - logical.Min(p => p.x), Is.GreaterThanOrEqualTo(47.99f));
+                        Assert.That(logical.Max(p => p.x) - logical.Min(p => p.x), Is.GreaterThanOrEqualTo(43.99f));
                         Assert.That(logical.Max(p => p.y) - logical.Min(p => p.y), Is.GreaterThanOrEqualTo(47.99f));
-                        Assert.That(screenRects[i].width / density, Is.GreaterThanOrEqualTo(47.99f));
+                        Assert.That(screenRects[i].width / density, Is.EqualTo(44f).Within(.01f));
                         Assert.That(screenRects[i].height / density, Is.GreaterThanOrEqualTo(47.99f));
                         Inside(screenRects[i], safe);
                         for (var j = 0; j < i; j++) Assert.That(screenRects[i].Overlaps(screenRects[j]), Is.False,
@@ -97,7 +97,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                         ?? instance.GetComponentsInChildren<RectTransform>(true).Single(rect => rect.name == "ActionPanel");
                     Inside(ScreenRect(camera, panel), safe);
                 }
-                Debug.Log("P8R synthetic geometry: " + size + "; four non-overlapping, raycastable buttons >=48 Canvas logical units within injected Safe Area. Actual Screen=" + Screen.width + "x" + Screen.height);
+                Debug.Log("P8R synthetic geometry: " + size + "; four non-overlapping, raycastable 44x48 logical buttons within injected Safe Area. Actual Screen=" + Screen.width + "x" + Screen.height);
                 yield return CheckPanelGeometry(root.transform, camera, safe, size);
             }
             finally

@@ -16,6 +16,7 @@ using AnimalCafe.UI.Foundation;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
 using InputTouchPhase = UnityEngine.InputSystem.TouchPhase;
@@ -1296,6 +1297,101 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(fixture.ActionBar.IsVisible, Is.True);
             Assert.That(fixture.ActionBar.VisibleActionLabels, Does.Contain("Cancel"));
             Assert.That(fixture.ActionBar.VisibleActionLabels, Does.Contain("Confirm"));
+        }
+
+        [UnityTest]
+        public IEnumerator Controller_SurfaceDragAcrossUi_PreservesSlotHeightAndResumesOnTable()
+        {
+            foreach (var kind in new[] { DecorationCatalogueItemKind.CashRegister,
+                DecorationCatalogueItemKind.CoffeeMachine, DecorationCatalogueItemKind.PickUpPoint })
+            foreach (var existing in new[] { false, true })
+                yield return AssertSurfaceDragAcrossUi(kind, existing);
+        }
+
+        private IEnumerator AssertSurfaceDragAcrossUi(
+            DecorationCatalogueItemKind kind, bool existing)
+        {
+            using var h = new FunctionalViewHarness();
+            Set(h.Controller, "sanitizedFurnitureHoverHeight", .35f);
+            if (kind == DecorationCatalogueItemKind.PickUpPoint) h.BeginPickUpPreview(existing);
+            else h.BeginMountedPreview(kind,
+                kind == DecorationCatalogueItemKind.CashRegister ? RegisterDefinitionId : CoffeeMachineDefinitionId, existing);
+            GameObject Visual() => kind == DecorationCatalogueItemKind.PickUpPoint
+                ? h.PickUpIndicators.CurrentPreview.transform.Find("InvertedSquarePyramid").gameObject
+                : h.MountedPreview.CurrentGhost;
+            var initialPosition = Visual().transform.position;
+            var readiness = h.Runtime.CurrentReadiness;
+            var version = h.Runtime.ReadinessVersion;
+            h.RouteMountedPointer(new Vector3(.5f, .72f, .5f), InputTouchPhase.Began, 1);
+
+            // Real UI raycast, not a fabricated hit / 使用真实 UI，覆盖手指进入按钮区域的路径。
+            if (EventSystem.current == null)
+            {
+                var events = new GameObject("DragUiEventSystem", typeof(EventSystem));
+                events.transform.SetParent(h.Root.transform, false);
+            }
+            var canvas = new GameObject("DragUiCanvas", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            canvas.transform.SetParent(h.Root.transform, false);
+            canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var blocker = new GameObject("DragUiButton", typeof(RectTransform), typeof(Image), typeof(Button));
+            blocker.transform.SetParent(canvas.transform, false);
+            var rect = blocker.GetComponent<RectTransform>();
+            rect.anchorMin = rect.anchorMax = new Vector2(.9f, .9f);
+            rect.sizeDelta = new Vector2(60, 60);
+            // This harness routes input explicitly; no live input source runs during UI setup.
+            // fixture 手动路由输入，等 UI 注册这一帧不读取硬件输入。
+            Set(h.Controller, "isOpen", false);
+            yield return null;
+            Set(h.Controller, "isOpen", true);
+            Canvas.ForceUpdateCanvases();
+            var uiPoint = RectTransformUtility.WorldToScreenPoint(null, rect.position);
+            var classifier = (IDecorationTouchHitClassifier)h.Controller;
+            Assert.That(classifier.ClassifyCurrent(71, uiPoint).Kind, Is.EqualTo(DecorationTouchHitKind.Ui));
+            var drag = h.Router.ProcessFrame(Frame(2, Point(71, uiPoint.x, uiPoint.y, InputTouchPhase.Moved)), classifier);
+            h.Controller.RouteTouchResultForActiveMode(drag);
+
+            Assert.That(drag.Owner, Is.EqualTo(DecorationGestureOwner.FunctionalSurface));
+            Assert.That(h.Controller.ActiveFunctionalSurfacePreview.Address, Is.EqualTo(Address("slot.0")),
+                "Crossing UI is not leaving the Counter; keep the last support binding.");
+            AssertWorldPosition(Visual(), initialPosition);
+            Assert.That(h.Controller.ActiveFunctionalSurfacePreview.CanConfirm, Is.True);
+            Assert.That(h.Runtime.CurrentReadiness, Is.SameAs(readiness));
+            Assert.That(h.Runtime.ReadinessVersion, Is.EqualTo(version));
+            blocker.SetActive(false);
+            h.RouteMountedPointer(new Vector3(2.5f, .72f, .5f), InputTouchPhase.Moved, 3);
+            Assert.That(h.Controller.ActiveFunctionalSurfacePreview.Address, Is.EqualTo(Address("slot.2")));
+            AssertWorldPosition(Visual(), initialPosition + new Vector3(2, 0, 0));
+            h.Controller.CancelFunctionalSurfacePreview();
+        }
+
+        [TestCase(FurnitureRotation.Degrees0, 2.5f, .5f)]
+        [TestCase(FurnitureRotation.Degrees90, .5f, 2.5f)]
+        public void Controller_SurfaceDrag_TableCornerBeyondSnapRadius_StaysAtSlotHeight(
+            FurnitureRotation rotation, float centerX, float centerZ)
+        {
+            using var h = new FunctionalViewHarness();
+            Assert.That(h.Scenario.Cafe.RotateFurniture(SupportInstanceId, rotation).Succeeded, Is.True);
+            h.RebuildAllConfirmedViews();
+            Set(h.Controller, "sanitizedFurnitureHoverHeight", .35f);
+            h.Camera.pixelRect = new Rect(0, 0, 1600, 1200);
+            h.Camera.orthographicSize = 2f;
+            h.Camera.transform.position = new Vector3(centerX, 10, centerZ);
+            h.BeginMountedPreview(DecorationCatalogueItemKind.CashRegister, RegisterDefinitionId, false);
+            Assert.That(h.Controller.TryMoveFunctionalSurfacePreview(Address("slot.2")), Is.True);
+            var center = new Vector3(centerX, .72f, centerZ);
+            var corner = center + new Vector3(.44f, 0, .44f);
+            Assert.That(Vector2.Distance(h.Camera.WorldToScreenPoint(center), h.Camera.WorldToScreenPoint(corner)),
+                Is.GreaterThan(72), "Exercise an actual tabletop corner outside the old circular snap radius.");
+            h.RouteMountedPointer(center, InputTouchPhase.Began, 1);
+            var drag = h.RouteMountedPointer(corner, InputTouchPhase.Moved, 2);
+            Assert.That(drag.FunctionalSurfaceDragRequested, Is.True);
+            Assert.That(drag.CurrentHit.Kind, Is.EqualTo(DecorationTouchHitKind.FunctionalSurface));
+            Assert.That(drag.CurrentHit.FunctionalSurfaceAddress, Is.EqualTo(Address("slot.2")),
+                "The tabletop must be hit, not merely freeze because floor projection failed.");
+            Assert.That(h.Controller.ActiveFunctionalSurfacePreview.Address, Is.EqualTo(Address("slot.2")));
+            AssertWorldPosition(h.MountedPreview.CurrentGhost, new Vector3(centerX, 1.07f, centerZ));
+            Assert.That(h.Controller.ActiveFunctionalSurfacePreview.CanConfirm, Is.True);
+            Assert.That(h.Scenario.Functional.MountedInstances, Is.Empty);
         }
 
         [TestCase(DecorationCatalogueItemKind.CashRegister, RegisterDefinitionId, false)]

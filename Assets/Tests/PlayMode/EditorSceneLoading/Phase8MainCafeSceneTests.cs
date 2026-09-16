@@ -353,8 +353,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     yield return CaptureReviewFrame("readiness-compact.png");
                     detailsButton.onClick.Invoke();
                     if (UsesP8R(notice)) Assert.That(notice.CurrentMessage,
-                        Does.Contain("Blocking: Coffee Machine: Add at least one Coffee Machine.")
-                            .And.Contain("Blocking: Pickup Point: Add at least one Pickup Point."));
+                        Does.Contain("<b>Coffee Machine</b>\nAdd a Coffee Machine.")
+                            .And.Contain("<b>Pickup Point</b>\nAdd a Pickup Point."));
                     else Assert.That(notice.CurrentMessage, Does.Contain("咖啡机").And.Contain("取餐点"));
                     Assert.That(runtime.ReadinessVersion, Is.EqualTo(versionBeforeDetails));
                     yield return CaptureReviewFrame("readiness-details.png");

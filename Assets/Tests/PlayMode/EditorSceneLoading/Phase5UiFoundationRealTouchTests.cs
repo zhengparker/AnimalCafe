@@ -18,10 +18,39 @@ namespace AnimalCafe.Tests.PlayMode
 {
     public sealed class Phase5UiFoundationRealTouchTests : InputTestFixture
     {
+        private Scene ownedScene;
+
+        [UnityTearDown]
+        public IEnumerator UnloadOwnedSceneBeforeInputSystemRestore()
+        {
+            if (!ownedScene.IsValid() || !ownedScene.isLoaded) yield break;
+
+            var inputAssets = EditorSceneLoading.Phase8SceneInputTestCleanup.CaptureAssets(ownedScene);
+            var roots = ownedScene.GetRootGameObjects();
+            var sources = roots.SelectMany(root => root.GetComponentsInChildren<
+                AnimalCafe.Decoration.Input.InputSystemDecorationTouchSource>(true)).ToArray();
+            // Retire this fixture's owners before InputTestFixture restores global input state.
+            // 先停用并卸载本测试的输入对象，避免下一个 fixture reset 后仍读取旧触摸状态。
+            foreach (var adapter in roots.SelectMany(root =>
+                         root.GetComponentsInChildren<AnimalCafe.Input.MouseCameraInput>(true)))
+                adapter.enabled = false;
+            foreach (var source in sources) source.enabled = false;
+
+            var cleanup = SceneManager.CreateScene("Phase5RealTouchTestCleanup");
+            SceneManager.SetActiveScene(cleanup);
+            var unload = SceneManager.UnloadSceneAsync(ownedScene);
+            while (unload != null && !unload.isDone) yield return null;
+            ownedScene = default;
+            EditorSceneLoading.Phase8SceneInputTestCleanup.DisposeReleasedAssets(inputAssets);
+            Assert.That(sources.All(source => source == null), Is.True,
+                "The fixture must destroy its touch owners before the next input reset.");
+            Assert.That(UnityEngine.InputSystem.EnhancedTouch.EnhancedTouchSupport.enabled, Is.False);
+        }
+
         [UnityTest]
         public IEnumerator VirtualTouch_UsesSceneEventSystemRaycastAndInvokesToastExactlyOnce()
         {
-            EditorSceneManager.LoadSceneInPlayMode(
+            ownedScene = EditorSceneManager.LoadSceneInPlayMode(
                 "Assets/Scenes/Validation/Phase5UiFoundation.unity",
                 new LoadSceneParameters(LoadSceneMode.Single));
             yield return null;

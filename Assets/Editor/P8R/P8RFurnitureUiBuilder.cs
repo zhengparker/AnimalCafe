@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using AnimalCafe.Decoration;
+using AnimalCafe.EditorTools.AssetPipeline;
 using AnimalCafe.EditorTools.Phase6;
 using AnimalCafe.EditorTools.Phase8;
 using AnimalCafe.UI.Components;
@@ -541,7 +542,8 @@ namespace AnimalCafe.EditorTools.P8R
         internal static void RequireCleanLoadedAssets()
         {
             var dirty = Resources.FindObjectsOfTypeAll<UnityEngine.Object>().Where(item => item != null && EditorUtility.IsPersistent(item)
-                && EditorUtility.IsDirty(item) && AssetDatabase.GetAssetPath(item).StartsWith("Assets/", StringComparison.Ordinal)).ToArray();
+                && EditorUtility.IsDirty(item) && AssetDatabase.GetAssetPath(item).StartsWith("Assets/", StringComparison.Ordinal)
+                && !ProjectAssetEditSafety.IsGeneratedDynamicFontAtlas(item)).ToArray();
             if (dirty.Length != 0) throw new InvalidOperationException("Loaded assets are dirty; save them before P8R authoring.");
         }
     }

@@ -175,7 +175,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     .Select(vertex => UnityEngine.Camera.main.WorldToScreenPoint(visual.TransformPoint(vertex))).ToArray();
                 var sign = Rect.MinMaxRect(vertices.Min(v => v.x), vertices.Min(v => v.y), vertices.Max(v => v.x), vertices.Max(v => v.y));
                 var actions = Find<DecorationActionBarView>().GetComponentsInChildren<Button>();
-                AssertTargets(actions, 1.5f); AssertNoOverlap(actions);
+                AssertTargets(actions, 1.5f, floating: true); AssertNoOverlap(actions);
                 var fixedControls = Find<TimeControlPanel>().GetComponentsInChildren<Button>()
                     .Concat(Find<DecorationModeTabsView>().GetComponentsInChildren<Button>()).ToArray();
                 foreach (var action in actions)
@@ -440,13 +440,16 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var points = corners.Select(point => RectTransformUtility.WorldToScreenPoint(camera, point)).ToArray();
             return Rect.MinMaxRect(points.Min(point => point.x), points.Min(point => point.y), points.Max(point => point.x), points.Max(point => point.y));
         }
-        private static void AssertTargets(Button[] buttons, float density, Rect? expectedSafe = null)
+        private static void AssertTargets(Button[] buttons, float density, Rect? expectedSafe = null, bool floating = false)
         {
             var safe = expectedSafe ?? Screen.safeArea;
             foreach (var button in buttons)
             {
                 var rect = Box(button);
-                Assert.That(rect.width / density, Is.GreaterThanOrEqualTo(47.9f), button.name + " target width");
+                // Only Furniture/Wall Decor floating tools use the approved 44-wide touch root.
+                // 仅浮动按钮采用44宽度，其他控件继续保留原48点击区检查。
+                Assert.That(rect.width / density, floating ? Is.EqualTo(44f).Within(.1f)
+                    : Is.GreaterThanOrEqualTo(47.9f), button.name + " target width");
                 Assert.That(rect.height / density, Is.GreaterThanOrEqualTo(47.9f), button.name + " target height");
                 AssertInside(rect, safe, button.name);
             }

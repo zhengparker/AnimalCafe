@@ -187,6 +187,179 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             AssertCameraUnchanged(cameraPositionBefore, cameraRotationBefore, cameraSizeBefore);
         }
 
+        [UnityTest]
+        public IEnumerator MainCafeNewWallDecor_DragAcrossUiPreservesPreviewAndResumesOnWall()
+        {
+            return AssertDragAcrossUiPreservesPreview(existing: false);
+        }
+
+        [UnityTest]
+        public IEnumerator MainCafeExistingWallDecor_DragAcrossUiPreservesPreviewAndResumesOnWall()
+        {
+            return AssertDragAcrossUiPreservesPreview(existing: true);
+        }
+
+        private IEnumerator AssertDragAcrossUiPreservesPreview(bool existing)
+        {
+            yield return LoadMonitorPreview();
+            GameObject source = null;
+            if (existing)
+            {
+                Assert.That(controller.TryConfirmPhase7Preview(), Is.True);
+                var instance = runtime.WallMountedLayout.CaptureSnapshot().Instances.Single(item =>
+                    item.DefinitionId == MonitorDefinitionId && item.SurfaceId == InitialSurfaceId
+                    && item.Column == InitialSlot.Column && item.Row == InitialSlot.Row);
+                Assert.That(Find<WallMountedSceneRegistry>().TryGet(instance.InstanceId, out source), Is.True);
+                Assert.That(controller.TryHandleSceneTap(new DecorationTouchHit(
+                    DecorationTouchHitKind.WallMounted, targetId: instance.InstanceId)), Is.True);
+                Assert.That(source.activeSelf, Is.False);
+                Canvas.ForceUpdateCanvases();
+            }
+
+            var classifier = (IDecorationTouchHitClassifier)controller;
+            var start = FindVisibleGhostPointWithoutItsOwnBackingSlot();
+            var cancel = Find<DecorationActionBarView>().GetComponentsInChildren<Button>(true)
+                .Single(button => button.name == "CancelButton");
+            var uiPoint = P8RWallDecorActionAvoidanceTests.UiBounds((RectTransform)cancel.transform).center;
+            var before = controller.ActiveWallMountedPreview;
+            var ghostPosition = previewView.CurrentGhost.transform.position;
+            var ghostRotation = previewView.CurrentGhost.transform.rotation;
+            var formalBefore = JsonUtility.ToJson(runtime.WallMountedLayout.CaptureSnapshot());
+            var cameraPosition = targetCamera.transform.position;
+            var cameraRotation = targetCamera.transform.rotation;
+            var cameraSize = targetCamera.orthographicSize;
+            Assert.That(before.CanConfirm, Is.True);
+            Assert.That(before.IsExisting, Is.EqualTo(existing));
+
+            var router = new DecorationTouchRouter(8f, 0f);
+            Assert.That(router.ProcessFrame(
+                Frame(1, Point(531, start, Vector2.zero, InputTouchPhase.Began)), classifier).Owner,
+                Is.EqualTo(DecorationGestureOwner.SceneDrag));
+            var overUi = router.ProcessFrame(
+                Frame(2, Point(531, uiPoint, uiPoint - start, InputTouchPhase.Moved)), classifier);
+            Assert.That(overUi.SceneDragRequested, Is.True);
+            Assert.That(overUi.CurrentHit.Kind, Is.EqualTo(DecorationTouchHitKind.Ui));
+            controller.RouteTouchResultForActiveMode(overUi);
+
+            Assert.That(controller.ActiveWallMountedPreview.SurfaceId, Is.EqualTo(InitialSurfaceId),
+                "An owned wall drag crossing UI must not discard its wall binding.");
+            Assert.That(controller.ActiveWallMountedPreview.Position, Is.EqualTo(InitialSlot));
+            Assert.That(controller.ActiveWallMountedPreview.CanConfirm, Is.True);
+            Assert.That(previewView.CurrentGhost.transform.position, Is.EqualTo(ghostPosition));
+            Assert.That(previewView.CurrentGhost.transform.rotation, Is.EqualTo(ghostRotation));
+            Assert.That(JsonUtility.ToJson(runtime.WallMountedLayout.CaptureSnapshot()), Is.EqualTo(formalBefore));
+            AssertCameraUnchanged(cameraPosition, cameraRotation, cameraSize);
+
+            var wallPoint = ScreenPointForWallSlot(InitialSurfaceId, DragTargetSlot);
+            var resumed = router.ProcessFrame(
+                Frame(3, Point(531, wallPoint, wallPoint - uiPoint, InputTouchPhase.Moved)), classifier);
+            Assert.That(resumed.CurrentHit.Kind, Is.EqualTo(DecorationTouchHitKind.WallSlot));
+            controller.RouteTouchResultForActiveMode(resumed);
+            Assert.That(controller.ActiveWallMountedPreview.Position, Is.EqualTo(DragTargetSlot));
+            Assert.That(controller.ActiveWallMountedPreview.CanConfirm, Is.True);
+            controller.RouteTouchResultForActiveMode(router.ProcessFrame(
+                Frame(4, Point(531, wallPoint, Vector2.zero, InputTouchPhase.Ended)), classifier));
+            Assert.That(router.Owner, Is.EqualTo(DecorationGestureOwner.None));
+            controller.CancelActivePhase7Preview();
+            Assert.That(JsonUtility.ToJson(runtime.WallMountedLayout.CaptureSnapshot()), Is.EqualTo(formalBefore));
+            AssertCameraUnchanged(cameraPosition, cameraRotation, cameraSize);
+            if (existing)
+                Assert.That(source.activeSelf, Is.True, "Cancel restores the original confirmed wall item.");
+        }
+
+        [UnityTest]
+        public IEnumerator MainCafeWallDecor_DragOverConfirmedDecorReportsOverlapAndRecovers()
+        {
+            yield return LoadMonitorPreview();
+            Assert.That(controller.TryHandleSceneDrag(new DecorationTouchHit(
+                DecorationTouchHitKind.WallSlot, surfaceId: InitialSurfaceId,
+                wallSlotPosition: DragTargetSlot)), Is.True);
+            Assert.That(controller.TryConfirmPhase7Preview(), Is.True);
+            var instance = runtime.WallMountedLayout.CaptureSnapshot().Instances.Single(item =>
+                item.DefinitionId == MonitorDefinitionId && item.SurfaceId == InitialSurfaceId
+                && item.Column == DragTargetSlot.Column && item.Row == DragTargetSlot.Row);
+            var registry = Find<WallMountedSceneRegistry>();
+            Assert.That(registry.TryGet(instance.InstanceId, out var source), Is.True);
+            Assert.That(controller.TryBeginWallMountedPreview(
+                MonitorDefinitionId, InitialSurfaceId, InitialSlot), Is.True);
+            Canvas.ForceUpdateCanvases();
+            Physics.SyncTransforms();
+
+            var classifier = (IDecorationTouchHitClassifier)controller;
+            var occupiedPoint = FindConfirmedDecorPoint(source, instance.InstanceId, DragTargetSlot);
+            Assert.That(classifier.ClassifyBegan(541, occupiedPoint).Kind,
+                Is.EqualTo(DecorationTouchHitKind.WallMounted),
+                "Began still selects the confirmed item; only ongoing drag reads the backing wall.");
+            var start = FindVisibleGhostPointWithoutItsOwnBackingSlot();
+            var formalBefore = JsonUtility.ToJson(runtime.WallMountedLayout.CaptureSnapshot());
+            var router = new DecorationTouchRouter(8f, 0f);
+            Assert.That(router.ProcessFrame(
+                Frame(1, Point(541, start, Vector2.zero, InputTouchPhase.Began)), classifier).Owner,
+                Is.EqualTo(DecorationGestureOwner.SceneDrag));
+            var moved = router.ProcessFrame(
+                Frame(2, Point(541, occupiedPoint, occupiedPoint - start, InputTouchPhase.Moved)), classifier);
+            Assert.That(moved.SceneDragRequested, Is.True);
+            Assert.That(moved.CurrentHit.Kind, Is.EqualTo(DecorationTouchHitKind.WallSlot),
+                "A confirmed wall decor collider must not hide the drag target wall Slot.");
+            Assert.That(moved.CurrentHit.SurfaceId, Is.EqualTo(InitialSurfaceId));
+            Assert.That(moved.CurrentHit.WallSlotPosition, Is.EqualTo((WallSlotPosition?)DragTargetSlot));
+            controller.RouteTouchResultForActiveMode(moved);
+            Assert.That(controller.ActiveWallMountedPreview.Position, Is.EqualTo(DragTargetSlot));
+            Assert.That(controller.ActiveWallMountedPreview.FailureReason, Is.EqualTo(WallPlacementFailureReason.Overlap));
+            Assert.That(controller.ActiveWallMountedPreview.CanConfirm, Is.False);
+            Assert.That(controller.TryConfirmPhase7Preview(), Is.False);
+            Assert.That(JsonUtility.ToJson(runtime.WallMountedLayout.CaptureSnapshot()), Is.EqualTo(formalBefore));
+
+            // UI must preserve an invalid candidate too, never turn it valid or erase its reason.
+            // 无效预览经过按钮也不能被重新验证成有效，或丢掉占位原因。
+            Canvas.ForceUpdateCanvases();
+            var cancel = Find<DecorationActionBarView>().GetComponentsInChildren<Button>(true)
+                .Single(button => button.name == "CancelButton");
+            var uiPoint = P8RWallDecorActionAvoidanceTests.UiBounds((RectTransform)cancel.transform).center;
+            var overUi = router.ProcessFrame(
+                Frame(3, Point(541, uiPoint, uiPoint - occupiedPoint, InputTouchPhase.Moved)), classifier);
+            Assert.That(overUi.CurrentHit.Kind, Is.EqualTo(DecorationTouchHitKind.Ui));
+            controller.RouteTouchResultForActiveMode(overUi);
+            Assert.That(controller.ActiveWallMountedPreview.Position, Is.EqualTo(DragTargetSlot));
+            Assert.That(controller.ActiveWallMountedPreview.FailureReason, Is.EqualTo(WallPlacementFailureReason.Overlap));
+            Assert.That(controller.ActiveWallMountedPreview.CanConfirm, Is.False);
+
+            var freePoint = ScreenPointForWallSlot(InitialSurfaceId, InitialSlot);
+            var recovered = router.ProcessFrame(
+                Frame(4, Point(541, freePoint, freePoint - uiPoint, InputTouchPhase.Moved)), classifier);
+            controller.RouteTouchResultForActiveMode(recovered);
+            Assert.That(controller.ActiveWallMountedPreview.Position, Is.EqualTo(InitialSlot));
+            Assert.That(controller.ActiveWallMountedPreview.CanConfirm, Is.True);
+            controller.RouteTouchResultForActiveMode(router.ProcessFrame(
+                Frame(5, Point(541, freePoint, Vector2.zero, InputTouchPhase.Ended)), classifier));
+            Assert.That(router.Owner, Is.EqualTo(DecorationGestureOwner.None));
+            controller.CancelActivePhase7Preview();
+            Assert.That(JsonUtility.ToJson(runtime.WallMountedLayout.CaptureSnapshot()), Is.EqualTo(formalBefore));
+            Assert.That(source.activeSelf, Is.True);
+        }
+
+        private Vector2 FindConfirmedDecorPoint(GameObject source, string instanceId, WallSlotPosition slot)
+        {
+            var bounds = P8RWallDecorActionAvoidanceTests.ModelBounds(source, targetCamera);
+            var registry = Find<WallMountedSceneRegistry>();
+            for (var x = 1; x < 10; x++)
+            for (var y = 1; y < 10; y++)
+            {
+                var point = new Vector2(Mathf.Lerp(bounds.xMin, bounds.xMax, x * .1f),
+                    Mathf.Lerp(bounds.yMin, bounds.yMax, y * .1f));
+                if (HasUiRaycast(point) || HitsActiveGhostRendererBounds(point)
+                    || !TryGetBackingWallSlot(point, out var surfaceId, out var backingSlot)
+                    || surfaceId != InitialSurfaceId || backingSlot != slot)
+                    continue;
+                if (Physics.RaycastAll(targetCamera.ScreenPointToRay(point), Mathf.Infinity,
+                    ~0, QueryTriggerInteraction.Collide).Any(hit =>
+                        registry.TryGetInstanceId(hit.collider, out var id) && id == instanceId))
+                    return point;
+            }
+            Assert.Fail("The confirmed monitor must expose a UI-free collider pixel over its literal occupied wall Slot.");
+            return default;
+        }
+
         private IEnumerator LoadMonitorPreview()
         {
             screen = new P8RReferenceLayoutTests.NativeScreenSize();
@@ -266,18 +439,23 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         {
             var wall = Components<WallSurfaceAuthoring>()
                 .Single(item => item.SurfaceId == surfaceId);
-            var localCenter = new Vector3(
-                -wall.Columns * wall.SlotSize * .5f + (slot.Column + .5f) * wall.SlotSize,
-                (slot.Row + .5f) * wall.SlotSize,
-                0f);
-            var projected = targetCamera.WorldToScreenPoint(
-                wall.GetWallMountedWorldPosition(localCenter));
-            var point = new Vector2(projected.x, projected.y);
-            Assert.That(projected.z, Is.GreaterThan(0f));
-            Assert.That(targetCamera.pixelRect.Contains(point), Is.True);
-            Assert.That(HasUiRaycast(point), Is.False,
-                "The literal drag target wall Slot must remain UI-free.");
-            return point;
+            // The floating action row may cover the center after the ghost moves.
+            // 在同一个指定墙格内找未被按钮遮住的点，不禁用真实 UI 来让测试通过。
+            foreach (var x in new[] { .5f, .2f, .8f })
+            foreach (var y in new[] { .5f, .2f, .8f })
+            {
+                var localPoint = new Vector3(
+                    -wall.Columns * wall.SlotSize * .5f + (slot.Column + x) * wall.SlotSize,
+                    (slot.Row + y) * wall.SlotSize, 0f);
+                var projected = targetCamera.WorldToScreenPoint(wall.GetWallMountedWorldPosition(localPoint));
+                var point = new Vector2(projected.x, projected.y);
+                if (projected.z > 0f && targetCamera.pixelRect.Contains(point) && !HasUiRaycast(point)
+                    && TryGetBackingWallSlot(point, out var backingSurface, out var backingSlot)
+                    && backingSurface == surfaceId && backingSlot == slot)
+                    return point;
+            }
+            Assert.Fail("The literal drag target wall Slot must expose a UI-free point.");
+            return default;
         }
 
         private bool HitsActiveGhostRendererBounds(Vector2 screenPoint)
@@ -319,6 +497,10 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 .OrderBy(hit => hit.distance);
             foreach (var hit in hits)
             {
+                // Confirmed items are parented to the wall but are not its mounting plane.
+                // 已有墙饰继承墙面 parent，不能把它的外表面误当成真实墙格。
+                if (Find<WallMountedSceneRegistry>().TryGetInstanceId(hit.collider, out _))
+                    continue;
                 var wall = hit.collider.GetComponentInParent<WallSurfaceAuthoring>();
                 if (wall == null)
                     continue;

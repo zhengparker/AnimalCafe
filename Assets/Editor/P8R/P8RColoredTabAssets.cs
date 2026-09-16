@@ -164,32 +164,49 @@ namespace AnimalCafe.EditorTools.P8R
             try
             {
                 var buttons = TabButtons(root);
-                var oldFaces = buttons.Select(b => EditorJsonUtility.ToJson(b.image) + EditorJsonUtility.ToJson(b)).ToArray();
                 var icons = buttons.Select(b => b.transform.Find("Icon").GetComponent<Image>()).ToArray();
                 var labels = buttons.Select(b => b.transform.Find("Label")).ToArray();
-                // Snapshot before SetActive: that lifecycle call can already repair stale icon references.
-                // 生命周期会先更新图标；必须提前记录，确保修复真正保存到 prefab。
-                var oldIcons = icons.Select((icon, i) => EditorJsonUtility.ToJson(icon) + EditorJsonUtility.ToJson(icon.rectTransform)
-                    + (labels[i] != null && labels[i].gameObject.activeSelf)).ToArray();
                 var tabs = root.GetComponentInChildren<DecorationModeTabsView>(true);
                 var changed = P8RCategoryTabAssets.BindIfAvailable(tabs);
-                tabs.SetActive(tabs.ActiveMode);
+                var tabProperties = new SerializedObject(tabs);
+                var idle = (Sprite)tabProperties.FindProperty("categoryIdleSprite").objectReferenceValue;
+                var selected = (Sprite)tabProperties.FindProperty("categorySelectedSprite").objectReferenceValue;
+                var unavailable = (Sprite)tabProperties.FindProperty("categoryUnavailableSprite").objectReferenceValue;
+                // Compare authored bindings before invoking runtime layout. SetActive creates touch
+                // faces and recalculates current viewport geometry; neither warrants rewriting art.
+                // 先比较素材与状态引用；运行时会重排触控底板，不应因此反复改写已正确的 prefab。
                 for (var i = 0; i < buttons.Length; i++)
                 {
-                    changed |= oldFaces[i] != EditorJsonUtility.ToJson(buttons[i].image) + EditorJsonUtility.ToJson(buttons[i]);
                     var icon = icons[i];
-                    icon.sprite = sprites[i]; icon.color = Color.white; icon.material = null;
-                    icon.type = Image.Type.Simple; icon.preserveAspect = true;
-                    icon.canvasRenderer.SetColor(Color.white);
-                    P8RButtonLayout.StackedButton(buttons[i]);
-                    changed |= oldIcons[i] != EditorJsonUtility.ToJson(icon) + EditorJsonUtility.ToJson(icon.rectTransform)
-                        + (labels[i] != null && labels[i].gameObject.activeSelf);
+                    var button = buttons[i];
+                    changed |= icon.sprite != sprites[i] || icon.color != Color.white
+                        || new SerializedObject(icon).FindProperty("m_Material").objectReferenceValue != null
+                        || icon.type != Image.Type.Simple || !icon.preserveAspect || icon.raycastTarget
+                        || (labels[i] != null && labels[i].gameObject.activeSelf)
+                        || button.image.sprite != (i == (int)tabs.ActiveMode ? selected : idle)
+                        || button.image.color != Color.white || button.transition != Selectable.Transition.SpriteSwap
+                        || button.spriteState.pressedSprite != selected || button.spriteState.selectedSprite != selected
+                        || button.spriteState.disabledSprite != unavailable;
                 }
                 if (changed)
                 {
+                    tabs.SetActive(tabs.ActiveMode);
+                    for (var i = 0; i < buttons.Length; i++)
+                    {
+                        var icon = icons[i];
+                        icon.sprite = sprites[i]; icon.color = Color.white; icon.material = null;
+                        icon.type = Image.Type.Simple; icon.preserveAspect = true;
+                        icon.canvasRenderer.SetColor(Color.white);
+                        P8RButtonLayout.StackedButton(buttons[i]);
+                    }
                     PrefabUtility.SaveAsPrefabAsset(root, P8RFurnitureUiPaths.CataloguePrefab, out var saved);
                     if (!saved) throw new InvalidOperationException("Could not save colored catalogue tabs.");
                 }
+                // Imports and prefab operations can invalidate a previously loaded native asset.
+                // 写入前重新获取有效实例；仍拒绝替用户保存真实的未保存修改。
+                appearance = AssetDatabase.LoadAssetAtPath<P8RAppearance>(P8RFurnitureUiPaths.Appearance);
+                if (appearance == null || EditorUtility.IsDirty(appearance))
+                    throw new InvalidOperationException("P8R Appearance is missing or dirty after tab import; save or restore it before retrying.");
                 var serialized = new SerializedObject(appearance); entries = serialized.FindProperty("sprites");
                 for (var i = 0; i < entries.arraySize; i++)
                 {

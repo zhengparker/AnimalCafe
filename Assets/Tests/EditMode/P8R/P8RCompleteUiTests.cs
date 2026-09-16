@@ -122,7 +122,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
                         (InteractionRole?)InteractionRole.Employee, (GridPosition?)new GridPosition(i, 2), "diagnostic-only")).ToArray();
                 var summary = Construct<LayoutReadinessSummary>(0, 0);
                 view.ShowReadiness(Construct<LayoutReadinessReport>(false, new StationReadiness[0], failures, summary, summary, summary));
-                Assert.That(view.CurrentMessage, Does.StartWith("Confirmed Layout:"));
+                Assert.That(view.CurrentMessage, Is.EqualTo("Can't open yet · 6 issues"));
                 Assert.That(view.FullReadinessMessage.Split('\n').Length, Is.GreaterThanOrEqualTo(13));
                 Assert.That(view.FullReadinessMessage, Does.Contain("Coffee Machine / Employee (11, 2)"));
                 Assert.That(view.FullReadinessMessage, Does.Not.Contain("private-"));
@@ -263,7 +263,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
         }
 
         [Test]
-        public void SixFurnitureBindings_RetainExactApprovedSpritesAndCompleteNames()
+        public void SixFurnitureBindings_RetainApprovedSourceTexturesCashFramingAndCompleteNames()
         {
             var root = Object.Instantiate(AssetDatabase.LoadAssetAtPath<GameObject>(Root + "Prefabs/PF_UI_P8RCatalogue.prefab"));
             try
@@ -275,7 +275,17 @@ namespace AnimalCafe.Tests.EditMode.P8R
                 {
                     tile.Bind(new DecorationCatalogueItemModel(entry.Definition.DefinitionId, entry.Definition.DisplayName,
                         entry.Thumbnail, DecorationCatalogueItemKind.Furniture, false, entry.Definition), null);
-                    Assert.That(Field<Image>(tile, "thumbnailImage").sprite, Is.SameAs(entry.Thumbnail));
+                    var displayed = Field<Image>(tile, "thumbnailImage").sprite;
+                    if (entry.Definition.DefinitionId == "equipment.cash-register.01")
+                    {
+                        // Approved CR presentation crops transparent padding, never redraws the source.
+                        // 收银机只缩小透明边缘取景，仍使用同一张已确认的原图。
+                        Assert.That(displayed.texture, Is.SameAs(entry.Thumbnail.texture));
+                        Assert.That(displayed.rect, Is.EqualTo(new Rect(54, 45, 148, 166)));
+                        Assert.That(displayed.pixelsPerUnit, Is.EqualTo(entry.Thumbnail.pixelsPerUnit));
+                        Assert.That(EditorUtility.IsPersistent(displayed), Is.False);
+                    }
+                    else Assert.That(displayed, Is.SameAs(entry.Thumbnail));
                     Assert.That(tile.Definition, Is.SameAs(entry.Definition));
                     AssertVisibleNameFits(tile);
                 }

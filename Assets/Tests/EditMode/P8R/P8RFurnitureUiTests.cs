@@ -16,6 +16,14 @@ namespace AnimalCafe.Tests.EditMode.P8R
     {
         private const string Root = "Assets/UI/P8R/";
         private readonly List<UnityEngine.Object> owned = new List<UnityEngine.Object>();
+        private Vector2? previousLogicalViewport;
+
+        [SetUp]
+        public void SetUp()
+        {
+            previousLogicalViewport = AnimalCafe.UI.P8R.P8RMobileMetrics.EditorLogicalViewportOverride;
+            AnimalCafe.UI.P8R.P8RMobileMetrics.EditorLogicalViewportOverride = null;
+        }
 
         [TearDown]
         public void TearDown()
@@ -23,6 +31,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
             foreach (var item in owned.AsEnumerable().Reverse())
                 if (item != null) UnityEngine.Object.DestroyImmediate(item);
             owned.Clear();
+            AnimalCafe.UI.P8R.P8RMobileMetrics.EditorLogicalViewportOverride = previousLogicalViewport;
         }
 
         [Test]
@@ -115,9 +124,18 @@ namespace AnimalCafe.Tests.EditMode.P8R
                         : !surface && button == Field<Button>(view, "storeButton") ? "destructive" : "secondary";
                     AssertFrame(button.image.sprite, "button_" + role + "_normal");
                     AssertFrame(button.spriteState.disabledSprite, "button_disabled");
-                    Assert.That(button.transform.Find("Label").gameObject.activeSelf, Is.EqualTo(surface));
+                    var compactFloorUtility = mode == DecorationModeKind.Floor
+                        && (button == Field<Button>(view, "undoLastButton")
+                            || button == Field<Button>(view, "rotateButton")
+                            || button == Field<Button>(view, "applyAllButton"));
+                    var iconOnly = !surface || compactFloorUtility;
+                    Assert.That(button.transform.Find("Label").gameObject.activeSelf, Is.EqualTo(!iconOnly));
                     var icon = button.transform.Find("Icon");
-                    if (icon != null) Assert.That(icon.gameObject.activeSelf, Is.EqualTo(!surface));
+                    if (icon != null)
+                    {
+                        Assert.That(icon.gameObject.activeSelf, Is.EqualTo(iconOnly));
+                        if (iconOnly) Assert.That(icon.GetComponent<Image>().sprite, Is.Not.Null);
+                    }
                 }
                 if (mode == DecorationModeKind.Floor)
                 {

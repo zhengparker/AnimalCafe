@@ -158,6 +158,30 @@ namespace AnimalCafe.Decoration
             ReadinessVersion = 1;
         }
 
+        internal ResolvedStationAnchors ResolveCashRegisterPreviewAnchors(FunctionalSurfacePlacementPreview preview)
+        {
+            if (preview == null || preview.Kind != FunctionalSurfacePreviewKind.MountedEquipment
+                || Layout == null || surfaceSlotCatalog == null || functionalDirectionCatalog == null
+                || !functionalDirectionCatalog.TryGetCashRegisterSides(preview.DefinitionId, out _)
+                || string.IsNullOrEmpty(preview.Address.SupportFurnitureInstanceId)
+                || string.IsNullOrEmpty(preview.Address.SlotId)) return ResolvedStationAnchors.Empty;
+
+            // Resolve a transient candidate only. Never place it or publish confirmed readiness.
+            // 用临时实例读取真实站位，不写入布局，不增加 ReadinessVersion。
+            var candidate = new SurfaceMountedInstance(preview.InstanceId, preview.DefinitionId,
+                preview.Address, preview.Rotation);
+            try
+            {
+                return new InteractionAnchorResolver().ResolveMounted(candidate, Layout,
+                    surfaceSlotCatalog, functionalDirectionCatalog);
+            }
+            catch (InvalidOperationException)
+            {
+                // Matches the resolver's grid-overflow handling in the readiness evaluator.
+                return ResolvedStationAnchors.Empty;
+            }
+        }
+
         public void RecalculateReadiness()
         {
             if (Layout == null ||

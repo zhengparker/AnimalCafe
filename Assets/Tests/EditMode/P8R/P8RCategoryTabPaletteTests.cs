@@ -169,6 +169,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
                 AssertPalette(tabs); // This regression starts after the approved initial authoring.
                 var icon = Buttons(tabs)[0].transform.Find("Icon").GetComponent<Image>();
                 icon.sprite = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/UI/P8R/TabIcons/tab_furniture_color.png");
+                icon.raycastTarget = true;
                 PrefabUtility.SaveAsPrefabAsset(contents, path, out var seeded);
                 Assert.That(seeded, Is.True);
                 PrefabUtility.UnloadPrefabContents(contents); contents = null;
@@ -177,12 +178,112 @@ namespace AnimalCafe.Tests.EditMode.P8R
                 icon = Buttons(contents.GetComponentInChildren<DecorationModeTabsView>(true))[0].transform.Find("Icon").GetComponent<Image>();
                 Assert.That(AssetDatabase.GetAssetPath(icon.sprite),
                     Is.EqualTo("Assets/UI/P8R/TabIcons/Outlined/tab_furniture_color.png"), "The repaired reference must be persisted, not only changed in memory.");
+                Assert.That(icon.raycastTarget, Is.False, "Decorative artwork must not intercept pointer input.");
             }
             finally
             {
                 if (contents != null) PrefabUtility.UnloadPrefabContents(contents);
                 if (!File.ReadAllBytes(path).SequenceEqual(original)) File.WriteAllBytes(path, original);
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+            }
+        }
+
+        [Test]
+        public void ApplyApproved_ReacquiresAppearanceWhenImportInvalidatesTheLoadedInstance()
+        {
+            const string iconPath = "Assets/UI/P8R/TabIcons/Outlined/tab_furniture_color.png";
+            var appearancePath = P8RFurnitureUiPaths.Appearance;
+            var files = new[] { iconPath, P8RFurnitureUiPaths.CataloguePrefab }
+                .SelectMany(path => new[] { path, path + ".meta" }).ToArray();
+            var bytes = files.ToDictionary(path => path, File.ReadAllBytes);
+            var times = files.ToDictionary(path => path, File.GetLastWriteTimeUtc);
+            var originalAppearance = AssetDatabase.LoadAssetAtPath<P8RAppearance>(appearancePath);
+            Assert.That(originalAppearance, Is.Not.Null);
+            Assert.That(EditorUtility.IsDirty(originalAppearance), Is.False,
+                "Save or revert the original Appearance before testing asset lifetime.");
+            var originalGuid = AssetDatabase.AssetPathToGUID(appearancePath);
+            var originalBytes = File.ReadAllBytes(appearancePath);
+            var originalMeta = File.ReadAllBytes(appearancePath + ".meta");
+            var folderName = "__P8RTabLifetime_" + Guid.NewGuid().ToString("N");
+            var folder = "Assets/" + folderName;
+            var backup = folder + "/" + Path.GetFileName(appearancePath);
+            var moved = false;
+            string ownedGuid = null;
+            byte[] ownedBytes = null;
+            var invalidated = false;
+            try
+            {
+                Assert.That(AssetDatabase.CreateFolder("Assets", folderName), Is.Not.Empty);
+                Assert.That(AssetDatabase.MoveAsset(appearancePath, backup), Is.Empty);
+                moved = true;
+                Assert.That(AssetDatabase.LoadAssetAtPath<P8RAppearance>(backup), Is.SameAs(originalAppearance));
+
+                var ownedAppearance = Object.Instantiate(originalAppearance);
+                ownedAppearance.name = originalAppearance.name;
+                AssetDatabase.CreateAsset(ownedAppearance, appearancePath);
+                AssetDatabase.SaveAssetIfDirty(ownedAppearance);
+                ownedGuid = AssetDatabase.AssetPathToGUID(appearancePath);
+                Assert.That(ownedGuid, Is.Not.Empty.And.Not.EqualTo(originalGuid));
+                Assert.That(EditorUtility.IsDirty(ownedAppearance), Is.False);
+                ownedBytes = File.ReadAllBytes(appearancePath);
+
+                // Force the real approved-import path, then reproduce Unity invalidating a loaded asset.
+                // 真实重导入期间使旧原生对象失效；不在 production 加测试开关。
+                var importer = (TextureImporter)AssetImporter.GetAtPath(iconPath);
+                Assert.That(EditorUtility.IsDirty(importer), Is.False);
+                importer.mipmapEnabled = false;
+                importer.SaveAndReimport();
+                P8RTabImportLifetimeProbe.ObserveImport = imported =>
+                {
+                    if (!imported.Contains(iconPath)) return;
+                    P8RTabImportLifetimeProbe.ObserveImport = null;
+                    Resources.UnloadAsset(ownedAppearance);
+                    invalidated = ownedAppearance == null;
+                };
+
+                Assert.DoesNotThrow(P8RColoredTabAssets.ApplyApproved);
+                Assert.That(invalidated, Is.True, "The regression must exercise a real invalidated native reference.");
+                Assert.That(AssetDatabase.AssetPathToGUID(appearancePath), Is.EqualTo(ownedGuid));
+                Assert.That(File.ReadAllBytes(appearancePath), Is.EqualTo(ownedBytes));
+                Assert.That(AssetDatabase.LoadAssetAtPath<P8RAppearance>(appearancePath)
+                    .Sprite("furniture_cocoa"), Is.Not.Null);
+            }
+            finally
+            {
+                P8RTabImportLifetimeProbe.ObserveImport = null;
+                try
+                {
+                    // Restore every changed byte before importing either real asset.
+                    foreach (var path in files) File.WriteAllBytes(path, bytes[path]);
+                    foreach (var path in files.Where(path => !path.EndsWith(".meta", StringComparison.Ordinal)))
+                        AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                    foreach (var path in files) File.SetLastWriteTimeUtc(path, times[path]);
+                }
+                finally
+                {
+                    // The unloaded owned object compares null, so ownership is proven only by its GUID.
+                    // 只删除本测试创建的 GUID；任何异常目标都保留原件 backup 供恢复。
+                    if (!string.IsNullOrEmpty(ownedGuid))
+                    {
+                        if (AssetDatabase.AssetPathToGUID(appearancePath) != ownedGuid)
+                            throw new InvalidOperationException("Lifetime cleanup target changed. Original retained at " + backup);
+                        if (!AssetDatabase.DeleteAsset(appearancePath))
+                            throw new InvalidOperationException("Could not remove owned lifetime Appearance. Original retained at " + backup);
+                    }
+                    if (moved)
+                    {
+                        var error = AssetDatabase.MoveAsset(backup, appearancePath);
+                        if (!string.IsNullOrEmpty(error))
+                            throw new InvalidOperationException("Restore original Appearance from " + backup + ": " + error);
+                        moved = false;
+                    }
+                    if (AssetDatabase.IsValidFolder(folder) && !Directory.EnumerateFileSystemEntries(folder).Any())
+                        AssetDatabase.DeleteAsset(folder);
+                }
+                Assert.That(AssetDatabase.AssetPathToGUID(appearancePath), Is.EqualTo(originalGuid));
+                Assert.That(AssetDatabase.LoadAssetAtPath<P8RAppearance>(appearancePath), Is.SameAs(originalAppearance));
+                Assert.That(File.ReadAllBytes(appearancePath), Is.EqualTo(originalBytes));
+                Assert.That(File.ReadAllBytes(appearancePath + ".meta"), Is.EqualTo(originalMeta));
             }
         }
 
@@ -197,11 +298,33 @@ namespace AnimalCafe.Tests.EditMode.P8R
             Assert.That(files.Length, Is.EqualTo(16));
             var bytes = files.ToDictionary(p => p, File.ReadAllBytes);
             var times = files.ToDictionary(p => p, File.GetLastWriteTimeUtc);
-            P8RColoredTabAssets.ApplyApproved();
-            foreach (var path in files)
+            try
             {
-                Assert.That(File.ReadAllBytes(path), Is.EqualTo(bytes[path]), "Repeat apply changes " + path);
-                Assert.That(File.GetLastWriteTimeUtc(path), Is.EqualTo(times[path]), "Repeat apply writes " + path);
+                for (var repeat = 0; repeat < 2; repeat++)
+                {
+                    P8RColoredTabAssets.ApplyApproved();
+                    foreach (var path in files)
+                    {
+                        Assert.That(File.ReadAllBytes(path), Is.EqualTo(bytes[path]), "Repeat apply changes " + path);
+                        Assert.That(File.GetLastWriteTimeUtc(path), Is.EqualTo(times[path]), "Repeat apply writes " + path);
+                    }
+                }
+            }
+            finally
+            {
+                // A failing idempotence assertion must not change the next test's authored baseline.
+                // 即使重复应用检查失败，也必须还原本测试触碰的资产与时间戳。
+                var changedFiles = files.Where(path => !File.ReadAllBytes(path).SequenceEqual(bytes[path])
+                    || File.GetLastWriteTimeUtc(path) != times[path]).ToArray();
+                foreach (var path in changedFiles) File.WriteAllBytes(path, bytes[path]);
+                // Restore metadata before reimport so in-memory importer state matches the restored disk.
+                // metadata 全部还原后再 import，避免缓存继续使用测试篡改过的设置。
+                foreach (var path in changedFiles.Select(path => path.EndsWith(".meta", StringComparison.Ordinal)
+                    ? path.Substring(0, path.Length - 5) : path).Distinct())
+                {
+                    AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
+                }
+                foreach (var path in files) File.SetLastWriteTimeUtc(path, times[path]);
             }
         }
 
@@ -258,6 +381,18 @@ namespace AnimalCafe.Tests.EditMode.P8R
             Assert.That(method, Is.Not.Null);
             try { return method.Invoke(null, args); }
             catch (TargetInvocationException error) { throw error.InnerException; }
+        }
+    }
+
+    // Scoped test-only observer; never changes imports unless the owning regression arms it.
+    public sealed class P8RTabImportLifetimeProbe : AssetPostprocessor
+    {
+        internal static Action<string[]> ObserveImport;
+
+        private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets,
+            string[] movedAssets, string[] movedFromAssetPaths)
+        {
+            ObserveImport?.Invoke(importedAssets);
         }
     }
 }

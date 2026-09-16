@@ -1,8 +1,11 @@
 #if UNITY_EDITOR
 using System.Collections;
+using System.IO;
 using System.Linq;
 using System.Reflection;
+using AnimalCafe.Content;
 using AnimalCafe.Decoration;
+using AnimalCafe.Layout;
 using AnimalCafe.UI;
 using AnimalCafe.UI.Components;
 using AnimalCafe.UI.Decoration;
@@ -57,6 +60,196 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         [UnityTest]
         public IEnumerator Phone360_InsetAfterShowingKeepsReadinessInsideSafeArea()
             => CheckInset(new Vector2(1080, 1920), new Vector2(360, 640), new Rect(72, 60, 984, 1728));
+
+        [UnityTest]
+        public IEnumerator ReadinessChecklist_UsesShortCopyAndControlledRichText()
+        {
+            ownedScene = EditorSceneManager.LoadSceneInPlayMode("Assets/Scenes/MainCafe.unity",
+                new LoadSceneParameters(LoadSceneMode.Single));
+            yield return null; yield return null; yield return null;
+            var view = SceneComponent<ValidationMessageView>();
+            var label = Field<TMP_Text>(view, "messageLabel");
+            var diagnostic = view.FullReadinessMessage;
+            var ids = view.DiagnosticIds.ToArray();
+            Assert.That(view.CurrentMessage, Does.StartWith("Can't open yet · ").And.Not.Contain("\n"));
+            Field<Button>(view, "disclosureButton").onClick.Invoke();
+            label.ForceMeshUpdate();
+            Assert.That(label.richText, Is.True, "Only authored checklist markup may be interpreted.");
+            Assert.That(view.CurrentMessage, Does.Contain("<b>Coffee Machine</b>"));
+            Assert.That(label.GetParsedText(), Does.Contain("Coffee Machine\nAdd a Coffee Machine.")
+                .And.Not.Contain("Blocking:").And.Not.Contain("Confirmed Layout:").And.Not.Contain("<b>"));
+            Assert.That(view.FullReadinessMessage, Is.EqualTo(diagnostic));
+            CollectionAssert.AreEqual(ids, view.DiagnosticIds);
+            view.ShowStatus("<b>Literal diagnostic</b>");
+            Assert.That(label.richText, Is.False, "Generic status is plain text, not trusted checklist markup.");
+            Assert.That(view.CurrentMessage, Is.EqualTo("<b>Literal diagnostic</b>"));
+        }
+
+        [UnityTest]
+        public IEnumerator ReadinessChecklist_PreviewHintFollowsCancelAndTabSwitchWithoutChangingReport()
+        {
+            ownedScene = EditorSceneManager.LoadSceneInPlayMode("Assets/Scenes/MainCafe.unity",
+                new LoadSceneParameters(LoadSceneMode.Single));
+            yield return null; yield return null; yield return null;
+            var controller = SceneComponent<DecorationModeController>();
+            var runtime = SceneComponent<CafeLayoutRuntime>();
+            var view = SceneComponent<ValidationMessageView>();
+            controller.EnterDecorationMode();
+            var confirmedReport = runtime.CurrentReadiness;
+            var version = runtime.ReadinessVersion;
+            var diagnostic = view.FullReadinessMessage;
+            var compact = view.CurrentMessage;
+            Assert.That(controller.TryChangeMode(DecorationModeKind.WallDecor), Is.True);
+            Assert.That(controller.TryBeginWallMountedPreview("wall-decor.monitor.01", "wall.back-left",
+                new WallSlotPosition(4, 0)), Is.True);
+            Assert.That(view.CurrentMessage, Is.EqualTo(compact), "Preview never expands or rewrites the confirmed summary.");
+            Field<Button>(view, "disclosureButton").onClick.Invoke();
+            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            controller.CancelActivePhase7Preview();
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
+            Assert.That(view.IsDetailsExpanded, Is.True);
+            Assert.That(controller.TryBeginWallMountedPreview("wall-decor.monitor.01", "wall.back-left",
+                new WallSlotPosition(4, 0)), Is.True);
+            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            Assert.That(controller.TryChangeMode(DecorationModeKind.Furniture), Is.True);
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
+            Assert.That(runtime.CurrentReadiness, Is.SameAs(confirmedReport));
+            Assert.That(runtime.ReadinessVersion, Is.EqualTo(version));
+            Assert.That(view.FullReadinessMessage, Is.EqualTo(diagnostic));
+        }
+
+        [UnityTest]
+        public IEnumerator ReadinessChecklist_SurfacePreviewNoteClearsAfterConfirmAndCancel()
+        {
+            ownedScene = EditorSceneManager.LoadSceneInPlayMode("Assets/Scenes/MainCafe.unity",
+                new LoadSceneParameters(LoadSceneMode.Single));
+            yield return null; yield return null; yield return null;
+            var controller = SceneComponent<DecorationModeController>();
+            var view = SceneComponent<ValidationMessageView>();
+            controller.EnterDecorationMode();
+            Field<Button>(view, "disclosureButton").onClick.Invoke();
+            Assert.That(controller.TryChangeMode(DecorationModeKind.Floor), Is.True);
+            SceneComponent<DecorationCatalogueView>().GetComponentsInChildren<DecorationCatalogueTileView>(true)
+                .First(tile => tile.gameObject.activeInHierarchy && tile.ItemId != null)
+                .GetComponent<Button>().onClick.Invoke();
+            Assert.That(controller.ActiveSurfacePreview, Is.Not.Null);
+            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            Assert.That(controller.TryConfirmPhase7Preview(), Is.True);
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
+            Assert.That(controller.TryChangeMode(DecorationModeKind.Wall), Is.True);
+            var styles = UnityEditor.AssetDatabase.LoadAssetAtPath<SurfaceStyleCatalogueAsset>(
+                "Assets/Art/Phase7/Catalogues/SC_Paint_Phase7.asset");
+            Assert.That(controller.TryBeginWallPreview("wall.back-left", SurfaceStyleKind.Paint,
+                styles.Entries[1].StyleId), Is.True);
+            if (!view.IsDetailsExpanded) Field<Button>(view, "disclosureButton").onClick.Invoke();
+            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            controller.CancelActivePhase7Preview();
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
+        }
+
+        [UnityTest]
+        public IEnumerator ReadinessChecklist_CaptureNativeExamplesWhenRequested()
+        {
+            yield return CaptureNativeExamples();
+        }
+
+        [UnityTest]
+        public IEnumerator ReadinessChecklist_DiscardAndDirectExitClearFurniturePendingNote()
+        {
+            ownedScene = EditorSceneManager.LoadSceneInPlayMode("Assets/Scenes/MainCafe.unity",
+                new LoadSceneParameters(LoadSceneMode.Single));
+            yield return null; yield return null; yield return null;
+            var controller = SceneComponent<DecorationModeController>();
+            var runtime = SceneComponent<CafeLayoutRuntime>();
+            var view = SceneComponent<ValidationMessageView>();
+            controller.EnterDecorationMode();
+            Field<Button>(view, "disclosureButton").onClick.Invoke();
+            var report = runtime.CurrentReadiness;
+            SceneComponent<DecorationCatalogueView>().GetComponentsInChildren<DecorationCatalogueTileView>(true)
+                .First(tile => tile.gameObject.activeInHierarchy && tile.ItemId != null
+                    && tile.ItemId.StartsWith("furniture.")).GetComponent<Button>().onClick.Invoke();
+            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            Assert.That(controller.TryRequestExit(), Is.False);
+            Field<Button>(SceneComponent<DecorationExitModalView>(), "discardButton").onClick.Invoke();
+            Assert.That(controller.IsOpen, Is.False);
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
+            Assert.That(runtime.CurrentReadiness, Is.SameAs(report));
+            controller.EnterDecorationMode();
+            if (!view.IsDetailsExpanded) Field<Button>(view, "disclosureButton").onClick.Invoke();
+            SceneComponent<DecorationCatalogueView>().GetComponentsInChildren<DecorationCatalogueTileView>(true)
+                .First(tile => tile.gameObject.activeInHierarchy && tile.ItemId != null
+                    && tile.ItemId.StartsWith("furniture.")).GetComponent<Button>().onClick.Invoke();
+            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            controller.ExitDecorationMode();
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."),
+                "Direct shutdown must synchronize after Furniture session.Exit clears its preview.");
+        }
+
+        private IEnumerator CaptureNativeExamples()
+        {
+            if (System.Environment.GetEnvironmentVariable("ANIMALCAFE_READINESS_CAPTURE") != "1")
+                Assert.Ignore("Opt-in native Game View evidence; no synthetic screenshot compositing.");
+            if (Application.isBatchMode) Assert.Ignore("Native captures require a real Editor Game View.");
+            var folder = Path.GetFullPath(Path.Combine("Artifacts", "readiness-checklist-"
+                + System.DateTime.UtcNow.ToString("yyyyMMdd-HHmmss")));
+            Directory.CreateDirectory(folder);
+            using (var screen = new P8RReferenceLayoutTests.RealGameViewSize())
+            {
+                screen.Resize(new Vector2(480, 854));
+                yield return new WaitForSecondsRealtime(.3f);
+                P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(320, 569);
+                ownedScene = EditorSceneManager.LoadSceneInPlayMode("Assets/Scenes/MainCafe.unity",
+                    new LoadSceneParameters(LoadSceneMode.Single));
+                yield return null; yield return null; yield return null;
+                var view = SceneComponent<ValidationMessageView>();
+                yield return CaptureReadinessFrame(folder, "phone-collapsed.png");
+                Field<Button>(view, "disclosureButton").onClick.Invoke();
+                yield return CaptureReadinessFrame(folder, "phone-expanded.png");
+                var controller = SceneComponent<DecorationModeController>();
+                controller.EnterDecorationMode();
+                Assert.That(controller.TryChangeMode(DecorationModeKind.WallDecor), Is.True);
+                Assert.That(controller.TryBeginWallMountedPreview("wall-decor.monitor.01", "wall.back-left",
+                    new WallSlotPosition(4, 0)), Is.True);
+                view.GetComponent<ScrollRect>().verticalNormalizedPosition = 0;
+                yield return CaptureReadinessFrame(folder, "phone-preview-note.png");
+                controller.ExitDecorationMode();
+                screen.Resize(new Vector2(1600, 900));
+                P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(800, 450);
+                yield return new WaitForSecondsRealtime(.3f);
+                yield return CaptureReadinessFrame(folder, "landscape-expanded.png");
+                Assert.That(new Vector2(Screen.width, Screen.height), Is.EqualTo(new Vector2(1600, 900)));
+                TestContext.WriteLine("Native readiness evidence: " + folder);
+            }
+        }
+
+        private static IEnumerator CaptureReadinessFrame(string folder, string name)
+        {
+            var path = Path.Combine(folder, name);
+            Assert.That(File.Exists(path), Is.False);
+            Canvas.ForceUpdateCanvases();
+            var deadline = Time.realtimeSinceStartup + 45;
+            while (UnityEditor.ShaderUtil.anythingCompiling && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(UnityEditor.ShaderUtil.anythingCompiling, Is.False);
+            Assert.That(UnityEngine.Camera.main.targetTexture, Is.Null);
+            yield return null; yield return null;
+            yield return new WaitForEndOfFrame();
+            var expectedWidth = Screen.width;
+            var expectedHeight = Screen.height;
+            Assert.That(new Vector2(UnityEngine.Camera.main.pixelWidth, UnityEngine.Camera.main.pixelHeight),
+                Is.EqualTo(new Vector2(expectedWidth, expectedHeight)));
+            ScreenCapture.CaptureScreenshot(path, 1);
+            for (var i = 0; i < 120 && !File.Exists(path); i++) yield return null;
+            Assert.That(File.Exists(path), Is.True);
+            Assert.That(new FileInfo(path).Length, Is.GreaterThan(0));
+            var frame = new Texture2D(2, 2);
+            try
+            {
+                Assert.That(frame.LoadImage(File.ReadAllBytes(path)), Is.True);
+                Assert.That(new Vector2(frame.width, frame.height),
+                    Is.EqualTo(new Vector2(expectedWidth, expectedHeight)), "PNG and actual Game View dimensions must agree.");
+            }
+            finally { Object.Destroy(frame); }
+        }
 
         [UnityTest]
         public IEnumerator Phone320_InsetAfterShowingKeepsReadinessInsideSafeArea()

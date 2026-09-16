@@ -169,7 +169,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 var face = ScreenRect(button.image.rectTransform);
                 var scale = button.GetComponentInParent<Canvas>().rootCanvas.scaleFactor;
                 var density = AnimalCafe.UI.P8R.P8RMobileMetrics.For(button).PixelsPerLogicalUnit;
-                Assert.That(hit.width / density, Is.GreaterThanOrEqualTo(47.99f), field + " platform-logical hit width");
+                Assert.That(hit.width / density, Is.EqualTo(44f).Within(.01f), field + " approved floating hit width");
                 Assert.That(face.width / density, Is.EqualTo(30f).Within(.1f), field + " compact platform-logical face");
                 Assert.That(face.xMin, Is.GreaterThanOrEqualTo(hit.xMin - .1f));
                 Assert.That(face.xMax, Is.LessThanOrEqualTo(hit.xMax + .1f));
@@ -217,13 +217,28 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     Assert.That(button.transform.Find("Icon").gameObject.activeSelf, Is.False);
                     var face = ScreenRect(button.image.rectTransform);
                     var hit = ScreenRect((RectTransform)button.transform);
-                    if (surfaceMode == DecorationModeKind.Floor)
-                    {
-                        Assert.That(face.width, Is.LessThanOrEqualTo(hit.width + .1f), "Compact Floor face stays inside its touch root.");
-                        Assert.That(face.height / AnimalCafe.UI.P8R.P8RMobileMetrics.For(button).PixelsPerLogicalUnit,
-                            Is.EqualTo(32f).Within(.1f));
-                    }
-                    else Assert.That(face.width, Is.EqualTo(hit.width).Within(.1f), "Wall footer remains full width.");
+                    var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(button);
+                    var label = button.transform.Find("Label").GetComponent<TMP_Text>();
+                    label.ForceMeshUpdate(true, true);
+                    var preferred = label.GetPreferredValues(label.text);
+                    Assert.That(label.text, Is.EqualTo(field == "confirmButton" ? "Apply" : "Cancel"),
+                        surfaceMode + " " + field + " uses its final surface copy.");
+                    Assert.That(label.fontSize / metrics.UnitsPerLogicalUnit, Is.EqualTo(12f).Within(.1f),
+                        surfaceMode + " " + field + " compact surface font.");
+                    Assert.That(face.width / metrics.PixelsPerLogicalUnit,
+                        Is.EqualTo(preferred.x / metrics.UnitsPerLogicalUnit + 12f).Within(.2f),
+                        surfaceMode + " " + field + " keeps 6 logical units beside each side of its copy.");
+                    Assert.That(face.height / metrics.PixelsPerLogicalUnit, Is.EqualTo(32f).Within(.1f),
+                        surfaceMode + " " + field + " compact surface face.");
+                    Assert.That(hit.width / metrics.PixelsPerLogicalUnit, Is.GreaterThanOrEqualTo(47.9f),
+                        surfaceMode + " " + field + " keeps a separate touch root.");
+                    Assert.That(hit.height / metrics.PixelsPerLogicalUnit, Is.GreaterThanOrEqualTo(47.9f),
+                        surfaceMode + " " + field + " keeps a separate touch root.");
+                    Assert.That(face.xMin, Is.GreaterThanOrEqualTo(hit.xMin - .1f), surfaceMode + " " + field);
+                    Assert.That(face.xMax, Is.LessThanOrEqualTo(hit.xMax + .1f), surfaceMode + " " + field);
+                    Assert.That(face.yMin, Is.GreaterThanOrEqualTo(hit.yMin - .1f), surfaceMode + " " + field);
+                    Assert.That(face.yMax, Is.LessThanOrEqualTo(hit.yMax + .1f), surfaceMode + " " + field);
+                    Assert.That(label.isTextTruncated, Is.False, surfaceMode + " " + field);
                 }
                 yield return Capture("alignment-" + surfaceMode + "-footer.png", folder);
                 Action("cancelButton").onClick.Invoke();

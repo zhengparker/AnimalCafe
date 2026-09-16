@@ -414,6 +414,9 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     Is.GreaterThanOrEqualTo(47.9f),
                     "While the height policy is pending, preserve one complete logical tap-height without shrinking controls.");
                 AssertVisibleTileTappable(catalogue, density, "Pending inset Floor preview");
+                Assert.That(Box(Field<GameObject>(catalogue, "expandedRoot").transform).height,
+                    Is.LessThanOrEqualTo(safePixels.height * .45f + 1f),
+                    "Small-phone preview must follow the same safe-height cap as browsing.");
             }
         }
 
@@ -477,6 +480,9 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 AssertNoOverlap(new[] { returnButton, pickupButton });
                 AssertRaycastResolvesTo(returnButton, Box(returnButton).center);
                 AssertRaycastResolvesTo(pickupButton, Box(pickupButton).center);
+                Assert.That(Box(Field<GameObject>(catalogue, "expandedRoot").transform).height,
+                    Is.LessThanOrEqualTo(Screen.safeArea.height * .45f + 1f),
+                    "Reopening Furniture with Return and Pickup must retain the browsing height cap.");
                 Field<Button>(Find<DecorationActionBarView>(), "cancelButton").onClick.Invoke();
                 yield return Settle();
 
@@ -502,6 +508,202 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 AssertTargets(controls, density, Screen.safeArea);
                 AssertNoOverlap(controls);
                 AssertVisibleTileTappable(catalogue, density, "640x360 Floor preview");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator VeryShortSafeArea_SurfacePreviewCapsSheetAndKeepsEveryToolReachable()
+        {
+            var pixels = new Vector2(1138, 640);
+            var logical = pixels * .5f;
+            var safe = new Rect(88, 40, 1026, 576);
+            const float density = 2f;
+            using (var screen = new P8RReferenceLayoutTests.NativeScreenSize())
+            {
+                screen.Resize(pixels);
+                yield return Load(pixels, logical, safe);
+                var controller = Find<DecorationModeController>();
+                controller.EnterDecorationMode();
+                var catalogue = Find<DecorationCatalogueView>();
+                foreach (var mode in new[] { DecorationModeKind.Floor, DecorationModeKind.Wall })
+                {
+                    Assert.That(controller.TryChangeMode(mode), Is.True);
+                    if (mode == DecorationModeKind.Wall)
+                        Assert.That(controller.TryHandleSceneTap(new AnimalCafe.Decoration.Input.DecorationTouchHit(
+                            AnimalCafe.Decoration.Input.DecorationTouchHitKind.WallSurface, surfaceId: "wall.back-left")), Is.True);
+                    catalogue.GetComponentsInChildren<DecorationCatalogueTileView>(true)
+                        .First(tile => tile.ItemId == (mode == DecorationModeKind.Floor ? "floor.warm-wood" : "paint.sage")
+                            && tile.gameObject.activeInHierarchy).GetComponent<Button>().onClick.Invoke();
+                    catalogue.ShowCatalogue();
+                    yield return Settle();
+                    var panel = Box(Field<GameObject>(catalogue, "expandedRoot").transform);
+                    AssertInside(panel, safe, mode + " short-safe-area panel");
+                    Assert.That(panel.height, Is.LessThanOrEqualTo(safe.height * .45f + 1f),
+                        mode + " preview may scroll its tools, but must not cover more of the scene.");
+                    AssertVisibleTileTappable(catalogue, density, mode + " first card");
+                    var actions = Find<DecorationActionBarView>();
+                    var fields = mode == DecorationModeKind.Floor
+                        ? new[] { "undoLastButton", "rotateButton", "applyAllButton", "cancelButton", "confirmButton" }
+                        : new[] { "cancelButton", "confirmButton" };
+                    var buttons = fields.Select(name => Field<Button>(actions, name)).ToList();
+                    if (mode == DecorationModeKind.Floor)
+                    {
+                        var range = Find<DecorationFloorRangeView>();
+                        buttons.Add(Field<Button>(range, "wholeRoomButton"));
+                        buttons.Add(Field<Button>(range, "singleGridButton"));
+                    }
+                    var reached = new HashSet<Button>();
+                    for (var step = 0; step <= 20; step++)
+                    {
+                        catalogue.VerticalScroll.verticalNormalizedPosition = 1f - step / 20f;
+                        Canvas.ForceUpdateCanvases();
+                        yield return null;
+                        foreach (var button in buttons)
+                        {
+                            Assert.That(button.gameObject.activeInHierarchy, Is.True, mode + " " + button.name + " must not disappear.");
+                            var bounds = Box(button);
+                            Assert.That(bounds.width / density, Is.GreaterThanOrEqualTo(47.9f));
+                            Assert.That(bounds.height / density, Is.GreaterThanOrEqualTo(47.9f));
+                            var clip = button.transform.IsChildOf(catalogue.VerticalScroll.content)
+                                ? Box(catalogue.VerticalScroll.viewport) : panel;
+                            var visible = Intersection(bounds, clip);
+                            if (visible.width / density < 47.9f || visible.height / density < 47.9f) continue;
+                            AssertRaycastResolvesTo(button, visible.center);
+                            reached.Add(button);
+                        }
+                    }
+                    Assert.That(reached, Is.EquivalentTo(buttons), "Every original tool needs a full reachable touch area.");
+                    catalogue.SetSheetState(DecorationSheetState.CompactPreview, true);
+                    Assert.That(catalogue.SurfaceFooterHost.IsChildOf(catalogue.VerticalScroll.content), Is.False,
+                        "Collapse must restore tools before disabling their former scrolling ancestor.");
+                    yield return Settle();
+                    foreach (var button in buttons)
+                    {
+                        Assert.That(button.gameObject.activeInHierarchy, Is.True, mode + " collapsed tool");
+                        AssertTarget(button, density, safe);
+                        AssertRaycastResolvesTo(button, Box(button).center);
+                    }
+                    catalogue.SetSheetState(DecorationSheetState.Expanded, true);
+                    yield return Settle();
+                    Field<Button>(actions, "cancelButton").onClick.Invoke();
+                    catalogue.ShowCatalogue();
+                    yield return Settle();
+                    Assert.That(Box(Field<GameObject>(catalogue, "expandedRoot").transform).height,
+                        Is.LessThanOrEqualTo(safe.height * .45f + 1f), "Cancel must restore the capped browsing layout.");
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator VeryShortSafeArea_FurniturePreviewRebindAndResizeKeepToolsReachable()
+        {
+            var pixels = new Vector2(1138, 640);
+            var safe = new Rect(88, 40, 1026, 576);
+            using (var screen = new P8RReferenceLayoutTests.NativeScreenSize())
+            {
+                screen.Resize(pixels);
+                yield return Load(pixels, pixels * .5f, safe);
+                var controller = Find<DecorationModeController>();
+                controller.EnterDecorationMode();
+                var catalogue = Find<DecorationCatalogueView>();
+                for (var pass = 0; pass < 2; pass++)
+                {
+                    Assert.That(controller.TryChangeMode(DecorationModeKind.Furniture), Is.True);
+                    catalogue.GetComponentsInChildren<DecorationCatalogueTileView>(true)
+                        .First(tile => tile.ItemId == "furniture.counter.module.01" && tile.gameObject.activeInHierarchy)
+                        .GetComponent<Button>().onClick.Invoke();
+                    catalogue.ShowCatalogue();
+                    yield return Settle();
+                    var panel = Box(Field<GameObject>(catalogue, "expandedRoot").transform);
+                    AssertInside(panel, safe, "Reopened Furniture");
+                    Assert.That(panel.height, Is.LessThanOrEqualTo(safe.height * .45f + 1f));
+                    var buttons = new[] { Field<Button>(catalogue, "returnToEditingButton"), Field<Button>(catalogue, "pickUpPointButton") };
+                    var reached = new HashSet<Button>();
+                    for (var step = 0; step <= 160; step++)
+                    {
+                        catalogue.VerticalScroll.verticalNormalizedPosition = 1f - step / 160f;
+                        Canvas.ForceUpdateCanvases();
+                        yield return null;
+                        foreach (var button in buttons)
+                        {
+                            Assert.That(button.gameObject.activeInHierarchy, Is.True, "Rebinding must not destroy a reparented tool.");
+                            var bounds = Box(button);
+                            Assert.That(bounds.width / 2f, Is.GreaterThanOrEqualTo(47.9f));
+                            Assert.That(bounds.height / 2f, Is.GreaterThanOrEqualTo(47.9f));
+                            var clip = button.transform.IsChildOf(catalogue.VerticalScroll.content)
+                                ? Box(catalogue.VerticalScroll.viewport) : panel;
+                            var visible = Intersection(bounds, clip);
+                            if (visible.width / 2f < 47.9f || visible.height / 2f < 47.9f) continue;
+                            AssertRaycastResolvesTo(button, visible.center);
+                            reached.Add(button);
+                        }
+                    }
+                    Assert.That(reached, Is.EquivalentTo(buttons));
+                    var previewState = controller.State;
+                    buttons[0].onClick.Invoke();
+                    yield return Settle();
+                    Assert.That(controller.State, Is.EqualTo(previewState), "Return must preserve the pending transaction.");
+                    catalogue.ShowCatalogue();
+                    yield return Settle();
+                    Assert.That(controller.TryChangeMode(DecorationModeKind.Floor), Is.True);
+                    yield return Settle();
+                    Assert.That(buttons[0], Is.Not.Null, "Changing tabs must retain the reusable Return control.");
+                    Assert.That(buttons[1], Is.Not.Null, "Changing tabs must retain the reusable Pickup control.");
+                }
+
+                // Rotate back to a roomy portrait profile: the scrolling fallback must not stick.
+                // 回到空间充足的竖屏后，临时滚动工具应恢复固定位置。
+                pixels = new Vector2(1080, 1920);
+                screen.Resize(pixels);
+                P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(360, 640);
+                foreach (var container in ownedScene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<SafeAreaContainer>(true)))
+                    container.ApplySafeArea(new Rect(Vector2.zero, pixels), pixels);
+                Assert.That(controller.TryChangeMode(DecorationModeKind.Furniture), Is.True);
+                catalogue.ShowCatalogue();
+                yield return Settle();
+                var pickup = Field<Button>(catalogue, "pickUpPointButton");
+                Assert.That(pickup.transform.IsChildOf(catalogue.VerticalScroll.content), Is.False);
+                AssertTarget(pickup, 3f, new Rect(Vector2.zero, pixels));
+                AssertRaycastResolvesTo(pickup, Box(pickup).center);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator FloorTab_CompensatesFlatArtworkWithoutChangingOtherIconsOrHitAreas()
+        {
+            var pixels = new Vector2(960, 1704);
+            using (var screen = new P8RReferenceLayoutTests.NativeScreenSize())
+            {
+                screen.Resize(pixels);
+                yield return Load(pixels, new Vector2(320, 568));
+                var controller = Find<DecorationModeController>();
+                controller.EnterDecorationMode();
+                var catalogue = Find<DecorationCatalogueView>();
+                catalogue.ShowCatalogue();
+                yield return Settle();
+                foreach (var mode in new[] { DecorationModeKind.Floor, DecorationModeKind.Furniture })
+                {
+                    Assert.That(controller.TryChangeMode(mode), Is.True);
+                    yield return Settle();
+                    var buttons = Find<DecorationModeTabsView>().GetComponentsInChildren<Button>();
+                    var icons = buttons.Select(button => button.transform.Find("Icon").GetComponent<Image>()).ToArray();
+                    var floor = icons.Single(icon => icon.sprite.name == "tab_floor_color");
+                    var others = icons.Where(icon => icon != floor).ToArray();
+                    var floorExtent = Mathf.Max(Box(floor).width, Box(floor).height);
+                    var otherExtent = others.Average(icon => Mathf.Max(Box(icon).width, Box(icon).height));
+                    Assert.That(floorExtent / otherExtent, Is.InRange(1.1f, 1.2f),
+                        "The flat floor symbol needs modest optical emphasis, independent of selection.");
+                    foreach (var icon in icons)
+                    {
+                        var bounds = Box(icon);
+                        AssertInside(bounds, Box(icon.GetComponentInParent<Button>()), "Tab ink");
+                        Assert.That(bounds.width / bounds.height,
+                            Is.EqualTo(icon.sprite.rect.width / icon.sprite.rect.height).Within(.01f),
+                            "Optical compensation must preserve the original PNG aspect ratio.");
+                    }
+                    AssertTargets(buttons, 3f, Screen.safeArea);
+                    AssertNoOverlap(buttons);
+                }
             }
         }
 

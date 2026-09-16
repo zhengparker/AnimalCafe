@@ -101,10 +101,15 @@ namespace AnimalCafe.UI.Decoration
             SheetState = hasActivePreview && state == DecorationSheetState.TabsOnly ? DecorationSheetState.CompactPreview : state;
             RefreshEditingContext();
             if (SheetState != DecorationSheetState.Expanded) EndNestedDrag();
+            // Detach tools while their ancestors are still active. OnDisable can refresh layout.
+            // 在祖先停用前移回工具，避免 OnDisable 回调在层级停用遍历中改父级。
+            var restoreTools = SheetState != DecorationSheetState.Expanded && scrollingToolParents.Count > 0;
+            if (restoreTools) RestoreScrollingTools();
             expandedRoot?.SetActive(SheetState == DecorationSheetState.Expanded);
             collapsedRoot?.SetActive(SheetState == DecorationSheetState.CompactPreview);
             sheetActionRoot?.SetActive(SheetState != DecorationSheetState.TabsOnly
                 && SheetState != DecorationSheetState.Hidden);
+            if (restoreTools) RefreshP8RLayout();
             // ModeTabs is a child of this Bottom Sheet, so tweening the shared root
             // keeps the raised tabs physically attached throughout collapse/expand.
             BeginTransition(SheetState == DecorationSheetState.Expanded
@@ -185,6 +190,7 @@ namespace AnimalCafe.UI.Decoration
             StopBrowsingMotion();
             browsingContextKey = contextKey;
             RefreshP8RLayout();
+            RestoreScrollingTools();
             browsingRows.Clear();
             if (pickUpPointButton != null)
                 pickUpPointButton.gameObject.SetActive(IsFurnitureTab(categories));
@@ -513,6 +519,37 @@ namespace AnimalCafe.UI.Decoration
         private bool handleHasActivePreview;
         private const float EditingContextHeight = 120f;
         private bool refreshingP8RLayout;
+        private readonly Dictionary<RectTransform, Transform> scrollingToolParents = new();
+        private bool FooterScrolls => surfaceFooterHost != null && surfaceFooterHost.parent == categoryContent;
+
+        // Only constrained sheets place the original tools inside the existing scroll content.
+        // 仅高度不足时让原有工具随目录滚动；父级变化不重建按钮或预览事务。
+        private void SetScrollingTool(RectTransform tool, bool scrolls, float height = 0)
+        {
+            if (tool == null || categoryContent == null) return;
+            if (scrolls)
+            {
+                if (!scrollingToolParents.ContainsKey(tool)) scrollingToolParents.Add(tool, tool.parent);
+                if (tool.parent != categoryContent) tool.SetParent(categoryContent, false);
+                tool.SetAsLastSibling();
+                var element = tool.GetComponent<LayoutElement>() ?? tool.gameObject.AddComponent<LayoutElement>();
+                element.ignoreLayout = false;
+                element.minHeight = element.preferredHeight = height;
+                element.flexibleHeight = 0;
+            }
+            else if (scrollingToolParents.TryGetValue(tool, out var parent))
+            {
+                tool.SetParent(parent, false);
+                var element = tool.GetComponent<LayoutElement>();
+                if (element != null) element.ignoreLayout = true;
+                scrollingToolParents.Remove(tool);
+            }
+        }
+
+        private void RestoreScrollingTools()
+        {
+            foreach (var tool in scrollingToolParents.Keys.ToArray()) SetScrollingTool(tool, false);
+        }
 
         public event Action<FurnitureDefinitionAsset> Selected;
         public event Action PickUpPointRequested;
@@ -671,10 +708,8 @@ namespace AnimalCafe.UI.Decoration
                 }
                 var panel = (RectTransform)expandedRoot.transform;
                 var uncappedHeight = Mathf.Min(metrics.Units(520), Mathf.Max(metrics.Units(120), availableHeight));
-                // Apply the 45% ceiling only when the measured fixed reservations still leave
-                // one complete 48-logical content target. The smallest Floor preview footer awaits
-                // an owner choice; until then it retains the prior height instead of clipping controls.
-                // 固定控件后仍留48内容高度时才应用45%；最小Floor预览footer等待owner决定。
+                // The complete sheet stays within 45% of safe height; overflow uses its ScrollRect.
+                // 整个面板最多占安全区45%，高度不足的工具使用已有目录滚动区。
                 var safeHeightCap = root.rect.height * .45f;
                 var measure = collapseButton != null ? collapseButton.GetComponentInChildren<TMP_Text>(true) : null;
                 var surface = browsingContextKey == "Floor" || browsingContextKey == "Wall";
@@ -683,11 +718,14 @@ namespace AnimalCafe.UI.Decoration
                     appearance, measure, browsingContextKey == "Floor", handleHasActivePreview) : null;
                 var footerHeight = footer != null ? footer.Height : 0;
                 var pickupIsVisible = pickUpPointButton != null && pickUpPointButton.gameObject.activeSelf;
+                var dualHeaderActions = pickupIsVisible && inlineContext
+                    && safeHeightCap < header + metrics.Units(64 + 76)
+                    && width >= padding * 2 + metrics.Units(328.03125f + 52 + 4 * 48 + 3 * 6);
                 // On a short wide screen, keep the existing Pickup action in the one-row header.
                 // Its 48-logical root stays unchanged; this only avoids reserving another row below the cards.
                 // 矮宽屏把既有Pickup放入单行header，不缩触控区，也不改变点击行为。
                 var pickupInHeader = pickupIsVisible && compactHeader
-                    && !hasContext
+                    && (!hasContext || dualHeaderActions)
                     && width + metrics.Units(.01f) >= metrics.Units(442)
                     && safeHeightCap < header + metrics.Units(64 + 76);
                 // Reuse the existing side-footer treatment before deciding the cap. Otherwise
@@ -703,11 +741,36 @@ namespace AnimalCafe.UI.Decoration
                     && shortLandscape
                     && width >= asideWidth + padding * 2 + gap + metrics.Units(76)
                     && safeHeightCap - header - footerHeight - surfaceGap * 2 < metrics.Units(76);
+                var contentGap = safeHeightCap - header - gap < metrics.Units(80)
+                    ? metrics.Units(4) : gap;
                 var fixedBottomReservation = surface
                     ? asideFooter ? surfaceGap * 2 : footerHeight + surfaceGap * 2
-                    : pickupIsVisible && !pickupInHeader ? metrics.Units(64) : gap;
-                var fixedContextReservation = hasContext && !inlineContext ? metrics.Units(48) + gap : 0;
+                    : pickupIsVisible && !pickupInHeader ? metrics.Units(64) : contentGap;
+                var contextGap = minimalHeader && safeHeightCap < header + metrics.Units(48)
+                    + gap + fixedBottomReservation + metrics.Units(76) ? metrics.Units(4) : gap;
+                var fixedContextReservation = hasContext && !inlineContext ? metrics.Units(48) + contextGap : 0;
                 var fixedReservations = header + fixedContextReservation + fixedBottomReservation;
+                var canScrollTools = expandedRoot.activeSelf && categoryContent != null;
+                var scrollFooter = canScrollTools && surface && safeHeightCap + metrics.Units(.01f)
+                    < fixedReservations + Mathf.Max(metrics.Units(48), asideFooter ? asideFooterHeight : 0);
+                if (scrollFooter)
+                {
+                    asideFooter = false;
+                    // Scroll content uses the card column's full width, not the old footer padding.
+                    footer = AnimalCafe.UI.P8R.P8RSurfaceFooterLayout.Measure(this, width - padding * 2,
+                        appearance, measure, browsingContextKey == "Floor", handleHasActivePreview);
+                    footerHeight = footer.Height;
+                    fixedBottomReservation = metrics.Units(4);
+                }
+                var scrollPickup = canScrollTools && pickupIsVisible && !pickupInHeader
+                    && safeHeightCap + metrics.Units(.01f) < header + fixedContextReservation
+                        + fixedBottomReservation + metrics.Units(76);
+                if (scrollPickup) fixedBottomReservation = metrics.Units(4);
+                var scrollContext = canScrollTools && hasContext && !inlineContext
+                    && safeHeightCap + metrics.Units(.01f) < header + fixedContextReservation
+                        + fixedBottomReservation + metrics.Units(76);
+                if (scrollContext) fixedContextReservation = 0;
+                fixedReservations = header + fixedContextReservation + fixedBottomReservation;
                 // A normal row needs its 28-logical heading plus a 48-logical visible card slice.
                 // When only that redundant Floor heading prevents the cap, hide it using the
                 // existing short-layout pattern instead of clipping the real tile target.
@@ -715,13 +778,13 @@ namespace AnimalCafe.UI.Decoration
                 var hideFloorHeadingForCap = browsingContextKey == "Floor"
                     && safeHeightCap + metrics.Units(.01f) >= fixedReservations + metrics.Units(48)
                     && safeHeightCap < fixedReservations + metrics.Units(76);
-                var minimumContentReservation = metrics.Units(hideFloorHeadingForCap ? 48 : 76);
+                // Keep Furniture/Wall Decor category names; trim only the first heading's blank space.
+                // 保留家具与墙饰分类名称，仅在极短屏压缩首行标题下的空白。
+                var firstHeadingHeight = Mathf.Clamp((safeHeightCap - fixedReservations) / metrics.Units(1) - 52.125f, 20f, 28f);
+                var minimumContentReservation = metrics.Units(hideFloorHeadingForCap ? 48 : 48 + firstHeadingHeight);
                 if (asideFooter) minimumContentReservation = Mathf.Max(minimumContentReservation, asideFooterHeight);
                 var minimumUsableHeight = fixedReservations + minimumContentReservation;
-                var capPreservesUsableViewport = safeHeightCap + metrics.Units(.01f) >= minimumUsableHeight;
-                var height = capPreservesUsableViewport
-                    ? Mathf.Max(Mathf.Min(uncappedHeight, safeHeightCap), minimumUsableHeight)
-                    : Mathf.Max(uncappedHeight, minimumUsableHeight);
+                var height = Mathf.Min(safeHeightCap, Mathf.Max(Mathf.Min(uncappedHeight, safeHeightCap), minimumUsableHeight));
                 // Short content shrinks below the cap. Each row owns an 84-logical card,
                 // a 28-logical heading and a small separation; fixed controls keep their reservation.
                 // 内容较少时继续收紧；每行保留84卡片、28标题和少量间距。
@@ -729,14 +792,17 @@ namespace AnimalCafe.UI.Decoration
                 {
                     var rowsHeight = categoryRows.Count * metrics.Units(116)
                         + Mathf.Max(0, categoryRows.Count - 1) * gap;
-                    var lowerReservation = surface
-                        ? asideFooter ? surfaceGap * 2 : footerHeight + surfaceGap * 2
-                        : pickupIsVisible && !pickupInHeader ? metrics.Units(64) : gap;
+                    var lowerReservation = fixedBottomReservation;
                     height = Mathf.Min(height, header + rowsHeight + lowerReservation);
                 }
                 panel.anchorMin = Vector2.zero; panel.anchorMax = new Vector2(1, 0); panel.pivot = new Vector2(.5f, 0);
                 panel.anchoredPosition = new Vector2(0, side);
                 panel.sizeDelta = new Vector2(-side * 2, height);
+                // Restore before applying anchored geometry; scrolling rows are appended below.
+                // 先恢复不再滚动的工具父级，再写正常布局；滚动工具稍后追加到内容末尾。
+                if (!scrollFooter) SetScrollingTool(surfaceFooterHost, false);
+                if (!scrollPickup) SetScrollingTool(pickUpPointButton != null ? (RectTransform)pickUpPointButton.transform : null, false);
+                if (!scrollContext) SetScrollingTool(editingContextRoot != null ? (RectTransform)editingContextRoot.transform : null, false);
                 // On very short wide screens, place the measured surface footer beside the cards
                 // when both columns and the full footer height fit; targets and preview rules stay intact.
                 // 短横屏仅在双栏和完整footer高度都能容纳时采用侧栏；不缩按钮、不改变Preview规则。
@@ -772,9 +838,9 @@ namespace AnimalCafe.UI.Decoration
                     var tabsInHeader = expandedRoot.activeSelf;
                     var tabsPadding = tabsInHeader ? headerPadding : padding;
                     var tabsLeading = tabsInHeader && compactHeader
-                        ? metrics.Units(inlineContext ? 188 : pickupInHeader ? 148 : 112) : 0;
+                        ? metrics.Units(dualHeaderActions ? 328.03125f : inlineContext ? 188 : pickupInHeader ? 148 : 112) : 0;
                     var tabsReservation = tabsInHeader
-                        ? (compactHeader ? metrics.Units(inlineContext ? 248 : pickupInHeader ? 208 : 172)
+                        ? (compactHeader ? metrics.Units(dualHeaderActions ? 380.03125f : inlineContext ? 248 : pickupInHeader ? 208 : 172)
                             : minimalHeader ? metrics.Units(52) : 0) : 0;
                     row.anchorMin = row.anchorMax = row.pivot = Vector2.zero;
                     row.anchoredPosition = new Vector2(side + tabsPadding + tabsLeading,
@@ -816,7 +882,7 @@ namespace AnimalCafe.UI.Decoration
                         if (pickupInHeader)
                         {
                             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
-                            rect.anchoredPosition = new Vector2(padding, 0);
+                            rect.anchoredPosition = new Vector2(padding + (dualHeaderActions ? metrics.Units(188.015625f) : 0), 0);
                             rect.sizeDelta = new Vector2(metrics.Units(140), metrics.Units(48));
                         }
                         else
@@ -851,7 +917,7 @@ namespace AnimalCafe.UI.Decoration
                     if (IsCollapsed && transitionCoroutine == null)
                     {
                         root.anchoredPosition = collapsedAnchoredPosition;
-                        if (surfaceFooterHost != null) surfaceFooterHost.anchoredPosition =
+                        if (surfaceFooterHost != null && !FooterScrolls) surfaceFooterHost.anchoredPosition =
                             surfaceFooterExpandedAnchoredPosition + expandedAnchoredPosition - collapsedAnchoredPosition;
                     }
                 }
@@ -888,42 +954,46 @@ namespace AnimalCafe.UI.Decoration
                 {
                     var viewport = (RectTransform)verticalScroll.transform;
                     var host = viewport.parent as RectTransform;
-                    var pickupVisible = pickUpPointButton != null && pickUpPointButton.gameObject.activeSelf;
                     if (host != null)
                     {
                         host.offsetMax = new Vector2(-padding - (asideFooter ? asideWidth + gap : 0),
-                            -header - (hasContext && !inlineContext ? contextHeight + gap : 0));
-                        host.offsetMin = new Vector2(padding, asideFooter ? surfaceGap : surface ? footerHeight + surfaceGap * 2
-                            : pickupVisible && !pickupInHeader ? metrics.Units(64) : gap);
+                            -header - (hasContext && !inlineContext && !scrollContext ? contextHeight + contextGap : 0));
+                        host.offsetMin = new Vector2(padding, asideFooter ? surfaceGap : fixedBottomReservation);
                     }
                     viewport.offsetMin = viewport.offsetMax = Vector2.zero;
                 }
+                SetScrollingTool(surfaceFooterHost, scrollFooter, footerHeight);
+                SetScrollingTool(editingContextRoot != null ? (RectTransform)editingContextRoot.transform : null,
+                    scrollContext, contextHeight);
+                SetScrollingTool(pickUpPointButton != null ? (RectTransform)pickUpPointButton.transform : null,
+                    scrollPickup, metrics.Units(48));
                 RefreshMobileCategoryRows(hideFloorHeadingForCap
-                    || asideFooter && height - header - surfaceGap < metrics.Units(80));
+                    || asideFooter && height - header - surfaceGap < metrics.Units(80), firstHeadingHeight);
                 RefreshOverflowIndicator(Vector2.zero);
             }
             finally { refreshingP8RLayout = false; }
         }
 
         private Image mobileOverflowIndicator;
-        private void RefreshMobileCategoryRows(bool hideRepeatedFloorHeading = false)
+        private void RefreshMobileCategoryRows(bool hideRepeatedFloorHeading = false, float firstHeadingHeight = 28f)
         {
             var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
             foreach (var row in categoryRows)
             {
+                var headingHeight = row == categoryRows[0] ? firstHeadingHeight : 28f;
                 var scroll = row.HorizontalScroll; if (scroll == null) continue;
                 var element = scroll.GetComponent<LayoutElement>() ?? scroll.gameObject.AddComponent<LayoutElement>();
-                element.minHeight = element.preferredHeight = metrics.Units(hideRepeatedFloorHeading ? 84 : 116);
+                element.minHeight = element.preferredHeight = metrics.Units(hideRepeatedFloorHeading ? 84 : 88 + headingHeight);
                 var label = scroll.GetComponentInChildren<TMP_Text>(true);
                 if (label != null && label.name == "CategoryLabel")
                 {
                     label.gameObject.SetActive(!hideRepeatedFloorHeading);
                     label.fontSize = metrics.Units(14);
-                    label.rectTransform.offsetMin = new Vector2(0, -metrics.Units(28));
+                    label.rectTransform.offsetMin = new Vector2(0, -metrics.Units(headingHeight));
                     label.rectTransform.offsetMax = Vector2.zero;
                 }
                 if (scroll.viewport != null) scroll.viewport.offsetMax = new Vector2(scroll.viewport.offsetMax.x,
-                    -metrics.Units(hideRepeatedFloorHeading ? 0 : 28));
+                    -metrics.Units(hideRepeatedFloorHeading ? 0 : headingHeight));
                 if (scroll.content != null)
                 {
                     var layout = scroll.content.GetComponent<HorizontalLayoutGroup>();
@@ -1276,8 +1346,11 @@ namespace AnimalCafe.UI.Decoration
             State = state;
             IsCatalogueVisible = state != DecorationCatalogueState.Hidden;
             IsCollapsed = state == DecorationCatalogueState.Collapsed;
+            var restoreTools = state != DecorationCatalogueState.Expanded && scrollingToolParents.Count > 0;
+            if (restoreTools) RestoreScrollingTools();
             expandedRoot?.SetActive(state == DecorationCatalogueState.Expanded);
             collapsedRoot?.SetActive(state == DecorationCatalogueState.Collapsed);
+            if (restoreTools) RefreshP8RLayout();
             SetInteraction(IsCatalogueVisible);
             BeginTransition(state);
             StateChanged?.Invoke(state);
@@ -1306,7 +1379,7 @@ namespace AnimalCafe.UI.Decoration
                 {
                     immediateRect.anchoredPosition = targetPosition;
                 }
-                if (surfaceFooterHost != null)
+                if (surfaceFooterHost != null && !FooterScrolls)
                 {
                     surfaceFooterHost.anchoredPosition = footerTargetPosition;
                 }
@@ -1349,7 +1422,7 @@ namespace AnimalCafe.UI.Decoration
                 {
                     rect.anchoredPosition = targetPosition;
                 }
-                if (surfaceFooterHost != null)
+                if (surfaceFooterHost != null && !FooterScrolls)
                 {
                     surfaceFooterHost.anchoredPosition = footerTargetPosition;
                 }
@@ -1371,7 +1444,7 @@ namespace AnimalCafe.UI.Decoration
                 {
                     rect.anchoredPosition = Vector2.Lerp(startPosition, targetPosition, t);
                 }
-                if (surfaceFooterHost != null)
+                if (surfaceFooterHost != null && !FooterScrolls)
                 {
                     surfaceFooterHost.anchoredPosition = Vector2.Lerp(
                         footerStartPosition,
@@ -1386,7 +1459,7 @@ namespace AnimalCafe.UI.Decoration
             {
                 rect.anchoredPosition = targetPosition;
             }
-            if (surfaceFooterHost != null)
+            if (surfaceFooterHost != null && !FooterScrolls)
             {
                 surfaceFooterHost.anchoredPosition = footerTargetPosition;
             }

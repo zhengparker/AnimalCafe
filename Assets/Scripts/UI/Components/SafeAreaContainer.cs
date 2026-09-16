@@ -13,6 +13,9 @@ namespace AnimalCafe.UI.Components
     public sealed class SafeAreaContainer : MonoBehaviour
     {
         [SerializeField] private bool autoApplyRuntimeSafeArea = true;
+        // Runtime host ownership must not become a prefab/scene override or leak into clones.
+        // 父级归属由运行时宿主指定，不写入资产，也不随独立控件复制。
+        [NonSerialized] private bool parentOwnsSafeArea;
 
         private bool hasAppliedMetrics;
         private Rect lastSafeArea;
@@ -22,6 +25,29 @@ namespace AnimalCafe.UI.Components
         {
             get => autoApplyRuntimeSafeArea;
             set => autoApplyRuntimeSafeArea = value;
+        }
+
+        /// <summary>
+        /// True when this container is nested inside a host that already owns the device Safe Area.
+        /// 已嵌套到负责Safe Area的父级时保持full-stretch，避免重复应用边距。
+        /// </summary>
+        public bool ParentOwnsSafeArea
+        {
+            get => parentOwnsSafeArea;
+            set
+            {
+                if (parentOwnsSafeArea == value)
+                {
+                    return;
+                }
+
+                parentOwnsSafeArea = value;
+                hasAppliedMetrics = false;
+                if (parentOwnsSafeArea)
+                {
+                    ApplyParentOwnedRect();
+                }
+            }
         }
 
         private void OnEnable()
@@ -69,10 +95,25 @@ namespace AnimalCafe.UI.Components
         /// </summary>
         public void ApplySafeArea(Rect safeArea, Vector2 screenSize)
         {
+            if (parentOwnsSafeArea)
+            {
+                ApplyParentOwnedRect();
+                return;
+            }
+
             var normalized = CalculateNormalizedSafeRect(safeArea, screenSize);
             var target = (RectTransform)transform;
             target.anchorMin = normalized.min;
             target.anchorMax = normalized.max;
+            target.offsetMin = Vector2.zero;
+            target.offsetMax = Vector2.zero;
+        }
+
+        private void ApplyParentOwnedRect()
+        {
+            var target = (RectTransform)transform;
+            target.anchorMin = Vector2.zero;
+            target.anchorMax = Vector2.one;
             target.offsetMin = Vector2.zero;
             target.offsetMax = Vector2.zero;
         }

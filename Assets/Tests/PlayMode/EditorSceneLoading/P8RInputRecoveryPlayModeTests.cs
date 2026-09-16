@@ -113,6 +113,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         [UnitySetUp]
         public IEnumerator SetUp()
         {
+            var preResetTime = InputState.currentTime;
             heldContacts.Clear();
             contactScreen = null;
             controller = null;
@@ -123,6 +124,10 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             foreach (var source in Object.FindObjectsByType<InputSystemDecorationTouchSource>(
                          FindObjectsInactive.Include, FindObjectsSortMode.None)) source.enabled = false;
             input.Setup();
+            // InputSystemObject keeps the Editor's native play-mode transition timestamps, while
+            // InputTestFixture starts a new mock clock. Keep synthetic events beyond that old window.
+            // Editor保留原生模式切换时间；对齐mock时钟，避免顺序运行时把新触点误判为旧事件。
+            input.currentTime = Math.Max(input.currentTime, preResetTime + .001d);
             screen = InputSystem.AddDevice<Touchscreen>();
             EditorSceneManager.LoadSceneInPlayMode("Assets/Scenes/MainCafe.unity",
                 new LoadSceneParameters(LoadSceneMode.Single));

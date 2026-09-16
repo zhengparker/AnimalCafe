@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using AnimalCafe.Content;
 using AnimalCafe.Decoration;
+using AnimalCafe.EditorTools.AssetPipeline;
 using AnimalCafe.EditorTools.Phase7;
 using AnimalCafe.UI.Decoration;
 using UnityEditor;
@@ -224,7 +225,8 @@ namespace AnimalCafe.EditorTools.Phase8
             // 先保护未保存的项目修改；下面各步骤只保存自己负责的目标资源。
             var dirtyAssets = Resources.FindObjectsOfTypeAll<UnityEngine.Object>()
                 .Where(asset => asset != null && !(asset is SceneAsset)
-                    && EditorUtility.IsPersistent(asset) && EditorUtility.IsDirty(asset))
+                    && EditorUtility.IsPersistent(asset) && EditorUtility.IsDirty(asset)
+                    && !ProjectAssetEditSafety.IsGeneratedDynamicFontAtlas(asset))
                 .Select(AssetDatabase.GetAssetPath)
                 .Where(path => !string.IsNullOrEmpty(path)
                     && path.StartsWith("Assets/", StringComparison.Ordinal) && File.Exists(path))

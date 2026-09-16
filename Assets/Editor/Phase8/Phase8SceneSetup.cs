@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using AnimalCafe.EditorTools.AssetPipeline;
 using AnimalCafe.Decoration;
 using AnimalCafe.UI.Decoration;
 using AnimalCafe.UI.Feedback;
@@ -172,7 +173,8 @@ namespace AnimalCafe.EditorTools.Phase8
             // resources and package imports are not editable project asset files.
             var dirtyAssets = Resources.FindObjectsOfTypeAll<UnityEngine.Object>()
                 .Where(asset => asset != null && !(asset is SceneAsset) && EditorUtility.IsPersistent(asset)
-                    && EditorUtility.IsDirty(asset))
+                    && EditorUtility.IsDirty(asset)
+                    && !ProjectAssetEditSafety.IsGeneratedDynamicFontAtlas(asset))
                 .Select(AssetDatabase.GetAssetPath)
                 .Where(path => !string.IsNullOrEmpty(path)
                     && path.StartsWith("Assets/", StringComparison.Ordinal) && File.Exists(path))

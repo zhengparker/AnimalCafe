@@ -35,18 +35,18 @@ namespace AnimalCafe.UI.P8R
             if (measurementLabel != null)
             {
                 measurementLabel.font = appearance.Font;
-                measurementLabel.fontSize = metrics.Units(floor ? 12 : 14);
+                measurementLabel.fontSize = metrics.Units(12);
                 measurementLabel.fontStyle = FontStyles.Bold;
             }
             for (var i = 0; i < actions.Length; i++)
             {
-                // Floor's final visible label is Apply, not the longer generic Confirm.
-                // 按实际显示文案测量，避免在 Apply 左右预留看不见的空白。
-                var copy = appearance.Text("action." + (floor && actions[i] == "confirm" ? "apply" : actions[i]));
+                // Both surface modes display Apply, never the transient generic Confirm copy.
+                // 两种表面模式都按最终 Apply 文案测量，避免预留看不见的 Confirm 空白。
+                var copy = appearance.Text("action." + (actions[i] == "confirm" ? "apply" : actions[i]));
                 var textWidth = measurementLabel != null ? measurementLabel.GetPreferredValues(copy).x : metrics.Units(copy.Length * 9);
-                // Floor range: 20 icon + 4 gap + 6 padding per side. Wall layout is unchanged.
-                // 图文按实际紧凑尺寸测量；墙面按钮沿用原布局。
-                var padding = floor ? (i < 2 ? 36 : 12) : 24;
+                // Floor range: 20 icon + 4 gap + 6 padding per side. Every surface action uses 6 per side.
+                // Floor范围保留图文宽度；Floor/Wall操作按钮统一使用每侧6单位留白。
+                var padding = floor && i < 2 ? 36 : 12;
                 result.Widths[i] = Mathf.Max(metrics.Units(48), textWidth + metrics.Units(padding));
             }
             if (measurementLabel != null)

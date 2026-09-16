@@ -1452,6 +1452,74 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [Test]
+        public void Controller_WallMountedTargetLossKeepsLastWallOcclusionFadeUntilCancel()
+        {
+            using var fixture = new EnterControllerFixture();
+            var blocker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var fadeObject = new GameObject("TargetLossFadeView");
+            var sourceMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            var fadeTemplate = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            try
+            {
+                var camera = fixture.CameraController.GetComponent<UnityEngine.Camera>();
+                camera.transform.position = new Vector3(0f, 1f, -10f);
+                camera.transform.rotation = Quaternion.identity;
+
+                blocker.transform.position = new Vector3(0f, 1f, -5f);
+                blocker.transform.localScale = new Vector3(8f, 2f, .5f);
+                var blockerRenderer = blocker.GetComponent<Renderer>();
+                blockerRenderer.sharedMaterial = sourceMaterial;
+
+                var fadeView = fadeObject.AddComponent<WallOcclusionFadeView>();
+                fadeView.Configure(
+                    camera,
+                    fixture.LeftWall.GetComponent<Renderer>(),
+                    0.35f,
+                    fadeTemplate);
+                Set(fixture.Controller, "wallOcclusionFadeView", fadeView);
+
+                fixture.Controller.EnterDecorationMode();
+                Assert.That(fixture.Controller.TryChangeMode(DecorationModeKind.WallDecor), Is.True);
+                Assert.That(fixture.Controller.TryBeginWallMountedPreview(
+                    "decor.clock", "wall.back-left", new WallSlotPosition(0, 0)), Is.True);
+                Assert.That(blockerRenderer.sharedMaterial, Is.Not.SameAs(sourceMaterial),
+                    "The real blocker must be faded before target loss exercises the regression.");
+                var fadedMaterial = blockerRenderer.sharedMaterial;
+                var ghostPosition = fixture.Projection.CurrentGhost.transform.position;
+                var ghostRotation = fixture.Projection.CurrentGhost.transform.rotation;
+
+                Assert.That(fixture.Controller.TryHandleSceneDrag(default), Is.False);
+
+                Assert.That(fixture.Controller.ActiveWallMountedPreview.IsValid, Is.False);
+                Assert.That(fixture.Controller.ActiveWallMountedPreview.FailureReason,
+                    Is.EqualTo(WallPlacementFailureReason.CrossCorner));
+                Assert.That(fixture.Controller.TryConfirmPhase7Preview(), Is.False);
+                Assert.That(Vector3.Distance(
+                    fixture.Projection.CurrentGhost.transform.position,
+                    ghostPosition), Is.LessThan(.0001f),
+                    "Losing the logical target must keep the ghost on its last displayed wall Slot.");
+                Assert.That(Quaternion.Angle(
+                    fixture.Projection.CurrentGhost.transform.rotation,
+                    ghostRotation), Is.LessThan(.01f));
+                Assert.That(blockerRenderer.sharedMaterial, Is.SameAs(fadedMaterial),
+                    "The last displayed wall must keep its occlusion fade while the preview is invalid.");
+
+                fixture.Controller.CancelActivePhase7Preview();
+
+                Assert.That(fixture.Controller.ActiveWallMountedPreview, Is.Null);
+                Assert.That(blockerRenderer.sharedMaterial, Is.SameAs(sourceMaterial),
+                    "Cancel is terminal and must restore the blocker's original Material.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(fadeObject);
+                UnityEngine.Object.DestroyImmediate(blocker);
+                UnityEngine.Object.DestroyImmediate(sourceMaterial);
+                UnityEngine.Object.DestroyImmediate(fadeTemplate);
+            }
+        }
+
+        [Test]
         public void Controller_ReenterResetsControllerTabsAndFloorRangeVisualsToDefaults()
         {
             using var fixture = new EnterControllerFixture();

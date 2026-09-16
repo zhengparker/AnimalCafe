@@ -172,6 +172,7 @@ namespace AnimalCafe.UI.Decoration
             }
             finally { refreshingMobileLayout = false; }
         }
+
         private void OnEnable()
         {
             AnimalCafe.UI.P8R.P8RMobileMetrics.Changed += RefreshMobilePresentation;
@@ -199,6 +200,12 @@ namespace AnimalCafe.UI.Decoration
             if (transform.parent != host)
             {
                 transform.SetParent(host, false);
+            }
+
+            var safeArea = GetComponent<AnimalCafe.UI.Components.SafeAreaContainer>();
+            if (safeArea != null)
+            {
+                safeArea.ParentOwnsSafeArea = true;
             }
 
             if (transform is RectTransform rect)
@@ -493,7 +500,7 @@ namespace AnimalCafe.UI.Decoration
                 rect.anchoredPosition = layout.Centers[slot];
                 rect.sizeDelta = new Vector2(layout.Widths[slot], layout.RowHeight);
                 var label = FindPrimaryLabel(button);
-                if (label != null) { label.fontSize = metrics.Units(14); label.color = AnimalCafe.UI.P8R.P8RAppearance.Cocoa; }
+                if (label != null) { label.fontSize = metrics.Units(12); label.color = AnimalCafe.UI.P8R.P8RAppearance.Cocoa; }
                 if (isFloor && layout.CompactUtilityIcons && i < 3)
                 {
                     var action = i == 0 ? "undo" : i == 1 ? "rotate" : "apply_all";
@@ -501,8 +508,8 @@ namespace AnimalCafe.UI.Decoration
                     appearance.Button(button, action, iconOnly: true);
                     AnimalCafe.UI.P8R.P8RButtonLayout.IconButton(button);
                 }
-                if (isFloor)
-                    AnimalCafe.UI.P8R.P8RButtonLayout.SurfaceButton(button, layout.CompactUtilityIcons && i < 3);
+                AnimalCafe.UI.P8R.P8RButtonLayout.SurfaceButton(
+                    button, isFloor && layout.CompactUtilityIcons && i < 3);
             }
         }
 
@@ -642,16 +649,17 @@ namespace AnimalCafe.UI.Decoration
             if (mode == DecorationModeKind.Furniture && rotateButton != null && rotateButton.gameObject.activeSelf)
                 ordered.Add(rotateButton);
             if (confirmButton != null && confirmButton.gameObject.activeSelf) ordered.Add(confirmButton);
-            // Smaller faces move inward while each separate 48-unit touch root stays fixed.
-            // 只收紧可见外观；48-unit点击区保留原位置，不互相覆盖。
+            // Owner-approved floating tools use 44x48 touch roots; surface footers stay unchanged.
+            // 仅浮动操作栏缩窄横向点击区，保留48高度；Floor/Wall footer不变。
             var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
-            var size = metrics.Units(48);
+            var width = metrics.Units(44);
+            var height = metrics.Units(48);
             // Subpixel separation keeps touching roots disjoint after Canvas coordinate conversion.
             // 只保留1/64单位的浮点边界保护，不增加可见的大间距。
             var edgeGuard = metrics.Units(1f / 64f);
-            // Keep a subpixel inset at the outermost faces in the four-action group.
-            // 四按钮最外侧底板也保留微小内边距，避免坐标换算后越出点击区。
-            var inwardStep = metrics.Units(6f - 1f / 64f);
+            // 30-unit faces have a ~9.4 gap; the four-action outer faces retain a 1/16 inset.
+            // 可见底板仍为30，间距约9.4；四按钮最外侧仍完整落在自己的点击区内。
+            var inwardStep = metrics.Units(4.625f);
             var horizontal = panel.GetComponent<HorizontalLayoutGroup>();
             if (horizontal != null)
             {
@@ -664,14 +672,14 @@ namespace AnimalCafe.UI.Decoration
             {
                 var button = ordered[i];
                 SetActionSibling(button, i);
-                ((RectTransform)button.transform).sizeDelta = Vector2.one * size;
+                ((RectTransform)button.transform).sizeDelta = new Vector2(width, height);
                 var faceOffset = ((ordered.Count - 1) * .5f - i) * inwardStep;
                 AnimalCafe.UI.P8R.P8RButtonLayout.ActionFace(button, true, faceOffset);
                 SetTooltipEnabled(button, false);
             }
             panel.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal,
-                ordered.Count * size + Mathf.Max(0, ordered.Count - 1) * edgeGuard);
-            panel.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, size);
+                ordered.Count * width + Mathf.Max(0, ordered.Count - 1) * edgeGuard);
+            panel.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
         }
 
         private void RefreshP8RButtons()
@@ -1046,6 +1054,7 @@ namespace AnimalCafe.UI.Decoration
                 feedbackLabel.text = text;
             }
 
+            ApplyP8RFeedbackArtwork(feedback);
             feedbackStateShape?.SetActive(feedback != PlacementFeedbackKey.None);
             if (feedbackRoot == null || feedbackCanvasGroup == null)
             {
@@ -1086,6 +1095,7 @@ namespace AnimalCafe.UI.Decoration
             {
                 feedbackLabel.text = text;
             }
+            ApplyP8RFeedbackArtwork(feedback);
             feedbackStateShape?.SetActive(feedback != PlacementFeedbackKey.None);
             if (feedbackRoot == null || feedbackCanvasGroup == null)
             {
@@ -1105,6 +1115,24 @@ namespace AnimalCafe.UI.Decoration
             feedbackCanvasGroup.blocksRaycasts = false;
             feedbackCanvasGroup.interactable = false;
             RefreshInstructionLayout();
+        }
+
+        private void ApplyP8RFeedbackArtwork(PlacementFeedbackKey feedback)
+        {
+            if (appearance == null || feedback == PlacementFeedbackKey.None
+                || feedbackStateShape == null
+                || feedbackStateShape.GetComponent<Image>() is not { } stateImage)
+            {
+                return;
+            }
+
+            var state = feedback == PlacementFeedbackKey.SelectWallTarget
+                || feedback == PlacementFeedbackKey.SelectFloorGridTarget
+                ? "info"
+                : feedback == PlacementFeedbackKey.Blocked ? "warning" : "error";
+            appearance.Paint(stateImage, "status_" + state, false);
+            AnimalCafe.UI.P8R.P8RButtonLayout.StatusIcon(stateImage);
+            stateImage.enabled = true;
         }
 
         private IEnumerator ShowFeedbackToast()

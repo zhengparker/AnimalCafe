@@ -65,21 +65,103 @@ namespace AnimalCafe.UI.P8R
 
         public string ReadinessSummary(LayoutReadinessReport report)
         {
+            var failures = DistinctReadinessFailures(report);
             var severity = report.CanOpenForBusiness ? LayoutReadinessSeverity.Warning : LayoutReadinessSeverity.Blocking;
-            var primary = report.Failures.FirstOrDefault(f => f.Severity == severity) ?? report.Failures.FirstOrDefault();
-            return Text(!report.CanOpenForBusiness ? "readiness.blocked" : primary == null ? "readiness.ready" : "readiness.warning")
-                + (primary == null ? string.Empty : "\n" + Text("readiness." + primary.Code));
+            var count = failures.Count(failure => failure.Severity == severity);
+            if (report.CanOpenForBusiness && count == 0) return Text("readiness.summary.ready");
+            var key = report.CanOpenForBusiness ? "readiness.summary.warning" : "readiness.summary.blocked";
+            return Text(key + (count == 1 ? "_one" : "_many")).Replace("{count}", count.ToString());
         }
 
-        public string ReadinessDetails(LayoutReadinessReport report)
+        public string ReadinessDetails(LayoutReadinessReport report, bool richText = false)
         {
-            if (report.Failures.Count == 0) return string.Empty;
-            return string.Join("\n", report.Failures.Select(f =>
+            var entries = new List<string>();
+            var hasSuggestionsHeading = false;
+            foreach (var failure in DistinctReadinessFailures(report))
+            {
+                var sectionHeading = string.Empty;
+                if (failure.Severity == LayoutReadinessSeverity.Warning && !hasSuggestionsHeading)
+                {
+                    sectionHeading = FormatReadinessText(Text("readiness.suggestions"), richText, true) + "\n";
+                    hasSuggestionsHeading = true;
+                }
+
+                var subject = ReadinessSubject(report, failure);
+                var actionKey = "readiness.action." + failure.Code;
+                if (failure.Code == LayoutReadinessFailureCode.AnchorBlocked && failure.Role.HasValue)
+                    actionKey += "." + failure.Role.Value;
+                entries.Add(sectionHeading + FormatReadinessText(subject, richText, true) + "\n"
+                    + FormatReadinessText(Text(actionKey), richText, false));
+            }
+            return string.Join("\n\n", entries);
+        }
+
+        public string ReadinessDiagnosticMessage(LayoutReadinessReport report)
+        {
+            if (report == null) throw new ArgumentNullException(nameof(report));
+            var severity = report.CanOpenForBusiness ? LayoutReadinessSeverity.Warning : LayoutReadinessSeverity.Blocking;
+            var primary = report.Failures.FirstOrDefault(f => f.Severity == severity) ?? report.Failures.FirstOrDefault();
+            var summary = Text(!report.CanOpenForBusiness ? "readiness.blocked" : primary == null ? "readiness.ready" : "readiness.warning")
+                + (primary == null ? string.Empty : "\n" + Text("readiness." + primary.Code));
+            if (report.Failures.Count == 0) return summary;
+            // Diagnostics retain every original record and raw cause, without UI deduplication.
+            // 诊断保留全部原始记录、坐标和原因；精简仅用于玩家看到的文案。
+            return summary + "\n" + string.Join("\n", report.Failures.Select(f =>
                 Text(f.Severity == LayoutReadinessSeverity.Blocking ? "readiness.blocking" : "readiness.warning_label") + ": "
                 + Text(f.FunctionType.HasValue ? "readiness." + f.FunctionType.Value : "readiness.layout")
                 + (f.Role.HasValue ? " / " + Text("readiness." + f.Role.Value) : string.Empty)
                 + (f.Position.HasValue ? " (" + f.Position.Value.X + ", " + f.Position.Value.Y + ")" : string.Empty)
-                + ": " + Text("readiness." + f.Code)));
+                + ": " + Text("readiness." + f.Code)
+                + (string.IsNullOrEmpty(f.Message) ? string.Empty : "\n" + f.Message)));
+        }
+
+        private static List<LayoutReadinessFailure> DistinctReadinessFailures(LayoutReadinessReport report)
+        {
+            if (report == null) throw new ArgumentNullException(nameof(report));
+            // Match the complete issue identity; equal wording can describe different people or places.
+            // 只去掉完全重复的记录，不因为文案相同而合并不同物件、角色或位置的问题。
+            return report.Failures.GroupBy(f => new
+                {
+                    f.Severity, f.Code, f.FunctionType, f.InstanceId, f.SupportFurnitureInstanceId,
+                    f.SurfaceSlotId, f.Role, f.Position, f.Message
+                }).Select(group => group.First())
+                .OrderByDescending(f => f.Severity).ThenBy(f => f.FunctionType)
+                .ThenBy(f => f.InstanceId, StringComparer.Ordinal).ThenBy(f => f.Role)
+                .ThenBy(f => f.Position?.X).ThenBy(f => f.Position?.Y).ThenBy(f => f.Code)
+                .ThenBy(f => f.SupportFurnitureInstanceId, StringComparer.Ordinal)
+                .ThenBy(f => f.SurfaceSlotId, StringComparer.Ordinal)
+                .ThenBy(f => f.Message, StringComparer.Ordinal).ToList();
+        }
+
+        private string ReadinessSubject(LayoutReadinessReport report, LayoutReadinessFailure failure)
+        {
+            var subject = Text(failure.FunctionType.HasValue ? "readiness." + failure.FunctionType.Value
+                : string.IsNullOrEmpty(failure.InstanceId) ? "readiness.layout" : "readiness.equipment");
+            if (!string.IsNullOrEmpty(failure.InstanceId))
+            {
+                // Include healthy instances so removing one warning does not renumber the others.
+                // 编号包括同类正常物件，修好一条问题后不会给剩余物件重新编号。
+                var instanceIds = report.Stations.Where(station => station.FunctionType == failure.FunctionType)
+                    .Select(station => station.InstanceId)
+                    .Concat(report.Failures.Where(item => item.FunctionType == failure.FunctionType)
+                        .Select(item => item.InstanceId))
+                    .Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal)
+                    .OrderBy(id => id, StringComparer.Ordinal).ToArray();
+                if (instanceIds.Length > 1)
+                    subject = Text("readiness.numbered_subject").Replace("{item}", subject)
+                        .Replace("{number}", (Array.IndexOf(instanceIds, failure.InstanceId) + 1).ToString());
+            }
+            return failure.Role.HasValue
+                ? Text("readiness.subject_role").Replace("{item}", subject)
+                    .Replace("{role}", Text("readiness.side." + failure.Role.Value))
+                : subject;
+        }
+
+        private static string FormatReadinessText(string value, bool richText, bool emphasized)
+        {
+            if (!richText) return value;
+            var escaped = value.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
+            return emphasized ? "<b>" + escaped + "</b>" : escaped;
         }
 
         public Sprite Sprite(string key)

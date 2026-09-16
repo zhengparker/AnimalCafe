@@ -26,6 +26,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         private float timeScaleBefore;
         private Vector2Int screenBefore;
         private Rect safeAreaBefore;
+        private System.IDisposable consistencyScreenLease;
+        private Vector2? logicalViewportBefore;
 
         [SetUp]
         public void RecordRuntimeBoundary()
@@ -34,11 +36,16 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             timeScaleBefore = Time.timeScale;
             screenBefore = new Vector2Int(Screen.width, Screen.height);
             safeAreaBefore = Screen.safeArea;
+            logicalViewportBefore = P8RMobileMetrics.EditorLogicalViewportOverride;
         }
 
         [UnityTearDown]
         public IEnumerator ReleaseOwnedSceneBeforeAnyInputSystemReset()
         {
+            // A failing nested iterator may not unwind its parent before UnityTearDown.
+            // 子协程断言失败时，也必须先归还本用例的真实屏幕尺寸。
+            consistencyScreenLease?.Dispose();
+            consistencyScreenLease = null;
             Assert.That(ownedScene.IsValid() && ownedScene.isLoaded, Is.True, "The actual loaded Scene must remain owned until fixture cleanup.");
             if (ownedScene.IsValid() && ownedScene.isLoaded)
             {
@@ -53,6 +60,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Phase8SceneInputTestCleanup.DisposeReleasedAssets(inputAssets);
             }
             Time.timeScale = timeScaleBefore;
+            P8RMobileMetrics.EditorLogicalViewportOverride = logicalViewportBefore;
             yield return null; // Let native size restore complete before the next fixture captures Screen.
             Assert.That(new Vector2Int(Screen.width, Screen.height), Is.EqualTo(screenBefore));
             Assert.That(Screen.safeArea, Is.EqualTo(safeAreaBefore));
@@ -131,7 +139,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     var face = Box(button.image);
                     var scale = icons[i].GetComponentInParent<Canvas>().rootCanvas.scaleFactor;
                     Assert.That(Mathf.Max(ink.width, ink.height) / P8RMobileMetrics.For(button).PixelsPerLogicalUnit,
-                        Is.InRange(19.8f, 20.2f), actions[i] + " approved compact visible art in platform logical units");
+                        Is.EqualTo(actions[i] == "floor" ? 23f : 20f).Within(.2f),
+                        actions[i] + " approved compact visible art, including Floor's proportional optical compensation");
                     Assert.That(ink.center.x, Is.EqualTo(face.center.x).Within(.5f), actions[i]);
                     Assert.That(ink.center.y, Is.EqualTo(face.center.y).Within(.5f), actions[i]);
                     Assert.That(face.Contains(ink.min) && face.Contains(ink.max), Is.True, actions[i]);
@@ -801,6 +810,16 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     yield return CaptureNative("27-INJECTED-expanded-readiness-floor-preview.png", boundaryFolder);
                     Assert.That(Find<ValidationMessageView>().IsDetailsExpanded, Is.True);
                     AssertCatalogueAvoidsChrome(catalogue);
+                    catalogue.VerticalScroll.verticalNormalizedPosition = .5f;
+                    yield return CaptureNative("30-INJECTED-floor-scroll-ranges.png", boundaryFolder);
+                    catalogue.VerticalScroll.verticalNormalizedPosition = 0f;
+                    yield return CaptureNative("31-INJECTED-floor-scroll-actions.png", boundaryFolder);
+                    Assert.That(controller.TryChangeMode(DecorationModeKind.Furniture), Is.True);
+                    SelectSixFeedbackItem("furniture.counter.module.01");
+                    catalogue.ShowCatalogue();
+                    yield return CaptureNative("32-INJECTED-furniture-preview-top.png", boundaryFolder);
+                    catalogue.VerticalScroll.verticalNormalizedPosition = 0f;
+                    yield return CaptureNative("33-INJECTED-furniture-preview-pickup.png", boundaryFolder);
                 }
             }
             }
@@ -998,14 +1017,25 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     Field<Button>(Find<DecorationFloorRangeView>(), "wholeRoomButton").onClick.Invoke();
                     SelectSixFeedbackItem("floor.warm-wood"); catalogue.ShowCatalogue();
                     yield return new WaitForSecondsRealtime(.3f);
-                    Assert.That(footer.anchorMin.x, Is.EqualTo(.5f), "Short landscape previews retain the compact side footer.");
-                    Assert.That(footer.anchorMax.x, Is.EqualTo(.5f));
+                    if (!footer.IsChildOf(catalogue.VerticalScroll.content))
+                    {
+                        Assert.That(footer.anchorMin.x, Is.EqualTo(.5f), "Keep the side footer where its full height fits.");
+                        Assert.That(footer.anchorMax.x, Is.EqualTo(.5f));
+                    }
                     foreach (var field in new[] { "undoLastButton", "rotateButton", "applyAllButton" })
                     {
                         var utility = Field<Button>(Find<DecorationActionBarView>(), field);
                         var icon = utility.transform.Find("Icon")?.GetComponent<Image>();
                         Assert.That(icon, Is.Not.Null, field + " icon-only action must not become an empty button.");
-                        Assert.That(icon.gameObject.activeInHierarchy && icon.enabled && icon.sprite != null, Is.True, field);
+                        var label = utility.transform.Find("Label").GetComponent<TMP_Text>();
+                        if (label.gameObject.activeInHierarchy)
+                        {
+                            label.ForceMeshUpdate(true, true);
+                            Assert.That(label.text, Is.Not.Empty, field + " must retain useful copy when there is room.");
+                            Assert.That(label.isTextTruncated, Is.False, field);
+                            Assert.That(label.GetPreferredValues(label.text).x, Is.LessThanOrEqualTo(label.rectTransform.rect.width + 1f));
+                        }
+                        else Assert.That(icon.gameObject.activeInHierarchy && icon.enabled && icon.sprite != null, Is.True, field);
                         Assert.That(icon.raycastTarget, Is.False);
                         Assert.That(icon.color.a, Is.GreaterThan(0f));
                         Assert.That(utility.transform.Cast<Transform>().Count(child => child.name == "Icon"), Is.EqualTo(1));
@@ -1019,9 +1049,11 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     TestContext.WriteLine("Compact expanded readiness " + pixels + ": readiness=" + Box(readiness)
                         + "; panel=" + Box(Field<GameObject>(catalogue, "expandedRoot").transform));
                     AssertCatalogueAvoidsChrome(catalogue);
-                    Assert.That(Box(footer).Overlaps(viewport), Is.False);
-                    foreach (var button in footer.GetComponentsInChildren<Button>())
+                    if (footer.IsChildOf(catalogue.VerticalScroll.content))
+                        yield return AssertScrolledFooterReachable(catalogue, footer, 2f);
+                    else foreach (var button in footer.GetComponentsInChildren<Button>())
                     {
+                        Assert.That(Box(footer).Overlaps(viewport), Is.False);
                         var hit = Box(button);
                         Assert.That(hit.Overlaps(viewport), Is.False);
                         Assert.That(hit.width / 2f, Is.GreaterThanOrEqualTo(47.99f));
@@ -1034,6 +1066,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     var utilityButtons = new[] { "undoLastButton", "applyAllButton" }
                         .Select(field => Field<Button>(Find<DecorationActionBarView>(), field)).ToArray();
                     var originalIcons = utilityButtons.Select(button => button.transform.Find("Icon")).ToArray();
+                    var originalIconVisibility = originalIcons.Select(icon => icon.gameObject.activeSelf).ToArray();
                     // More logical width restores the original text-only utility layout.
                     // 宽窄来回切换必须复用Icon，不能挤坏原先的文字按钮。
                     P8RMobileMetrics.EditorLogicalViewportOverride = pixels;
@@ -1050,12 +1083,93 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     for (var i = 0; i < utilityButtons.Length; i++)
                     {
                         Assert.That(utilityButtons[i].transform.Find("Icon"), Is.SameAs(originalIcons[i]));
-                        Assert.That(originalIcons[i].gameObject.activeInHierarchy, Is.True);
+                        Assert.That(originalIcons[i].gameObject.activeSelf, Is.EqualTo(originalIconVisibility[i]),
+                            "Resize must restore the previous text/icon choice for the same available width.");
                         Assert.That(utilityButtons[i].transform.Cast<Transform>().Count(child => child.name == "Icon"), Is.EqualTo(1));
                     }
                 }
             }
             finally { P8RMobileMetrics.EditorLogicalViewportOverride = previous; }
+        }
+
+        [UnityTest]
+        public IEnumerator ShortSafeAreaChangedDuringPreview_KeepsToolsWithinScrollViewport()
+        {
+            var previous = P8RMobileMetrics.EditorLogicalViewportOverride;
+            var batchScreen = Application.isBatchMode ? new NativeScreenSize() : null;
+            var gameView = Application.isBatchMode ? null : new RealGameViewSize();
+            consistencyScreenLease = (System.IDisposable)batchScreen ?? gameView;
+            try
+            {
+                var pixels = new Vector2(1138, 640);
+                if (batchScreen != null) batchScreen.Resize(pixels); else gameView.Resize(pixels);
+                P8RMobileMetrics.EditorLogicalViewportOverride = pixels * .5f;
+                yield return new WaitForSecondsRealtime(.3f); yield return Load();
+                Assert.That(new Vector2(Screen.width, Screen.height), Is.EqualTo(pixels));
+                var controller = Find<DecorationModeController>(); controller.EnterDecorationMode();
+                Assert.That(controller.TryChangeMode(DecorationModeKind.Floor), Is.True);
+                Field<Button>(Find<DecorationFloorRangeView>(), "wholeRoomButton").onClick.Invoke();
+                SelectSixFeedbackItem("floor.warm-wood");
+                var catalogue = Find<DecorationCatalogueView>(); catalogue.ShowCatalogue();
+                // Exercise a late safe-area change with an already active preview, as in native capture.
+                // 已有Preview后才变安全区，不能只测试载入时就固定好的宽度。
+                foreach (var safe in Object.FindObjectsByType<AnimalCafe.UI.Components.SafeAreaContainer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                {
+                    safe.AutoApplyRuntimeSafeArea = false;
+                    safe.ApplySafeArea(new Rect(88, 40, 1026, 576), pixels);
+                }
+                Field<Button>(Find<ValidationMessageView>(), "disclosureButton").onClick.Invoke();
+                yield return new WaitForSecondsRealtime(.3f); Canvas.ForceUpdateCanvases();
+                Assert.That(catalogue.SurfaceFooterHost.IsChildOf(catalogue.VerticalScroll.content), Is.True);
+                var bar = Find<DecorationActionBarView>();
+                var actionLabel = Field<Button>(bar, "cancelButton").transform.Find("Label").GetComponent<TMP_Text>();
+                var fresh = P8RSurfaceFooterLayout.Measure(bar, catalogue.SurfaceFooterHost.rect.width,
+                    Field<P8RAppearance>(bar, "appearance"), actionLabel, true);
+                TestContext.WriteLine($"Late footer host={Box(catalogue.SurfaceFooterHost)}, localWidth={catalogue.SurfaceFooterHost.rect.width}, freshHeight={fresh.Height}, compact={fresh.CompactUtilityIcons}, bar={Box(bar)}, panel={Box(Field<RectTransform>(bar, "presentationRoot"))}");
+                var debugFields = new[] { "undoLastButton", "rotateButton", "applyAllButton", "cancelButton", "confirmButton" };
+                for (var index = 0; index < debugFields.Length; index++)
+                {
+                    var action = Field<Button>(bar, debugFields[index]);
+                    TestContext.WriteLine($"{debugFields[index]} actualLocal={((RectTransform)action.transform).anchoredPosition} expectedLocal={fresh.Centers[index + 2]} screen={Box(action)}");
+                }
+                yield return AssertScrolledFooterReachable(catalogue, catalogue.SurfaceFooterHost, 2f);
+            }
+            finally
+            {
+                P8RMobileMetrics.EditorLogicalViewportOverride = previous;
+                consistencyScreenLease?.Dispose();
+                consistencyScreenLease = null;
+            }
+        }
+
+        private static IEnumerator AssertScrolledFooterReachable(DecorationCatalogueView catalogue, RectTransform footer, float density)
+        {
+            var buttons = footer.GetComponentsInChildren<Button>();
+            var reached = new System.Collections.Generic.HashSet<Button>();
+            var originalPosition = catalogue.VerticalScroll.verticalNormalizedPosition;
+            for (var step = 0; step <= 80; step++)
+            {
+                catalogue.VerticalScroll.verticalNormalizedPosition = 1f - step / 80f;
+                Canvas.ForceUpdateCanvases(); yield return null;
+                var viewport = Box(catalogue.VerticalScroll.viewport);
+                foreach (var button in buttons)
+                {
+                    var bounds = Box(button);
+                    Assert.That(bounds.width / density, Is.GreaterThanOrEqualTo(47.99f));
+                    Assert.That(bounds.height / density, Is.GreaterThanOrEqualTo(47.99f));
+                    var visible = Rect.MinMaxRect(Mathf.Max(bounds.xMin, viewport.xMin), Mathf.Max(bounds.yMin, viewport.yMin),
+                        Mathf.Min(bounds.xMax, viewport.xMax), Mathf.Min(bounds.yMax, viewport.yMax));
+                    if (visible.width / density < 47.99f || visible.height / density < 47.99f) continue;
+                    var hits = new System.Collections.Generic.List<RaycastResult>();
+                    EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = visible.center }, hits);
+                    Assert.That(hits, Is.Not.Empty);
+                    Assert.That(hits[0].gameObject.GetComponentInParent<Button>(), Is.SameAs(button));
+                    reached.Add(button);
+                }
+            }
+            Assert.That(reached, Is.EquivalentTo(buttons), "A clipped footer must expose every full touch target while scrolling.");
+            catalogue.VerticalScroll.verticalNormalizedPosition = originalPosition;
+            Canvas.ForceUpdateCanvases(); yield return null;
         }
 
         private static void AssertCatalogueAvoidsChrome(DecorationCatalogueView catalogue)
@@ -1459,12 +1573,13 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 {
                     var button = buttons[i]; var hit = Box(button); var face = Box(button.image);
                     Assert.That(face.width / density, Is.EqualTo(30).Within(.1f));
-                    // World-corner conversion can round 48 to 47.9999886; keep a 0.01-unit tolerance.
-                    // 只容忍坐标换算的微小浮点误差，实际点击与不重叠断言仍保留。
-                    Assert.That(hit.width / density, Is.GreaterThanOrEqualTo(47.99f));
+                    // Owner-approved floating width only; other controls retain their 48-unit contract.
+                    // 仅浮动操作栏采用44宽度，保留高度、真实点击及不重叠检查。
+                    Assert.That(hit.width / density, Is.EqualTo(44f).Within(.01f));
+                    Assert.That(hit.height / density, Is.GreaterThanOrEqualTo(47.99f));
                     if (i > 0)
                     {
-                        Assert.That((face.xMin - Box(buttons[i - 1].image).xMax) / density, Is.EqualTo(12f).Within(.1f));
+                        Assert.That((face.xMin - Box(buttons[i - 1].image).xMax) / density, Is.EqualTo(9.4f).Within(.1f));
                         Assert.That(hit.Overlaps(Box(buttons[i - 1])), Is.False);
                     }
                     var data = new PointerEventData(EventSystem.current) { position = hit.center, button = PointerEventData.InputButton.Left };

@@ -2236,8 +2236,9 @@ namespace AnimalCafe.Tests.PlayMode
         [UnityTest]
         public IEnumerator MainCafeRealTouch_ReleaseOutsideOrCancelFlushesDeferredActionWithoutFreshInput()
         {
-            // This short landscape profile makes the sheet boundary clamp the action position.
-            // 短横屏产生真实待处理位移；纵屏的首选点可能始终合法，正确 flush 也无需移动。
+            // Keep real Touch hold/terminal delivery, but explicitly stimulate a changed projection:
+            // a smaller sheet can leave the default action point legal before and after collapse.
+            // 保留真实Touch；用生产镜头API制造确定的几何变化，不假设收起目录一定要移动按钮。
             screenOverride = new EditorSceneLoading.P8RReferenceLayoutTests.NativeScreenSize();
             screenOverride.Resize(new Vector2(640, 480));
             foreach (var canceled in new[] { false, true })
@@ -2255,8 +2256,19 @@ namespace AnimalCafe.Tests.PlayMode
                         yield return BeginUiContact(touch, 913, point);
                         yield return new WaitForSecondsRealtime(.22f);
                         var held = ButtonCenter(rotate);
+                        Assert.That(Vector2.Distance(held, point), Is.LessThan(.5f),
+                            "The real held action must stay under its original finger through sheet completion.");
                         Assert.That(ReadPrivate<bool>(context.ActionBar, "hasDeferredPresentation"), Is.True,
                             "Sheet completion must leave a real deferred presentation while the action is held.");
+                        // This is a test geometry stimulus, not a pointer route: UI Touch still owns the press.
+                        // 直接刺激真实镜头投影，不伪造deferred状态；UI触点仍由原EventSystem持有。
+                        var cameraBefore = context.Camera.transform.position;
+                        ReadPrivate<DecorationCameraDriver>(context.Controller, "cameraDriver").ApplyScenePan(new Vector2(60f, 0f));
+                        Assert.That(Vector3.Distance(context.Camera.transform.position, cameraBefore), Is.GreaterThan(.01f));
+                        typeof(DecorationModeController).GetMethod("UpdateActionPresentation", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(context.Controller, null);
+                        yield return null;
+                        Assert.That(Vector2.Distance(ButtonCenter(rotate), held), Is.LessThan(.5f),
+                            "A real changed projection must remain deferred while the Touch is held.");
                         var outside = point + Vector2.right * 120f;
                         yield return MoveContact(touch, 913, outside);
                         if (canceled) yield return Cancel(touch, 913, outside);
@@ -2266,7 +2278,11 @@ namespace AnimalCafe.Tests.PlayMode
                         // Read-only presentation oracle: an extra refresh must have no work left after terminal input.
                         typeof(DecorationModeController).GetMethod("UpdateActionPresentation", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(context.Controller, null);
                         Assert.That(Vector2.Distance(ButtonCenter(rotate), idle), Is.LessThan(.5f), "Release/cancel must flush the latest deferred layout before idle, without another pointer frame.");
-                        Assert.That(Vector2.Distance(held, idle), Is.GreaterThan(1f), "The fixture must exercise a real sheet-boundary displacement.");
+                        Assert.That(Vector2.Distance(held, idle), Is.GreaterThan(1f),
+                            "The fixture must exercise a real pending geometry displacement. "
+                            + $"held={held}, idle={idle}, "
+                            + $"preferred={ReadPrivate<Vector2>(context.ActionBar, "deferredPreferredPoint")}, "
+                            + $"safe={ReadPrivate<Rect>(context.ActionBar, "deferredSafeArea")}");
                         Assert.That(calls, Is.Zero); Assert.That(ActivePreview(context.Controller), Is.Not.Null);
                         AssertPointerBoundaryClean(ReadPrivate<UiPointerBoundary>(context.Controller, "pointerBoundary"));
                     }

@@ -35,10 +35,18 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     Is.GreaterThan(tabs.GetComponentsInChildren<Button>(true).Where(x => x != active).Max(x => ((RectTransform)x.transform).anchoredPosition.y)));
                 return;
             }
+            const System.Reflection.BindingFlags flags =
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var idleSprite = typeof(DecorationModeTabsView).GetField("categoryIdleSprite", flags)?.GetValue(tabs) as Sprite;
+            var selectedSprite = typeof(DecorationModeTabsView).GetField("categorySelectedSprite", flags)?.GetValue(tabs) as Sprite;
+            Assert.That(idleSprite, Is.Not.Null);
+            Assert.That(selectedSprite, Is.Not.Null);
+            Assert.That(idleSprite.name, Is.EqualTo("category_tab_idle"));
+            Assert.That(selectedSprite.name, Is.EqualTo("category_tab_selected"));
             foreach (var button in tabs.GetComponentsInChildren<Button>(true))
             {
                 Assert.That(button.transform.Find("SelectedUnderline").gameObject.activeSelf, Is.False);
-                Assert.That(button.image.sprite.name, Is.EqualTo(button == active ? "tab_selected" : "tab_idle"));
+                Assert.That(button.image.sprite, Is.SameAs(button == active ? selectedSprite : idleSprite));
                 Assert.That(((RectTransform)button.transform).anchoredPosition.y, Is.EqualTo(((RectTransform)active.transform).anchoredPosition.y));
             }
         }
@@ -493,10 +501,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var camera = Object.FindObjectsByType<UnityEngine.Camera>(
                     FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Single(item => item.CompareTag("MainCamera"));
-            var renderBounds = CombinedBounds(
-                representation.GetComponentsInChildren<Renderer>(true));
-            var screenPoint = camera.WorldToScreenPoint(renderBounds.center);
-            Assert.That(screenPoint.z, Is.GreaterThan(0f));
+            var screenPoint = FindUiFreeWallMountedScreenPoint(
+                camera, registry, representation, confirmed.InstanceId);
 
             var classify = typeof(DecorationModeController).GetMethod(
                 "ClassifyPrimaryBegan",
@@ -802,9 +808,25 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var viewport = catalogue.GetComponentInParent<Canvas>().rootCanvas.pixelRect;
             Assert.That(collapsedTabRect.yMin, Is.GreaterThanOrEqualTo(viewport.yMin));
             Assert.That(collapsedTabRect.yMax, Is.LessThanOrEqualTo(viewport.yMax));
-            Assert.That(collapsedTabRect.center.y, Is.LessThanOrEqualTo(viewport.height * .2f),
-                "Collapsed tabs must settle with the Bottom Sheet in the lower screen region instead of floating mid-screen.");
             var collapsedHandleRect = WorldRect(catalogue.CollapsedHandleRect);
+            if (AppearanceOf(tabs) == null)
+            {
+                Assert.That(collapsedTabRect.center.y, Is.LessThanOrEqualTo(viewport.height * .2f),
+                    "Legacy collapsed tabs must settle in the lower screen region.");
+            }
+            else
+            {
+                // Fixed logical targets occupy more than 20% on short landscape screens.
+                // 用已批准的贴底间距与触控高度检查收起栏，不把短横屏的固定尺寸当成布局漂移。
+                var density = P8RMobileMetrics.For(catalogue).PixelsPerLogicalUnit;
+                var safeBottom = Mathf.Max(viewport.yMin, Screen.safeArea.yMin);
+                Assert.That(collapsedHandleRect.height / density, Is.EqualTo(48f).Within(.1f));
+                Assert.That(collapsedTabRect.height / density, Is.EqualTo(48f).Within(.1f));
+                Assert.That((collapsedTabRect.yMin - collapsedHandleRect.yMax) / density,
+                    Is.EqualTo(8f).Within(.1f), "Tabs must stay attached directly above the expand handle.");
+                Assert.That((collapsedHandleRect.yMin - safeBottom) / density,
+                    Is.EqualTo(24f).Within(.1f), "Furniture's collapsed handle must retain its fixed safe-bottom inset.");
+            }
             Assert.That(catalogue.CollapsedHandleRect.gameObject.activeInHierarchy, Is.True);
             Assert.That(collapsedHandleRect.yMin, Is.GreaterThanOrEqualTo(viewport.yMin),
                 "The collapsed expand handle must remain visible after the sheet and tabs move down.");
@@ -886,10 +908,15 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     Canvas.ForceUpdateCanvases();
                     var tabButtons = tabs.GetComponentsInChildren<Button>(true);
                     Assert.That(tabButtons, Has.Length.EqualTo(4));
-                    Assert.That(tabButtons.All(button => button.gameObject.activeInHierarchy
-                        && button.interactable && button.image != null && button.image.raycastTarget), Is.True);
                     foreach (var tab in tabButtons)
                     {
+                        var hitRoot = tab.GetComponent<Image>();
+                        Assert.That(tab.gameObject.activeInHierarchy && tab.interactable
+                            && tab.image != null && hitRoot != null && hitRoot.raycastTarget, Is.True,
+                            $"viewport={viewport}, tab={tab.name}: the full-size root must own the tab raycast target.");
+                        if (tab.image != hitRoot)
+                            Assert.That(tab.image.raycastTarget, Is.False,
+                                $"viewport={viewport}, tab={tab.name}: the visual face must defer raycasts to the full-size hit root.");
                         var bounds = WorldRect((RectTransform)tab.transform);
                         Assert.That(viewport.Contains(bounds.min) && viewport.Contains(bounds.max), Is.True,
                             $"viewport={viewport}, tab={tab.name}, bounds={bounds}");
@@ -1006,8 +1033,17 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             }
             else Assert.That(backdrop.color.a, Is.InRange(.35f, .75f));
 
-            var card = modal.transform.Find("ModalCard")?.GetComponent<Image>();
+            var cardRect = typeof(DecorationExitModalView).GetField("modalCard",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?.GetValue(modal) as RectTransform;
+            var card = cardRect?.GetComponent<Image>();
             Assert.That(card, Is.Not.Null, "Continue and Discard must live on a separate warm Modal card.");
+            if (appearance != null)
+            {
+                Assert.That(cardRect.parent.GetComponent<P8RModalSafeAreaHost>(), Is.Not.Null,
+                    "The P8R card must remain inside its runtime Safe Area host.");
+                Assert.That(cardRect.parent.parent, Is.SameAs(modal.transform));
+            }
             Assert.That(card.sprite, Is.Not.Null);
             Assert.That(card.type, Is.EqualTo(Image.Type.Sliced));
             if (appearance != null)
@@ -1281,6 +1317,60 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Object.Destroy(target);
                 Object.Destroy(pixels);
             }
+        }
+
+        private static Vector2 FindUiFreeWallMountedScreenPoint(
+            UnityEngine.Camera camera, WallMountedSceneRegistry registry,
+            GameObject representation, string instanceId)
+        {
+            var colliders = representation.GetComponentsInChildren<Collider>(false);
+            Assert.That(colliders, Is.Not.Empty, "Confirmed decor must have real production Colliders immediately.");
+            Assert.That(EventSystem.current, Is.Not.Null);
+            var samples = new[] { .1f, .3f, .5f, .7f, .9f };
+            var uiHits = new List<RaycastResult>();
+            var sampled = 0;
+            var lastUi = "none";
+            var lastCollider = "none";
+            // Find an actually visible point without disabling UI or asking the classifier for the answer.
+            // 不隐藏 UI、不等待一帧、不手动同步物理；首次确认后的真实 Collider 必须已经可点。
+            foreach (var collider in colliders)
+            foreach (var x in samples)
+            foreach (var y in samples)
+            foreach (var z in samples)
+            {
+                sampled++;
+                var bounds = collider.bounds;
+                var world = new Vector3(Mathf.Lerp(bounds.min.x, bounds.max.x, x),
+                    Mathf.Lerp(bounds.min.y, bounds.max.y, y), Mathf.Lerp(bounds.min.z, bounds.max.z, z));
+                var projected = camera.WorldToScreenPoint(world);
+                var point = (Vector2)projected;
+                if (projected.z <= 0f || !camera.pixelRect.Contains(point)) continue;
+                uiHits.Clear();
+                EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current)
+                    { position = point }, uiHits);
+                var uiHit = uiHits.FirstOrDefault(result =>
+                    result.module is GraphicRaycaster raycaster && raycaster.isActiveAndEnabled
+                    && raycaster.gameObject.activeInHierarchy);
+                if (uiHit.gameObject != null)
+                {
+                    lastUi = uiHit.gameObject.name;
+                    continue;
+                }
+                var hits = Physics.RaycastAll(camera.ScreenPointToRay(point), Mathf.Infinity,
+                    ~0, QueryTriggerInteraction.Collide).OrderBy(hit => hit.distance);
+                foreach (var hit in hits)
+                {
+                    lastCollider = hit.collider.name;
+                    if (registry.TryGetInstanceId(hit.collider, out var hitId))
+                    {
+                        if (hitId == instanceId) return point;
+                        break;
+                    }
+                    if (hit.collider.GetComponentInParent<WallSurfaceAuthoring>() != null) break;
+                }
+            }
+            Assert.Fail($"No UI-free production Collider point for {instanceId}; samples={sampled}, UI={lastUi}, collider={lastCollider}.");
+            return default;
         }
 
         private static void AssertTop(Button button)

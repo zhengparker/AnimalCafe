@@ -21,7 +21,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
 {
     /// <summary>
     /// Real preview transitions must tighten the visible group without stealing adjacent taps.
-    /// 真实预览验证更小的外观与约12 logical间距，同时保持各自48×48触控范围。
+    /// 真实预览验证约9.4 logical间距及获批44×48触控范围，外观和图标尺寸不变。
     /// </summary>
     public sealed class P8RFloatingTightSpacingTests
     {
@@ -159,8 +159,9 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(buttons.Select(button => button.name), Is.EqualTo(expectedNames));
             // Hand-checked positions for each real count, with room for the 1/64 boundary guard.
             // 独立列出2/3/4按钮的期望位置，避免复用production公式掩盖计算错误。
-            var expectedOffsets = buttons.Length == 2 ? new[] { 3f, -3f }
-                : buttons.Length == 3 ? new[] { 6f, 0f, -6f } : new[] { 9f, 3f, -3f, -9f };
+            var expectedOffsets = buttons.Length == 2 ? new[] { 2.3125f, -2.3125f }
+                : buttons.Length == 3 ? new[] { 4.625f, 0f, -4.625f }
+                : new[] { 6.9375f, 2.3125f, -2.3125f, -6.9375f };
             for (var index = 0; index < buttons.Length; index++)
             {
                 var button = buttons[index];
@@ -170,7 +171,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Assert.That(face.width / density, Is.EqualTo(30f).Within(.08f), button.name + " smaller face");
                 Assert.That(face.height / density, Is.EqualTo(30f).Within(.08f), button.name);
                 Assert.That(Mathf.Max(ink.width, ink.height) / density, Is.EqualTo(18f).Within(.08f), button.name + " ink");
-                Assert.That(root.width / density, Is.GreaterThanOrEqualTo(47.99f), button.name + " touch width");
+                Assert.That(root.width / density, Is.EqualTo(44f).Within(.01f), button.name + " approved floating touch width");
                 Assert.That(root.height / density, Is.GreaterThanOrEqualTo(47.99f), button.name + " touch height");
                 Assert.That(face.xMin, Is.GreaterThanOrEqualTo(root.xMin - .01f * density), button.name + " face left");
                 Assert.That(face.xMax, Is.LessThanOrEqualTo(root.xMax + .01f * density), button.name + " face right");
@@ -181,7 +182,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     Is.EqualTo(expectedOffsets[index]).Within(.08f), button.name + " count-dependent inward offset");
                 if (index > 0)
                     Assert.That((face.xMin - Box(buttons[index - 1].image).xMax) / density,
-                        Is.EqualTo(12f).Within(.08f), "Visible gaps stay tight when action count changes.");
+                        Is.EqualTo(9.4f).Within(.08f), "Visible gaps stay tight when action count changes.");
                 for (var earlier = 0; earlier < index; earlier++)
                     Assert.That(root.Overlaps(Box(buttons[earlier])), Is.False, button.name + " touch roots must not overlap");
 

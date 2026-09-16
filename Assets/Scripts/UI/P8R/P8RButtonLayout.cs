@@ -107,7 +107,9 @@ namespace AnimalCafe.UI.P8R
                 // 彩色分类图标放大并居中；Floor 等比补偿，窄屏仍保留每侧 8 unit 留白。
                 label.gameObject.SetActive(false);
                 var tabInk = InkBounds(icon.sprite);
-                var extent = metrics.Units(20);
+                // The flat floor artwork has less visual mass; compensate without stretching it.
+                // 地板图案较扁，等比补偿 15%，其余图标和点击范围不变。
+                var extent = metrics.Units(icon.sprite.name == "tab_floor_color" ? 23 : 20);
                 var factor = Mathf.Min(extent / Mathf.Max(tabInk.width, tabInk.height),
                     Mathf.Max(1f, rect.rect.width - 16f) / tabInk.width,
                     Mathf.Max(1f, rect.rect.height - 16f) / tabInk.height);

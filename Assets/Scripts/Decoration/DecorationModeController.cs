@@ -169,6 +169,7 @@ namespace AnimalCafe.Decoration
         private bool functionalSurfaceStoreConfirmationPending;
         private IReadOnlyList<DecorationCategoryModel> phase7CatalogueCategories;
         private RectTransform nonSurfaceActionHost;
+        private CashRegisterSideIndicatorView cashRegisterSideIndicators;
         private DecorationModeKind activeMode = DecorationModeKind.Furniture;
         private SurfaceEditScope floorRange = SurfaceEditScope.WholeRoomFloor;
         private GridPosition? selectedFloorTarget;
@@ -857,6 +858,13 @@ namespace AnimalCafe.Decoration
                 return false;
             }
 
+            // Crossing UI is not leaving the wall; keep the pending placement and its fade.
+            // 已持有的墙饰拖拽经过按钮时保留原位，真正离墙仍按无效摆放处理。
+            if (currentHit.Kind == DecorationTouchHitKind.Ui)
+            {
+                return false;
+            }
+
             var surfaceId = currentHit.Kind == DecorationTouchHitKind.WallSlot
                 ? currentHit.SurfaceId
                 : null;
@@ -1083,7 +1091,9 @@ namespace AnimalCafe.Decoration
                 phase7WallDefinitionsById.TryGetValue(preview.DefinitionId, out var definition)
                     ? definition.Prefab
                     : null);
-            UpdateWallOcclusionFade(preview.SurfaceId);
+            // Keep the displayed wall readable even while the logical target is invalid.
+            // 目标暂时丢失时仍显示上一墙位，遮挡淡化也跟随该显示墙面。
+            UpdateWallOcclusionFade(authoring.SurfaceId);
         }
 
         private bool TryFindVisibleWallMountedStart(
@@ -1382,6 +1392,8 @@ namespace AnimalCafe.Decoration
             // Presentation follows the existing modal owner; input and transactions remain below.
             // 必要提示只跟随已有 Modal ownership 隐藏/恢复，不参与 pointer 或 Save。
             if (p8rAppearance != null) actionBarView?.SetInstructionModalCovered(EditingModalOwnsInput());
+            cashRegisterSideIndicators?.SetCovered(!isOpen || EditingModalOwnsInput()
+                || catalogueView != null && catalogueView.SheetState == DecorationSheetState.Expanded);
             if (!isOpen)
             {
                 if (pauseCoordinator != null && pauseCoordinator.HasPendingRestore)
@@ -1485,6 +1497,7 @@ namespace AnimalCafe.Decoration
 
         private void OnDisable()
         {
+            cashRegisterSideIndicators?.Hide();
             RebindReadinessPresentation(null);
             RebindCataloguePresentation(null);
             CleanupDecorationMode();
@@ -1494,6 +1507,11 @@ namespace AnimalCafe.Decoration
 
         private void OnDestroy()
         {
+            if (cashRegisterSideIndicators != null)
+            {
+                cashRegisterSideIndicators.PresentationChanged -= HandleCashRegisterPresentationChanged;
+                Destroy(cashRegisterSideIndicators.gameObject);
+            }
             CleanupDecorationMode();
             UnsubscribePhase7Ui();
             RemoveHudListener();
@@ -3229,6 +3247,7 @@ namespace AnimalCafe.Decoration
             Bounds bounds;
             var hasAttachedPickUpSign = false;
             var hasWallDecorPreview = false;
+            var hasCashRegisterPreview = false;
             DecorationActionPresentation presentation;
             if (functionalSurfaceSession?.ActivePreview is { } functionalPreview)
             {
@@ -3240,6 +3259,8 @@ namespace AnimalCafe.Decoration
                     ? DecorationActionPresentation.New
                     : DecorationActionPresentation.Existing;
                 hasAttachedPickUpSign = functionalPreview.Kind == FunctionalSurfacePreviewKind.PickUpPoint;
+                hasCashRegisterPreview = functionalPreview.Kind == FunctionalSurfacePreviewKind.MountedEquipment
+                    && ResolveMountedCatalogueKind(functionalPreview.DefinitionId) == DecorationCatalogueItemKind.CashRegister;
             }
             else if (activeMode == DecorationModeKind.WallDecor
                 && wallMountedSession?.ActivePreview is { } wallPreview)
@@ -3300,7 +3321,7 @@ namespace AnimalCafe.Decoration
 
             var safeArea = GetActionPresentationSafeArea();
             Rect? avoidWorldRect = null;
-            if (p8rAppearance != null && (hasAttachedPickUpSign || hasWallDecorPreview))
+            if (p8rAppearance != null && (hasAttachedPickUpSign || hasWallDecorPreview || hasCashRegisterPreview))
             {
                 var minimum = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
                 var maximum = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
@@ -3314,6 +3335,16 @@ namespace AnimalCafe.Decoration
                 }
                 if (minimum.x <= maximum.x && minimum.y <= maximum.y)
                     avoidWorldRect = Rect.MinMaxRect(minimum.x, minimum.y, maximum.x, maximum.y);
+            }
+            if (hasCashRegisterPreview && cashRegisterSideIndicators != null
+                && cashRegisterSideIndicators.TryGetPresentationBounds(out var roleBounds))
+            {
+                // CR-only obstacle includes both icons and their complete animation envelope.
+                // 沿用操作栏现有避让，不改变 pickup sign、wall decor 或按钮点击区域。
+                var worldRect = avoidWorldRect ?? roleBounds;
+                avoidWorldRect = Rect.MinMaxRect(Mathf.Min(worldRect.xMin, roleBounds.xMin),
+                    Mathf.Min(worldRect.yMin, roleBounds.yMin), Mathf.Max(worldRect.xMax, roleBounds.xMax),
+                    Mathf.Max(worldRect.yMax, roleBounds.yMax));
             }
             actionBarView.SetPresentation(
                 presentation,
@@ -3696,6 +3727,14 @@ namespace AnimalCafe.Decoration
 
             if (result.FunctionalSurfaceDragRequested)
             {
+                // UI or an unprojectable frame is not a floor drop; retain the last pose.
+                // 拖过按钮或暂时没有场景落点时保持原位，不清空桌面绑定。
+                if (result.CurrentHit.Kind == DecorationTouchHitKind.Ui
+                    || (!result.CurrentHit.FunctionalSurfaceAddress.HasValue
+                        && !result.CurrentHit.FloorPosition.HasValue))
+                {
+                    return;
+                }
                 if (!result.CurrentHit.FunctionalSurfaceAddress.HasValue)
                 {
                     mountedPreviewFloorPosition = result.CurrentHit.FloorPosition
@@ -3769,6 +3808,7 @@ namespace AnimalCafe.Decoration
             var preview = functionalSurfaceSession?.ActivePreview;
             if (preview == null)
             {
+                cashRegisterSideIndicators?.Hide();
                 return;
             }
 
@@ -3822,11 +3862,57 @@ namespace AnimalCafe.Decoration
                 canConfirm: preview.CanConfirm,
                 feedback: PlacementFeedbackMapper.Map(preview.Validation));
             RefreshEditingFeedback();
+            RefreshCashRegisterSideIndicators(kind);
             UpdateActionPresentation();
         }
 
+        private void HandleCashRegisterPresentationChanged()
+        {
+            if (isActiveAndEnabled && isOpen) UpdateActionPresentation();
+        }
+
+        private void RefreshCashRegisterSideIndicators(DecorationCatalogueItemKind kind)
+        {
+            var ghost = surfaceMountedPreviewView != null ? surfaceMountedPreviewView.CurrentGhost : null;
+            if (!isOpen || p8rAppearance == null || kind != DecorationCatalogueItemKind.CashRegister
+                || ghost == null || nonSurfaceActionHost == null)
+            {
+                cashRegisterSideIndicators?.Hide();
+                return;
+            }
+            if (cashRegisterSideIndicators == null)
+            {
+                var root = new GameObject("CashRegisterSideIndicators", typeof(RectTransform));
+                root.transform.SetParent(nonSurfaceActionHost, false);
+                // Floating role icons stay behind the existing action buttons.
+                // 悬浮角色图标不覆盖操作按钮；箭头单独绘制在地面。
+                root.transform.SetSiblingIndex(actionBarView.transform.GetSiblingIndex());
+                cashRegisterSideIndicators = root.AddComponent<CashRegisterSideIndicatorView>();
+                cashRegisterSideIndicators.Configure(p8rAppearance, targetCamera, GetActionPresentationSafeArea,
+                    actionBarView.transform.Find("ActionPanel") as RectTransform,
+                    functionalSurfacePreviewPrefab != null
+                        ? functionalSurfacePreviewPrefab.transform.Find("Footprint")?.GetComponent<Renderer>()?.sharedMaterial : null,
+                    gridRoot, gridSpace);
+                cashRegisterSideIndicators.PresentationChanged += HandleCashRegisterPresentationChanged;
+            }
+            var preview = functionalSurfaceSession.ActivePreview;
+            var anchors = layoutRuntime.ResolveCashRegisterPreviewAnchors(preview);
+            cashRegisterSideIndicators.SetCovered(EditingModalOwnsInput()
+                || catalogueView != null && catalogueView.SheetState == DecorationSheetState.Expanded);
+            cashRegisterSideIndicators.Show(ghost, anchors,
+                CashRegisterRoleInvalid(anchors, InteractionRole.Employee),
+                CashRegisterRoleInvalid(anchors, InteractionRole.Customer));
+        }
+
+        // Surface-slot validation is separate: an occupied desktop does not block both floor roles.
+        // 桌面占用由原 placement feedback 说明，不把它误报成双侧站位受阻。
+        private bool CashRegisterRoleInvalid(ResolvedStationAnchors anchors, InteractionRole role) =>
+            !anchors.TryGetAnchor(role, out var anchor)
+            || LayoutReadinessEvaluator.GetAnchorObstruction(layoutRuntime.Layout, anchor.Position).HasValue;
+
         private void RebuildConfirmedFunctionalSurfaceViews()
         {
+            cashRegisterSideIndicators?.Hide();
             mountedPreviewFloorPosition = null;
             surfaceMountedPreviewView?.Hide();
             pickUpPointIndicatorView?.HidePreview();
@@ -3879,6 +3965,7 @@ namespace AnimalCafe.Decoration
             }
 
             validationMessageView.ShowReadiness(readiness);
+            validationMessageView.SetPreviewPending(HasAnyActivePreview());
             hasPublishedReadinessFeedback = true;
         }
 
@@ -3935,6 +4022,7 @@ namespace AnimalCafe.Decoration
 
         private void RefreshEditingFeedback(PlacementResult furnitureResult = null)
         {
+            validationMessageView?.SetPreviewPending(HasAnyActivePreview());
             RefreshSurfaceCatalogueState();
             // Enable the new feedback on the P8 runtime, leaving historical P5/P6 Toasts unchanged.
             if (functionalSurfaceSession == null) return;
@@ -4052,6 +4140,7 @@ namespace AnimalCafe.Decoration
 
         private void ClearEditingFeedbackIfPreviewEnded()
         {
+            validationMessageView?.SetPreviewPending(HasAnyActivePreview());
             if (HasAnyActivePreview()) return;
             RefreshSurfaceCatalogueState();
             currentEditingMessage = null;
@@ -4184,9 +4273,16 @@ namespace AnimalCafe.Decoration
                             wallHits[index].collider,
                             out var mountedInstanceId))
                     {
-                        return new DecorationTouchHit(
-                            DecorationTouchHitKind.WallMounted,
-                            targetId: mountedInstanceId);
+                        if (includeWallPreview || wallMountedSession?.ActivePreview == null)
+                        {
+                            return new DecorationTouchHit(
+                                DecorationTouchHitKind.WallMounted,
+                                targetId: mountedInstanceId);
+                        }
+
+                        // During a preview drag, use the wall behind the confirmed item.
+                        // 墙饰的 parent 也是墙，必须跳过整个 hit，不能拿模型表面算墙格。
+                        continue;
                     }
 
                     var authoring = wallHits[index].collider
@@ -4491,25 +4587,29 @@ namespace AnimalCafe.Decoration
 
             const float maximumDistancePixels = 72f;
             var bestDistanceSquared = maximumDistancePixels * maximumDistancePixels;
+            var ray = targetCamera.ScreenPointToRay(screenPosition);
+            var halfCell = layoutRuntime.Layout.GridSettings.CellSize * .5f;
+            var nearestTableDistance = float.PositiveInfinity;
+            var foundTable = false;
             var found = false;
             foreach (var support in layoutRuntime.Layout.FurnitureInstances)
             {
                 if (!sceneRegistry.TryGet(support.InstanceId, out var representation)
-                    || representation == null)
+                    || representation == null || !representation.activeInHierarchy)
                 {
                     continue;
                 }
 
+                var markers = representation.GetComponentsInChildren<SurfaceSlotMarker>(true);
                 foreach (var slot in layoutRuntime.SurfaceSlotCatalog
                     .GetForSupport(support.DefinitionId))
                 {
-                    var marker = representation
-                        .GetComponentsInChildren<SurfaceSlotMarker>(true)
+                    var marker = markers
                         .FirstOrDefault(candidate => string.Equals(
                             candidate.SlotId,
                             slot.SlotId,
                             StringComparison.Ordinal));
-                    if (marker == null)
+                    if (marker == null || !marker.gameObject.activeInHierarchy)
                     {
                         continue;
                     }
@@ -4521,10 +4621,37 @@ namespace AnimalCafe.Decoration
                     }
 
                     var distanceSquared = ((Vector2)projected - screenPosition).sqrMagnitude;
-                    if (distanceSquared <= bestDistanceSquared)
+                    var candidateAddress = new SurfaceSlotAddress(support.InstanceId, slot.SlotId);
+                    var table = representation.transform;
+                    var plane = new Plane(table.up, marker.transform.position);
+                    var onTable = false;
+                    if (plane.Raycast(ray, out var tableDistance))
+                    {
+                        var offset = ray.GetPoint(tableDistance) - marker.transform.position;
+                        onTable = Mathf.Abs(Vector3.Dot(offset, table.right)) <= halfCell
+                            && Mathf.Abs(Vector3.Dot(offset, table.forward)) <= halfCell;
+                    }
+                    // Test the whole rotated tabletop cell first, independently of zoom.
+                    // 优先命中完整台面格子；远近镜头都不会在角落掉回地面。
+                    if (onTable)
+                    {
+                        var sameDepth = Mathf.Approximately(tableDistance, nearestTableDistance);
+                        var isCurrent = functionalSurfaceSession?.ActivePreview != null
+                            && candidateAddress.Equals(functionalSurfaceSession.ActivePreview.Address);
+                        if (!foundTable || (!sameDepth && tableDistance < nearestTableDistance)
+                            || (sameDepth && isCurrent))
+                        {
+                            nearestTableDistance = tableDistance;
+                            address = candidateAddress;
+                        }
+                        foundTable = found = true;
+                    }
+                    // Preserve the existing near-slot touch tolerance outside the tabletop.
+                    // 台面外仍保留原有近距离吸附容错，但不能抢走真实台面命中。
+                    else if (!foundTable && distanceSquared <= bestDistanceSquared)
                     {
                         bestDistanceSquared = distanceSquared;
-                        address = new SurfaceSlotAddress(support.InstanceId, slot.SlotId);
+                        address = candidateAddress;
                         found = true;
                     }
                 }
@@ -4746,6 +4873,7 @@ namespace AnimalCafe.Decoration
 
                 hiddenSourceInstanceId = null;
                 session?.Exit();
+                validationMessageView?.SetPreviewPending(HasAnyActivePreview());
                 if (modeViewHandle != null)
                 {
                     modeViewHandle.Close();
