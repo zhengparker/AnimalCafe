@@ -5,6 +5,7 @@
     "AnimalCafe.Runtime",
     "AnimalCafe.Editor",
     "Unity.TextMeshPro",
+    "UnityEngine.UI",
     "Unity.RenderPipelines.Universal.Runtime"
   ],
   "optionalUnityReferences": [

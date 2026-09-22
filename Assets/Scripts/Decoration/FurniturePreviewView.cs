@@ -13,17 +13,15 @@ namespace AnimalCafe.Decoration
     /// </summary>
     public sealed class FurniturePreviewView : MonoBehaviour
     {
-        private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
-        private static readonly int ColorId = Shader.PropertyToID("_Color");
-
         private readonly List<Renderer> previewRenderers = new List<Renderer>();
 
         private Transform previewRoot;
         private DecorationGridSpace gridSpace;
         private AnimalCafeUiTheme theme;
         private GameObject previewObject;
-        private MaterialPropertyBlock propertyBlock;
         private bool isConfigured;
+
+        public Transform CurrentPreviewTransform => previewObject != null ? previewObject.transform : null;
 
         public void Configure(
             Transform root,
@@ -44,7 +42,6 @@ namespace AnimalCafe.Decoration
             previewRoot = root;
             this.gridSpace = gridSpace;
             this.theme = theme;
-            propertyBlock = new MaterialPropertyBlock();
             isConfigured = true;
         }
 
@@ -98,30 +95,8 @@ namespace AnimalCafe.Decoration
         public void SetValidity(bool valid)
         {
             EnsurePreviewVisible();
-            var color = valid ? theme.Colors.Accent : theme.Colors.Destructive;
-
-            foreach (var renderer in previewRenderers)
-            {
-                if (renderer == null)
-                {
-                    continue;
-                }
-
-                propertyBlock.Clear();
-                renderer.GetPropertyBlock(propertyBlock);
-                var material = renderer.sharedMaterial;
-                if (material != null && material.HasProperty(BaseColorId))
-                {
-                    propertyBlock.SetColor(BaseColorId, color);
-                }
-
-                if (material != null && material.HasProperty(ColorId))
-                {
-                    propertyBlock.SetColor(ColorId, color);
-                }
-
-                renderer.SetPropertyBlock(propertyBlock);
-            }
+            // Validity belongs to the footprint and action UI; preserve model appearance.
+            // 红绿提示由 footprint 和操作 UI 负责，不覆盖模型材质或已有属性。
         }
 
         public bool TryGetWorldBounds(out Bounds bounds)

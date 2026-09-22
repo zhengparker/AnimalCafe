@@ -2183,14 +2183,22 @@ namespace AnimalCafe.Tests.PlayMode
             fixture.SetFurnitureOffset(120f);
             fixture.Controller.EnterDecorationMode();
             fixture.SelectCatalogue(0);
-            var raw = fixture.ScreenForCell(new GridPosition(4, 3));
+            var raw = fixture.ScreenForCell(fixture.Session.ActivePreview.ProposedPosition);
 
             fixture.SendTouch(32, raw, Vector2.zero, UnityEngine.InputSystem.TouchPhase.Began);
             fixture.SendTouch(32, raw + Vector2.right * 40f, Vector2.right * 40f,
                 UnityEngine.InputSystem.TouchPhase.Moved);
 
             var offsetProjected = fixture.ProjectScreen(raw + Vector2.right * 40f + Vector2.up * 120f);
-            Assert.That(fixture.Session.ActivePreview.ProposedPosition, Is.EqualTo(offsetProjected));
+            var proposedPosition = fixture.Session.ActivePreview.ProposedPosition;
+            Assert.That(proposedPosition.X, Is.EqualTo(offsetProjected.X),
+                $"Furniture drag X must use the configured offset. Expected " +
+                $"({offsetProjected.X}, {offsetProjected.Y}), but was " +
+                $"({proposedPosition.X}, {proposedPosition.Y}).");
+            Assert.That(proposedPosition.Y, Is.EqualTo(offsetProjected.Y),
+                $"Furniture drag Y must use the configured offset. Expected " +
+                $"({offsetProjected.X}, {offsetProjected.Y}), but was " +
+                $"({proposedPosition.X}, {proposedPosition.Y}).");
             Assert.That(fixture.CameraDriver.IsEdgeAutoPanning, Is.False,
                 "The raw finger remains away from the edge even if the visual offset is nearer it.");
         }
@@ -2543,9 +2551,9 @@ namespace AnimalCafe.Tests.PlayMode
                     UnityEngine.InputSystem.TouchPhase.Moved));
             Assert.That(fixture.Session.ActivePreview.ProposedPosition, Is.EqualTo(frozen));
             Assert.That(fixture.Camera.orthographicSize,
-                Is.EqualTo(zoomBeforePinchMove - fixture.CameraSettings.ZoomSpeed)
+                Is.EqualTo(zoomBeforePinchMove - fixture.CameraSettings.ZoomSpeed * 1.25f)
                     .Within(Epsilon),
-                "The controller must route pinch distance through CameraDriver.ApplyPinchZoom.");
+                "The 50-pixel pinch must retain its distance through CameraDriver.ApplyPinchZoom.");
 
             fixture.SendTouches(
                 new DecorationTouchPoint(36, edge, Vector2.zero,
@@ -2619,22 +2627,46 @@ namespace AnimalCafe.Tests.PlayMode
                 .PrimaryTouchId, Is.EqualTo(MouseDecorationInputSource.PointerId));
         }
 
-        [Test]
-        public void Controller_MouseWheelZoomsOnlyWhenNoPointerGestureIsActive()
+        [TestCase(1f, -.75f)]
+        [TestCase(-1f, .75f)]
+        [TestCase(120f, -.75f)]
+        [TestCase(-120f, .75f)]
+        public void Controller_MouseWheelKeepsNormalStepWithExpandedCatalogueAndIgnoresDrag(
+            float wheelDelta, float expectedChange)
         {
             using var fixture = CreateControllerFixture();
-            fixture.Controller.EnterDecorationMode();
+            fixture.CameraSettings.ZoomSpeed = .75f;
             var initialSize = fixture.Camera.orthographicSize;
 
-            fixture.Mouse.QueueScroll(10f);
+            // Compare both production Update paths, not only the camera's zoom helper.
+            // 同一滚轮输入分别经过普通和装修模式的 Update，防止装修误走 pinch 的像素换算。
+            fixture.LegacyInput.NextFrame = new AnimalCafe.Input.CameraInputFrame(
+                Vector2.zero, wheelDelta, false, Vector2.zero);
+            InvokePrivate(fixture.CameraController, "Update");
+            Assert.That(fixture.Camera.orthographicSize,
+                Is.EqualTo(initialSize + expectedChange).Within(Epsilon),
+                "The normal camera must preserve its existing whole wheel step.");
+
+            fixture.Camera.orthographicSize = initialSize;
+            fixture.Controller.EnterDecorationMode();
+            Assert.That(fixture.Catalogue.View.State, Is.EqualTo(DecorationCatalogueState.Expanded));
+            fixture.Mouse.QueueScroll(wheelDelta);
             fixture.InvokeControllerUpdate();
-            Assert.That(fixture.Camera.orthographicSize, Is.Not.EqualTo(initialSize));
+            Assert.That(fixture.Camera.orthographicSize,
+                Is.EqualTo(initialSize + expectedChange).Within(Epsilon),
+                "Decoration wheel input must use one full ZoomSpeed step even with Catalogue expanded.");
             var afterIdleWheel = fixture.Camera.orthographicSize;
 
+            fixture.Catalogue.View.ShowCollapsedHandle();
             var furnitureScreen = fixture.ScreenForCell(new GridPosition(2, 3));
             fixture.SendMouse(furnitureScreen, Vector2.zero,
                 UnityEngine.InputSystem.TouchPhase.Began, true);
-            fixture.Mouse.QueueScroll(10f);
+            var dragScreen = fixture.ScreenForCell(new GridPosition(3, 3));
+            fixture.SendMouse(dragScreen, dragScreen - furnitureScreen,
+                UnityEngine.InputSystem.TouchPhase.Moved, true);
+            Assert.That(GetField<DecorationTouchRouter>(fixture.Controller, "touchRouter").Owner,
+                Is.EqualTo(DecorationGestureOwner.Furniture));
+            fixture.Mouse.QueueScroll(wheelDelta);
             fixture.InvokeControllerUpdate();
             Assert.That(fixture.Camera.orthographicSize, Is.EqualTo(afterIdleWheel),
                 "Wheel zoom must not run during an active pointer gesture.");
@@ -3494,13 +3526,18 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Preview_DisablesCollidersAndSelectableBehavioursAndUsesPropertyBlocks()
+        public IEnumerator Preview_DisablesCollidersAndSelectableBehavioursAndPreservesAuthoredAppearance()
         {
             var prefab = CreateFurniturePrefab("PreviewSafetyCounter", 1, 3);
             var previewRoot = CreateRoot("PreviewSafetyRoot");
             var preview = CreateRoot("PreviewSafetyOwner")
                 .AddComponent<FurniturePreviewView>();
             preview.Configure(previewRoot.transform, CreateGridSpace(), theme);
+            var originalColor = new Color(0.62f, 0.41f, 0.23f, 1f);
+            worldMaterial.color = originalColor;
+            var originalTexture = new Texture2D(2, 2);
+            ownedAssets.Add(originalTexture);
+            worldMaterial.mainTexture = originalTexture;
             var sharedColorBefore = ReadMaterialColor(worldMaterial);
             var sourceColliders = prefab.GetComponentsInChildren<Collider>(true);
             var sourceSelectables = prefab.GetComponentsInChildren<MonoBehaviour>(true)
@@ -3526,20 +3563,55 @@ namespace AnimalCafe.Tests.PlayMode
 
             var renderers = clone.GetComponentsInChildren<Renderer>(true);
             Assert.That(renderers, Has.Length.EqualTo(3));
-            foreach (var renderer in renderers)
+            foreach (var valid in new[] { true, false, true })
             {
-                AssertRendererColor(renderer, theme.Colors.Accent);
+                preview.SetValidity(valid);
+                foreach (var renderer in renderers.Concat(prefab.GetComponentsInChildren<Renderer>(true)))
+                {
+                    Assert.That(renderer.sharedMaterial, Is.SameAs(worldMaterial));
+                    Assert.That(ReadMaterialColor(renderer.sharedMaterial), Is.EqualTo(sharedColorBefore));
+                    Assert.That(renderer.sharedMaterial.mainTexture, Is.SameAs(originalTexture));
+                    var block = new MaterialPropertyBlock();
+                    renderer.GetPropertyBlock(block);
+                    Assert.That(block.isEmpty, Is.True,
+                        "Validity feedback must preserve the model's authored color and texture.");
+                }
             }
-            Assert.That(ReadMaterialColor(worldMaterial), Is.EqualTo(sharedColorBefore));
-
-            preview.SetValidity(false);
-            foreach (var renderer in renderers)
-            {
-                AssertRendererColor(renderer, theme.Colors.Destructive);
-            }
-            Assert.That(ReadMaterialColor(worldMaterial), Is.EqualTo(sharedColorBefore));
             Assert.That(sourceColliders, Has.All.Matches<Collider>(collider => collider.enabled));
             Assert.That(sourceSelectables, Has.All.Matches<MonoBehaviour>(behaviour => behaviour.enabled));
+        }
+
+        [Test]
+        public void Preview_SetValidityPreservesExistingMaterialPropertyOverrides()
+        {
+            var prefab = CreateFurniturePrefab("PreviewPropertyCounter", 1, 1);
+            var preview = CreateRoot("PreviewPropertyOwner").AddComponent<FurniturePreviewView>();
+            preview.Configure(CreateRoot("PreviewPropertyRoot").transform, CreateGridSpace(), theme);
+            preview.Show(prefab, Cells((1, 1)));
+            var renderer = preview.CurrentPreviewTransform.GetComponentInChildren<Renderer>(true);
+            var authoredColor = new Color(0.24f, 0.48f, 0.73f, 0.8f);
+            var authoredTexture = new Texture2D(2, 2);
+            ownedAssets.Add(authoredTexture);
+            var authoredBlock = new MaterialPropertyBlock();
+            authoredBlock.SetColor("_BaseColor", authoredColor);
+            authoredBlock.SetColor("_Color", authoredColor);
+            authoredBlock.SetTexture("_BaseMap", authoredTexture);
+            authoredBlock.SetFloat("_Smoothness", 0.37f);
+            renderer.SetPropertyBlock(authoredBlock);
+
+            // A renderer may already carry runtime appearance overrides before validation changes.
+            // 有效性切换不能覆盖或清除模型已有的外观属性。
+            foreach (var valid in new[] { true, false, true })
+            {
+                preview.SetValidity(valid);
+                var actual = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(actual);
+                Assert.That(actual.GetColor("_BaseColor"), Is.EqualTo(authoredBlock.GetColor("_BaseColor")));
+                Assert.That(actual.GetColor("_Color"), Is.EqualTo(authoredBlock.GetColor("_Color")));
+                Assert.That(actual.GetTexture("_BaseMap"), Is.SameAs(authoredTexture));
+                Assert.That(actual.GetFloat("_Smoothness"), Is.EqualTo(0.37f).Within(Epsilon));
+                Assert.That(renderer.sharedMaterial, Is.SameAs(worldMaterial));
+            }
         }
 
         [UnityTest]
@@ -3696,6 +3768,12 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(
                 invalidRenderers.Select(renderer => renderer.name),
                 Is.EquivalentTo(new[] { "InvalidBarA", "InvalidBarB" }));
+
+            grid.ShowFootprint(cells, valid: true);
+            AssertRendererColor(fill, theme.Colors.Accent);
+            var recoveredRenderers = markRoot.GetComponentsInChildren<Renderer>(false);
+            Assert.That(recoveredRenderers, Has.Length.EqualTo(1));
+            Assert.That(recoveredRenderers[0].name, Is.EqualTo("ValidDiamond"));
             Assert.That(ReadMaterialColor(worldMaterial), Is.EqualTo(sharedColorBefore));
             Assert.That(gridRoot.GetComponentsInChildren<Collider>(true), Is.Empty);
         }

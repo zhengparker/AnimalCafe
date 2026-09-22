@@ -179,7 +179,8 @@ namespace AnimalCafe.Tests.PlayMode
 
             Assert.That(button, Is.Not.Null);
             Assert.That(label, Is.Not.Null);
-            Assert.That(label.text, Is.EqualTo("Decoration"));
+            var decorationLabel = ReadPrivate<AnimalCafe.UI.P8R.P8RAppearance>(controller, "p8rAppearance") != null ? "Decorate" : "Decoration";
+            Assert.That(label.text, Is.EqualTo(decorationLabel));
             AssertClosedActiveUiRoot(catalogue.gameObject, catalogueGroup);
             AssertClosedActiveUiRoot(actionBar.gameObject, actionGroup);
             AssertClosedActiveUiRoot(storeModal.gameObject, modalGroup);
@@ -187,7 +188,7 @@ namespace AnimalCafe.Tests.PlayMode
             controller.EnterDecorationMode();
             yield return WaitForUnscaledSeconds(0.2f);
             Assert.That(controller.IsOpen, Is.True);
-            Assert.That(label.text, Is.EqualTo("Done"));
+            Assert.That(label.text, Is.EqualTo(ReadPrivate<AnimalCafe.UI.P8R.P8RAppearance>(controller, "p8rAppearance") != null ? "Exit Decoration" : "Done"));
             Assert.That(catalogue.IsCatalogueVisible, Is.True);
             Assert.That(catalogueGroup.alpha, Is.EqualTo(1f).Within(0.001f));
             Assert.That(catalogueGroup.interactable, Is.True);
@@ -205,7 +206,7 @@ namespace AnimalCafe.Tests.PlayMode
             controller.ExitDecorationMode();
             yield return WaitForUnscaledSeconds(0.2f);
             Assert.That(controller.IsOpen, Is.False);
-            Assert.That(label.text, Is.EqualTo("Decoration"));
+            Assert.That(label.text, Is.EqualTo(decorationLabel));
             Assert.That(catalogue.gameObject.activeSelf, Is.True);
             Assert.That(actionBar.gameObject.activeSelf, Is.True);
             Assert.That(storeModal.gameObject.activeSelf, Is.True);
@@ -284,7 +285,21 @@ namespace AnimalCafe.Tests.PlayMode
                 var rail = ScreenRect(timePanel.transform as RectTransform);
                 Assert.That(expanded.Overlaps(rail), Is.False,
                     $"Landscape Catalogue {expanded} overlaps the actual MainCafe RightRail {rail}.");
-                Assert.That(expanded.xMax, Is.LessThanOrEqualTo(rail.xMin));
+                if (ReadPrivate<AnimalCafe.UI.P8R.P8RAppearance>(controller, "p8rAppearance") == null)
+                    Assert.That(expanded.xMax, Is.LessThanOrEqualTo(rail.xMin));
+                else
+                {
+                    Assert.That(expanded.yMax, Is.LessThanOrEqualTo(rail.yMin), "P8R reserves the top HUD instead of a right rail.");
+                    foreach (var hudButton in timePanel.GetComponentsInChildren<Button>())
+                    {
+                        var box = ScreenRect((RectTransform)hudButton.transform);
+                        Assert.That(new Rect(96, 48, 2208, 984).Contains(box.min) && new Rect(96, 48, 2208, 984).Contains(box.max), Is.True);
+                        var hits = new List<RaycastResult>();
+                        EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = box.center }, hits);
+                        Assert.That(hits, Is.Not.Empty);
+                        Assert.That(hits[0].gameObject.GetComponentInParent<Button>(), Is.SameAs(hudButton));
+                    }
+                }
             }
             finally
             {
@@ -397,8 +412,7 @@ namespace AnimalCafe.Tests.PlayMode
                 };
 
                 controller.EnterDecorationMode();
-                yield return WaitUntil(() => catalogue.IsCatalogueVisible
-                        && !catalogue.IsCollapsed,
+                yield return WaitUntil(() => CatalogueExpandedAndSettled(catalogue),
                     2f, "Catalogue did not become expanded in real MainCafe.");
 
                 foreach (var item in expected)
@@ -415,6 +429,8 @@ namespace AnimalCafe.Tests.PlayMode
                             controller.State == DecorationSessionState.PreviewingNewFurniture
                             && previewRoot.childCount == 1,
                         2f, item.Id + " did not create a visible Preview.");
+                    yield return WaitUntil(() => CatalogueCollapsedAndSettled(catalogue),
+                        2f, item.Id + " Catalogue did not settle into Compact Preview before real Mouse drag.");
 
                     Assert.That(previewRoot.childCount, Is.EqualTo(1), item.Id);
                     Assert.That(previewRoot.GetChild(0).gameObject.activeInHierarchy, Is.True, item.Id);
@@ -435,9 +451,31 @@ namespace AnimalCafe.Tests.PlayMode
                     yield return null;
                     yield return null;
                     Assert.That(source.HasActivePointer, Is.True, item.Id + " drag Began");
+                    var router = ReadPrivate<DecorationTouchRouter>(controller, "touchRouter");
+                    Assert.That(router.Owner, Is.EqualTo(DecorationGestureOwner.Furniture), item.Id);
+                    Assert.That(ReadPrivate<DecorationTouchHit>(router, "originHit").Kind,
+                        Is.EqualTo(DecorationTouchHitKind.Furniture), item.Id + " origin");
+                    // Began refreshes the floating controls. Choose the destination against
+                    // their current bounds, not the previous frame's near-edge UI-free point.
+                    // 按下后工具栏会刷新；使用当前真实 UI 命中结果选择目标，不绕过输入门禁。
+                    Assert.That(previewView.TryGetWorldBounds(out bounds), Is.True, item.Id);
+                    dragEnd = FindUiFreeFloorDragDestination(camera, floor, bounds);
+                    var half = dragStart + (dragEnd - dragStart).normalized
+                        * ReadPrivate<float>(router, "dragThresholdPixels") * .5f;
+                    QueueMouseState(mouse, half, true);
+                    yield return null;
+                    yield return null;
+                    Assert.That(router.IsDragging, Is.False, item.Id + " below threshold");
+                    var targetHits = new List<RaycastResult>();
+                    EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current)
+                        { position = dragEnd }, targetHits);
+                    Assert.That(targetHits, Is.Empty, item.Id + " destination must remain UI-free after Began at "
+                        + dragEnd + "; hits=" + string.Join(",", targetHits.Select(hit => hit.gameObject.name)));
                     QueueMouseState(mouse, dragEnd, true);
                     yield return null;
                     yield return null;
+                    Assert.That(router.Owner, Is.EqualTo(DecorationGestureOwner.Furniture), item.Id);
+                    Assert.That(router.IsDragging, Is.True, item.Id + " above threshold");
                     Assert.That(previewView.TryGetWorldBounds(out var movedBounds), Is.True,
                         item.Id + " moved Preview bounds");
                     Assert.That(Vector3.Distance(movedBounds.center, boundsBefore),
@@ -465,7 +503,7 @@ namespace AnimalCafe.Tests.PlayMode
                     yield return WaitUntil(() =>
                             controller.State == DecorationSessionState.BrowsingCatalogue
                             && previewRoot.childCount == 0
-                            && catalogue.IsCatalogueVisible && !catalogue.IsCollapsed,
+                            && CatalogueExpandedAndSettled(catalogue),
                         2f, item.Id + " Cancel did not restore the expanded Catalogue.");
                 }
             }

@@ -8,7 +8,7 @@
 >
 > 正式目标平台：Android 与 iOS
 >
-> 更新日期：2026-08-29
+> 更新日期：2026-09-11
 
 ## 1. 文档用途
 
@@ -75,7 +75,7 @@ AnimalCafe 使用 **Dependency-driven Small Phases + Playable Milestones**。
 ```text
 Phase 开始：一次 design + test cases + implementation plan approval
 → Task 开发：focused RED/GREEN + 直接相关 regression
-→ Phase 收尾：一次完整 regression + Engineering/QA/必要的 Art review
+→ Phase 收尾：一次完整 regression + Engineering / QA / Production / 必要的 Art review
 → Studio Owner 手工验收
 → 更新 report、guide 和 Roadmap
 ```
@@ -225,7 +225,7 @@ Layout Data
 - 必要的人工 Play Mode checklist 完成。
 - Console 没有未处理 error。
 - 如果修改持久数据，Save / Load、invalid data 和 migration tests 通过。
-- Engineering 和 QA 默认在 Phase 收尾各 review 一次；只有明显视觉变化才需要 Art/UX review。
+- Engineering、QA 和 Production 默认在 Phase 收尾各 review 一次；只有明显视觉变化才需要 Art/UX review。
 - Critical 和 Important 必须修复；Minor 默认进入 polish backlog，不阻挡 Phase。
 - docs-only 修正只做静态验证，不重新运行 Unity。
 - Roadmap 只在全部 gate 通过后记录 `Completed` evidence。
@@ -773,11 +773,33 @@ Store Expansion 稳定后，高级结构编辑可复用 Surface ID、attachment 
 
 ## Phase 8 — Functional Furniture & Layout Readiness
 
+### Status
+
+`In Progress`（2026-09-09）— 五项 bug 修复与前三项 UX 保留，后续批准的 UX2 选项 2–5 与半透明光感 footprint 已实现并技术核验，交回 **Ready for manual review**。完整 Editor PlayMode **813/813**（707 core + 106 Scene/Input）、全部 Phase 8 EditMode + SurfaceSession **235/235 PASS**，failed/skipped/inconclusive 均 0、exit 0；focused asset/font 8/8 已含在 235。独立 code 与 7 张视觉技术复核无未处理 Critical/Important；新增 7 项 Owner manual 全部 **Pending**，最终 XML 与步骤见 `Docs/Phase8_Beginner_Guide.md` 8.5。选项 1 保留 icon，Exit 不动。M1–M17 历史 Owner PASS、M18 technical PASS 保留；M6 incompatible Slot 子项仍未覆盖，不自动标为 Phase Completed。
+
+下表保留 UX2 前的历史 gate 证据；UX2 使用上段与 Guide 8.5 的 fresh evidence。本轮未执行 full EditMode、standalone Player 或 Android/iOS 真机；窄屏为 320 logical pixels runtime Prefab fixture。Footprint/font authoring 完成后的 1,393 个非 C# Assets + ProjectSettings 在 full regression 前后 hash 一致、changed/missing/unexpected 为 0；本轮仍有已批准的 shader/material、两份 footprint Prefab 与 P8 static font 修改，没有 Scene/ProjectSettings 改动。人工结果独立记录。
+
+| Gate | Status |
+|---|---|
+| Automated | **2026-09-09 修复验证 PASS**：完整 PlayMode `781/781`（core679 + Scene102），直接 EditMode `83/83`，原 Touch control `26/26`。未重跑 full EditMode / Player。2026-09-04 full EditMode `1,689/1,689`、Windows Player `619/619` 仍是历史 baseline，不替代本轮验证；XML 见 Guide 第6节。 |
+| Engineering | **PASS** final independent department decision。 |
+| QA | **PASS** final independent department decision；P8-M-018 guide 可观察性 Minor 已修正。 |
+| Production | **PASS** final focused re-review；`0 Critical / 0 Important / 0 Minor`。 |
+| Studio Owner Manual / 授权代测 | **17 项 Owner manual PASS + 1 项 Codex technical PASS / 0 FAIL**：M1–M17 已由用户确认；M18 代测不计为 Owner 人工执行。M6 incompatible 子项仍未覆盖。 |
+
+2026-09-08 历史 M6 / 玩家提示修复：EditMode75/75、Core374/374、直接Scene15/15 PASS，已获 Owner 复测接受；当时旧 Touch 顺序问题仍开放。2026-09-09 已确认是前序 Scene fixture 的 InputAction runtime cache 未清理，并以无诊断原始26-case control及完整PlayMode验证修复。最新独立 code review 无未处理 Critical / Important；新修复的手感尚待 targeted manual review。
+
+Current Next Step：按 Guide 8.5 逐项人工复测 Catalogue 记忆/继续添加、readiness 摘要/详情、CR/CM 最近屏幕中心的合法 Slot、Floor 范围/真实格数及四路径半透明 footprint，7 项当前均 Pending。Pick-up 起点不变，Whole Room Undo 仍禁用，readiness 发布合同不变；白色取餐 icon/模型与入口蓝区保留。不自动批准 Phase 8R 或扩展系统。
+
+2026-09-09 红绿灯式 footprint 配色历史见 Guide **8.7**：brightness 6 / saturation 3 / light intensity 1.5，opacity 0.45 / softness 0.12 / bounds / depth 沿用。该轮 focused 15/15、PlayMode 84/84 保留为历史；最新 Preview authority 为 **8.8**：普通家具/CR/CM 保留原材质，墙饰仅 Preview 向室内额外悬浮 20 cm，Confirm 回原贴墙位置、底高与真实占格不变。直接 PlayMode **301/301 PASS**，failed/skipped/inconclusive 0、exit 0；三张近景独立技术复核无阻挡，**Ready for manual review**。8 项受保护文件 hash 不变，既有 dirty Invalid material 原样保留。Owner 四项新增 manual 与视觉偏好 Pending；本轮未执行 full Phase / EditMode / Player / 手机验证。
+
 ### Goal
 
 让经营系统通过 furniture capabilities 和 interaction anchors 使用布局，而不是依赖固定 Scene object names。
 
 ### Scope
+
+Phase 8 只提供 functional placement、automatic anchors 和 layout-readiness contracts。它不加入 cafe day loop、NPC movement、Order、Queue、NavMesh / pathfinding agents、economy 或 Save。
 
 - Furniture capability definitions。
 - Cash Register、Coffee Machine 和 Pick-up Surface。
@@ -786,6 +808,10 @@ Store Expansion 稳定后，高级结构编辑可复用 Surface ID、attachment 
 - Anchor rotation 与 validity。
 - Layout readiness report。
 - 缺少必要功能或路径准备条件时禁止营业。
+
+### Accepted / Deferred Minor
+
+九项 accepted/deferred Minor 集中记录在 `.superpowers/sdd/2026-09-02-phase-8-functional-furniture-layout-readiness/task-10-report.md`。它们是已知 test / diagnostic / polish limitations，不是隐藏 blocker，也不会自动成为 Phase 8R scope。
 
 ### Why Before Cafe Loop
 
@@ -2692,6 +2718,6 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 - **Phase 5 — UI Architecture & Design System** 已完成 approved design、TDD implementation、review hardening、Studio Owner `MT001–MT034` manual acceptance、PR #4 merge 与 merged-main regression，状态为 `Completed`。Merged-main evidence（2026-08-15）：EditMode `690 / 690`、Editor PlayMode `121 / 121`、Windows standalone PlayMode `103 / 103` passed；failed、skipped、inconclusive 均为 `0`。
 - **Phase 6 — Basic Decoration Mode** 已完成 approved design、TDD implementation、independent review、Studio Owner manual acceptance 与 fresh full regression，状态为 `Completed`。Merge-preparation evidence（2026-08-22）：EditMode `1136 / 1136`、Editor PlayMode `446 / 446` passed，failed、skipped、inconclusive 均为 `0`；Windows standalone build 为 `Success`，无 C# warning/error；Studio Owner applicable manual set 为 `29 / 29 PASS`。`P6-M-023` 的真实 Android + iOS two-finger Pinch 已按 scope decision 移至 Phase 51，不计入 Phase 6 denominator。
 - Phase 6 清理只删除 obsolete Phase 4 MainCafe manual-review setup 与两份 temporary materials；`ManualReviewPingPongMover` 及其 regression test 因仍有 Phase 5 live consumers 而保留。
-- **Current Next Step：Phase 8 — Functional Furniture & Layout Readiness design gate。** Phase 7 已完成 implementation、review、manual acceptance、merge 与 merged-main full regression。Phase 8 implementation 尚未获授权；开始 coding 前先确认 scope/design、normal/invalid/boundary/recovery test cases、implementation plan 与 Studio Owner approval。Phase 8 完成后进入 `Phase 8R — Decoration & Functional Layout Review & Polish`；Phase 8R 只允许 Review / Polish Phase 1–8，不加入新 system 或 feature，具体内容保持 `TBD`，完成并经 Studio Owner 验收后才进入 Milestone B。
+- **Current Next Step：Phase 8 — 参考图 UI 排版已完成，Ready for manual review（2026-09-12）。** 两步已合并交付：56×56 logical 可见浮动按钮、约10 logical间距且无tooltip；左上HUD／右上装修入口；目录内嵌四类Tab／固定Pick-up。定向EditMode57/57、扩大PlayMode210/210、root独立完整Editor PlayMode849/849、专用截图流程13/13，均0failed／skipped／inconclusive；34图经最终独立复核。完整测试前后2393个Assets／ProjectSettings文件无漂移，154原始UI PNG保留。详见Guide第15节；历史45张测试截图＋3份metrics误覆盖的未恢复concern见15.6，不以新图冒充原证据。Owner／原生Overlay／真机接受Pending；M1–M17历史Owner PASS、M18 technical PASS及M6 incompatible未覆盖项保留。不关闭Phase 8、不推进后续gameplay，不commit／push／merge。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
-- 不开始 Customer AI，也不提前实现 Phase 6 `Not Included` 的家具商店、经营功能、anchors、path validation 或 Atmosphere。
+- 不开始 cafe day loop、Customer / NPC movement、Order、Queue、NavMesh / pathfinding agents、economy 或 Save 等后续 gameplay scope。

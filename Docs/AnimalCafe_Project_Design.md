@@ -747,6 +747,7 @@ Pick-up Point 是当前需要玩家主动决定的主要 Interaction Point。
 - 玩家可以移动、旋转、放置或收起家具。
 - Decoration Mode 统一承载 Floor Furniture、Wall Decoration 和兼容 Surface Slot 上的 Pick-up Point 编辑；各能力仍按对应 development Phase 分阶段实现。
 - 编辑过程中暂停 NPC 行为，避免 Pathfinding 状态不断变化。
+- 2026-09-12 P8R 获批规则：切换到另一个装修分类 Tab 时，先取消当前未确认 Preview，再进入目标分类；不自动保存，已确认 Layout 不变。重复点击当前 Tab 保留 Preview；Store / Exit 确认弹窗仍独占输入。取消时同时终止旧拖拽，不能将旧 pointer 的后续动作带到新分类。
 - 退出前重新验证布局、Interaction Anchors 和路径。
 - 玩家可以保留尚未完成的装修，但在必需服务路径无效时不能开始或恢复营业。
 - 非必需功能的布局无效时，对应功能明确标记为不可用，不阻塞其他有效区域。

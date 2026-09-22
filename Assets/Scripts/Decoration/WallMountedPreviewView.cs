@@ -9,6 +9,7 @@ namespace AnimalCafe.Decoration
     /// <summary>Renders a non-interactive wall-slot footprint projection for active Preview.</summary>
     public sealed class WallMountedPreviewView : MonoBehaviour
     {
+        private const float PreviewOutwardOffset = .2f;
         private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         private static readonly int ColorId = Shader.PropertyToID("_Color");
         private static readonly List<Vector3> CheckIconVertices = new List<Vector3>
@@ -58,6 +59,7 @@ namespace AnimalCafe.Decoration
         private Transform projectionRoot;
         private Material validMaterial;
         private Material invalidMaterial;
+        private Material footprintLightMaterial;
         private Mesh currentIconMesh;
         private Mesh currentProjectionMesh;
         private MeshRenderer projectionRenderer;
@@ -75,8 +77,21 @@ namespace AnimalCafe.Decoration
             this.projectionRoot = projectionRoot ?? throw new ArgumentNullException(nameof(projectionRoot));
             this.validMaterial = validMaterial ?? throw new ArgumentNullException(nameof(validMaterial));
             this.invalidMaterial = invalidMaterial ?? throw new ArgumentNullException(nameof(invalidMaterial));
+            footprintLightMaterial = null;
             propertyBlock = new MaterialPropertyBlock();
             ClearPreview();
+        }
+
+        /// <summary>Configure a dedicated fill material without replacing the check/cross material.</summary>
+        public void ConfigureFootprintLight(Material material)
+        {
+            EnsureConfigured();
+            if (material == null) throw new ArgumentNullException(nameof(material));
+            if (!material.HasProperty("_FootprintOpacity"))
+                throw new ArgumentException("A footprint light material is required.", nameof(material));
+            footprintLightMaterial = material;
+            if (projectionRenderer != null && currentIconIsValid.HasValue)
+                ApplyFillMaterial(currentIconIsValid.Value);
         }
 
         public void ShowWallPreview(
@@ -129,9 +144,27 @@ namespace AnimalCafe.Decoration
                 currentFootprintWidth = width;
                 currentFootprintHeight = height;
             }
-            projectionRenderer.sharedMaterial = isValid ? validMaterial : invalidMaterial;
-            UpdateFeedbackIcon(isValid, projectionRenderer.sharedMaterial);
+            ApplyFillMaterial(isValid);
+            UpdateFeedbackIcon(isValid, isValid ? validMaterial : invalidMaterial);
             UpdateGhost(preview, surface, localCenter, previewPrefab);
+        }
+
+        private void ApplyFillMaterial(bool isValid)
+        {
+            var authoredMaterial = isValid ? validMaterial : invalidMaterial;
+            projectionRenderer.sharedMaterial = footprintLightMaterial != null
+                ? footprintLightMaterial : authoredMaterial;
+            if (footprintLightMaterial == null) return;
+
+            // 颜色继续来自既有 valid/invalid 语义，透明度由光感 shader 独立控制。
+            var color = authoredMaterial.HasProperty(BaseColorId)
+                ? authoredMaterial.GetColor(BaseColorId) : authoredMaterial.color;
+            propertyBlock.Clear();
+            propertyBlock.SetColor(BaseColorId, color);
+            propertyBlock.SetColor(ColorId, color);
+            projectionRenderer.SetPropertyBlock(propertyBlock);
+            projectionRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            projectionRenderer.receiveShadows = false;
         }
 
         public void ClearPreview()
@@ -267,7 +300,10 @@ namespace AnimalCafe.Decoration
                 WallSurfaceAuthoring.WallMountedPlaneEpsilon);
             var bottomPivotPosition = wallContactCenter
                 - surface.transform.up * (preview.Footprint.Height * surface.SlotSize * 0.5f);
-            CurrentGhost.transform.SetPositionAndRotation(bottomPivotPosition, wallFacing);
+            // Preview alone floats into the room; the projection and confirmed contact stay put.
+            // 只让 Preview 沿墙面法线悬浮，真实占格、贴墙位置和底部高度都不变。
+            var previewPosition = bottomPivotPosition - surface.transform.forward * PreviewOutwardOffset;
+            CurrentGhost.transform.SetPositionAndRotation(previewPosition, wallFacing);
         }
 
         private void ClearGhost()

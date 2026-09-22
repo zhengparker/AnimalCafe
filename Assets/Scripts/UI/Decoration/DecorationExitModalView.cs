@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using AnimalCafe.UI.Foundation;
 using AnimalCafe.UI.Components;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,6 +11,9 @@ namespace AnimalCafe.UI.Decoration
 {
     public sealed class DecorationExitModalView : MonoBehaviour
     {
+        [SerializeField] private AnimalCafe.UI.P8R.P8RAppearance appearance;
+        [SerializeField] private TMP_Text titleLabel;
+        [SerializeField] private TMP_Text bodyLabel;
         [SerializeField] private Button continueButton;
         [SerializeField] private Button discardButton;
         [SerializeField] private RectTransform modalCard;
@@ -19,6 +23,8 @@ namespace AnimalCafe.UI.Decoration
         private readonly HashSet<int> scheduledPointerReleaseIds = new HashSet<int>();
         private Coroutine scheduledPointerReleaseCoroutine;
         private bool closePending;
+        private bool refreshingMobileLayout;
+        private AnimalCafe.UI.P8R.P8RModalSafeAreaHost mobileSafeAreaHost;
         public event Action ContinueEditingRequested;
         public event Action DiscardChangesRequested;
         public string[] ChoiceLabels => new[] { "Continue Editing", "Discard Changes" };
@@ -32,11 +38,25 @@ namespace AnimalCafe.UI.Decoration
             ReleaseGestureOwnership();
             boundary = value;
             ConfigureGestureRetention();
+            EnsureMobileSafeAreaHost();
             Bind();
         }
         public void Show()
         {
             Bind();
+            if (appearance != null)
+            {
+                titleLabel.text = appearance.Text("exit.title");
+                bodyLabel.text = appearance.Text("exit.body");
+                appearance.Button(continueButton, "back");
+                appearance.Button(discardButton, "cancel", "destructive");
+                continueButton.transform.Find("Icon")?.gameObject.SetActive(false);
+                discardButton.transform.Find("Icon")?.gameObject.SetActive(false);
+                continueButton.GetComponentInChildren<TMP_Text>(true).text = appearance.Text("exit.continue");
+                discardButton.GetComponentInChildren<TMP_Text>(true).text = appearance.Text("exit.discard");
+                AnimalCafe.UI.P8R.P8RButtonLayout.TextOnly(continueButton);
+                AnimalCafe.UI.P8R.P8RButtonLayout.TextOnly(discardButton);
+            }
             closePending = false;
             gameObject.SetActive(true);
             RefreshSafeAreaLayout();
@@ -140,6 +160,18 @@ namespace AnimalCafe.UI.Decoration
         }
         private void RefreshSafeAreaLayout()
         {
+            if (appearance != null)
+            {
+                if (refreshingMobileLayout) return;
+                refreshingMobileLayout = true;
+                try
+                {
+                    EnsureMobileSafeAreaHost();
+                    AnimalCafe.UI.P8R.P8RButtonLayout.Modal(modalCard, titleLabel, bodyLabel, continueButton, discardButton);
+                }
+                finally { refreshingMobileLayout = false; }
+                return;
+            }
             if (modalCard == null)
             {
                 return;
@@ -150,10 +182,35 @@ namespace AnimalCafe.UI.Decoration
                 new Vector2(Screen.width, Screen.height));
             var cardAnchor = new Vector2(
                 (safeRect.xMin + safeRect.xMax) * .5f,
-                Mathf.Lerp(safeRect.yMin, safeRect.yMax, .72f));
+                Mathf.Lerp(safeRect.yMin, safeRect.yMax, appearance != null ? .5f : .72f));
             modalCard.anchorMin = cardAnchor;
             modalCard.anchorMax = cardAnchor;
             modalCard.anchoredPosition = Vector2.zero;
+            if (appearance != null && transform is RectTransform root)
+            {
+                var available = Vector2.Scale(root.rect.size, safeRect.size) - Vector2.one * 32f;
+                var scale = Mathf.Min(1f, available.x / 840f, available.y / 560f);
+                modalCard.localScale = Vector3.one * Mathf.Max(.1f, scale);
+            }
+        }
+
+        private void EnsureMobileSafeAreaHost()
+        {
+            if (!Application.isPlaying || appearance == null || modalCard == null || mobileSafeAreaHost != null) return;
+            var host = new GameObject("P8RModalSafeArea", typeof(RectTransform), typeof(AnimalCafe.UI.P8R.P8RModalSafeAreaHost));
+            host.transform.SetParent(modalCard.parent, false);
+            mobileSafeAreaHost = host.GetComponent<AnimalCafe.UI.P8R.P8RModalSafeAreaHost>();
+            var rect = (RectTransform)host.transform;
+            rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            modalCard.SetParent(rect, false);
+            mobileSafeAreaHost.RectChanged = HandleMobileSafeAreaChanged;
+            host.GetComponent<SafeAreaContainer>().ApplySafeArea(Screen.safeArea, new Vector2(Screen.width, Screen.height));
+        }
+
+        private void HandleMobileSafeAreaChanged()
+        {
+            if (this != null && gameObject.activeInHierarchy) RefreshSafeAreaLayout();
         }
         private void OnRectTransformDimensionsChange()
         {
@@ -189,9 +246,11 @@ namespace AnimalCafe.UI.Decoration
         }
         private void OnDisable()
         {
+            AnimalCafe.UI.P8R.P8RMobileMetrics.Changed -= RefreshSafeAreaLayout;
             ReleaseGestureOwnership();
             SetInteraction(false);
         }
+        private void OnEnable() => AnimalCafe.UI.P8R.P8RMobileMetrics.Changed += RefreshSafeAreaLayout;
         private void OnDestroy()
         {
             ReleaseGestureOwnership();

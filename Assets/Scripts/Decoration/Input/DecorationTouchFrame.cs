@@ -9,6 +9,7 @@ namespace AnimalCafe.Decoration.Input
         None,
         Ui,
         Furniture,
+        FunctionalSurface,
         SceneDrag,
         Camera,
         Pinch
@@ -23,7 +24,8 @@ namespace AnimalCafe.Decoration.Input
         FloorGrid,
         WallSurface,
         WallSlot,
-        WallMounted
+        WallMounted,
+        FunctionalSurface
     }
 
     public readonly struct DecorationTouchPoint

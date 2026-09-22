@@ -38,6 +38,7 @@ namespace AnimalCafe.Tests.PlayMode
             owned.Clear();
         }
 
+#if UNITY_EDITOR
         [Test]
         public void SceneRendering_RequiresTask7RuntimeComponentsAndLayeredShader()
         {
@@ -51,6 +52,8 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(Shader.Find("AnimalCafe/Phase7/WallSurfaceLayered"), Is.Not.Null,
                 "Task 7 requires the layered wall shader asset.");
         }
+
+#endif
 
         [Test]
         public void WallSurfaceView_RendersColumnTiledWallpaperAndDerivedWaistCutoffWithoutMaterialMutation()
@@ -243,6 +246,7 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(after.UsingWallWainscotingStyleId, Is.EqualTo("wainscot.white"));
         }
 
+#if UNITY_EDITOR
         [Test]
         public void WallSurfaceLayeredShader_UsesEightColumnWainscotingUvsAndSupportedCompiledPass()
         {
@@ -270,6 +274,8 @@ namespace AnimalCafe.Tests.PlayMode
                 Does.Contain("tex2D(_WainscotingMap, wainscotingUv) * _WainscotingColor"),
                 "The wainscoting style tint written by WallSurfaceView must be consumed by the shader.");
         }
+
+#endif
 
         [Test]
         public void WallSurfaceView_DerivesCanonicalHeightFromValidatedRendererBounds()
@@ -751,6 +757,7 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(floor.GetComponentsInChildren<NavMeshObstacle>(true), Is.Empty);
         }
 
+#if UNITY_EDITOR
         [Test]
         public void WallOcclusionFadeView_UsesInjectedFadeMaterialBindingInsteadOfShaderFind()
         {
@@ -765,6 +772,8 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(source, Does.Not.Contain("Shader.Find"),
                 "Runtime fade must not depend solely on Shader.Find, which Player stripping can remove.");
         }
+
+#endif
 
         [UnityTest]
         public IEnumerator Task7TechnicalScreenshot_CapturesIsolatedWallProjectionForReview()
@@ -1202,6 +1211,7 @@ namespace AnimalCafe.Tests.PlayMode
                 "The reused projection must still move to the latest Wall slot.");
         }
 
+#if UNITY_EDITOR
         [TestCase(
             "Assets/Art/Phase7/Definitions/WD_WallDecor_Monitor_01.asset",
             "wall-decor.monitor.01",
@@ -1286,8 +1296,8 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(ghost, Is.Not.Null, expectedDefinitionId);
             Assert.That(ghost.name, Does.StartWith(definition.Prefab.name), expectedDefinitionId);
             var ghostLocalPosition = wall.transform.InverseTransformPoint(ghost.transform.position);
-            Assert.That(ghostLocalPosition.z, Is.EqualTo(-.091f).Within(.0001f),
-                expectedDefinitionId + " ghost must sit 1 mm outside the Base Wall Surface instead of floating at the decorative rail depth.");
+            Assert.That(ghostLocalPosition.z, Is.EqualTo(-.291f).Within(.0001f),
+                expectedDefinitionId + " ghost must hover 20 cm outward from the unchanged Base Wall contact plane.");
             var projectionLocalPosition = wall.transform.InverseTransformPoint(
                 view.CurrentProjection.transform.position);
             Assert.That(ghostLocalPosition.x,
@@ -1357,6 +1367,8 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(definition.Prefab.GetComponentsInChildren<Collider>(true), Is.Not.Empty,
                 "Preview stripping must not mutate the prefab asset.");
         }
+
+#endif
 
         [Test]
         public void WallMountedPreviewView_StripsEveryInteractionBodyFromCloneOnly()

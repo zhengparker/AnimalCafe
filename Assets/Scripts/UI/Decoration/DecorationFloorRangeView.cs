@@ -7,13 +7,17 @@ namespace AnimalCafe.UI.Decoration
 {
     public sealed class DecorationFloorRangeView : MonoBehaviour
     {
+        [SerializeField] private AnimalCafe.UI.P8R.P8RAppearance appearance;
         [SerializeField] private Button wholeRoomButton;
         [SerializeField] private Button singleGridButton;
         private bool listenersBound;
+        private bool refreshingLayout;
 
         public event Func<SurfaceEditScope, bool> RangeRequested;
         public SurfaceEditScope SelectedRange { get; private set; } =
             SurfaceEditScope.WholeRoomFloor;
+
+        public void RefreshMobileLayout() => ApplySelectedVisual();
 
         public void Configure(Button wholeRoom, Button singleGrid)
         {
@@ -41,11 +45,20 @@ namespace AnimalCafe.UI.Decoration
 
         private void OnEnable()
         {
+            AnimalCafe.UI.P8R.P8RMobileMetrics.Changed += ApplySelectedVisual;
             BindListeners();
             ApplySelectedVisual();
         }
 
-        private void OnDisable() => UnbindListeners();
+        private void OnDisable()
+        {
+            AnimalCafe.UI.P8R.P8RMobileMetrics.Changed -= ApplySelectedVisual;
+            UnbindListeners();
+        }
+        private void OnRectTransformDimensionsChange()
+        {
+            if (appearance != null && !refreshingLayout) ApplySelectedVisual();
+        }
         private void OnDestroy() => UnbindListeners();
 
         private void BindListeners()
@@ -100,6 +113,41 @@ namespace AnimalCafe.UI.Decoration
             if (singleGridButton != null)
             {
                 singleGridButton.interactable = SelectedRange != SurfaceEditScope.SingleGridFloor;
+            }
+            if (appearance != null)
+            {
+                if (refreshingLayout) return;
+                refreshingLayout = true;
+                var root = (RectTransform)transform;
+                var width = transform.parent is RectTransform host ? host.rect.width : 800f;
+                var measure = wholeRoomButton != null ? wholeRoomButton.GetComponentInChildren<TMPro.TMP_Text>(true) : null;
+                var catalogue = GetComponentInParent<DecorationCatalogueView>();
+                var layout = AnimalCafe.UI.P8R.P8RSurfaceFooterLayout.Measure(this, width, appearance, measure, true,
+                    catalogue == null || catalogue.HasActivePreview);
+                root.anchorMin = root.anchorMax = new Vector2(.5f, 0);
+                root.pivot = new Vector2(.5f, 0);
+                root.anchoredPosition = Vector2.zero;
+                root.sizeDelta = new Vector2(width, layout.Height);
+                var buttons = new[] { wholeRoomButton, singleGridButton };
+                for (var i = 0; i < buttons.Length; i++)
+                {
+                    if (buttons[i] == null) continue;
+                    var rect = (RectTransform)buttons[i].transform;
+                    rect.anchorMin = rect.anchorMax = new Vector2(.5f, 0);
+                    rect.pivot = Vector2.one * .5f; rect.anchoredPosition = layout.Centers[i];
+                    rect.sizeDelta = new Vector2(layout.Widths[i], layout.RowHeight);
+                }
+                appearance.Tab(wholeRoomButton, "whole_room", SelectedRange == SurfaceEditScope.WholeRoomFloor);
+                appearance.Tab(singleGridButton, "single_grid", SelectedRange == SurfaceEditScope.SingleGridFloor);
+                // A selected range is disabled only to make repeated selection a no-op, not unavailable.
+                // 已选中范围仍使用批准的彩色图；只保持现有禁止重复点击的语义。
+                for (var i = 0; i < buttons.Length; i++)
+                {
+                    var icon = buttons[i]?.transform.Find("Icon")?.GetComponent<Image>();
+                    if (icon != null) appearance.Paint(icon, i == 0 ? "whole_room_cocoa" : "single_grid_cocoa", false);
+                    AnimalCafe.UI.P8R.P8RButtonLayout.SurfaceButton(buttons[i]);
+                }
+                refreshingLayout = false;
             }
         }
     }

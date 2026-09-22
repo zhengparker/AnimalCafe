@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using AnimalCafe.UI.Foundation;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
 
 namespace AnimalCafe.UI.Decoration
 {
@@ -22,8 +24,11 @@ namespace AnimalCafe.UI.Decoration
         [SerializeField] private bool tooltipEnabled = true;
 
         private IUiPointerOwnershipRegistrar pointerBoundary;
+        private readonly HashSet<int> activePressIds = new HashSet<int>();
 
         public string SemanticLabel => semanticLabel;
+        public bool HasActivePress => activePressIds.Count > 0;
+        public event Action PresentationPressChanged;
         public bool IsTooltipVisible => tooltipRoot != null && tooltipRoot.activeSelf;
 
         public void Configure(IUiPointerOwnershipRegistrar registrar)
@@ -45,6 +50,7 @@ namespace AnimalCafe.UI.Decoration
             if (eventData != null)
             {
                 pointerBoundary?.RegisterUiPointerPress(eventData.pointerId);
+                if (activePressIds.Add(eventData.pointerId)) PresentationPressChanged?.Invoke();
             }
         }
 
@@ -53,6 +59,7 @@ namespace AnimalCafe.UI.Decoration
             if (eventData != null)
             {
                 pointerBoundary?.ReleasePointer(eventData.pointerId);
+                if (activePressIds.Remove(eventData.pointerId)) PresentationPressChanged?.Invoke();
             }
         }
 
@@ -83,11 +90,29 @@ namespace AnimalCafe.UI.Decoration
 
         public void OnPointerExit(PointerEventData eventData)
         {
+            var eventSystem = EventSystem.current;
+            var module = eventSystem != null ? eventSystem.currentInputModule : null;
+            if (module == null || !module.isActiveAndEnabled || !eventSystem.isActiveAndEnabled)
+                ClearPresentationPresses(); // Terminal UI-module purge, not an ordinary drag-out.
+            else if (eventData is ExtendedPointerEventData extended && extended.device != null && !extended.device.added)
+            {
+                // InputSystem removes stale device pointers with Exit but no Up; retain other held pointers.
+                // 只清这个已移除 device 的显示锁，不提前释放 registrar ownership。
+                if (activePressIds.Remove(eventData.pointerId)) PresentationPressChanged?.Invoke();
+            }
             HideTooltip();
+        }
+
+        public void ClearPresentationPresses()
+        {
+            if (activePressIds.Count == 0) return;
+            activePressIds.Clear();
+            PresentationPressChanged?.Invoke();
         }
 
         private void OnDisable()
         {
+            ClearPresentationPresses();
             HideTooltip();
         }
 

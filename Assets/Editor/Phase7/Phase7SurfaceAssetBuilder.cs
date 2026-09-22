@@ -641,6 +641,13 @@ namespace AnimalCafe.EditorTools.Phase7
         internal static void LayoutExitModal(DecorationExitModalView view)
         {
             if(view==null)throw new ArgumentNullException(nameof(view));
+            var p8r = new SerializedObject(view);
+            if (p8r.FindProperty("appearance").objectReferenceValue != null)
+            {
+                if (p8r.FindProperty("titleLabel").objectReferenceValue == null || p8r.FindProperty("bodyLabel").objectReferenceValue == null)
+                    throw new InvalidOperationException("P8R Exit references are incomplete; legacy authoring refused.");
+                return;
+            }
             var root=view.transform;
             var rootRect=(RectTransform)root;
             rootRect.anchorMin=Vector2.zero;rootRect.anchorMax=Vector2.one;rootRect.pivot=Vector2.one*.5f;

@@ -128,6 +128,10 @@ namespace AnimalCafe.EditorTools.Phase6
     {
         private const string Phase7CataloguePrefabPath="Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationCatalogue.prefab";
         private const string Phase7ActionBarPrefabPath="Assets/UI/Phase7/Prefabs/PF_UI_Phase7DecorationActionBar.prefab";
+        private const string Phase8CataloguePrefabPath="Assets/UI/Phase8/Prefabs/PF_UI_Phase8DecorationCatalogue.prefab";
+        private const string Phase8ActionBarPrefabPath="Assets/UI/Phase8/Prefabs/PF_UI_Phase8DecorationActionBar.prefab";
+        private const string Phase8CataloguePrefabGuid="c9629ed3cd810f34b8e67ee4402b8c89";
+        private const string Phase8ActionBarPrefabGuid="628e7dd8323d2a341b76290af6745059";
         private const string FloorPrefabPath =
             "Assets/Art/Phase4/Environment/Prefabs/PF_Environment_Floor_8x8.prefab";
         private const string BackLeftPrefabPath =
@@ -211,6 +215,10 @@ namespace AnimalCafe.EditorTools.Phase6
                 ValidateDependencyAssets(dependencies);
                 transaction.RefuseDirtyLoadedTarget();
                 transaction.RefuseSelectedTemporaryFixture();
+                // Approved presentation cannot bypass the original dependency/dirty/selection preflight.
+                // P8R 只保护外观，不跳过原有依赖与用户工作保护。
+                if (target == Phase6SceneSetupTarget.MainCafe
+                    && AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.GuardLegacyMainCafe()) return;
                 transaction.CreateBackup();
                 FaultInjectorForTests?.Invoke(Phase6SceneSetupStage.BeforeMutation);
                 transaction.OpenCandidate(dependencies);
@@ -252,6 +260,11 @@ namespace AnimalCafe.EditorTools.Phase6
                         "Persisted Phase 6 target validation failed: "
                         + string.Join("; ", targetIssues.Select(issue => issue.ToString())));
                 }
+
+                // Reload transient Editor layout changes on the fresh validated target only.
+                // 仅重载刚验证目标的 Editor 临时布局变化；不保存或清除用户修改。
+                if (transaction.Scene.isDirty)
+                    transaction.ReloadPersistedTarget();
 
                 transaction.Complete();
             }
@@ -609,7 +622,8 @@ namespace AnimalCafe.EditorTools.Phase6
                     Quaternion.identity);
                 changed = true;
             }
-            if(!IsExactPhase7Upgrade(catalogueObject,Phase7CataloguePrefabPath))
+            if(!IsExactPhase7Upgrade(catalogueObject,Phase7CataloguePrefabPath)
+                &&!IsExactPhase8Upgrade(catalogueObject,Phase8CataloguePrefabPath,Phase8CataloguePrefabGuid))
                 changed |= EnsureClosedActiveUiRoot(catalogueObject);
             var actionObject = FindNamed(scene, "PF_UI_DecorationActionBar")
                 .SingleOrDefault();
@@ -623,7 +637,8 @@ namespace AnimalCafe.EditorTools.Phase6
                     Quaternion.identity);
                 changed = true;
             }
-            if(!IsExactPhase7Upgrade(actionObject,Phase7ActionBarPrefabPath))
+            if(!IsExactPhase7Upgrade(actionObject,Phase7ActionBarPrefabPath)
+                &&!IsExactPhase8Upgrade(actionObject,Phase8ActionBarPrefabPath,Phase8ActionBarPrefabGuid))
                 changed |= EnsureClosedActiveUiRoot(actionObject);
             var modalObject = FindNamed(scene, "PF_UI_DecorationStoreModal")
                 .SingleOrDefault();
@@ -718,15 +733,26 @@ namespace AnimalCafe.EditorTools.Phase6
             var modal = FindNamed(scene, "PF_UI_DecorationStoreModal").SingleOrDefault();
             var phase7Catalogue=catalogue!=null&&IsExactPhase7Upgrade(catalogue,Phase7CataloguePrefabPath);
             var phase7Action=action!=null&&IsExactPhase7Upgrade(action,Phase7ActionBarPrefabPath);
+            var phase8Catalogue=catalogue!=null&&IsExactPhase8Upgrade(catalogue,Phase8CataloguePrefabPath,Phase8CataloguePrefabGuid);
+            var phase8Action=action!=null&&IsExactPhase8Upgrade(action,Phase8ActionBarPrefabPath,Phase8ActionBarPrefabGuid);
             if (catalogue != null
                 && (!HasPrefabSource(catalogue,
-                        Phase6DecorationAssetPaths.DecorationCataloguePrefabPath)&&!phase7Catalogue
+                        Phase6DecorationAssetPaths.DecorationCataloguePrefabPath)
+                    &&!phase7Catalogue
+                    &&!phase8Catalogue
                     || catalogue.GetComponent<BoxCollider>() != null))
                 throw new InvalidOperationException("Decoration catalogue UI contains hostile drift.");
             if (action != null
                 && !HasPrefabSource(action,
-                    Phase6DecorationAssetPaths.DecorationActionBarPrefabPath)&&!phase7Action)
+                    Phase6DecorationAssetPaths.DecorationActionBarPrefabPath)
+                &&!phase7Action
+                &&!phase8Action)
                 throw new InvalidOperationException("Decoration action bar UI contains hostile drift.");
+            var hasUpgrade=phase7Catalogue||phase7Action||phase8Catalogue||phase8Action;
+            var hasSameGenerationUpgrade=(phase7Catalogue&&phase7Action)
+                ||(phase8Catalogue&&phase8Action);
+            if(hasUpgrade&&!hasSameGenerationUpgrade)
+                throw new InvalidOperationException("Decoration catalogue/action bar UI generations cannot be mixed.");
             if (modal != null)
             {
                 var rect = modal.GetComponent<RectTransform>();
@@ -736,10 +762,10 @@ namespace AnimalCafe.EditorTools.Phase6
                     || rect.anchoredPosition != Vector2.zero)
                     throw new InvalidOperationException("Decoration store modal UI contains hostile drift.");
             }
-            if(phase7Catalogue&&phase7Action)
+            if(hasSameGenerationUpgrade)
             {
                 if(!catalogue.activeSelf||!action.activeSelf||action.transform.GetSiblingIndex()<catalogue.transform.GetSiblingIndex())
-                    throw new InvalidOperationException("Canonical Phase 7 decoration UI activation or sibling order drifted.");
+                    throw new InvalidOperationException("Canonical upgraded decoration UI activation or sibling order drifted.");
                 return;
             }
             if (catalogue != null && action != null && modal != null)
@@ -784,6 +810,14 @@ namespace AnimalCafe.EditorTools.Phase6
 
             return instanceGraph.SequenceEqual(BuildComponentGraph(source),StringComparer.Ordinal);
         }
+
+        private static bool IsExactPhase8Upgrade(
+            GameObject instance,
+            string path,
+            string expectedGuid) =>
+            string.Equals(AssetDatabase.AssetPathToGUID(path), expectedGuid,
+                StringComparison.Ordinal)
+            && IsExactPhase7Upgrade(instance, path);
 
         private static bool IsPhase7SceneOwnedFloorRangeSignature(string signature)
         {
@@ -1158,6 +1192,8 @@ namespace AnimalCafe.EditorTools.Phase6
             GameTimeService gameTime,
             AnimalCafeUiTheme theme)
         {
+            var p8rController = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<DecorationModeController>(true)).SingleOrDefault();
+            if (AnimalCafe.EditorTools.P8R.P8RCompleteUiBuilder.GuardLegacy(p8rController)) return false;
             var changed = false;
             var rail = safeArea.Find("RightRail")?.gameObject;
             if (rail == null)

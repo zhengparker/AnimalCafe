@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using AnimalCafe.Layout;
 
 namespace AnimalCafe.Decoration
@@ -11,6 +15,7 @@ namespace AnimalCafe.Decoration
         public GridPosition ProposedPosition { get; }
         public FurnitureRotation ProposedRotation { get; }
         public PlacementResult PlacementResult { get; }
+        public IReadOnlyList<string> StoreBlockerContentIds { get; }
         public bool IsNew => SourceInstanceId == null;
 
         internal FurniturePlacementPreview(
@@ -20,7 +25,8 @@ namespace AnimalCafe.Decoration
             FurnitureRotation originalRotation,
             GridPosition proposedPosition,
             FurnitureRotation proposedRotation,
-            PlacementResult placementResult)
+            PlacementResult placementResult,
+            IEnumerable<string> storeBlockerContentIds = null)
         {
             DefinitionId = definitionId;
             SourceInstanceId = sourceInstanceId;
@@ -29,6 +35,8 @@ namespace AnimalCafe.Decoration
             ProposedPosition = proposedPosition;
             ProposedRotation = proposedRotation;
             PlacementResult = placementResult;
+            StoreBlockerContentIds = new ReadOnlyCollection<string>(
+                (storeBlockerContentIds ?? Array.Empty<string>()).ToList());
         }
 
         internal FurniturePlacementPreview WithProposedPlacement(
@@ -43,7 +51,22 @@ namespace AnimalCafe.Decoration
                 OriginalRotation,
                 position,
                 rotation,
-                placementResult);
+                placementResult,
+                StoreBlockerContentIds);
+        }
+
+        internal FurniturePlacementPreview WithStoreBlockerContentIds(
+            IEnumerable<string> contentIds)
+        {
+            return new FurniturePlacementPreview(
+                DefinitionId,
+                SourceInstanceId,
+                OriginalPosition,
+                OriginalRotation,
+                ProposedPosition,
+                ProposedRotation,
+                PlacementResult,
+                contentIds);
         }
     }
 }

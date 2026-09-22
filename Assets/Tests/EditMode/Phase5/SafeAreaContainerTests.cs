@@ -81,6 +81,106 @@ namespace AnimalCafe.Tests.Phase5
             }
         }
 
+        [Test]
+        public void ParentOwnsSafeArea_DefaultFalse_StillAppliesNormalizedInsets()
+        {
+            var gameObject = new GameObject("DefaultSafeArea", typeof(RectTransform));
+            gameObject.SetActive(false);
+            var container = gameObject.AddComponent<SafeAreaContainer>();
+            var rectTransform = gameObject.GetComponent<RectTransform>();
+            try
+            {
+                Assert.That(container.ParentOwnsSafeArea, Is.False);
+
+                container.ApplySafeArea(
+                    new Rect(88f, 40f, 1026f, 576f),
+                    new Vector2(1138f, 640f));
+
+                Assert.That(rectTransform.anchorMin.x, Is.EqualTo(88f / 1138f).Within(0.0001f));
+                Assert.That(rectTransform.anchorMin.y, Is.EqualTo(40f / 640f).Within(0.0001f));
+                Assert.That(rectTransform.anchorMax.x, Is.EqualTo(1114f / 1138f).Within(0.0001f));
+                Assert.That(rectTransform.anchorMax.y, Is.EqualTo(616f / 640f).Within(0.0001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void ParentOwnsSafeArea_AutomaticAndExplicitRefreshStayFullStretch_ThenDisableReappliesInsets()
+        {
+            var gameObject = new GameObject("InheritedSafeArea", typeof(RectTransform));
+            gameObject.SetActive(false);
+            var container = gameObject.AddComponent<SafeAreaContainer>();
+            var rectTransform = gameObject.GetComponent<RectTransform>();
+            var safeArea = new Rect(88f, 40f, 1026f, 576f);
+            var screenSize = new Vector2(1138f, 640f);
+            try
+            {
+                Assert.That(container.RefreshSafeArea(safeArea, screenSize), Is.True);
+                container.ParentOwnsSafeArea = true;
+
+                Assert.That(container.RefreshSafeArea(safeArea, screenSize), Is.True,
+                    "Changing safe-area ownership must invalidate cached metrics for the automatic path.");
+                AssertFullStretch(rectTransform);
+
+                rectTransform.anchorMin = new Vector2(.2f, .3f);
+                rectTransform.anchorMax = new Vector2(.7f, .8f);
+                container.ApplySafeArea(new Rect(108f, 40f, 1006f, 576f), screenSize);
+                AssertFullStretch(rectTransform);
+
+                container.ParentOwnsSafeArea = false;
+                Assert.That(container.RefreshSafeArea(safeArea, screenSize), Is.True,
+                    "Returning ownership must also invalidate cached metrics.");
+                Assert.That(rectTransform.anchorMin.x, Is.EqualTo(88f / 1138f).Within(0.0001f));
+                Assert.That(rectTransform.anchorMin.y, Is.EqualTo(40f / 640f).Within(0.0001f));
+                Assert.That(rectTransform.anchorMax.x, Is.EqualTo(1114f / 1138f).Within(0.0001f));
+                Assert.That(rectTransform.anchorMax.y, Is.EqualTo(616f / 640f).Within(0.0001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(gameObject);
+            }
+        }
+
+        [Test]
+        public void ParentOwnedRuntimeState_DoesNotLeakIntoAClonedStandaloneContainer()
+        {
+            var source = new GameObject("NestedRuntimeSafeArea", typeof(RectTransform));
+            source.SetActive(false);
+            var container = source.AddComponent<SafeAreaContainer>();
+            container.AutoApplyRuntimeSafeArea = false;
+            container.ParentOwnsSafeArea = true;
+            GameObject clone = null;
+            try
+            {
+                // Ownership belongs to the current runtime host, not to a saved/duplicated UI asset.
+                // 父级归属是当前运行环境的状态，复制为独立控件后必须重新应用自己的 Safe Area。
+                clone = Object.Instantiate(source);
+                var standalone = clone.GetComponent<SafeAreaContainer>();
+                Assert.That(standalone.ParentOwnsSafeArea, Is.False);
+                standalone.RefreshSafeArea(new Rect(20, 40, 960, 1840), new Vector2(1000, 1920));
+                var rect = (RectTransform)clone.transform;
+                Assert.That(rect.anchorMin.x, Is.EqualTo(.02f).Within(.0001f));
+                Assert.That(rect.anchorMin.y, Is.EqualTo(40f / 1920f).Within(.0001f));
+                Assert.That(rect.anchorMax.x, Is.EqualTo(.98f).Within(.0001f));
+            }
+            finally
+            {
+                if (clone != null) Object.DestroyImmediate(clone);
+                Object.DestroyImmediate(source);
+            }
+        }
+
+        private static void AssertFullStretch(RectTransform rectTransform)
+        {
+            Assert.That(rectTransform.anchorMin, Is.EqualTo(Vector2.zero));
+            Assert.That(rectTransform.anchorMax, Is.EqualTo(Vector2.one));
+            Assert.That(rectTransform.offsetMin, Is.EqualTo(Vector2.zero));
+            Assert.That(rectTransform.offsetMax, Is.EqualTo(Vector2.zero));
+        }
+
         [TestCase(UiTextStyle.Body, 12f, 16f)]
         [TestCase(UiTextStyle.Label, 10f, 14f)]
         public void ConfigureLocalizedText_LongMixedLabel_WrapsWithoutShrinkingBelowBaseline(

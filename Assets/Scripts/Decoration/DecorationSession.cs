@@ -6,13 +6,22 @@ namespace AnimalCafe.Decoration
     public sealed class DecorationSession
     {
         private readonly CafeLayout layout;
+        private readonly FunctionalSurfaceLayout functionalSurfaceLayout;
 
         public DecorationSessionState State { get; private set; }
         public FurniturePlacementPreview ActivePreview { get; private set; }
 
         public DecorationSession(CafeLayout layout)
+            : this(layout, null)
+        {
+        }
+
+        public DecorationSession(
+            CafeLayout layout,
+            FunctionalSurfaceLayout functionalSurfaceLayout)
         {
             this.layout = layout ?? throw new ArgumentNullException(nameof(layout));
+            this.functionalSurfaceLayout = functionalSurfaceLayout;
             State = DecorationSessionState.Closed;
         }
 
@@ -253,6 +262,7 @@ namespace AnimalCafe.Decoration
             }
 
             State = DecorationSessionState.ConfirmingStore;
+            ActivePreview = ActivePreview.WithStoreBlockerContentIds(null);
             return true;
         }
 
@@ -263,6 +273,7 @@ namespace AnimalCafe.Decoration
                 !ActivePreview.IsNew)
             {
                 State = DecorationSessionState.EditingExistingFurniture;
+                ActivePreview = ActivePreview.WithStoreBlockerContentIds(null);
             }
         }
 
@@ -273,6 +284,15 @@ namespace AnimalCafe.Decoration
                 ActivePreview.IsNew)
             {
                 return PlacementResult.Success();
+            }
+
+            var blockerContentIds = functionalSurfaceLayout?
+                .GetContentIdsForSupport(ActivePreview.SourceInstanceId);
+            if (blockerContentIds != null && blockerContentIds.Count > 0)
+            {
+                ActivePreview = ActivePreview.WithStoreBlockerContentIds(
+                    blockerContentIds);
+                return PlacementResult.Failure(PlacementFailureReason.Blocked);
             }
 
             var result = layout.RemoveFurniture(ActivePreview.SourceInstanceId);

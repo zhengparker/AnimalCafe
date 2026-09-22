@@ -8,6 +8,7 @@ using AnimalCafe.Decoration;
 using AnimalCafe.Decoration.Input;
 using AnimalCafe.Layout;
 using AnimalCafe.UI.Decoration;
+using AnimalCafe.UI.P8R;
 using TMPro;
 using NUnit.Framework;
 using UnityEditor.SceneManagement;
@@ -23,6 +24,32 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
     {
         private const string MainCafe = "Assets/Scenes/MainCafe.unity";
         private const string CanonicalWindow = "wall-mounted.main.window.canonical.01";
+        private static P8RAppearance AppearanceOf(Component view) => view.GetType().GetField("appearance",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(view) as P8RAppearance;
+
+        private static void AssertSelectedTabPresentation(DecorationModeTabsView tabs, Button active)
+        {
+            if (AppearanceOf(tabs) == null)
+            {
+                Assert.That(((RectTransform)active.transform).anchoredPosition.y,
+                    Is.GreaterThan(tabs.GetComponentsInChildren<Button>(true).Where(x => x != active).Max(x => ((RectTransform)x.transform).anchoredPosition.y)));
+                return;
+            }
+            const System.Reflection.BindingFlags flags =
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var idleSprite = typeof(DecorationModeTabsView).GetField("categoryIdleSprite", flags)?.GetValue(tabs) as Sprite;
+            var selectedSprite = typeof(DecorationModeTabsView).GetField("categorySelectedSprite", flags)?.GetValue(tabs) as Sprite;
+            Assert.That(idleSprite, Is.Not.Null);
+            Assert.That(selectedSprite, Is.Not.Null);
+            Assert.That(idleSprite.name, Is.EqualTo("category_tab_idle"));
+            Assert.That(selectedSprite.name, Is.EqualTo("category_tab_selected"));
+            foreach (var button in tabs.GetComponentsInChildren<Button>(true))
+            {
+                Assert.That(button.transform.Find("SelectedUnderline").gameObject.activeSelf, Is.False);
+                Assert.That(button.image.sprite, Is.SameAs(button == active ? selectedSprite : idleSprite));
+                Assert.That(((RectTransform)button.transform).anchoredPosition.y, Is.EqualTo(((RectTransform)active.transform).anchoredPosition.y));
+            }
+        }
 
         [UnityTearDown]
         public IEnumerator RestoreCleanSceneAndInputOwners()
@@ -33,9 +60,11 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             SceneManager.SetActiveScene(cleanup);
             if (active.IsValid() && active.isLoaded && active != cleanup)
             {
+                var inputAssets = Phase8SceneInputTestCleanup.CaptureAssets(active);
                 var unload = SceneManager.UnloadSceneAsync(active);
                 while (unload != null && !unload.isDone)
                     yield return null;
+                Phase8SceneInputTestCleanup.DisposeReleasedAssets(inputAssets);
             }
 
             Assert.That(Object.FindObjectsByType<AnimalCafe.Decoration.Input.InputSystemDecorationTouchSource>(
@@ -287,10 +316,22 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Assert.That(button.image.sprite, Is.Not.Null, button.name);
                 Assert.That(button.image.type, Is.EqualTo(Image.Type.Sliced), button.name);
                 Assert.That(button.image.sprite.border.sqrMagnitude, Is.GreaterThan(0f), button.name);
-                Assert.That(button.colors.normalColor.r, Is.GreaterThan(button.colors.normalColor.b),
-                    button.name + " must use the warm paper state instead of default white.");
-                Assert.That(button.colors.disabledColor.g, Is.GreaterThan(button.colors.disabledColor.r),
-                    button.name + " selected state must use the shared sage highlight.");
+                var appearance = AppearanceOf(range);
+                if (appearance != null)
+                {
+                    var selected = button.name == (range.SelectedRange == SurfaceEditScope.WholeRoomFloor ? "WholeRoomButton" : "SingleGridButton");
+                    Assert.That(button.image.overrideSprite, Is.SameAs(appearance.Sprite(selected ? "tab_selected" : "tab_idle")));
+                    Assert.That(button.spriteState.disabledSprite, Is.SameAs(appearance.Sprite(selected ? "tab_selected" : "tab_idle")));
+                    Assert.That(button.image.color, Is.EqualTo(Color.white));
+                    Assert.That(button.image.canvasRenderer.GetColor(), Is.EqualTo(Color.white));
+                }
+                else
+                {
+                    Assert.That(button.colors.normalColor.r, Is.GreaterThan(button.colors.normalColor.b),
+                        button.name + " must use the warm paper state instead of default white.");
+                    Assert.That(button.colors.disabledColor.g, Is.GreaterThan(button.colors.disabledColor.r),
+                        button.name + " selected state must use the shared sage highlight.");
+                }
             }
         }
 
@@ -324,7 +365,18 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var focusedName=EventSystem.current?.currentSelectedGameObject?.name??"none";
             var wholeRoomTint=wholeRoom.targetGraphic.canvasRenderer.GetColor();
             var singleGridTint=singleGrid.targetGraphic.canvasRenderer.GetColor();
-            Assert.That(Vector4.Distance(singleGridTint,wholeRoomTint), Is.GreaterThan(.25f),
+            var appearance = AppearanceOf(range);
+            if (appearance != null)
+            {
+                Assert.That(wholeRoom.interactable, Is.False);
+                Assert.That(singleGrid.interactable, Is.True);
+                Assert.That(wholeRoom.image.overrideSprite, Is.SameAs(appearance.Sprite("tab_selected")));
+                Assert.That(singleGrid.image.overrideSprite, Is.SameAs(appearance.Sprite("tab_idle")),
+                    "Rejected focused range must not display the accepted selection sprite.");
+                Assert.That(wholeRoomTint, Is.EqualTo(Color.white));
+                Assert.That(singleGridTint, Is.EqualTo(Color.white));
+            }
+            else Assert.That(Vector4.Distance(singleGridTint,wholeRoomTint), Is.GreaterThan(.25f),
                 $"A rejected Single Grid click may keep UI focus, but it must not reuse the green active-range colour. " +
                 $"Whole={wholeRoomTint}, interactable={wholeRoom.interactable}; " +
                 $"Single={singleGridTint}, interactable={singleGrid.interactable}; " +
@@ -449,10 +501,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var camera = Object.FindObjectsByType<UnityEngine.Camera>(
                     FindObjectsInactive.Include, FindObjectsSortMode.None)
                 .Single(item => item.CompareTag("MainCamera"));
-            var renderBounds = CombinedBounds(
-                representation.GetComponentsInChildren<Renderer>(true));
-            var screenPoint = camera.WorldToScreenPoint(renderBounds.center);
-            Assert.That(screenPoint.z, Is.GreaterThan(0f));
+            var screenPoint = FindUiFreeWallMountedScreenPoint(
+                camera, registry, representation, confirmed.InstanceId);
 
             var classify = typeof(DecorationModeController).GetMethod(
                 "ClassifyPrimaryBegan",
@@ -498,12 +548,44 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(action.IsVisible, Is.True);
             Assert.That(rotate.gameObject.activeSelf, Is.False,
                 "Wall Decor must never expose Furniture's Rotate action.");
-            CollectionAssert.AreEqual(new[] { "×", "✓" }, visibleActionButtons
-                .Select(button => button.transform.Find("Label").GetComponent<TMP_Text>().text));
-            Assert.That(visibleActionButtons.All(button =>
-                Mathf.Approximately(((RectTransform)button.transform).rect.width, 48f)
-                && Mathf.Approximately(((RectTransform)button.transform).rect.height, 48f)), Is.True,
-                "Wall Decor must restore the compact icon actions instead of Surface-sized text buttons.");
+            var appearance = AppearanceOf(action);
+            if (appearance != null)
+            {
+                CollectionAssert.AreEqual(new[] { "CancelButton", "ConfirmButton" }, visibleActionButtons.Select(button => button.name));
+                foreach (var button in visibleActionButtons)
+                {
+                    var semantic = button.name == "CancelButton" ? "cancel" : "confirm";
+                    var icon = button.transform.Find("Icon").GetComponent<Image>();
+                    Assert.That(button.transform.Find("Label").gameObject.activeSelf, Is.False);
+                    Assert.That(icon.gameObject.activeInHierarchy, Is.True);
+                    Assert.That(icon.sprite, Is.SameAs(appearance.Sprite(semantic + (button.interactable ? "_cocoa" : "_muted"))));
+                    var role = semantic == "confirm" ? "primary" : "secondary";
+                    Assert.That(button.image.overrideSprite, Is.SameAs(appearance.Sprite(button.interactable ? "button_" + role + "_normal" : "button_disabled")));
+                    var rect = (RectTransform)button.transform;
+                    Assert.That(rect.rect.width, Is.GreaterThanOrEqualTo(48f));
+                    Assert.That(rect.rect.height, Is.GreaterThanOrEqualTo(48f));
+                }
+                Canvas.ForceUpdateCanvases();
+                var first = WorldRect((RectTransform)visibleActionButtons[0].transform);
+                var second = WorldRect((RectTransform)visibleActionButtons[1].transform);
+                Assert.That(first.Overlaps(second), Is.False);
+                foreach (var rect in new[] { first, second })
+                {
+                    Assert.That(rect.xMin, Is.GreaterThanOrEqualTo(Screen.safeArea.xMin));
+                    Assert.That(rect.yMin, Is.GreaterThanOrEqualTo(Screen.safeArea.yMin));
+                    Assert.That(rect.xMax, Is.LessThanOrEqualTo(Screen.safeArea.xMax));
+                    Assert.That(rect.yMax, Is.LessThanOrEqualTo(Screen.safeArea.yMax));
+                }
+            }
+            else
+            {
+                CollectionAssert.AreEqual(new[] { "×", "✓" }, visibleActionButtons
+                    .Select(button => button.transform.Find("Label").GetComponent<TMP_Text>().text));
+                Assert.That(visibleActionButtons.All(button =>
+                    Mathf.Approximately(((RectTransform)button.transform).rect.width, 48f)
+                    && Mathf.Approximately(((RectTransform)button.transform).rect.height, 48f)), Is.True,
+                    "Wall Decor must restore the compact icon actions instead of Surface-sized text buttons.");
+            }
 
             Canvas.ForceUpdateCanvases();
             var initialGhost = CombinedBounds(
@@ -556,8 +638,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(tabs.RequestMode(DecorationModeKind.Wall), Is.True); yield return null;
             var active = tabs.GetComponentsInChildren<Button>(true).Single(x => x.name == "wallButton");
             Assert.That(active.transform.GetSiblingIndex(), Is.EqualTo(tabs.transform.childCount - 1));
-            Assert.That(((RectTransform)active.transform).anchoredPosition.y,
-                Is.GreaterThan(tabs.GetComponentsInChildren<Button>(true).Where(x => x != active).Max(x => ((RectTransform)x.transform).anchoredPosition.y)));
+            AssertSelectedTabPresentation(tabs, active);
 
             var row = catalogue.CategoryRows[0].HorizontalScroll;
             catalogue.BeginNestedDrag(row);
@@ -696,10 +777,16 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(titleRect.yMin, Is.GreaterThanOrEqualTo(cards[0].yMax - 1f),
                 "Category title must own a separate row and never overlap its item cards.");
             var activeRect = WorldRect((RectTransform)activeTab.transform);
-            Assert.That(activeRect.yMin, Is.LessThanOrEqualTo(panelRect.yMax),
-                "Raised active tab must overlap the panel edge instead of leaving a visible gap.");
-            Assert.That(activeRect.yMin, Is.GreaterThanOrEqualTo(panelRect.yMax - 16f),
-                "Active tab should read as a folder tab, not sink deep into the panel.");
+            if (AppearanceOf(tabs) == null)
+            {
+                Assert.That(activeRect.yMin, Is.LessThanOrEqualTo(panelRect.yMax), "Raised active tab must overlap the panel edge.");
+                Assert.That(activeRect.yMin, Is.GreaterThanOrEqualTo(panelRect.yMax - 16f), "Legacy folder tab stays at the panel edge.");
+            }
+            else
+            {
+                Assert.That(activeRect.yMin, Is.GreaterThan(panelRect.yMin));
+                Assert.That(activeRect.yMax, Is.LessThan(panelRect.yMax), "Approved P8R tabs are visually inside the sheet below its header.");
+            }
             CaptureUiEvidence("outputs/phase7-ui-fix/MainCafe_Catalogue_Expanded.png", catalogue);
 
             var catalogueStart = catalogueRect.anchoredPosition;
@@ -721,9 +808,25 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var viewport = catalogue.GetComponentInParent<Canvas>().rootCanvas.pixelRect;
             Assert.That(collapsedTabRect.yMin, Is.GreaterThanOrEqualTo(viewport.yMin));
             Assert.That(collapsedTabRect.yMax, Is.LessThanOrEqualTo(viewport.yMax));
-            Assert.That(collapsedTabRect.center.y, Is.LessThanOrEqualTo(viewport.height * .2f),
-                "Collapsed tabs must settle with the Bottom Sheet in the lower screen region instead of floating mid-screen.");
             var collapsedHandleRect = WorldRect(catalogue.CollapsedHandleRect);
+            if (AppearanceOf(tabs) == null)
+            {
+                Assert.That(collapsedTabRect.center.y, Is.LessThanOrEqualTo(viewport.height * .2f),
+                    "Legacy collapsed tabs must settle in the lower screen region.");
+            }
+            else
+            {
+                // Fixed logical targets occupy more than 20% on short landscape screens.
+                // 用已批准的贴底间距与触控高度检查收起栏，不把短横屏的固定尺寸当成布局漂移。
+                var density = P8RMobileMetrics.For(catalogue).PixelsPerLogicalUnit;
+                var safeBottom = Mathf.Max(viewport.yMin, Screen.safeArea.yMin);
+                Assert.That(collapsedHandleRect.height / density, Is.EqualTo(48f).Within(.1f));
+                Assert.That(collapsedTabRect.height / density, Is.EqualTo(48f).Within(.1f));
+                Assert.That((collapsedTabRect.yMin - collapsedHandleRect.yMax) / density,
+                    Is.EqualTo(8f).Within(.1f), "Tabs must stay attached directly above the expand handle.");
+                Assert.That((collapsedHandleRect.yMin - safeBottom) / density,
+                    Is.EqualTo(24f).Within(.1f), "Furniture's collapsed handle must retain its fixed safe-bottom inset.");
+            }
             Assert.That(catalogue.CollapsedHandleRect.gameObject.activeInHierarchy, Is.True);
             Assert.That(collapsedHandleRect.yMin, Is.GreaterThanOrEqualTo(viewport.yMin),
                 "The collapsed expand handle must remain visible after the sheet and tabs move down.");
@@ -805,10 +908,15 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     Canvas.ForceUpdateCanvases();
                     var tabButtons = tabs.GetComponentsInChildren<Button>(true);
                     Assert.That(tabButtons, Has.Length.EqualTo(4));
-                    Assert.That(tabButtons.All(button => button.gameObject.activeInHierarchy
-                        && button.interactable && button.image != null && button.image.raycastTarget), Is.True);
                     foreach (var tab in tabButtons)
                     {
+                        var hitRoot = tab.GetComponent<Image>();
+                        Assert.That(tab.gameObject.activeInHierarchy && tab.interactable
+                            && tab.image != null && hitRoot != null && hitRoot.raycastTarget, Is.True,
+                            $"viewport={viewport}, tab={tab.name}: the full-size root must own the tab raycast target.");
+                        if (tab.image != hitRoot)
+                            Assert.That(tab.image.raycastTarget, Is.False,
+                                $"viewport={viewport}, tab={tab.name}: the visual face must defer raycasts to the full-size hit root.");
                         var bounds = WorldRect((RectTransform)tab.transform);
                         Assert.That(viewport.Contains(bounds.min) && viewport.Contains(bounds.max), Is.True,
                             $"viewport={viewport}, tab={tab.name}, bounds={bounds}");
@@ -816,9 +924,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     }
                     var active = tabButtons.Single(button => button.name == "wallButton");
                     Assert.That(active.transform.GetSiblingIndex(), Is.EqualTo(tabs.transform.childCount - 1));
-                    Assert.That(((RectTransform)active.transform).anchoredPosition.y,
-                        Is.GreaterThan(tabButtons.Where(button => button != active)
-                            .Max(button => ((RectTransform)button.transform).anchoredPosition.y)));
+                    AssertSelectedTabPresentation(tabs, active);
 
                     var row = catalogue.CategoryRows.First().HorizontalScroll;
                     catalogue.BeginNestedDrag(row);
@@ -844,8 +950,12 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     var confirm = actionButtons.Single(button => button.name == "ConfirmButton");
                     foreach (var button in new[] { cancel, confirm })
                     {
+                        var hitRoot = button.GetComponent<Image>();
                         Assert.That(button.gameObject.activeInHierarchy && button.interactable
-                            && button.image != null && button.image.raycastTarget, Is.True);
+                            && button.image != null && hitRoot != null && hitRoot.raycastTarget, Is.True);
+                        if (button.image != hitRoot)
+                            Assert.That(button.image.raycastTarget, Is.False,
+                                "The P8R visual face must defer raycasts to the full-size hit root.");
                         var bounds = WorldRect((RectTransform)button.transform);
                         Assert.That(safe.Contains(bounds.min) && safe.Contains(bounds.max), Is.True,
                             $"viewport={viewport}, safe={safe}, button={button.name}, bounds={bounds}");
@@ -905,13 +1015,45 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var backdrop = modal.transform.Find("Backdrop")?.GetComponent<Image>();
             Assert.That(backdrop, Is.Not.Null, "The Modal needs a dedicated dim blocker behind its card.");
             Assert.That(backdrop.raycastTarget, Is.True);
-            Assert.That(backdrop.color.a, Is.InRange(.35f, .75f));
+            var appearance = AppearanceOf(modal);
+            if (appearance != null)
+            {
+                Assert.That(backdrop.sprite, Is.SameAs(appearance.Sprite("modal_scrim")));
+                Assert.That(backdrop.color, Is.EqualTo(Color.white));
+                Assert.That(backdrop.canvasRenderer.GetColor(), Is.EqualTo(Color.white));
+                Assert.That(WorldRect(backdrop.rectTransform), Is.EqualTo(WorldRect(rootRect)));
+                var pixels = new Texture2D(2, 2);
+                try
+                {
+                    Assert.That(pixels.LoadImage(File.ReadAllBytes(UnityEditor.AssetDatabase.GetAssetPath(backdrop.sprite))), Is.True);
+                    Assert.That(pixels.GetPixel(pixels.width / 2, pixels.height / 2).a * backdrop.color.a,
+                        Is.InRange(.35f, .75f), "The PNG, not its white tint, supplies the dim alpha.");
+                }
+                finally { Object.Destroy(pixels); }
+            }
+            else Assert.That(backdrop.color.a, Is.InRange(.35f, .75f));
 
-            var card = modal.transform.Find("ModalCard")?.GetComponent<Image>();
+            var cardRect = typeof(DecorationExitModalView).GetField("modalCard",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                ?.GetValue(modal) as RectTransform;
+            var card = cardRect?.GetComponent<Image>();
             Assert.That(card, Is.Not.Null, "Continue and Discard must live on a separate warm Modal card.");
+            if (appearance != null)
+            {
+                Assert.That(cardRect.parent.GetComponent<P8RModalSafeAreaHost>(), Is.Not.Null,
+                    "The P8R card must remain inside its runtime Safe Area host.");
+                Assert.That(cardRect.parent.parent, Is.SameAs(modal.transform));
+            }
             Assert.That(card.sprite, Is.Not.Null);
             Assert.That(card.type, Is.EqualTo(Image.Type.Sliced));
-            Assert.That(card.color.r, Is.GreaterThan(card.color.b),
+            if (appearance != null)
+            {
+                Assert.That(card.sprite, Is.SameAs(appearance.Sprite("panel_cream")));
+                Assert.That(card.sprite.border.sqrMagnitude, Is.GreaterThan(0f));
+                Assert.That(card.color, Is.EqualTo(Color.white));
+                Assert.That(card.canvasRenderer.GetColor(), Is.EqualTo(Color.white));
+            }
+            else Assert.That(card.color.r, Is.GreaterThan(card.color.b),
                 "The card must use the approved warm-paper palette instead of plain white.");
 
             var buttons = modal.GetComponentsInChildren<Button>(true);
@@ -1133,6 +1275,10 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
 
         private static void CaptureUiEvidence(string path, DecorationCatalogueView catalogue)
         {
+            // Regression runs are read-only unless a fresh evidence folder is explicitly requested.
+            var captureFolder = System.Environment.GetEnvironmentVariable("ANIMALCAFE_PHASE7_CAPTURE_FOLDER");
+            if (string.IsNullOrEmpty(captureFolder)) return;
+            path = Path.Combine(captureFolder, Path.GetFileName(path));
             var canvas = catalogue.GetComponentInParent<Canvas>().rootCanvas;
             var camera = Object.FindObjectsByType<UnityEngine.Camera>(
                     FindObjectsInactive.Include, FindObjectsSortMode.None)
@@ -1171,6 +1317,60 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Object.Destroy(target);
                 Object.Destroy(pixels);
             }
+        }
+
+        private static Vector2 FindUiFreeWallMountedScreenPoint(
+            UnityEngine.Camera camera, WallMountedSceneRegistry registry,
+            GameObject representation, string instanceId)
+        {
+            var colliders = representation.GetComponentsInChildren<Collider>(false);
+            Assert.That(colliders, Is.Not.Empty, "Confirmed decor must have real production Colliders immediately.");
+            Assert.That(EventSystem.current, Is.Not.Null);
+            var samples = new[] { .1f, .3f, .5f, .7f, .9f };
+            var uiHits = new List<RaycastResult>();
+            var sampled = 0;
+            var lastUi = "none";
+            var lastCollider = "none";
+            // Find an actually visible point without disabling UI or asking the classifier for the answer.
+            // 不隐藏 UI、不等待一帧、不手动同步物理；首次确认后的真实 Collider 必须已经可点。
+            foreach (var collider in colliders)
+            foreach (var x in samples)
+            foreach (var y in samples)
+            foreach (var z in samples)
+            {
+                sampled++;
+                var bounds = collider.bounds;
+                var world = new Vector3(Mathf.Lerp(bounds.min.x, bounds.max.x, x),
+                    Mathf.Lerp(bounds.min.y, bounds.max.y, y), Mathf.Lerp(bounds.min.z, bounds.max.z, z));
+                var projected = camera.WorldToScreenPoint(world);
+                var point = (Vector2)projected;
+                if (projected.z <= 0f || !camera.pixelRect.Contains(point)) continue;
+                uiHits.Clear();
+                EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current)
+                    { position = point }, uiHits);
+                var uiHit = uiHits.FirstOrDefault(result =>
+                    result.module is GraphicRaycaster raycaster && raycaster.isActiveAndEnabled
+                    && raycaster.gameObject.activeInHierarchy);
+                if (uiHit.gameObject != null)
+                {
+                    lastUi = uiHit.gameObject.name;
+                    continue;
+                }
+                var hits = Physics.RaycastAll(camera.ScreenPointToRay(point), Mathf.Infinity,
+                    ~0, QueryTriggerInteraction.Collide).OrderBy(hit => hit.distance);
+                foreach (var hit in hits)
+                {
+                    lastCollider = hit.collider.name;
+                    if (registry.TryGetInstanceId(hit.collider, out var hitId))
+                    {
+                        if (hitId == instanceId) return point;
+                        break;
+                    }
+                    if (hit.collider.GetComponentInParent<WallSurfaceAuthoring>() != null) break;
+                }
+            }
+            Assert.Fail($"No UI-free production Collider point for {instanceId}; samples={sampled}, UI={lastUi}, collider={lastCollider}.");
+            return default;
         }
 
         private static void AssertTop(Button button)

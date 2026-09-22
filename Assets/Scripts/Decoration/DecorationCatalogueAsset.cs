@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using AnimalCafe.Content;
 using UnityEngine;
 
@@ -21,6 +22,8 @@ namespace AnimalCafe.Decoration
         [SerializeField] private List<DecorationCatalogueEntry> entries =
             new List<DecorationCatalogueEntry>();
 
-        public IReadOnlyList<DecorationCatalogueEntry> Entries => entries;
+        public IReadOnlyList<DecorationCatalogueEntry> Entries => entries == null
+            ? Array.Empty<DecorationCatalogueEntry>()
+            : Array.AsReadOnly(entries.ToArray());
     }
 }

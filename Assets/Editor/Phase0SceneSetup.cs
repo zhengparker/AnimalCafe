@@ -34,7 +34,44 @@ namespace AnimalCafe.EditorTools
         public static void ConfigurePhase0Scene()
         {
             var scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
-            var mainCameraObject = GameObject.Find("Main Camera");
+            RequireMainCamera(scene);
+            Phase5UiAssetBuilder.BuildAll();
+            GetOrCreateCameraSettings();
+            ConfigurePhase0Scene(scene);
+            if (!EditorSceneManager.SaveScene(scene))
+                throw new InvalidOperationException("Could not save Phase 0 target Scene.");
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(ScenePath, true)
+            };
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log("[Phase0SceneSetup] MainCafe configured successfully.");
+        }
+
+        // Shared target configuration for isolated migration tests. The public menu still
+        // owns its historical project-wide preparation/save workflow.
+        // 测试只配置自己拥有的target，不把旧公开菜单的Single/SaveAssets当作caller安全证据。
+        internal static void ConfigurePhase0Scene(Scene scene)
+        {
+            var mainCamera = RequireMainCamera(scene);
+            var settings = AssetDatabase.LoadAssetAtPath<CameraSettings>(SettingsPath)
+                ?? throw new InvalidOperationException("Phase 0 camera settings must exist before target configuration.");
+            RemoveLegacyDemoObjects(scene);
+            ConfigureCamera(mainCamera);
+            ConfigureRuntime(scene, mainCamera, settings);
+            var uiRoot = FindOrCreatePhase5UiRoot(scene);
+            ConfigureTimeControls(scene, uiRoot.transform);
+            EnsureEventSystem(scene, uiRoot.transform);
+            EditorSceneManager.MarkSceneDirty(scene);
+        }
+
+        private static UnityEngine.Camera RequireMainCamera(Scene scene)
+        {
+            if (!scene.IsValid() || !scene.isLoaded)
+                throw new ArgumentException("The target Scene must be loaded.", nameof(scene));
+            var mainCameraObject = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                .SingleOrDefault(item => item.name == "Main Camera")?.gameObject;
             if (mainCameraObject == null)
             {
                 throw new InvalidOperationException(
@@ -48,25 +85,7 @@ namespace AnimalCafe.EditorTools
                     "'Main Camera' must contain a Camera component.");
             }
 
-            RemoveLegacyDemoObjects(scene);
-            Phase5UiAssetBuilder.BuildAll();
-            var settings = GetOrCreateCameraSettings();
-            ConfigureCamera(mainCamera);
-            ConfigureRuntime(scene, mainCamera, settings);
-            var uiRoot = FindOrCreatePhase5UiRoot(scene);
-            ConfigureTimeControls(scene, uiRoot.transform);
-            EnsureEventSystem(scene, uiRoot.transform);
-
-            EditorSceneManager.MarkSceneDirty(scene);
-            EditorSceneManager.SaveScene(scene);
-            EditorBuildSettings.scenes = new[]
-            {
-                new EditorBuildSettingsScene(ScenePath, true)
-            };
-
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-            Debug.Log("[Phase0SceneSetup] MainCafe configured successfully.");
+            return mainCamera;
         }
 
         private static CameraSettings GetOrCreateCameraSettings()

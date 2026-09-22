@@ -208,8 +208,20 @@ namespace AnimalCafe.Decoration
                 return SurfaceSessionResult.Success();
             }
 
-            PushUndo(activeState);
-            activeState.ArmedRotation = NextRotation(activeState.ArmedRotation);
+            if (activeState.Scope == SurfaceEditScope.SingleGridFloor &&
+                activeState.ArmedStyleId == null)
+            {
+                var position = activeState.SelectedFloorPosition.Value;
+                activeState.ProposedLayout.TryGetFloor(position, out var current);
+                PushUndo(activeState);
+                activeState.ArmedStyleId = current.StyleId;
+                activeState.ArmedRotation = NextRotation(current.Rotation);
+            }
+            else
+            {
+                PushUndo(activeState);
+                activeState.ArmedRotation = NextRotation(activeState.ArmedRotation);
+            }
 
             if (activeState.Scope == SurfaceEditScope.WholeRoomFloor)
             {
@@ -220,12 +232,6 @@ namespace AnimalCafe.Decoration
             else
             {
                 var position = activeState.SelectedFloorPosition.Value;
-                if (activeState.ArmedStyleId == null)
-                {
-                    activeState.ProposedLayout.TryGetFloor(position, out var current);
-                    activeState.ArmedStyleId = current.StyleId;
-                }
-
                 activeState.ProposedLayout.ReplaceFloor(new FloorTileAppearance(
                     position,
                     activeState.ArmedStyleId,

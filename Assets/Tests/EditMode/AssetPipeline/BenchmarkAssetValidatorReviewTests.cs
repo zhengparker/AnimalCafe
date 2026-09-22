@@ -5,7 +5,9 @@ using System.Text.RegularExpressions;
 using AnimalCafe.EditorTools.AssetPipeline;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
 namespace AnimalCafe.Tests.EditMode.AssetPipeline
@@ -33,6 +35,51 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
         {
             Selection.activeObject = selectionBeforeTest;
             fixture.Dispose();
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void FixturePrefabCreation_PreservesCallerSceneDirtyStateAndHierarchy(bool callerStartsDirty)
+        {
+            var activeBefore = SceneManager.GetActiveScene();
+            var folder = "Assets/Tests/BenchmarkCaller_" + Guid.NewGuid().ToString("N");
+            AssetDatabase.CreateFolder("Assets/Tests", System.IO.Path.GetFileName(folder));
+            var caller = default(Scene);
+            try
+            {
+                Assert.That(AssetDatabase.CopyAsset("Assets/Scenes/SampleScene.unity", folder + "/Caller.unity"), Is.True);
+                caller = EditorSceneManager.OpenScene(folder + "/Caller.unity", OpenSceneMode.Additive);
+                SceneManager.SetActiveScene(caller);
+                new GameObject("Saved caller root");
+                Assert.That(EditorSceneManager.SaveScene(caller, folder + "/Caller.unity"), Is.True);
+                if (callerStartsDirty)
+                {
+                    new GameObject("Unsaved caller work");
+                    EditorSceneManager.MarkSceneDirty(caller);
+                }
+                var roots = caller.GetRootGameObjects().Select(root => root.name).OrderBy(name => name).ToArray();
+                var setup = EditorSceneManager.GetSceneManagerSetup()
+                    .Select(entry => entry.path + "|" + entry.isLoaded + "|" + entry.isActive).ToArray();
+                var bytes = System.IO.File.ReadAllBytes(folder + "/Caller.unity");
+
+                using (var nestedFixture = new BenchmarkAssetTestFactory())
+                {
+                    Assert.That(nestedFixture.CreatePrefab("IsolationProbe", WorkTableSize, 12), Is.Not.Null);
+                    Assert.That(caller.isDirty, Is.EqualTo(callerStartsDirty),
+                        "Temporary benchmark objects must not dirty a caller Scene or clear its unsaved work.");
+                }
+
+                Assert.That(caller.GetRootGameObjects().Select(root => root.name).OrderBy(name => name), Is.EqualTo(roots));
+                Assert.That(System.IO.File.ReadAllBytes(folder + "/Caller.unity"), Is.EqualTo(bytes));
+                Assert.That(EditorSceneManager.GetSceneManagerSetup()
+                    .Select(entry => entry.path + "|" + entry.isLoaded + "|" + entry.isActive), Is.EqualTo(setup));
+            }
+            finally
+            {
+                if (caller.IsValid() && caller.isLoaded) EditorSceneManager.CloseScene(caller, true);
+                if (activeBefore.IsValid() && activeBefore.isLoaded) SceneManager.SetActiveScene(activeBefore);
+                AssetDatabase.DeleteAsset(folder);
+            }
         }
 
         [Test]

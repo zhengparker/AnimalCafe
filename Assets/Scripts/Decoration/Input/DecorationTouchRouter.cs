@@ -12,7 +12,8 @@ namespace AnimalCafe.Decoration.Input
             string targetId = null,
             string surfaceId = null,
             GridPosition? floorPosition = null,
-            WallSlotPosition? wallSlotPosition = null)
+            WallSlotPosition? wallSlotPosition = null,
+            SurfaceSlotAddress? functionalSurfaceAddress = null)
         {
             Kind = kind;
             FurnitureInstanceId = furnitureInstanceId;
@@ -20,6 +21,7 @@ namespace AnimalCafe.Decoration.Input
             SurfaceId = surfaceId;
             FloorPosition = floorPosition;
             WallSlotPosition = wallSlotPosition;
+            FunctionalSurfaceAddress = functionalSurfaceAddress;
         }
 
         public DecorationTouchHitKind Kind { get; }
@@ -28,6 +30,7 @@ namespace AnimalCafe.Decoration.Input
         public string SurfaceId { get; }
         public GridPosition? FloorPosition { get; }
         public WallSlotPosition? WallSlotPosition { get; }
+        public SurfaceSlotAddress? FunctionalSurfaceAddress { get; }
     }
 
     public interface IDecorationTouchHitClassifier
@@ -61,12 +64,19 @@ namespace AnimalCafe.Decoration.Input
             TapReleased = tapReleased;
             FurnitureDragRequested = furnitureDragRequested;
             FurnitureDragScreenPosition = furnitureDragScreenPosition;
-            SceneDragRequested = sceneDragRequested;
+            SceneDragRequested = sceneDragRequested
+                && owner != DecorationGestureOwner.FunctionalSurface;
             SceneDragScreenPosition = sceneDragScreenPosition;
             CameraPanRequested = cameraPanRequested;
             CameraPanDelta = cameraPanDelta;
             PinchZoomRequested = pinchZoomRequested;
             PinchDistanceDelta = pinchDistanceDelta;
+            FunctionalSurfaceDragRequested = sceneDragRequested
+                && owner == DecorationGestureOwner.FunctionalSurface;
+            GestureCanceled = originHit.Kind == DecorationTouchHitKind.FunctionalSurface
+                && currentHitClassified
+                && !sceneDragRequested
+                && !tapReleased;
         }
 
         public DecorationGestureOwner Owner { get; }
@@ -81,6 +91,8 @@ namespace AnimalCafe.Decoration.Input
         public Vector2 CameraPanDelta { get; }
         public bool PinchZoomRequested { get; }
         public float PinchDistanceDelta { get; }
+        public bool FunctionalSurfaceDragRequested { get; }
+        public bool GestureCanceled { get; }
     }
 
     public sealed class DecorationTouchRouter
@@ -163,6 +175,20 @@ namespace AnimalCafe.Decoration.Input
                 }
             }
 
+            // A source frame is a complete snapshot. Device removal may omit a terminal record.
+            // 设备移除可能没有 Ended/Canceled；旧 primary 消失时按取消处理，绝不生成 tap。
+            if (primaryTouchId != NoTouchId && !primaryTerminal
+                && !TryFindActiveTouch(frame, primaryTouchId, out _))
+            {
+                primaryTerminal = true;
+                primaryCanceled = true;
+            }
+            if (secondaryTouchId != NoTouchId && !secondaryTerminal
+                && !TryFindActiveTouch(frame, secondaryTouchId, out _))
+            {
+                secondaryTerminal = true;
+            }
+
             // Primary terminal always wins over secondary replacement/new Began.
             // primary 结束优先，不能把剩余或新手指提升成新 gesture。
             if (primaryTerminal)
@@ -172,6 +198,7 @@ namespace AnimalCafe.Decoration.Input
                 // 短 Began -> terminal 也必须用 terminal 位置锁定 drag threshold。
                 if (!isDragging
                     && (owner == DecorationGestureOwner.Furniture
+                        || owner == DecorationGestureOwner.FunctionalSurface
                         || owner == DecorationGestureOwner.SceneDrag
                         || owner == DecorationGestureOwner.Camera)
                     && Vector2.Distance(primaryPressPosition, primaryTerminalTouch.Position)
@@ -200,7 +227,8 @@ namespace AnimalCafe.Decoration.Input
                 return new DecorationTouchRoutingResult(
                     owner,
                     releasedOrigin,
-                    tapReleased: tapReleased);
+                    tapReleased: tapReleased,
+                    currentHitClassified: primaryCanceled);
             }
 
             var skipSingleFingerCommand = false;
@@ -249,6 +277,7 @@ namespace AnimalCafe.Decoration.Input
                 }
 
                 if ((owner == DecorationGestureOwner.Furniture
+                        || owner == DecorationGestureOwner.FunctionalSurface
                         || owner == DecorationGestureOwner.SceneDrag
                         || owner == DecorationGestureOwner.Camera)
                     && touch.TouchId != primaryTouchId
@@ -331,6 +360,19 @@ namespace AnimalCafe.Decoration.Input
                         + Vector2.up * furnitureDragOffsetPixels);
             }
 
+            if (owner == DecorationGestureOwner.FunctionalSurface)
+            {
+                var currentHit = hitClassifier != null
+                    ? hitClassifier.ClassifyCurrent(primaryTouchId, activePrimary.Position)
+                    : default;
+                return new DecorationTouchRoutingResult(
+                    owner,
+                    originHit,
+                    currentHit: currentHit,
+                    currentHitClassified: true,
+                    sceneDragRequested: true);
+            }
+
             if (owner == DecorationGestureOwner.SceneDrag)
             {
                 var currentHit = hitClassifier != null
@@ -356,6 +398,16 @@ namespace AnimalCafe.Decoration.Input
             }
 
             return CurrentStateWithoutCommand();
+        }
+
+        public void CancelGesture()
+        {
+            // Keep the frame fence and wait for held pointers to release before a new gesture.
+            // 保留已处理 frame，旧指针全部抬起前不接管新的 Began。
+            var waitForRelease = primaryTouchId != NoTouchId
+                || secondaryTouchId != NoTouchId || isSuppressingUntilAllTouchesUp;
+            ClearGestureState();
+            isSuppressingUntilAllTouchesUp = waitForRelease;
         }
 
         public void Reset()
@@ -388,6 +440,7 @@ namespace AnimalCafe.Decoration.Input
             {
                 DecorationTouchHitKind.Ui => DecorationGestureOwner.Ui,
                 DecorationTouchHitKind.Furniture => DecorationGestureOwner.Furniture,
+                DecorationTouchHitKind.FunctionalSurface => DecorationGestureOwner.FunctionalSurface,
                 DecorationTouchHitKind.WallSlot => DecorationGestureOwner.SceneDrag,
                 DecorationTouchHitKind.WallMounted => DecorationGestureOwner.SceneDrag,
                 DecorationTouchHitKind.FloorGrid => DecorationGestureOwner.Camera,

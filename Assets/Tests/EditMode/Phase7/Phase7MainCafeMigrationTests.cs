@@ -15,6 +15,9 @@ namespace AnimalCafe.Tests.EditMode.Phase7
 {
     public sealed class Phase7MainCafeMigrationTests
     {
+        private LegacyMainCafeFixture legacy;
+        [SetUp] public void SetUpLegacy() => legacy = new LegacyMainCafeFixture();
+        [TearDown] public void RestoreLegacy() { legacy?.Dispose(); legacy = null; }
         [Test]
         public void MigrateMainCafe_RemovesTemporaryPreplacedWindowButKeepsWindowCatalogueEntries()
         {

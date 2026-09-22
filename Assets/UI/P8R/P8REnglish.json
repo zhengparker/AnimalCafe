@@ -1,0 +1,325 @@
+{
+  "entries": [
+    {"key":"mode.normal","value":"Normal"},
+    {"key":"mode.decoration","value":"Decoration"},
+    {"key":"catalogue.title","value":"Catalogue"},
+    {"key":"category.furniture","value":"Counters"},
+    {"key":"category.cash-register","value":"Cash Registers"},
+    {"key":"category.coffee-machine","value":"Coffee Machines"},
+    {"key":"category.floor","value":"Flooring"},
+    {"key":"category.wallpaper","value":"Wallpaper"},
+    {"key":"category.paint","value":"Paint"},
+    {"key":"category.wainscoting","value":"Wainscoting"},
+    {"key":"category.wall-decor","value":"Wall Decor"},
+    {"key":"category.windows","value":"Windows"},
+    {"key":"action.apply","value":"Apply"},
+    {"key":"action.undo","value":"Undo"},
+    {"key":"action.apply_all","value":"Apply All"},
+    {"key":"action.whole_room","value":"Whole Room"},
+    {"key":"action.single_grid","value":"Single Grid"},
+    {"key":"action.decorate","value":"Decorate"},
+    {"key":"action.exit","value":"Exit Decoration"},
+    {"key":"action.pause","value":"Pause"},
+    {"key":"action.resume","value":"Resume"},
+    {"key":"action.clock","value":"1x"},
+    {"key":"action.fast_forward","value":"2x"},
+    {"key":"action.lock","value":"Paused"},
+    {"key":"item.wall-decor.monitor.01","value":"Wall Monitor"},
+    {"key":"item.wall-decor.shiba-painting.01","value":"Shiba Painting"},
+    {"key":"item.wall-decor.wood-shelf.01","value":"Wood Shelf"},
+    {"key":"item.window.canonical.phase4","value":"Cafe Window"},
+    {"key":"item.window.tall-glass.1x2.01","value":"Tall Glass Window"},
+    {"key":"surface.ready","value":"Changes are previewed. Apply when you are ready."},
+    {"key":"surface.choose","value":"Choose a style, then Apply your changes."},
+    {"key":"floor.whole_summary","value":"Whole Room - {count} tiles changed\nCancel discards this preview."},
+    {"key":"floor.grid_summary","value":"Single Grid - {count} tiles changed\nUndo affects this preview only."},
+    {"key":"floor.whole_summary_one","value":"Whole Room - {count} tile changed\nCancel discards this preview."},
+    {"key":"floor.grid_summary_one","value":"Single Grid - {count} tile changed\nUndo affects this preview only."},
+    {"key":"wall.Overlap","value":"This wall space is occupied."},
+    {"key":"wall.OutOfBounds","value":"This position is outside the wall."},
+    {"key":"wall.CrossCorner","value":"Place the item fully on one wall."},
+    {"key":"wall.SurfaceMissing","value":"Move the item onto an available wall."},
+    {"key":"wall.SurfaceMismatch","value":"This item cannot go on this wall."},
+    {"key":"feedback.Occupied","value":"This space is occupied."},
+    {"key":"feedback.OutsideUnlockedArea","value":"This position is outside the available area."},
+    {"key":"feedback.Locked","value":"This area is not unlocked."},
+    {"key":"feedback.Blocked","value":"Put away the items on this counter first."},
+    {"key":"feedback.EntranceClearance","value":"Keep the entrance clear."},
+    {"key":"feedback.UnsupportedSurface","value":"This item needs a compatible surface."},
+    {"key":"feedback.MissingInstance","value":"This item has changed. Select it again."},
+    {"key":"feedback.WallOverlap","value":"This wall space is occupied."},
+    {"key":"feedback.WallOutOfBounds","value":"This position is outside the wall."},
+    {"key":"feedback.WallCrossCorner","value":"Place the item fully on one wall."},
+    {"key":"feedback.WallSurfaceMissing","value":"Move the item onto an available wall."},
+    {"key":"feedback.SelectWallTarget","value":"Select a wall to edit."},
+    {"key":"feedback.SelectFloorGridTarget","value":"Select a floor grid to edit."},
+    {"key":"feedback.NoValidInteractionAnchor","value":"Pickup Point needs a free adjacent interaction space."},
+    {"key":"exit.title","value":"Discard this preview?"},
+    {"key":"exit.body","value":"Only this preview will be discarded. Your applied changes will stay."},
+    {"key":"exit.continue","value":"Continue Editing"},
+    {"key":"exit.discard","value":"Discard Preview"},
+    {"key":"readiness.ready","value":"Confirmed Layout: Ready to open"},
+    {"key":"readiness.warning","value":"Confirmed Layout: Ready, with a warning"},
+    {"key":"readiness.blocked","value":"Confirmed Layout: Needs attention"},
+    {"key":"readiness.blocking","value":"Blocking"},
+    {"key":"readiness.warning_label","value":"Warning"},
+    {"key":"readiness.layout","value":"Layout"},
+    {"key":"readiness.Employee","value":"Employee"},
+    {"key":"readiness.Customer","value":"Customer"},
+    {"key":"readiness.CashRegister","value":"Cash Register"},
+    {"key":"readiness.CoffeeMachine","value":"Coffee Machine"},
+    {"key":"readiness.PickUpPoint","value":"Pickup Point"},
+    {"key":"readiness.expand","value":"Show Details"},
+    {"key":"readiness.collapse","value":"Hide Details"},
+    {"key":"readiness.MissingCashRegister","value":"Add at least one Cash Register."},
+    {"key":"readiness.MissingCoffeeMachine","value":"Add at least one Coffee Machine."},
+    {"key":"readiness.MissingPickUpPoint","value":"Add at least one Pickup Point."},
+    {"key":"readiness.MissingSupportFurniture","value":"This equipment needs supporting furniture."},
+    {"key":"readiness.MissingSurfaceSlot","value":"This equipment needs a valid surface slot."},
+    {"key":"readiness.DuplicateSurfaceOccupancy","value":"More than one item occupies this surface slot."},
+    {"key":"readiness.AnchorOutOfBounds","value":"The interaction space is outside the available area."},
+    {"key":"readiness.AnchorBlocked","value":"The interaction space is blocked."},
+    {"key":"readiness.AnchorUnreachable","value":"The interaction space cannot be reached."},
+    {"key":"readiness.NoCompleteReachableServiceCombination","value":"A complete, reachable service route is still needed."},
+    {"key":"readiness.MissingFunctionalDirection","value":"This equipment needs a valid functional direction."},
+    {"key":"readiness.InvalidFunctionalDefinition","value":"This equipment definition is invalid."},
+    {"key":"readiness.summary.ready","value":"Can open"},
+    {"key":"readiness.summary.blocked_one","value":"Can't open yet · {count} issue"},
+    {"key":"readiness.summary.blocked_many","value":"Can't open yet · {count} issues"},
+    {"key":"readiness.summary.warning_one","value":"Can open · {count} suggestion"},
+    {"key":"readiness.summary.warning_many","value":"Can open · {count} suggestions"},
+    {"key":"readiness.suggestions","value":"Suggestions"},
+    {"key":"readiness.preview_hint","value":"Updates after confirmation."},
+    {"key":"readiness.equipment","value":"Equipment"},
+    {"key":"readiness.numbered_subject","value":"{item} #{number}"},
+    {"key":"readiness.subject_role","value":"{item} · {role}"},
+    {"key":"readiness.side.Employee","value":"Employee side"},
+    {"key":"readiness.side.Customer","value":"Customer side"},
+    {"key":"readiness.action.MissingCashRegister","value":"Add a Cash Register."},
+    {"key":"readiness.action.MissingCoffeeMachine","value":"Add a Coffee Machine."},
+    {"key":"readiness.action.MissingPickUpPoint","value":"Add a Pickup Point."},
+    {"key":"readiness.action.MissingSupportFurniture","value":"Place this item on a counter."},
+    {"key":"readiness.action.MissingSurfaceSlot","value":"Move this item to an available counter spot."},
+    {"key":"readiness.action.DuplicateSurfaceOccupancy","value":"Move one item to another counter spot."},
+    {"key":"readiness.action.AnchorOutOfBounds","value":"Move this item so people can stand inside the room."},
+    {"key":"readiness.action.AnchorBlocked","value":"Clear space beside this item."},
+    {"key":"readiness.action.AnchorBlocked.Customer","value":"Clear space for the customer."},
+    {"key":"readiness.action.AnchorBlocked.Employee","value":"Clear space for the employee."},
+    {"key":"readiness.action.AnchorUnreachable","value":"Clear a path to this item."},
+    {"key":"readiness.action.NoCompleteReachableServiceCombination","value":"Connect the register, coffee machine and pickup point with clear paths."},
+    {"key":"readiness.action.MissingFunctionalDirection","value":"This item is currently unavailable. Use another item."},
+    {"key":"readiness.action.InvalidFunctionalDefinition","value":"This item is currently unavailable. Use another item."},
+    {
+      "key": "store.pickup_body",
+      "value": "This removes the Pickup Point from this surface. You can add it again with the Pickup Point button."
+    },
+    {
+      "key": "nav.furniture",
+      "value": "Furniture"
+    },
+    {
+      "key": "nav.floor",
+      "value": "Floor"
+    },
+    {
+      "key": "nav.wall",
+      "value": "Walls"
+    },
+    {
+      "key": "nav.wall_decor",
+      "value": "Wall Decor"
+    },
+    {
+      "key": "catalogue.expand",
+      "value": "Show Catalogue"
+    },
+    {
+      "key": "catalogue.add",
+      "value": "Add Another"
+    },
+    {
+      "key": "catalogue.back",
+      "value": "Back to Editing"
+    },
+    {
+      "key": "catalogue.pickup",
+      "value": "Pickup Point"
+    },
+    {
+      "key": "action.confirm",
+      "value": "Confirm"
+    },
+    {
+      "key": "action.cancel",
+      "value": "Cancel"
+    },
+    {
+      "key": "action.rotate",
+      "value": "Rotate"
+    },
+    {
+      "key": "action.store",
+      "value": "Put Away"
+    },
+    {
+      "key": "action.back",
+      "value": "Back to Editing"
+    },
+    {
+      "key": "action.catalogue",
+      "value": "Show Catalogue"
+    },
+    {
+      "key": "action.pickup",
+      "value": "Pickup Point"
+    },
+    {
+      "key": "action.chevron_down",
+      "value": "Hide Catalogue"
+    },
+    {
+      "key": "action.furniture",
+      "value": "Furniture"
+    },
+    {
+      "key": "action.floor",
+      "value": "Floor"
+    },
+    {
+      "key": "action.wall",
+      "value": "Walls"
+    },
+    {
+      "key": "action.wall_decor",
+      "value": "Wall Decor"
+    },
+    {
+      "key": "item.counter",
+      "value": "Counter {width}x{depth}"
+    },
+    {
+      "key": "item.cash_register",
+      "value": "Cash Register"
+    },
+    {
+      "key": "item.coffee_machine",
+      "value": "Coffee Machine"
+    },
+    {
+      "key": "preview.title",
+      "value": "Current Preview: {item} - Not yet applied\n{reason}"
+    },
+    {
+      "key": "preview.valid",
+      "value": "Ready to place. Confirm to apply your changes."
+    },
+    {
+      "key": "preview.locked_tabs",
+      "value": "Confirm or cancel this preview before selecting another item."
+    },
+    {
+      "key": "store.title",
+      "value": "Put away {item}?"
+    },
+    {
+      "key": "store.body",
+      "value": "This item will be removed from your layout. You can place it again from the catalogue."
+    },
+    {
+      "key": "placement.None",
+      "value": "Ready to place."
+    },
+    {
+      "key": "placement.Overlap",
+      "value": "This space is occupied. Move to an empty space."
+    },
+    {
+      "key": "placement.OutOfUnlockedRegion",
+      "value": "This area is not unlocked."
+    },
+    {
+      "key": "placement.OutOfLayoutBounds",
+      "value": "This position is outside the available area."
+    },
+    {
+      "key": "placement.LockedCell",
+      "value": "This tile is not unlocked."
+    },
+    {
+      "key": "placement.Blocked",
+      "value": "Put away the items on this counter first"
+    },
+    {
+      "key": "placement.ReservedEntranceClearance",
+      "value": "Keep the entrance clear."
+    },
+    {
+      "key": "placement.UnsupportedPlacementSurface",
+      "value": "This item cannot stand on this surface."
+    },
+    {
+      "key": "placement.InstanceNotFound",
+      "value": "This furniture has changed. Select it again."
+    },
+    {
+      "key": "placement.InstanceAlreadyPlaced",
+      "value": "This furniture is already placed."
+    },
+    {
+      "key": "functional.None",
+      "value": "Ready to place."
+    },
+    {
+      "key": "functional.MissingDefinition",
+      "value": "The equipment definition is missing."
+    },
+    {
+      "key": "functional.UnsupportedFunction",
+      "value": "This equipment function is not supported."
+    },
+    {
+      "key": "functional.UnsupportedPlacementSurface",
+      "value": "This item needs a compatible surface."
+    },
+    {
+      "key": "functional.MissingSupportFurniture",
+      "value": "The supporting furniture is missing."
+    },
+    {
+      "key": "functional.MissingSurfaceSlot",
+      "value": "This furniture has no compatible surface slot."
+    },
+    {
+      "key": "functional.SlotOccupied",
+      "value": "This surface slot is occupied."
+    },
+    {
+      "key": "functional.InstanceAlreadyPlaced",
+      "value": "This item is already placed."
+    },
+    {
+      "key": "functional.InstanceNotFound",
+      "value": "This item has changed. Select it again."
+    },
+    {
+      "key": "functional.InvalidRotation",
+      "value": "This rotation is not available."
+    },
+    {
+      "key": "functional.InvalidInstance",
+      "value": "This item has invalid data."
+    },
+    {
+      "key": "functional.InvalidSurfaceSlotAddress",
+      "value": "Move this item onto a counter surface slot."
+    },
+    {
+      "key": "functional.UnsupportedAction",
+      "value": "This item does not support that action."
+    },
+    {
+      "key": "functional.NoValidInteractionAnchor",
+      "value": "Pickup Point needs a free adjacent interaction space."
+    }
+  ]
+}

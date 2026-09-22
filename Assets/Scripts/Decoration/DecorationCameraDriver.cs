@@ -66,11 +66,21 @@ namespace AnimalCafe.Decoration
             }
         }
 
+        // Wheel events use whole steps; pinch distance is measured in pixels.
+        // 滚轮保持普通模式的整步缩放，不进入双指手势的像素换算。
+        public void ApplyWheelZoom(float wheelDelta)
+        {
+            if (IsFinite(wheelDelta))
+            {
+                cameraController?.ApplyZoom(wheelDelta);
+            }
+        }
+
         public void ApplyPinchZoom(float pinchDistanceDelta)
         {
             if (IsFinite(pinchDistanceDelta))
             {
-                cameraController?.ApplyZoom(pinchDistanceDelta);
+                cameraController?.ApplyPinchZoom(pinchDistanceDelta);
             }
         }
 
