@@ -8,7 +8,7 @@
 >
 > 正式目标平台：Android 与 iOS
 >
-> 更新日期：2026-09-11
+> 更新日期：2026-09-21
 
 ## 1. 文档用途
 
@@ -774,6 +774,14 @@ Store Expansion 稳定后，高级结构编辑可复用 Surface ID、attachment 
 ## Phase 8 — Functional Furniture & Layout Readiness
 
 ### Status
+
+`Completed — merged to main`（2026-09-21）。Studio Owner 已确认朋友 review 完成，并授权 PR #7 merge、Phase 8 完成、本地 fast-forward 与归档后清理；以上步骤均已完成。本次合并包含已批准并实现的 P8R UI / input / feedback enhancements；merge commit 为 `8ee0026247c2c3200bd1bc9ac471b7007e4a4f32`。Merged-main fresh 回归覆盖 2110 个不同 EditMode 用例（1755 full-suite PASS + 355 独立补测 PASS），PlayMode 1015 PASS / 0 FAIL / 2 opt-in screenshot SKIP；所有 inconclusive 为 0。完整报告、Owner 决定及归档位置统一见 `Docs/Phase8_Beginner_Guide.md` 第 37 节。
+
+Current Next Step：由 Owner 确认 Roadmap 中独立 Phase 8R design gate 的具体范围；本轮不自动启动 Phase 8R 或 Phase 9。已有 P8R 实现随本 PR 集成，不因此把仍为 TBD 的后续规划 gate 自动标为完成。
+
+#### 历史 gate 快照（2026-09-09）
+
+以下旧的 In Progress、Current Next Step 和 manual Pending 均描述当时状态；不覆盖上方 2026-09-21 收尾决定，也不补造未执行的逐项验收结果。
 
 `In Progress`（2026-09-09）— 五项 bug 修复与前三项 UX 保留，后续批准的 UX2 选项 2–5 与半透明光感 footprint 已实现并技术核验，交回 **Ready for manual review**。完整 Editor PlayMode **813/813**（707 core + 106 Scene/Input）、全部 Phase 8 EditMode + SurfaceSession **235/235 PASS**，failed/skipped/inconclusive 均 0、exit 0；focused asset/font 8/8 已含在 235。独立 code 与 7 张视觉技术复核无未处理 Critical/Important；新增 7 项 Owner manual 全部 **Pending**，最终 XML 与步骤见 `Docs/Phase8_Beginner_Guide.md` 8.5。选项 1 保留 icon，Exit 不动。M1–M17 历史 Owner PASS、M18 technical PASS 保留；M6 incompatible Slot 子项仍未覆盖，不自动标为 Phase Completed。
 
@@ -2718,6 +2726,6 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 - **Phase 5 — UI Architecture & Design System** 已完成 approved design、TDD implementation、review hardening、Studio Owner `MT001–MT034` manual acceptance、PR #4 merge 与 merged-main regression，状态为 `Completed`。Merged-main evidence（2026-08-15）：EditMode `690 / 690`、Editor PlayMode `121 / 121`、Windows standalone PlayMode `103 / 103` passed；failed、skipped、inconclusive 均为 `0`。
 - **Phase 6 — Basic Decoration Mode** 已完成 approved design、TDD implementation、independent review、Studio Owner manual acceptance 与 fresh full regression，状态为 `Completed`。Merge-preparation evidence（2026-08-22）：EditMode `1136 / 1136`、Editor PlayMode `446 / 446` passed，failed、skipped、inconclusive 均为 `0`；Windows standalone build 为 `Success`，无 C# warning/error；Studio Owner applicable manual set 为 `29 / 29 PASS`。`P6-M-023` 的真实 Android + iOS two-finger Pinch 已按 scope decision 移至 Phase 51，不计入 Phase 6 denominator。
 - Phase 6 清理只删除 obsolete Phase 4 MainCafe manual-review setup 与两份 temporary materials；`ManualReviewPingPongMover` 及其 regression test 因仍有 Phase 5 live consumers 而保留。
-- **Current Next Step：Phase 8 — 参考图 UI 排版已完成，Ready for manual review（2026-09-12）。** 两步已合并交付：56×56 logical 可见浮动按钮、约10 logical间距且无tooltip；左上HUD／右上装修入口；目录内嵌四类Tab／固定Pick-up。定向EditMode57/57、扩大PlayMode210/210、root独立完整Editor PlayMode849/849、专用截图流程13/13，均0failed／skipped／inconclusive；34图经最终独立复核。完整测试前后2393个Assets／ProjectSettings文件无漂移，154原始UI PNG保留。详见Guide第15节；历史45张测试截图＋3份metrics误覆盖的未恢复concern见15.6，不以新图冒充原证据。Owner／原生Overlay／真机接受Pending；M1–M17历史Owner PASS、M18 technical PASS及M6 incompatible未覆盖项保留。不关闭Phase 8、不推进后续gameplay，不commit／push／merge。
+- **Current Next Step（2026-09-21）：Phase 8 已 Completed，等待 Owner 确认独立 Phase 8R design gate 的具体范围。** PR #7 已合入 main，merged-main 回归、本地 fast-forward、归档及旧本地 branch/worktree 清理均完成；最终证据见 `Docs/Phase8_Beginner_Guide.md` 第 37 节。不自动进入 Phase 9。2026-09-12 的 UI 排版交接与截图数量保留在 Guide 第 15 节；15.6 的历史截图误覆盖限制和 M6 incompatible Slot 未覆盖项不因合并而消失。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 cafe day loop、Customer / NPC movement、Order、Queue、NavMesh / pathfinding agents、economy 或 Save 等后续 gameplay scope。

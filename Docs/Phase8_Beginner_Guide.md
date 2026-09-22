@@ -1,6 +1,8 @@
-# AnimalCafe Phase 8 Beginner Guide — Studio Owner Manual Handoff
+# AnimalCafe Phase 8 Beginner Guide — Completion & Review Record
 
-> 当前工作（2026-09-13）：Owner 已批准手机 UI 调整，正在实现与验证，详见第 27 节。此轮尚未 Ready for manual review；下方第 26 节及更早数字仅代表历史验证。
+> 当前状态（2026-09-21）：**Completed — merged to main**。Studio Owner 确认朋友 review 完成，授权合并 PR #7、完成 Phase 8、本地同步及归档后清理。PR 已合入 `main`（`8ee0026247c2c3200bd1bc9ac471b7007e4a4f32`）；合并后回归及归档清理均完成，最终结果见第 37 节。以下带日期的 manual Pending / 未 commit / 未 merge 仅表示当时状态，不覆盖最新收尾记录。
+
+> 历史工作（2026-09-13）：Owner 已批准手机 UI 调整，当时正在实现与验证，详见第 27 节。当时尚未 Ready for manual review；下方第 26 节及更早数字仅代表历史验证。
 
 > 历史状态（2026-09-13，上一轮）：五项 UI polish 的当轮记录见第 26 节。EditMode **683/683**、PlayMode **585/585**、原生截图流程 **15/15** PASS，四种尺寸共 **80 张**截图已复核。这些结果不代表第 27 节正在进行的手机调整；Owner 与手机真机验收仍 **Pending**。
 
@@ -10,15 +12,15 @@
 
 ## 1. 这次要检查什么
 
-Phase 8 只负责三件事：把功能设备放到合适位置、自动算出 Employee / Customer anchors、判断布局是否具备未来营业条件。它不包含 cafe day loop、NPC movement、Order、Queue、NavMesh / pathfinding agents、economy 或 Save；看到“可以营业”只表示布局准备好了，并不表示正式经营已经实现。
+Phase 8 只负责三件事：把功能设备放到合适位置、自动算出 Employee / Customer anchors、判断布局是否具备未来营业条件。它不包含 cafe day loop、NPC movement、Order、Queue、NavMesh / pathfinding agents、economy 或 Save；readiness 满足营业条件只表示布局准备好了，并不表示正式经营已经实现。
 
 你只需要判断玩家实际看到和操作到的内容是否清楚、稳定、符合预期；**不要在本轮自己修改 Scene、Prefab、asset 或 code**。
 
 ## 2. 玩家视角：改动前与改动后
 
 - 改动前：Decoration Mode 只能处理普通 furniture，系统不知道哪台设备负责收银、做咖啡或取餐，也不能判断布局是否适合未来营业。
-- 改动后：Furniture Tab 多了 Cash Register、Coffee Machine 两行和 Pick-up Point button。玩家仍用熟悉的 Preview、Move、Confirm、Cancel、Store 操作；系统自动放置 Employee / Customer anchors，并在 Confirm 或 Store 后给出 readiness 结果。
-- 例子：把一台收银机、一台咖啡机和一个取餐点放到合适 Counter Slots，并让顾客路线和员工路线各自连通，顶部会显示 `布局已准备好，可以营业`。
+- 改动后：Furniture Tab 多了 Cash Register、Coffee Machine 两行和 Pick-up Point button。玩家仍用熟悉的 Preview、Move、Confirm、Cancel、Store 操作；系统自动放置 Employee / Customer anchors，并在 Confirm 或 Store 后更新 readiness，有问题时显示提示。
+- 例子：把一台收银机、一台咖啡机和一个取餐点放到合适 Counter Slots，并保持顾客与员工路线连通。确认后若没有 blocking 或 warning，顶部 readiness 提示会隐藏；有问题时显示短状态，可展开处理清单。
 
 ## 3. 重要文件与关键概念
 
@@ -30,24 +32,26 @@ Phase 8 只负责三件事：把功能设备放到合适位置、自动算出 Em
 | `Assets/Scripts/Layout/LayoutReadinessEvaluator.cs` | 汇总设备、anchors 和两套网络，生成 ready / blocking / warning 结果。 |
 | `Assets/Scripts/Decoration/SurfaceMountedPreviewView.cs`、`PickUpPointIndicatorView.cs` | 显示设备 Preview、Pick-up indicator 与随支撑家具移动的表现。 |
 | `Docs/superpowers/specs/2026-09-02-phase-8-functional-furniture-layout-readiness-test-cases.md` | 完整 automated/manual cases 与 18 项人工结果 ledger。 |
-| 本 guide 第 6 节与表中指定的 XML | 本轮修复的最新自动化结果与交接状态；旧 Task 10 report 仅作历史快照。 |
+| 本 guide 第 37 节 | 最新合并、回归、Owner 收尾决定与清理记录；第 6–36 节保留各轮历史证据。 |
 
 关键概念：`Surface Slot` 是 Counter 上可放功能设备的位置；`anchor` 是未来 Employee 或 Customer 互动时应站的 Grid cell；`Preview` 只是临时状态，只有 Confirm / Store 成功后才改变正式 layout 和 readiness。顾客与员工使用两套独立连通网络；Pick-up 的两个角色 anchor 必要时可以共用一个 cell。
 
 ## 4. 开始前
 
-1. 在 Unity Hub 打开项目：`E:\Unity\Project\AnimalCafe\.worktrees\phase-8-functional-furniture`。
+1. 在 Unity Hub 打开已同步的主项目：`E:\Unity\Project\AnimalCafe`，branch 为 `main`；旧 Phase 8 worktree 仅为历史开发路径，不再作为试玩入口。
 2. 使用 Unity `6000.5.5f1`。
 3. 打开 `Assets/Scenes/MainCafe.unity` 并进入 Play Mode；在 Game view 右侧点击 `Decoration` button 进入 Decoration Mode。Catalogue 默认打开 `Furniture` tab；如果当前是其他 tab，点击 `Furniture`。
 4. P8-M-018 使用 validation Scene：`Assets/Scenes/Validation/Phase8FunctionalFurniture.unity`。
-5. 每项完成后，到 `Docs/superpowers/specs/2026-09-02-phase-8-functional-furniture-layout-readiness-test-cases.md` 的“Manual Execution Ledger”填写结果。
+5. 如需再次人工复测，在 `Docs/superpowers/specs/2026-09-02-phase-8-functional-furniture-layout-readiness-test-cases.md` 的“Manual Execution Ledger”追加本次日期与结果，不覆盖历史验收记录。
 6. 不要运行 `Build Assets` 或任何 `Configure ...` menu；它们会修改 assets / Scenes，不属于本次 manual review。
-7. readiness feedback 显示在 Game view 顶部中央的 `Phase8_ValidationMessage`。它只在 Confirm / Store 成功后发布正式结果；Preview 或 Cancel 不会改写上一条正式 readiness。
+7. readiness 提示位于 Game view 顶部。初始化时显示当前布局的问题，Confirm / Store 成功后刷新；无 blocking 或 warning 时隐藏。Preview / Cancel 不改写已确认报告，展开详情时可显示待确认备注。
 
 
 判定方法很简单：预期现象全部出现、没有新的 Console error/exception，记 `PASS`；任何步骤无法完成、结果与预期不同、或 Console 有新的 error/exception，记 `FAIL`。`FAIL` 时记录 case ID、操作步骤、Scene 状态、Console message，并附截图或短视频；**停止修复，交回团队处理**。
 
-## 5. 手动验收清单
+## 5. 手动验收清单（早期验收基线）
+
+本节保留早期 manual cases 的操作与预期，便于对照历史 ledger；不是当前版本逐字、逐像素的 UI 规范，也不表示需要重新执行已完成的验收。后续 P8R 已调整 Pick-up 图标、CR 方向提示、Catalogue 名称和 readiness 短提示等表现；实际变更按下方带日期的对应记录核对，当前完成状态以第 37 节为准。当前 readiness 的快速说明见上方第 2、4 节。
 
 ### A. Catalogue 与设备放置（P8-M-001–005）
 
@@ -309,6 +313,8 @@ M1/M2 修复后，Studio Owner 曾明确反馈“1和2也pass了”，因此关�
 九项 accepted/deferred Minor 的完整 register 在 `.superpowers/sdd/2026-09-02-phase-8-functional-furniture-layout-readiness/task-10-report.md`。这些是已知 test / diagnostic / polish limitations，不是隐藏 blocker，也不会自动成为 Phase 8R scope。
 
 ## 7. 已知限制与下一步
+
+本节以下为 2026-09-09 的历史交接快照；最新收尾、已知限制和下一步以第 37 节为准。历史本地 `task-10-report.md` 不保证存在于 fresh clone，不能据此声称当前仓库有完整的旧 Minor register。
 
 当前九项 Minor 主要是缺少少数直接 regression、边缘 diagnostic 不够完整，以及一个环境敏感的 performance threshold；完整清单和影响说明见上面的 `task-10-report.md`。它们不是本轮隐藏 blocker，也不会自动变成承诺功能。
 
@@ -2424,3 +2430,44 @@ Owner 已批准先修复回归失败，再重新测试并 commit／push 到现�
 - [完整 PlayMode](../TestResults/p8-prefab-stage-full-playmode.xml)：1015 PASS／0 FAIL／2 opt-in 截图项跳过。未声称新增截图、Player build 或手机真机验收。
 
 两份源码在完整测试期间保持冻结；测试生成的 8 份资源变化留副本并恢复到测试前字节，原有 24 份资源修改保持不变。本次提交仅包含上述两份源码与本指南，不收录本地截图、测试报告或既有资源差异。
+
+## 37. Phase 8 merge 与最终收尾（2026-09-21）
+
+### 37.1 Owner 决定与合并版本
+
+- Owner 确认朋友 review 完成，明确授权合并、将 Phase 8 标记完成、执行所有 post-merge 步骤并清理本地 branch；另行选择了先归档保留旧 worktree 文件，再移除 worktree。
+- [PR #7](https://github.com/zhengparker/AnimalCafe/pull/7) 已合并：`codex/phase-8-functional-furniture` → `main`；reviewed head 为 `14a00a85c664e66d14c5864239fb099da5256980`，merge commit 为 `8ee0026247c2c3200bd1bc9ac471b7007e4a4f32`。保留完整提交历史；合并树与 reviewed head 的 tree 均为 `c157d6aaf21747d608d57e13fc44634cdde045af`。
+- GitHub 当时没有 formal review / review comments，也没有配置 check runs / commit statuses；没有将空检查列表称为 CI PASS。朋友 review 和整体收尾批准的依据是本轮 Owner 的明确确认。
+- 本地 `main` 已 fast-forward 至合并提交。原有 `.gitignore` 和 `AnimalCafe.slnx` 两份修改保持原字节，没有纳入本次完成记录提交。
+
+### 37.2 Merged-main 验证
+
+本次在合并后的主项目 fresh 执行，Toronto 时间为 2026-09-21 20:43:02–21:24:27；使用 Unity `6000.5.5f1`、graphics enabled，未启用两项 opt-in native screenshot。全部进程 exit 0，结果如下：
+
+| 本轮本地报告 | PASS | FAIL | SKIP |
+|---|---:|---:|---:|
+| [完整 EditMode](../outputs/phase8-postmerge-20260921/editmode.xml) | 1755 | 0 | 355 |
+| [独立 validator](../outputs/phase8-postmerge-20260921/editmode-validator.xml) | 194 | 0 | 0 |
+| [独立 migration](../outputs/phase8-postmerge-20260921/editmode-migration.xml) | 160 | 0 | 0 |
+| [独立 single-Scene](../outputs/phase8-postmerge-20260921/editmode-single-scene.xml) | 1 | 0 | 0 |
+| [完整 PlayMode](../outputs/phase8-postmerge-20260921/playmode.xml) | 1015 | 0 | 2 |
+
+独立 QA 已核对 root 和逐用例结果，全部 inconclusive 为 0。完整 EditMode 的 355 个 scene-protection skipped fullname 与独立进程的 355 个 Passed fullname 完全一致，差集为 0；跨运行合计 **2110 个不同 EditMode 用例获得 PASS**，不把原始完整报告写成零 skip。PlayMode 的 2 项 skip 恰为 Cash Register 与 readiness 的 opt-in native screenshot，不计为 PASS。
+
+本轮本地证据目录：`outputs/phase8-postmerge-20260921/`。测试前对 Assets / Packages / ProjectSettings 的 2773 份 tracked 文件保留恢复快照；测试产生的 29 份资源变化已另存到 `test-side-effects/` 并恢复到快照字节，生产文件 diff 为空。原有 `.gitignore` 和 `AnimalCafe.slnx` 两份修改也通过 SHA256 校验保留，不进入完成记录提交。
+
+证据分享注意：原始 Unity log 含本地认证参数，仅保留在本机，不纳入 Git 或直接外发；分享结果使用 XML 和不含敏感参数的摘要。
+
+### 37.3 归档与清理
+
+已按 Owner 授权，将旧 worktree 的所有非缓存资料归档到 `outputs/phase8-archive-20260921/`：**74,981 个文件、6,271,447,731 bytes，源文件与副本 SHA256 全部一致**。包含 24 份未提交的 Phase 7 材质／验证 Scene 修改、截图、XML/log、历史 `.superpowers` 记录和项目文件；仅排除可重建的 `Library/` 与旧 `.git` worktree 指针。清单位于 `outputs/phase8-postmerge-20260921/archive-manifest.csv`，恢复说明见归档内 `ARCHIVE_README.md`。清理前又完成逐文件校验与独立 safety review。
+
+回归通过后，已移除 `.worktrees/phase-8-functional-furniture` 和本地 `codex/phase-8-functional-furniture` branch。Git 首次移除遇到两个超过 260 字符的 Library cache 路径；确认 Git 登记已移除后，对残留非缓存文件再次核对归档 SHA256，以 PowerShell 逐文件及空目录清理，没有递归强制删除或扩大目标。其他两个 Codex worktree 保留。远端 Phase 8 branch 未获删除授权，继续保留；当前开发与试玩使用主项目 `E:\Unity\Project\AnimalCafe`。
+
+### 37.4 完成范围与保留限制
+
+- 完成范围为 Phase 8 functional furniture / anchors / readiness，以及本 PR 已实现的 P8R UI、输入和反馈增强；没有添加 Save / Load、NPC movement、Order / Queue、经营循环或 economy。
+- Owner 的整体收尾决定不补造历史逐项 manual PASS。M1–M17 历史 Owner PASS 与 M18 授权技术代测 PASS 分开保留；M6 incompatible Slot 子项仍未独立覆盖。
+- Guide 15.6 中历史 45 张截图和 3 份 metrics 的误覆盖限制保留；新归档不表示恢复了已被覆盖的旧版本。
+- 本轮不新增 Player build、Android / iOS 真机验收或视觉验收结论；两项 opt-in 截图未执行不能计为 PASS。
+- Roadmap 中独立 Phase 8R 的具体范围／gate 仍需 Owner 决定；不因文件名含 P8R 而自动关闭该规划 gate，也不启动 Phase 9。

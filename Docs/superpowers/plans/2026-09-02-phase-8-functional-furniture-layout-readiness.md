@@ -1,5 +1,7 @@
 # Phase 8 Functional Furniture & Layout Readiness Implementation Plan
 
+> 当前状态（2026-09-21）：Phase 8 **Completed — merged to main**。PR #7 已 merge，Owner 已批准整体收尾，本地同步、post-merge 回归与归档后清理均完成；最终状态见 Beginner Guide 第 37 节。以下 Task 实施记录及 checkbox 保留当时快照，不作为重新实施已完成功能的指令。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:test-driven-development` for each implementation Task. Execute inline unless the Studio Owner explicitly authorizes sub-agents. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 让玩家在现有 Decoration Mode 中把多个 Cash Registers、Coffee Machines 和 Pick-up Points 放到兼容 Surface Slots，并让纯 C# readiness system 判断当前布局是否至少有一组完整、可达的营业功能点。
@@ -592,6 +594,8 @@ Run Phase 8 EditMode + EditorSceneLoading filters, then Phase 6/7 MainCafe migra
 
 ### Task 10: Phase Verification, Reviews and Studio Owner Manual Gate
 
+**2026-09-21 closeout authority：** Owner 已确认朋友 review 完成并明确授权 merge / Phase 8 completion / post-merge / local cleanup；merge commit `8ee0026247c2c3200bd1bc9ac471b7007e4a4f32`。最终 regression 和清理结果见 Beginner Guide 第 37 节；下面的 2026-09-04 表格及 manual gate 描述为历史。
+
 > **Current evidence status (2026-09-04):** Task 10 / Phase 8 are `In Progress`. Automated Verification、Engineering、QA 与 Production final review 均为 `PASS`；Studio Owner manual `P8-M-001–P8-M-018` 全部 `Pending / 未执行`，是唯一下一道 gate。Do not mark Phase 8 `Completed` or advance to Phase 8R before manual acceptance passes.
 
 ### Finalized automation evidence
@@ -642,9 +646,11 @@ Current status：Engineering final review `PASS`（`0/0/0`）；QA focused re-re
 
 Provide exact Unity Hub project path、Unity version、Scene/menu paths and P8-M-001–P8-M-018 steps. Prepare only representative screenshots needed to find UI/indicators/debug state。
 
-- [ ] **Step 6: Studio Owner executes P8-M-001–P8-M-018**
+- [x] **Step 6: Record Studio Owner manual decisions and approved M18 exception**
 
 Do not mark Manual PASS from automated evidence. Record each result; visual acceptance for Pick-up indicator and Catalogue remains Pending until the Studio Owner reviews it。
+
+执行记录：2026-09-08 M1–M17 Owner PASS；M18 按 Owner 授权由 Codex 技术代测 PASS，不能称为 18 项 Owner 亲测。2026-09-21 Owner 确认朋友 review 后作出整体完成决定；不追补未执行的逐项结果，不声称 mobile device acceptance。
 
 - [x] **Step 7: Fix accepted blocking findings with focused RED/GREEN**
 
@@ -654,13 +660,17 @@ For each Critical/Important finding, diagnose first, add/adjust a focused regres
 
 Required only if production code/assets changed after Steps 2–3. Record final exact counts and known limitations。
 
-- [ ] **Step 9: Update Roadmap and guide only after all gates pass**
+- [x] **Step 9: Update Roadmap and guide only after all gates pass**
 
 Mark Phase 8 Completed only when automated、review and Studio Owner manual gates all pass. Set Current Next Step to `Phase 8R — Decoration & Functional Layout Review & Polish` design gate；do not define the deferred Phase 8R detail items here。
 
-- [ ] **Step 10: Request separate version-control decision**
+2026-09-21：按 Owner 整体收尾批准与已记录的 M18 技术代测例外，Phase 8 已标记 Completed。PR #7 merge 后 fresh 回归覆盖 2110 个不同 EditMode 用例，PlayMode 1015 PASS / 0 FAIL / 2 opt-in screenshot SKIP；所有 inconclusive 为 0。旧 worktree 资料校验归档、本地 main 同步及本地 branch/worktree 清理完成；不补造历史未覆盖子项或手机验收结果。Current Next Step 为等待 Owner 确认独立 Phase 8R design gate 的具体范围。
+
+- [x] **Step 10: Request separate version-control decision**
 
 Present changed files、tests、manual evidence、known limitations and suggested commit/PR text. Do not commit、push、open PR、merge or clean the branch/worktree without current Studio Owner authorization。
+
+2026-09-21 Owner 已明确授权 PR #7 merge、完成记录及 post-merge 同步、归档后清理本地 Phase 8 branch；不授权删除远端 branch 或自动开始下一 Phase。
 
 ## Plan Self-review Checklist
 

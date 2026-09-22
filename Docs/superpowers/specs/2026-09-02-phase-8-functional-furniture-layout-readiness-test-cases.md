@@ -1,6 +1,6 @@
 # Phase 8 — Functional Furniture & Layout Readiness Test Cases
 
-> 状态：Approved Phase 8 Baseline；Task 10 / Phase 8 `In Progress`；2026-09-09 UX2 见第 9 节，automated PASS / Ready for manual review，新增 manual Pending
+> 状态：Approved Phase 8 Baseline；Phase 8 **Completed — merged to main**（2026-09-21）。PR #7 已 merge，Owner 已批准整体收尾，post-merge 回归通过；结果见 `Docs/Phase8_Beginner_Guide.md` 第 37 节。以下逐项 ledger 保留原始执行记录；整体收尾不把历史 Pending / 未覆盖项批量改为 PASS。
 >
 > 日期：2026-09-02
 > 对应 Design：`Docs/superpowers/specs/2026-09-02-phase-8-functional-furniture-layout-readiness-design.md`
@@ -614,6 +614,8 @@ Phase 收尾至少需要：
 - known Minor items 已进入 accepted/deferred register；不把它们静默变成 Phase 8R 承诺。
 
 ## 8. Lifecycle Gate
+
+当前 authority（2026-09-21）：Owner 确认朋友 review 完成，明确授权 PR #7 merge 与 Phase 8 完成。合并后回归、归档和最终状态统一记录在 Beginner Guide 第 37 节。下面及第 9 节的 UX2 / NP manual Pending 是历史逐项记录，不代表新执行结果，也不替代本次整体收尾决定；M6 incompatible Slot 子项仍未独立覆盖。
 
 2026-09-09 三项 UX 的历史交回：UX-01–UX-06 cases、RED/GREEN 与 6 步 manual 操作保存在 `Docs/Phase8_Beginner_Guide.md` 8.4。当时完整 PlayMode **789/789**（686 core + 103 Scene/Input）、Phase 8 EditMode + surface sessions **227/227** PASS，failed/skipped/inconclusive 均为 0。XML：`TestResults/ux-20260909-all-play-verified.xml`、`ux-20260909-edit-verified.xml`。当时独立审查无未处理 Critical/Important，Owner manual Pending，交回 Ready for manual review。当前后续 UX2 见第 9 节；789/227 与以下 781/83/26 都不能当作 UX2 PASS。
 

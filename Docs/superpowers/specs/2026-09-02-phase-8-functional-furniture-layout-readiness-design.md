@@ -6,7 +6,7 @@
 >
 > Project：AnimalCafe
 >
-> Lifecycle：Approved Design Baseline；Task 10 / Phase 8 仍为 `In Progress`；2026-09-09 UX2 合同见 9.5，automated PASS / Ready for manual review，新增 manual Pending
+> Lifecycle：Approved Design Baseline；Phase 8 **Completed — merged to main**（2026-09-21）。PR #7 合并、Owner 整体收尾决定、post-merge 回归与本地归档清理均已完成，最终结果统一见 `Docs/Phase8_Beginner_Guide.md` 第 37 节。
 >
 > Source of Truth：`Docs/AnimalCafe_Project_Design.md`、`Docs/AnimalCafe_Development_Roadmap.md`
 
@@ -417,6 +417,10 @@ Editor 配置工具的安全边界：
 - 具体 cases 由 `Docs/superpowers/specs/2026-09-02-phase-8-functional-furniture-layout-readiness-test-cases.md` 定义。
 
 ## 16. Lifecycle 与剩余 Gate
+
+2026-09-21：Owner 确认朋友 review 完成，并授权合并、Phase 8 完成、本地 fast-forward 与归档后清理。PR #7 的 merge commit 为 `8ee0026247c2c3200bd1bc9ac471b7007e4a4f32`；最终 merged-main 验证和完成状态见 Beginner Guide 第 37 节。该整体决定不补造逐项 manual PASS、GitHub formal approval、Player build 或 Android/iOS 真机结果；本次不启动 Phase 8R / Phase 9。
+
+以下为 2026-09-04–09 的历史 gate 记录，保留原始结果与未覆盖项，不作为当前工作状态：
 
 本 design 与配套 test cases 已获批，现作为 Phase 8 baseline；这里的 `Approved` 只表示设计合同已确认，不表示 Task 10 或 Phase 8 已完成。
 
