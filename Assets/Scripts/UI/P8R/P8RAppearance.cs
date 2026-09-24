@@ -63,6 +63,55 @@ namespace AnimalCafe.UI.P8R
             text.color = Cocoa;
         }
 
+        /// <summary>Display confirmed setup; keep domain validation as the source of truth.
+        /// 只展示已确认的设施状态，整体连通性仍由现有 report 判定。</summary>
+        public string ChecklistSummary(LayoutReadinessReport report)
+        {
+            if (report == null) throw new ArgumentNullException(nameof(report));
+            if (report.CanOpenForBusiness) return Text("checklist.complete");
+            var count = (report.CashRegisters.ValidCount > 0 ? 1 : 0)
+                + (report.CoffeeMachines.ValidCount > 0 ? 1 : 0)
+                + (report.PickUpPoints.ValidCount > 0 ? 1 : 0);
+            return Text("checklist.title") + " · " + count + "/3";
+        }
+
+        public string ChecklistDetails(LayoutReadinessReport report) => string.Join("\n", ChecklistRows(report));
+
+        public string[] ChecklistRows(LayoutReadinessReport report)
+        {
+            if (report == null) throw new ArgumentNullException(nameof(report));
+            var rows = new List<string>();
+            AddChecklistRow(rows, report, LayoutStationType.CashRegister, report.CashRegisters);
+            AddChecklistRow(rows, report, LayoutStationType.CoffeeMachine, report.CoffeeMachines);
+            AddChecklistRow(rows, report, LayoutStationType.PickUpPoint, report.PickUpPoints);
+            if (!report.CanOpenForBusiness && report.CashRegisters.ValidCount > 0
+                && report.CoffeeMachines.ValidCount > 0 && report.PickUpPoints.ValidCount > 0)
+                rows[2] += "\n" + Text("readiness.action.NoCompleteReachableServiceCombination");
+            return rows.ToArray();
+        }
+        private void AddChecklistRow(List<string> rows, LayoutReadinessReport report,
+            LayoutStationType type, LayoutReadinessSummary summary)
+        {
+            var ready = summary.ValidCount > 0;
+            var missing = summary.TotalCount == 0;
+            var state = Text(ready ? "checklist.state.ready" : missing ? "checklist.state.to_place" : "checklist.state.adjust");
+            var row = FormatReadinessText(Text("readiness." + type), true, true) + " · " + state;
+            if (ready && summary.InvalidCount > 0)
+                row += "\n" + Text(summary.InvalidCount == 1 ? "checklist.extra" : "checklist.extra_many")
+                    .Replace("{count}", summary.InvalidCount.ToString());
+            // Missing rows stay compact; invalid rows retain their corrective hint.
+            // 缺失行保持简短；无效设施继续显示修正提示。
+            else if (!ready && !missing)
+            {
+                var failure = report.Failures.FirstOrDefault(item => item.FunctionType == type);
+                var key = failure != null ? "readiness.action." + failure.Code : "checklist.adjust";
+                if (failure?.Code == LayoutReadinessFailureCode.AnchorBlocked && failure.Role.HasValue)
+                    key += "." + failure.Role.Value;
+                row += "\n" + FormatReadinessText(Text(key), true, false);
+            }
+            rows.Add(row);
+        }
+
         public string ReadinessSummary(LayoutReadinessReport report)
         {
             var failures = DistinctReadinessFailures(report);

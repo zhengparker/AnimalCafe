@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System.Collections;
 using System.Linq;
 using System.Reflection;
@@ -53,128 +53,126 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             .SelectMany(root => root.GetComponentsInChildren<T>(true)).Single();
         private static T Field<T>(object owner, string name) => (T)owner.GetType()
             .GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(owner);
-        private static RectTransform Strip(TimeControlPanel hud) => (RectTransform)hud.transform.Find("P8RTimeStrip");
-        private static RectTransform Selection(TimeControlPanel hud)
-        {
-            var selection = Strip(hud).Find("P8RTimeSelection") as RectTransform;
-            Assert.That(selection, Is.Not.Null, "One moving orange selection is required.");
-            return selection;
-        }
-        private static float X(TimeControlPanel hud) => Selection(hud).anchoredPosition.x / P8RMobileMetrics.For(hud).Units(1);
-        private static Button[] Buttons(TimeControlPanel hud) => new[] { "pauseButton", "normalButton", "fastButton" }
+        private static Button[] Buttons(TimeControlPanel hud) => new[] { "normalButton", "fastButton" }
             .Select(name => Field<Button>(hud, name)).ToArray();
-
-        [UnityTest] public IEnumerator ModeAndTime_AreEqualSizedAndAdjacent_AcrossResponsiveResize()
+        private static string NormalIcon(TimeControlPanel hud) =>
+            Field<Button>(hud, "normalButton").transform.Find("Icon").GetComponent<Image>().sprite.name;
+        private static Rect Bounds(RectTransform rect)
         {
-            using (var screen = new P8RReferenceLayoutTests.NativeScreenSize())
-            {
-                screen.Resize(new Vector2(1080, 1920));
-                P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(360, 640);
-                yield return Load();
-                var hud = Find<TimeControlPanel>();
-                var strip = Strip(hud);
-                foreach (var logical in new[] { new Vector2(360, 640), new Vector2(320, 569),
-                    new Vector2(800, 360), new Vector2(768, 1024), new Vector2(360, 640) })
-                {
-                    screen.Resize(logical * 2);
-                    P8RMobileMetrics.EditorLogicalViewportOverride = logical;
-                    yield return new WaitForSecondsRealtime(.25f);
-                    Canvas.ForceUpdateCanvases();
-                    var unit = P8RMobileMetrics.For(hud).Units(1);
-                    var badge = (RectTransform)hud.transform.Find("P8RModeBadge");
-                    Assert.That(strip, Is.SameAs(Strip(hud)), "Resize reuses the strip.");
-                    Assert.That(badge.rect.width, Is.EqualTo(strip.rect.width).Within(.05f), logical + " equal widths");
-                    Assert.That(badge.rect.height / unit, Is.EqualTo(32).Within(.05f), logical + " compact badge");
-                    Assert.That(strip.rect.height / unit, Is.EqualTo(32).Within(.05f), logical + " compact time");
-                    if (logical.x > logical.y)
-                    {
-                        Assert.That(strip.anchoredPosition.y, Is.EqualTo(badge.anchoredPosition.y).Within(.05f));
-                        Assert.That((strip.anchoredPosition.x - badge.anchoredPosition.x - badge.rect.width) / unit,
-                            Is.EqualTo(8).Within(.05f), "Side-by-side landscape gap");
-                    }
-                    else
-                    {
-                        Assert.That(strip.anchoredPosition.x, Is.EqualTo(badge.anchoredPosition.x).Within(.05f));
-                        Assert.That((badge.anchoredPosition.y - strip.anchoredPosition.y - badge.rect.height) / unit,
-                            Is.EqualTo(8).Within(.05f), "Stacked portrait gap");
-                    }
-                    foreach (var button in Buttons(hud))
-                    {
-                        var size = ((RectTransform)button.transform).rect.size / unit;
-                        Assert.That(size.x, Is.EqualTo(48).Within(.05f));
-                        Assert.That(size.y, Is.EqualTo(48).Within(.05f));
-                    }
-                }
-            }
+            var corners = new Vector3[4]; rect.GetWorldCorners(corners);
+            var min = RectTransformUtility.WorldToScreenPoint(null, corners[0]);
+            var max = RectTransformUtility.WorldToScreenPoint(null, corners[2]);
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
         }
 
-        [UnityTest] public IEnumerator Selection_SlidesAndRetargets_WhileGameSpeedChangesImmediately()
-        {
-            yield return Load();
-            var hud = Find<TimeControlPanel>();
-            var buttons = Buttons(hud);
-            var time = Find<GameTimeService>();
-            time.SetNormal();
-            yield return new WaitForSecondsRealtime(.22f);
-            Assert.That(X(hud), Is.EqualTo(48.015625f).Within(.05f), "Fresh stable normal selection");
-            var iconCenters = buttons.Select(button => P8RCompleteFlowTests.MeasuredInk(
-                button.transform.Find("Icon").GetComponent<Image>()).center).ToArray();
-            var start = X(hud);
-            buttons[2].onClick.Invoke();
-            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
-            Assert.That(X(hud), Is.EqualTo(start).Within(.05f), "Speed changes before the visual begins travelling.");
-            yield return new WaitForSecondsRealtime(.045f);
-            var middle = X(hud);
-            Assert.That(middle, Is.InRange(start + .01f, 96.03125f - .01f), "A real intermediate position, not an instant swap.");
-            buttons[0].onClick.Invoke();
-            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
-            Assert.That(Time.timeScale, Is.Zero);
-            Assert.That(X(hud), Is.EqualTo(middle).Within(.05f), "Rapid input retargets from current visual position.");
-            yield return new WaitForSecondsRealtime(.23f);
-            Assert.That(X(hud), Is.Zero.Within(.05f), "Motion finishes while paused.");
-            for (var index = 0; index < buttons.Length; index++)
-            {
-                var center = P8RCompleteFlowTests.MeasuredInk(buttons[index].transform.Find("Icon").GetComponent<Image>()).center;
-                Assert.That(Vector2.Distance(center, iconCenters[index]) / P8RMobileMetrics.For(hud).PixelsPerLogicalUnit,
-                    Is.LessThan(.03f), "Only the background moves; Pause/Resume PNG padding is not visible ink.");
-            }
-            Assert.That(buttons.All(button => !button.image.enabled), Is.True,
-                "Instant segment backgrounds must not cover the sliding highlight.");
-            Assert.That(Selection(hud).GetComponentsInChildren<Graphic>().All(image => !image.raycastTarget), Is.True);
-        }
-
-        [UnityTest] public IEnumerator Selection_LockDisableAndResize_DoNotLeaveStaleMotionOrDuplicateNodes()
+        [UnityTest] public IEnumerator ModeAndTime_StayAdjacentAndDoNotOverlap_AcrossResponsiveResize()
         {
             using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
             screen.Resize(new Vector2(1080, 1920));
             P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(360, 640);
             yield return Load();
             var hud = Find<TimeControlPanel>();
-            var selection = Selection(hud);
+            var buttons = Buttons(hud);
+            var strip = (RectTransform)hud.transform.Find("P8RTimeStrip");
+            foreach (var logical in new[] { new Vector2(360, 640), new Vector2(320, 569),
+                new Vector2(800, 360), new Vector2(768, 1024), new Vector2(360, 640) })
+            {
+                screen.Resize(logical * 2);
+                P8RMobileMetrics.EditorLogicalViewportOverride = logical;
+                yield return new WaitForSecondsRealtime(.25f);
+                Canvas.ForceUpdateCanvases();
+                var density = P8RMobileMetrics.For(hud).PixelsPerLogicalUnit;
+                var badge = Bounds((RectTransform)hud.transform.Find("P8RModeBadge"));
+                var mode = Bounds((RectTransform)hud.transform.Find("DecorationModeButton"));
+                var stripBounds = Bounds(strip);
+                Assert.That(strip, Is.SameAs(hud.transform.Find("P8RTimeStrip")), "Resize reuses the time container.");
+                Assert.That(badge.center.y, Is.EqualTo(mode.center.y).Within(1f), logical + " mode row alignment");
+                Assert.That(badge.Overlaps(stripBounds) || mode.Overlaps(stripBounds), Is.False,
+                    logical + " time controls must not cover either mode control");
+                if (stripBounds.xMin > badge.xMax)
+                {
+                    Assert.That(stripBounds.center.y, Is.EqualTo(badge.center.y).Within(1f));
+                    Assert.That((stripBounds.xMin - badge.xMax) / density, Is.EqualTo(8).Within(.1f));
+                }
+                else
+                {
+                    Assert.That(stripBounds.xMin, Is.EqualTo(badge.xMin).Within(1f));
+                    Assert.That((badge.yMin - stripBounds.yMax) / density, Is.EqualTo(8).Within(.1f));
+                }
+                foreach (var button in buttons)
+                {
+                    var target = Bounds((RectTransform)button.transform);
+                    Assert.That(target.width / density, Is.GreaterThanOrEqualTo(47.9f));
+                    Assert.That(target.height / density, Is.GreaterThanOrEqualTo(47.9f));
+                }
+                Assert.That(Bounds((RectTransform)buttons[0].transform)
+                    .Overlaps(Bounds((RectTransform)buttons[1].transform)), Is.False);
+            }
+        }
+
+        [UnityTest] public IEnumerator RapidPauseAndSpeedChanges_UpdateStateImmediatelyWithoutDelayedReversion()
+        {
+            yield return Load();
+            var hud = Find<TimeControlPanel>();
+            var buttons = Buttons(hud);
+            var time = Find<GameTimeService>();
+            time.SetNormal();
+            buttons[1].onClick.Invoke();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
+            Assert.That(buttons[1].image.sprite.name, Is.EqualTo("tab_selected"));
+            buttons[1].onClick.Invoke();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+            Assert.That(Time.timeScale, Is.Zero);
+            Assert.That(buttons.All(button => button.interactable), Is.True);
+            Assert.That(NormalIcon(hud), Is.EqualTo("pause_cocoa"));
+            buttons[0].onClick.Invoke();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal), "Paused Normal always selects 1x.");
+            buttons[0].onClick.Invoke();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+            buttons[1].onClick.Invoke();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Fast), "Fast resumes directly at 2x.");
+            buttons[0].onClick.Invoke();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+            yield return new WaitForSecondsRealtime(.25f);
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+            Assert.That(buttons[0].image.sprite.name, Is.EqualTo("tab_selected"), "No delayed refresh restores obsolete state.");
+        }
+
+        [UnityTest] public IEnumerator LockDisableAndResize_ReuseControlsAndReflectCurrentServiceState()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            screen.Resize(new Vector2(1080, 1920));
+            P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(360, 640);
+            yield return Load();
+            var hud = Find<TimeControlPanel>();
+            var buttons = Buttons(hud);
+            var faces = buttons.Select(button => button.image).ToArray();
             var time = Find<GameTimeService>();
             time.SetFast();
             hud.SetDecorationPauseLock(true);
-            Assert.That(selection.gameObject.activeSelf, Is.False, "Locked controls have no orange selection.");
-            Assert.That(Buttons(hud).All(button => !button.interactable && button.image.enabled), Is.True);
+            Assert.That(buttons.All(button => !button.interactable), Is.True);
+            Assert.That(buttons.All(button => button.image.sprite.name == "tab_unavailable"), Is.True);
             hud.SetDecorationPauseLock(false);
-            Assert.That(X(hud), Is.EqualTo(96.03125f).Within(.05f), "Unlock reflects actual restored speed.");
+            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "pause_cocoa" : "resume_cocoa"));
             time.SetNormal();
             hud.enabled = false;
-            time.SetPaused();
+            time.SetFast(); time.SetPaused();
             hud.enabled = true;
-            Assert.That(X(hud), Is.Zero.Within(.05f), "Reenable snaps to current state, not stale motion.");
-            yield return new WaitForSecondsRealtime(.23f);
-            Assert.That(X(hud), Is.Zero.Within(.05f));
-            Assert.That(Selection(hud), Is.SameAs(selection));
-            Assert.That(hud.GetComponentsInChildren<RectTransform>(true).Count(rect => rect.name == "P8RTimeSelection"), Is.EqualTo(1));
-            time.SetFast();
+            Assert.That(buttons[1].interactable, Is.True);
+            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "pause_cocoa" : "resume_cocoa"));
             screen.Resize(new Vector2(1600, 720));
             P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(800, 360);
-            yield return null;
+            yield return new WaitForSecondsRealtime(.25f);
             Canvas.ForceUpdateCanvases();
-            Assert.That(X(hud), Is.EqualTo(96.03125f).Within(.05f), "Resize resolves the in-flight selection.");
-            yield return new WaitForSecondsRealtime(.23f);
-            Assert.That(X(hud), Is.EqualTo(96.03125f).Within(.05f), "The canceled animation cannot write stale coordinates.");
+            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "pause_cocoa" : "resume_cocoa"));
+            Assert.That(buttons.Select(button => button.image), Is.EqualTo(faces));
+            Assert.That(hud.GetComponentsInChildren<RectTransform>(true)
+                .Count(rect => rect.name == "P8RTimeStrip"), Is.EqualTo(1));
+            foreach (var button in buttons)
+                Assert.That(button.GetComponentsInChildren<Image>(true).Count(image => image.name == "P8RFace"), Is.EqualTo(1));
+            buttons[0].onClick.Invoke();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "pause_cocoa" : "resume_cocoa"));
         }
     }
 }

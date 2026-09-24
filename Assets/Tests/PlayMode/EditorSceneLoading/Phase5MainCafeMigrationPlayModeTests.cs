@@ -27,7 +27,7 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator VirtualMouse_ClicksMigratedPauseNormalAndFastButtons()
+        public IEnumerator VirtualMouse_ClicksPauseResumeAndSpeedToggle()
         {
             yield return LoadMainCafe();
             var scene = SceneManager.GetActiveScene();
@@ -42,7 +42,7 @@ namespace AnimalCafe.Tests.PlayMode
             {
                 QueueMouseState(mouse, Vector2.zero, false);
                 yield return null;
-                yield return Click(mouse, Find<Button>(scene, "PauseButton"));
+                yield return Click(mouse, Find<Button>(scene, "NormalButton"));
                 Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
 
                 yield return Click(mouse, Find<Button>(scene, "NormalButton"));
@@ -50,6 +50,8 @@ namespace AnimalCafe.Tests.PlayMode
 
                 yield return Click(mouse, Find<Button>(scene, "FastButton"));
                 Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
+                yield return Click(mouse, Find<Button>(scene, "NormalButton"));
+                Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
             }
             finally
             {

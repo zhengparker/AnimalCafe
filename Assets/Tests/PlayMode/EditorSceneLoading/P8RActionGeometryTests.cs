@@ -19,6 +19,40 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
 {
     public sealed class P8RActionGeometryTests
     {
+        [Test]
+        public void ActionAvoidance_AcceptsOnlyAvailableSlotTouchingSafeRightEdge()
+        {
+            var root = new GameObject("Action boundary regression", typeof(RectTransform), typeof(Canvas));
+            try
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/UI/P8R/Prefabs/PF_UI_P8RActionBar.prefab");
+                var instance = Object.Instantiate(prefab, root.transform);
+                var view = instance.GetComponent<DecorationActionBarView>();
+                Assert.That(Field<AnimalCafe.UI.P8R.P8RAppearance>(view, "appearance"), Is.Not.Null);
+                var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(view);
+                var unit = metrics.Units(1);
+                var gap = metrics.Units(8);
+                var safe = new Rect(0, 0, 300 * unit, 200 * unit);
+                var size = new Vector2(100, 50) * unit;
+                // The world obstacle spans the full height: only the exact-width right slot remains.
+                // 障碍占满垂直空间，右侧唯一空位必须允许贴住安全区边界。
+                var obstacle = new Rect(0, 0, 200 * unit - gap, safe.height);
+                var avoid = typeof(DecorationActionBarView).GetMethod("AvoidWorldPresentation",
+                    BindingFlags.Instance | BindingFlags.NonPublic);
+                Assert.That(avoid, Is.Not.Null);
+                var point = (Vector2)avoid.Invoke(view, new object[]
+                {
+                    new Vector2(100, 100) * unit, size, Vector2.one * .5f, safe, obstacle, null
+                });
+                var row = new Rect(point - size * .5f, size);
+                Inside(row, safe);
+                Assert.That(row.Overlaps(obstacle), Is.False, "Rejecting a legal boundary slot must not leave the row over the world obstacle.");
+                Assert.That(row.xMin - obstacle.xMax, Is.GreaterThanOrEqualTo(gap - .01f));
+                Assert.That(row.xMax, Is.EqualTo(safe.xMax).Within(.01f));
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
         [UnityTest]
         public IEnumerator ProductionActionPrefab_SyntheticPortraitLandscape_ClampsFourUsableButtons()
         {

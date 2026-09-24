@@ -710,7 +710,7 @@ namespace AnimalCafe.UI.Decoration
                 var uncappedHeight = Mathf.Min(metrics.Units(520), Mathf.Max(metrics.Units(120), availableHeight));
                 // The complete sheet stays within 45% of safe height; overflow uses its ScrollRect.
                 // 整个面板最多占安全区45%，高度不足的工具使用已有目录滚动区。
-                var safeHeightCap = root.rect.height * .45f;
+                var safeHeightCap = Mathf.Min(root.rect.height * .45f, Mathf.Max(0, availableHeight));
                 var measure = collapseButton != null ? collapseButton.GetComponentInChildren<TMP_Text>(true) : null;
                 var surface = browsingContextKey == "Floor" || browsingContextKey == "Wall";
                 var footerPadding = minimalHeader ? metrics.Units(4) : padding;
@@ -781,7 +781,7 @@ namespace AnimalCafe.UI.Decoration
                 // Keep Furniture/Wall Decor category names; trim only the first heading's blank space.
                 // 保留家具与墙饰分类名称，仅在极短屏压缩首行标题下的空白。
                 var firstHeadingHeight = Mathf.Clamp((safeHeightCap - fixedReservations) / metrics.Units(1) - 52.125f, 20f, 28f);
-                var minimumContentReservation = metrics.Units(hideFloorHeadingForCap ? 48 : 48 + firstHeadingHeight);
+                var minimumContentReservation = metrics.Units(hideFloorHeadingForCap ? 48 : 50 + firstHeadingHeight);
                 if (asideFooter) minimumContentReservation = Mathf.Max(minimumContentReservation, asideFooterHeight);
                 var minimumUsableHeight = fixedReservations + minimumContentReservation;
                 var height = Mathf.Min(safeHeightCap, Mathf.Max(Mathf.Min(uncappedHeight, safeHeightCap), minimumUsableHeight));

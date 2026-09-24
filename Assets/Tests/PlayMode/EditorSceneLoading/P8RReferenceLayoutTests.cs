@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System.Collections;
 using System.Linq;
 using System.Reflection;
@@ -285,7 +285,10 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 var face = label.GetComponentInParent<Image>();
                 Assert.That(face.sprite.name, Is.EqualTo("button_secondary_normal"));
                 var center = face.rectTransform.InverseTransformPoint(label.transform.TransformPoint(label.textBounds.center));
-                Assert.That(Vector2.Distance(center, face.rectTransform.rect.center + Vector2.up), Is.LessThan(1f), label.text);
+                // Keep the existing one-unit optical tolerance inclusive at its exact boundary.
+                // 左右模式改为共同中心线后，允许恰好一单位的原底板阴影偏移。
+                Assert.That(Vector2.Distance(center, face.rectTransform.rect.center + Vector2.up),
+                    Is.LessThanOrEqualTo(1.01f), label.text);
             }
         }
 
@@ -499,7 +502,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Assert.That(notice.gameObject.activeInHierarchy, Is.False, "Preview explanations no longer obscure either landscape size.");
                 var modeLabel = Field<TMP_Text>(controller, "decorationModeButtonLabel");
                 var button = modeLabel.GetComponentInParent<Button>();
-                Assert.That(modeLabel.gameObject.activeSelf, Is.False);
+                Assert.That(modeLabel.gameObject.activeSelf, Is.True);
+                Assert.That(modeLabel.text, Is.EqualTo("Done"));
                 var inkBottom = P8RCompleteFlowTests.MeasuredInk(button.transform.Find("Icon").GetComponent<Image>()).yMin;
                 var bottom = Box(button.image).yMin;
                 Assert.That((inkBottom - bottom) / button.GetComponentInParent<Canvas>().rootCanvas.scaleFactor,
@@ -804,7 +808,6 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                         safe.AutoApplyRuntimeSafeArea = false;
                         safe.ApplySafeArea(new Rect(88, 40, 1026, 576), boundaryPixels);
                     }
-                    Field<Button>(Find<ValidationMessageView>(), "disclosureButton").onClick.Invoke();
                     var boundaryFolder = "outputs/p8r-mobile-ui-20260913/"
                         + System.Environment.GetEnvironmentVariable("ANIMALCAFE_P8R_POLISH_RUN") + "/1138x640";
                     yield return CaptureNative("27-INJECTED-expanded-readiness-floor-preview.png", boundaryFolder);
@@ -994,7 +997,10 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                         Mathf.Min(card.xMax, viewport.xMax), Mathf.Min(card.yMax, viewport.yMax));
                     Assert.That(visible.width / 2f, Is.GreaterThanOrEqualTo(48f));
                     Assert.That(visible.height / 2f, Is.GreaterThanOrEqualTo(48f),
-                        "Check the clipped, actually visible card target, not just the compact card RectTransform.");
+                        "Check the clipped, actually visible card target, not just the compact card RectTransform. "
+                        + "pixels=" + pixels + "; tile=" + tile.ItemId + "; card=" + card + "; viewport=" + viewport
+                        + "; panel=" + Box(catalogue) + "; readiness=" + Box(Find<ValidationMessageView>())
+                        + "; footer=" + Box(catalogue.SurfaceFooterHost));
                     var hits = new System.Collections.Generic.List<RaycastResult>();
                     EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = visible.center }, hits);
                     Assert.That(hits, Is.Not.Empty);
@@ -1043,7 +1049,6 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     viewport = Box(catalogue.VerticalScroll.viewport);
                     AssertCatalogueAvoidsChrome(catalogue);
                     var readiness = Find<ValidationMessageView>();
-                    Field<Button>(readiness, "disclosureButton").onClick.Invoke();
                     yield return new WaitForSecondsRealtime(.2f); Canvas.ForceUpdateCanvases();
                     Assert.That(readiness.IsDetailsExpanded, Is.True);
                     TestContext.WriteLine("Compact expanded readiness " + pixels + ": readiness=" + Box(readiness)
@@ -1118,7 +1123,6 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     safe.AutoApplyRuntimeSafeArea = false;
                     safe.ApplySafeArea(new Rect(88, 40, 1026, 576), pixels);
                 }
-                Field<Button>(Find<ValidationMessageView>(), "disclosureButton").onClick.Invoke();
                 yield return new WaitForSecondsRealtime(.3f); Canvas.ForceUpdateCanvases();
                 Assert.That(catalogue.SurfaceFooterHost.IsChildOf(catalogue.VerticalScroll.content), Is.True);
                 var bar = Find<DecorationActionBarView>();
@@ -1348,51 +1352,49 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
 
 
         [UnityTest]
-        public IEnumerator Polish_HudIconsStayCompactAcrossSpeedAndDecorationChanges()
+        public IEnumerator Polish_HudControlsStayReadableAcrossSpeedAndDecorationChanges()
         {
             yield return Load();
             var hud = Find<TimeControlPanel>(); var controller = Find<DecorationModeController>();
             var service = Find<GameTimeService>();
-            var pause = Field<Button>(hud, "pauseButton"); var normal = Field<Button>(hud, "normalButton");
-            var fast = Field<Button>(hud, "fastButton");
+            var pause = Field<Button>(hud, "normalButton"); var speedButton = Field<Button>(hud, "fastButton");
             var mode = Field<TMP_Text>(controller, "decorationModeButtonLabel").GetComponentInParent<Button>();
             foreach (var speed in new[] { GameSpeed.Normal, GameSpeed.Fast })
             {
                 if (speed == GameSpeed.Fast) service.SetFast(); else service.SetNormal();
-                pause.onClick.Invoke(); yield return null;
+                (speed == GameSpeed.Fast ? speedButton : pause).onClick.Invoke(); yield return null;
                 Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
-                Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("resume_cocoa"));
+                Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("pause_cocoa"));
+                Assert.That(speedButton.interactable, Is.True);
                 pause.onClick.Invoke(); yield return null;
-                Assert.That(service.CurrentSpeed, Is.EqualTo(speed), "Resume must retain the previous speed, not force 1x.");
+                Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
                 foreach (var decorating in new[] { true, false })
                 {
                     if (decorating) controller.EnterDecorationMode(); else controller.TryRequestExit();
                     yield return null; Canvas.ForceUpdateCanvases();
-                    foreach (var button in new[] { pause, normal, fast, mode })
-                        Assert.That(button.transform.Find("Label").gameObject.activeSelf, Is.False, button.name + " must stay icon-only after every event.");
-                    Assert.That(normal.transform.Find("Icon").GetComponent<Image>().sprite.name,
-                        Is.EqualTo(decorating ? "resume_muted" : "resume_cocoa"), "1x uses a single triangle, not a clock.");
-                    Assert.That(fast.transform.Find("Icon").GetComponent<Image>().sprite.name,
-                        Is.EqualTo(decorating ? "fast_forward_muted" : "fast_forward_cocoa"));
-                    var scale = mode.GetComponentInParent<Canvas>().rootCanvas.scaleFactor;
+                    Assert.That(pause.transform.Find("Label").gameObject.activeSelf, Is.False);
+                    Assert.That(Field<Button>(hud, "pauseButton").gameObject.activeInHierarchy, Is.False);
+                    Assert.That(speedButton.transform.Find("Label").gameObject.activeInHierarchy, Is.False);
+                    Assert.That(speedButton.transform.Find("Icon").GetComponent<Image>().sprite.name,
+                        Is.EqualTo(decorating ? "resume_muted" : "resume_cocoa"));
+                    Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name,
+                        Is.EqualTo(decorating ? "lock_muted" : "resume_cocoa"));
+                    Assert.That(mode.transform.Find("Label").GetComponent<TMP_Text>().text,
+                        Is.EqualTo(decorating ? "Done" : "Decor"));
                     var density = P8RMobileMetrics.For(mode).PixelsPerLogicalUnit;
-                    Assert.That(Box(mode.image).width / density, Is.EqualTo(40f).Within(.1f));
-                    Assert.That(Box(mode.image).height / density, Is.EqualTo(40f).Within(.1f));
-                    Assert.That(Box(mode).width, Is.GreaterThan(Box(mode.image).width));
+                    Assert.That(Box(mode.image).height / density, Is.EqualTo(48f).Within(.1f));
                     Assert.That(mode.GetComponent<Image>().color.a, Is.Zero,
-                        "Legacy Awake must not paint the invisible hit area into a white rectangle.");
+                        "The transparent hit root must not become an extra opaque rectangle.");
                     var modeInk = P8RCompleteFlowTests.MeasuredInk(mode.transform.Find("Icon").GetComponent<Image>());
                     Assert.That(Mathf.Max(modeInk.width, modeInk.height) / density, Is.InRange(19.8f, 20.2f));
-                    // Transparent padding remains a real touch target outside the visible face.
                     var edge = new PointerEventData(EventSystem.current)
-                    { position = new Vector2(Box(mode).xMin + scale, Box(mode).center.y) };
+                    { position = new Vector2(Box(mode).xMin + density, Box(mode).center.y) };
                     var hits = new System.Collections.Generic.List<RaycastResult>();
                     EventSystem.current.RaycastAll(edge, hits);
                     Assert.That(hits, Is.Not.Empty);
                     Assert.That(hits[0].gameObject.GetComponentInParent<Button>(), Is.SameAs(mode));
-                    Assert.That(Box(normal).width / density, Is.EqualTo(48f).Within(.1f));
-                    Assert.That(Box(pause).Overlaps(Box(normal)), Is.False);
-                    Assert.That(Box(normal).Overlaps(Box(fast)), Is.False);
+                    Assert.That(Box(speedButton).width / density, Is.GreaterThanOrEqualTo(48f));
+                    Assert.That(Box(pause).Overlaps(Box(speedButton)), Is.False);
                     Assert.That(mode.GetComponentsInChildren<Transform>(true)
                         .Any(t => (t.name == "Top Highlight" || t.name == "TopHighlight") && t.gameObject.activeInHierarchy), Is.False);
                 }
@@ -1400,59 +1402,56 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         }
 
         [UnityTest]
-        public IEnumerator TimeOptical_ThreeButtonsHaveEqualGapsAndMobileTouchSize()
+        public IEnumerator TimeOptical_TwoControlsHaveSeparateMobileTouchTargets()
         {
             yield return Load();
             var hud = Find<TimeControlPanel>();
-            var buttons = new[] { "pauseButton", "normalButton", "fastButton" }.Select(n => Field<Button>(hud, n)).ToArray();
+            var buttons = new[] { "normalButton", "fastButton" }.Select(n => Field<Button>(hud, n)).ToArray();
             var scale = P8RMobileMetrics.For(hud).PixelsPerLogicalUnit;
             var boxes = buttons.Select(Box).ToArray();
-            Assert.That((boxes[1].xMin - boxes[0].xMax) / scale,
-                Is.EqualTo((boxes[2].xMin - boxes[1].xMax) / scale).Within(.1f), "Time controls need equal visible separation.");
+            Assert.That((boxes[1].xMin - boxes[0].xMax) / scale, Is.EqualTo(8).Within(.1f));
             foreach (var box in boxes)
             {
-                Assert.That(box.width / scale, Is.EqualTo(48f).Within(.1f));
+                Assert.That(box.width / scale, Is.GreaterThanOrEqualTo(47.9f));
                 Assert.That(box.height / scale, Is.EqualTo(48f).Within(.1f));
             }
         }
 
         [UnityTest]
-        public IEnumerator TimeOptical_DoubleTriangleStaysBalancedAfterEveryStateRefresh()
+        public IEnumerator TimeOptical_TwoIconsStayReadableAfterEveryStateRefresh()
         {
             yield return Load();
             var hud = Find<TimeControlPanel>(); var controller = Find<DecorationModeController>();
             var time = Find<GameTimeService>();
-            var pause = Field<Button>(hud, "pauseButton"); var normal = Field<Button>(hud, "normalButton");
-            var fast = Field<Button>(hud, "fastButton");
-            var scale = hud.GetComponentInParent<Canvas>().rootCanvas.scaleFactor;
+            var pause = Field<Button>(hud, "normalButton"); var speedButton = Field<Button>(hud, "fastButton");
             void CheckInk()
             {
                 Canvas.ForceUpdateCanvases();
-                // Measure the actual PNG alpha, independently of the production ink-bound table.
-                // 用源图可见像素验证，不复制 production 中的尺寸常量。
-                var one = P8RCompleteFlowTests.MeasuredInk(normal.transform.Find("Icon").GetComponent<Image>());
-                var two = P8RCompleteFlowTests.MeasuredInk(fast.transform.Find("Icon").GetComponent<Image>());
-                Assert.That(two.height / one.height, Is.InRange(.85f, 1.05f), "2x must not look like a tiny pair next to 1x.");
-                Assert.That(two.width / two.height, Is.EqualTo(193f / 122f).Within(.02f), "Do not stretch the double triangle.");
-                Assert.That(Vector2.Distance(two.center, Box(fast).center) / scale, Is.LessThan(.1f));
-                Assert.That((two.xMin - Box(fast).xMin) / scale, Is.GreaterThanOrEqualTo(10f));
-                Assert.That((Box(fast).xMax - two.xMax) / scale, Is.GreaterThanOrEqualTo(10f));
+                var density = P8RMobileMetrics.For(hud).PixelsPerLogicalUnit;
+                var ink = P8RCompleteFlowTests.MeasuredInk(pause.transform.Find("Icon").GetComponent<Image>());
+                Assert.That(Mathf.Max(ink.width, ink.height) / density, Is.InRange(19.8f, 20.2f));
+                Assert.That(Vector2.Distance(ink.center, Box(pause).center) / density, Is.LessThan(.15f));
+                var fastInk = P8RCompleteFlowTests.MeasuredButtonInk(speedButton);
+                Assert.That(fastInk.height / density, Is.InRange(19.8f, 20.2f));
+                Assert.That(fastInk.width / density, Is.LessThanOrEqualTo(36.1f));
+                Assert.That(Vector2.Distance(fastInk.center, Box(speedButton).center) / density, Is.LessThan(.15f));
+                Assert.That(pause.transform.Find("Label").gameObject.activeSelf, Is.False);
+                Assert.That(speedButton.transform.Find("Label").gameObject.activeSelf, Is.False);
             }
             foreach (var speed in new[] { GameSpeed.Normal, GameSpeed.Fast })
             {
                 if (speed == GameSpeed.Fast) time.SetFast(); else time.SetNormal();
                 yield return null; CheckInk();
+                (speed == GameSpeed.Fast ? speedButton : pause).onClick.Invoke(); yield return null; CheckInk();
                 pause.onClick.Invoke(); yield return null; CheckInk();
-                pause.onClick.Invoke(); yield return null; CheckInk();
-                Assert.That(time.CurrentSpeed, Is.EqualTo(speed));
+                Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
                 controller.EnterDecorationMode(); yield return null; CheckInk();
-                Assert.That(new[] { pause, normal, fast }.All(b => !b.interactable), Is.True);
+                Assert.That(new[] { pause, speedButton }.All(b => !b.interactable), Is.True);
                 controller.TryRequestExit(); yield return null; CheckInk();
-                Assert.That(time.CurrentSpeed, Is.EqualTo(speed));
+                Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
                 hud.enabled = false; hud.enabled = true; yield return null; CheckInk();
             }
         }
-
         [UnityTest]
         public IEnumerator Polish_SurfaceThumbnailFitsWellAfterCategoryRebinding()
         {
@@ -1490,16 +1489,16 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         }
 
         [UnityTest]
-        public IEnumerator Hud_TimeSegmentsShareTopLeftRow_AndRestoreExactPreviousSpeed()
+        public IEnumerator Hud_TwoTimeControlsShareTopLeftRow_AndRestoreExactPreviousSpeed()
         {
             yield return Load(); var hud = Find<TimeControlPanel>();
-            var buttons = new[] { "pauseButton", "normalButton", "fastButton" }.Select(n => Field<Button>(hud, n)).ToArray();
+            var buttons = new[] { "normalButton", "fastButton" }.Select(n => Field<Button>(hud, n)).ToArray();
             var boxes = buttons.Select(Box).ToArray();
             Assert.That(boxes[0].center.y, Is.EqualTo(boxes[1].center.y).Within(.5f), "Pause and 1x must share a row.");
-            Assert.That(boxes[1].center.y, Is.EqualTo(boxes[2].center.y).Within(.5f));
+
             Assert.That(boxes[0].xMax, Is.LessThanOrEqualTo(boxes[1].xMin + .1f));
-            Assert.That(boxes[1].xMax, Is.LessThanOrEqualTo(boxes[2].xMin + .1f));
-            Assert.That(boxes[2].center.x, Is.LessThan(Screen.width * .65f));
+
+            Assert.That(boxes[1].center.x, Is.LessThan(Screen.width * .65f));
             var time = Find<GameTimeService>(); time.SetFast();
             var controller = Find<DecorationModeController>(); controller.EnterDecorationMode(); yield return null;
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
@@ -1514,15 +1513,15 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             yield return Load(); var hud = Find<TimeControlPanel>();
             var badge = hud.transform.Find("P8RModeBadge");
             Assert.That(badge, Is.Not.Null, "Mode retains its own badge in both responsive layouts.");
-            var pause = Field<Button>(hud, "pauseButton");
+            var pause = Field<Button>(hud, "normalButton");
             var mode = Field<TMP_Text>(Find<DecorationModeController>(), "decorationModeButtonLabel").GetComponentInParent<Button>();
             var strip = hud.transform.Find("P8RTimeStrip");
             Assert.That(strip, Is.Not.Null);
-            // Compare visible chrome; the 48-unit touch root extends beyond the 32-unit face.
-            // 比较可见32单位时间条，不把外扩的48单位透明点击区当成底板。
+            // Mode controls share their row while time controls may wrap below.
+            // 左右模式共用首行，时间控件在空间不足时换至第二行。
             var badgeBox = Box(badge); var stripBox = Box(strip);
             var density = P8RMobileMetrics.For(hud).PixelsPerLogicalUnit;
-            Assert.That(Vector2.Distance(badgeBox.size, stripBox.size), Is.LessThan(.1f));
+            Assert.That(badgeBox.center.y, Is.EqualTo(Box(mode).center.y).Within(.5f));
             if (badgeBox.xMax < stripBox.xMin)
             {
                 Assert.That(badgeBox.center.y, Is.EqualTo(stripBox.center.y).Within(.5f), "Wide HUD puts badge beside time controls.");
@@ -1535,8 +1534,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             }
             Assert.That(Box(mode).center.x, Is.GreaterThan(Screen.width * .7f));
             var icon = mode.transform.Find("Icon").GetComponent<Image>(); var label = mode.transform.Find("Label").GetComponent<TMP_Text>();
-            Assert.That(label.gameObject.activeSelf, Is.False);
-            P8RCompleteFlowTests.AssertTextIconGroup(mode);
+            Assert.That(label.gameObject.activeSelf, Is.True);
+            Assert.That(label.text, Is.EqualTo("Decor").Or.EqualTo("Done"));
             var readiness = Find<ValidationMessageView>();
             Assert.That(readiness.IsVisible, Is.True, "Normal HUD must show the existing confirmed-layout report before the first edit.");
             Assert.That(Box(readiness).yMax, Is.LessThan(Box(pause).yMin));
@@ -1544,11 +1543,11 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var normalCopy = badge.GetComponentInChildren<TMP_Text>().text;
             Find<DecorationModeController>().EnterDecorationMode(); yield return null;
             Assert.That(badge.GetComponentInChildren<TMP_Text>().text, Is.Not.EqualTo(normalCopy));
-            Assert.That(label.gameObject.activeSelf, Is.False);
-            P8RCompleteFlowTests.AssertTextIconGroup(mode);
+            Assert.That(label.gameObject.activeSelf, Is.True);
+            Assert.That(label.text, Is.EqualTo("Decor").Or.EqualTo("Done"));
             Find<DecorationModeController>().TryRequestExit(); yield return null;
-            Assert.That(label.gameObject.activeSelf, Is.False);
-            P8RCompleteFlowTests.AssertTextIconGroup(mode);
+            Assert.That(label.gameObject.activeSelf, Is.True);
+            Assert.That(label.text, Is.EqualTo("Decor").Or.EqualTo("Done"));
         }
 
         [UnityTest]
@@ -1640,8 +1639,9 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var readiness = Find<ValidationMessageView>();
             yield return null; Canvas.ForceUpdateCanvases();
             var view = Find<DecorationActionBarView>();
+            yield return new WaitForSecondsRealtime(.3f); Canvas.ForceUpdateCanvases();
             var collapsedPlacement = Box(Field<Button>(view, "cancelButton"));
-            Field<Button>(readiness, "disclosureButton").onClick.Invoke();
+            P8RCompleteFlowTests.AssertChecklist(readiness);
             yield return new WaitForSecondsRealtime(.3f); Canvas.ForceUpdateCanvases();
             Assert.That(readiness.IsDetailsExpanded, Is.True);
             foreach (var button in new[] { Field<Button>(view, "cancelButton"), Field<Button>(view, "confirmButton") })
@@ -1649,35 +1649,35 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 var box = Box(button);
                 Assert.That(box.xMin, Is.GreaterThanOrEqualTo(0)); Assert.That(box.xMax, Is.LessThanOrEqualTo(Screen.width));
                 Assert.That(box.yMin, Is.GreaterThanOrEqualTo(0));
-                Assert.That(box.yMax, Is.LessThanOrEqualTo(Box(readiness).yMin), "Expanded real confirmed-layout report must not cover the floating controls.");
+                Assert.That(box.Overlaps(Box(readiness)), Is.False, "Expanded checklist must not cover the floating controls.");
             }
-            Field<Button>(readiness, "disclosureButton").onClick.Invoke(); yield return null;
+            P8RCompleteFlowTests.AssertChecklist(readiness); yield return null;
             // The whole-model avoidance may keep the same position in both states.
             // 收起后恢复有效位置，不要求上移而重新遮住模型。
             Assert.That(Box(Field<Button>(view, "cancelButton")).yMax,
                 Is.EqualTo(collapsedPlacement.yMax).Within(.1f),
-                "Collapsing details restores the valid pre-expansion placement without pointer movement.");
+                "An unchanged checklist preserves valid placement without pointer movement.");
             Field<Button>(view, "cancelButton").onClick.Invoke(); yield return null;
-            Field<Button>(readiness, "disclosureButton").onClick.Invoke(); yield return null;
+            P8RCompleteFlowTests.AssertChecklist(readiness); yield return null;
             Assert.That(view.IsVisible, Is.False, "Disclosure with no preview must not create floating controls.");
         }
 
         [UnityTest]
-        public IEnumerator ReadinessDisclosure_VisibleContentFitsItsClickableTarget()
+        public IEnumerator ReadinessRows_CompleteCopyFitsAndPassesThroughClicks()
         {
             yield return Load(); var controller = Find<DecorationModeController>(); controller.EnterDecorationMode();
             Find<DecorationCatalogueView>().GetComponentsInChildren<DecorationCatalogueTileView>(true)
                 .First(t => t.ItemId == "equipment.cash-register.01" && t.gameObject.activeInHierarchy).GetComponent<Button>().onClick.Invoke();
             Assert.That(controller.TryConfirmFunctionalSurfacePreview(), Is.True);
-            var readiness = Find<ValidationMessageView>(); var disclosure = Field<Button>(readiness, "disclosureButton");
-            foreach (var pass in new[] { 0, 1 })
+            var readiness = Find<ValidationMessageView>();
+            P8RCompleteFlowTests.AssertChecklist(readiness);
+            foreach (var row in Enumerable.Range(0, 3).Select(i => readiness.transform.Find("ChecklistRow" + i)))
             {
-                Canvas.ForceUpdateCanvases();
-                foreach (var text in disclosure.GetComponentsInChildren<TMP_Text>())
-                    Assert.That(text.GetPreferredValues(text.text).x, Is.LessThanOrEqualTo(((RectTransform)disclosure.transform).rect.width), "Visible disclosure copy must fit the target.");
-                Assert.That(((RectTransform)disclosure.transform).rect.height, Is.GreaterThanOrEqualTo(48));
-                disclosure.onClick.Invoke(); yield return null;
+                var label = row.Find("Label").GetComponent<TMP_Text>();
+                Assert.That(label.GetPreferredValues(label.text, label.rectTransform.rect.width, Mathf.Infinity).y,
+                    Is.LessThanOrEqualTo(label.rectTransform.rect.height + 1f));
             }
+            yield return null;
         }
 
         [UnityTest]
@@ -1765,11 +1765,22 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 var failures = Enumerable.Range(0, 24).Select(i => P8RCompleteFlowTests.Failure(AnimalCafe.Layout.LayoutReadinessSeverity.Blocking,
                     (AnimalCafe.Layout.LayoutReadinessFailureCode)(i % 12), i)).ToArray();
                 readiness.ShowReadiness(P8RCompleteFlowTests.Report(false, failures));
-                Field<Button>(readiness, "disclosureButton").onClick.Invoke();
-                Assert.That(readiness.IsDetailsExpanded && readiness.GetComponent<ScrollRect>().vertical, Is.True);
-                yield return P8RCompleteFlowTests.Capture("15-INJECTED-long-readiness-expanded.png", folder);
-                readiness.GetComponent<ScrollRect>().verticalNormalizedPosition = 0;
-                yield return P8RCompleteFlowTests.Capture("16-INJECTED-long-readiness-bottom.png", folder);
+                Assert.That(readiness.IsDetailsExpanded, Is.True);
+                // Diagnostics are summarized into three categories; 24 failures no longer imply 24 UI rows.
+                // 诊断按三类归纳，失败数量不再决定清单是否需要滚动。
+                foreach (var name in new[] { "Cash Register", "Coffee Machine", "Pickup Point" })
+                    Assert.That(readiness.CurrentMessage, Does.Contain(name));
+                yield return P8RCompleteFlowTests.Capture("15-INJECTED-checklist-expanded.png", folder);
+                var checklistScroll = readiness.GetComponent<ScrollRect>();
+                if (checklistScroll.vertical)
+                {
+                    var beforeScroll = checklistScroll.content.anchoredPosition;
+                    checklistScroll.verticalNormalizedPosition = 0;
+                    Canvas.ForceUpdateCanvases();
+                    Assert.That(Vector2.Distance(beforeScroll, checklistScroll.content.anchoredPosition), Is.GreaterThan(.01f),
+                        "A constrained checklist must still let the player reach the bottom.");
+                }
+                yield return P8RCompleteFlowTests.Capture("16-INJECTED-checklist-bottom.png", folder);
                 Debug.Log("P8R reference gallery actual Screen=" + Screen.width + "x" + Screen.height + "; Camera=" + UnityEngine.Camera.main.pixelWidth + "x" + UnityEngine.Camera.main.pixelHeight
                     + "; Canvas=" + view.GetComponentInParent<Canvas>().rootCanvas.renderingDisplaySize + "; folder=" + folder);
             }

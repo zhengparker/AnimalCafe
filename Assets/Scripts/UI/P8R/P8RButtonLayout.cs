@@ -8,6 +8,43 @@ namespace AnimalCafe.UI.P8R
     /// 只布局当前P8R控件；使用固定素材可见墨迹边界，不在runtime读取texture。</summary>
     public static class P8RButtonLayout
     {
+        private static readonly System.Collections.Generic.Dictionary<Sprite, Sprite> borderSprites = new();
+
+        // Extract only the existing cocoa stroke, not the cream pixels in the nine-slice edges.
+        // 仅提取原素材棕色边框，避免九宫格边缘的奶油色覆盖透明底色或选中状态。
+        public static Sprite BorderSprite(Sprite source)
+        {
+            if (source == null) return null;
+            if (borderSprites.TryGetValue(source, out var cached) && cached != null) return cached;
+            var texture = source.texture;
+            var target = RenderTexture.GetTemporary(texture.width, texture.height, 0, RenderTextureFormat.ARGB32);
+            var previous = RenderTexture.active;
+            Texture2D borderTexture;
+            try
+            {
+                Graphics.Blit(texture, target);
+                RenderTexture.active = target;
+                borderTexture = new Texture2D(texture.width, texture.height, TextureFormat.RGBA32, false);
+                borderTexture.ReadPixels(new Rect(0, 0, texture.width, texture.height), 0, 0);
+                var pixels = borderTexture.GetPixels32();
+                for (var i = 0; i < pixels.Length; i++)
+                {
+                    var pixel = pixels[i];
+                    var darkestChannel = Mathf.Min(pixel.r, Mathf.Min(pixel.g, pixel.b));
+                    pixel.a = (byte)Mathf.RoundToInt(pixel.a * Mathf.Clamp01((200f - darkestChannel) / 40f));
+                    pixels[i] = pixel;
+                }
+                borderTexture.SetPixels32(pixels);
+                borderTexture.Apply(false, true);
+            }
+            finally { RenderTexture.active = previous; RenderTexture.ReleaseTemporary(target); }
+            var sprite = Sprite.Create(borderTexture, source.rect,
+                source.pivot / source.rect.size, source.pixelsPerUnit, 0, SpriteMeshType.FullRect, source.border);
+            sprite.name = source.name + "_border";
+            borderSprites[source] = sprite;
+            return sprite;
+        }
+
         private static Rect InkBounds(Sprite sprite)
         {
             if (IsTrimmedArtwork(sprite)) return new Rect(Vector2.zero, sprite.rect.size);
@@ -202,6 +239,68 @@ namespace AnimalCafe.UI.P8R
 
         /// <summary>Centre the visible ink, keeping a smaller face inside its touch target.
         /// 图标按实际墨迹居中；可见底板与触控范围分开。</summary>
+        /// <summary>Match visible symbol height; double arrows may use more width without stretching.
+        /// 按可见图形高度对齐，双箭头等比加宽，不修改素材。</summary>
+        public static void IconButtonByHeight(Button button, float height, float maxWidth, float faceExtent)
+        {
+            if (button == null) return;
+            IconButton(button, height, faceExtent);
+            var icon = button.transform.Find("Icon")?.GetComponent<Image>();
+            if (icon == null) return;
+            var metrics = P8RMobileMetrics.For(button);
+            var ink = InkBounds(icon.sprite);
+            var factor = Mathf.Min(metrics.Units(height) / Mathf.Max(1, ink.height),
+                metrics.Units(maxWidth) / Mathf.Max(1, ink.width));
+            PlaceIcon(icon, factor, Vector2.zero, ink);
+        }
+
+        // Reuse one triangle at identical scale for consistent stroke weight.
+        // 两个箭头复用同一素材和缩放，保证线宽一致。
+        public static void StableTimeBorder(Button button, P8RAppearance appearance)
+        {
+            var face = button.image;
+            var border = face.transform.Find("TimeBorder")?.GetComponent<Image>();
+            if (border == null)
+            {
+                var node = new GameObject("TimeBorder", typeof(RectTransform), typeof(Image));
+                node.transform.SetParent(face.transform, false);
+                border = node.GetComponent<Image>();
+                border.raycastTarget = false;
+                border.rectTransform.anchorMin = Vector2.zero;
+                border.rectTransform.anchorMax = Vector2.one;
+                border.rectTransform.offsetMin = border.rectTransform.offsetMax = Vector2.zero;
+            }
+            // Keep the existing selected/locked fill while sharing the ordinary HUD border.
+            // 保留高亮/锁定底色，边框复用普通 HUD 按钮。
+            appearance.Paint(border, "button_secondary_normal");
+            border.sprite = BorderSprite(border.sprite);
+            border.fillCenter = false;
+        }
+
+        public static void RepeatedTriangle(Button button, bool repeated)
+        {
+            var icon = button.transform.Find("Icon")?.GetComponent<Image>();
+            if (icon == null) return;
+            var second = button.transform.Find("SecondTriangle")?.GetComponent<Image>();
+            if (second == null && repeated)
+            {
+                var node = new GameObject("SecondTriangle", typeof(RectTransform), typeof(Image));
+                node.transform.SetParent(button.transform, false);
+                second = node.GetComponent<Image>();
+                second.raycastTarget = false;
+            }
+            if (second != null) second.gameObject.SetActive(repeated);
+            if (!repeated) return;
+            second.sprite = icon.sprite;
+            second.color = icon.color;
+            var metrics = P8RMobileMetrics.For(button);
+            var ink = InkBounds(icon.sprite);
+            var factor = metrics.Units(20) / ink.height;
+            var offset = (ink.width * factor + metrics.Units(2)) * .5f;
+            PlaceIcon(icon, factor, new Vector2(-offset, 0), ink);
+            PlaceIcon(second, factor, new Vector2(offset, 0), ink);
+        }
+
         public static void IconButton(Button button, float iconExtent = 20f, float faceExtent = 34f)
         {
             if (button == null) return;

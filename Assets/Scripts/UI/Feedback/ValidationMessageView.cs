@@ -30,12 +30,24 @@ namespace AnimalCafe.UI.Feedback
         private string readinessSummary = string.Empty;
         private string readinessDetails = string.Empty;
         private bool hasPendingPreview;
+        private bool hasChecklistReport;
+        private LayoutReadinessReport checklistReport;
+        private readonly RectTransform[] checklistRows = new RectTransform[3];
+        private readonly TMP_Text[] checklistLabels = new TMP_Text[3];
+        private readonly Image[] checklistIcons = new Image[3];
+        private Material checklistOutlineMaterial;
+        private TMP_Text normalSummaryLabel;
+        private Image checklistPanelFill;
+        private Image checklistPanelBorder;
+        private bool decorationMode;
+        private static readonly Color ChecklistCream = new Color(1f, .96f, .88f, 1f);
         private RectTransform disclosureViewport;
         private Vector2 viewportOffsetBeforeDisclosure;
         private bool refreshingLayout;
         private RectTransform p8rHud;
         private bool hasP8RHudBottom;
         private float lastP8RHudBottom;
+        private Vector2 lastP8RParentSize;
         private Canvas p8rGeometryCanvas;
         private bool hasPublishedP8RBounds;
         private Rect publishedP8RScreenBounds;
@@ -48,6 +60,16 @@ namespace AnimalCafe.UI.Feedback
             RefreshVisibleLayout();
         }
         public event Action DetailsVisibilityChanged;
+
+        // Mode changes only presentation; keep the confirmed readiness report intact.
+        // 模式只影响显示，保留已确认布局的报告。
+        public void SetDecorationMode(bool active)
+        {
+            if (this == null) return; // Owner cleanup may run after the view was destroyed.
+            if (decorationMode == active) return;
+            decorationMode = active;
+            if (appearance != null && hasChecklistReport) ShowReadiness(checklistReport);
+        }
 
         public bool IsVisible { get; private set; }
         public bool IsDetailsExpanded { get; private set; }
@@ -111,7 +133,7 @@ namespace AnimalCafe.UI.Feedback
             messageLabel.richText = richText;
             messageLabel.text = message;
             messageLabel.enabled = true;
-            if (background != null) background.enabled = true;
+            if (background != null) background.enabled = appearance == null || !hasChecklistReport;
             IsVisible = true;
             RefreshScrollLayout();
         }
@@ -119,25 +141,29 @@ namespace AnimalCafe.UI.Feedback
         public void ShowReadiness(LayoutReadinessReport report)
         {
             if (report == null) throw new ArgumentNullException(nameof(report));
-            // A new confirmed report always starts collapsed; the full contract stays available.
-            // 新的已确认报告默认收起；完整报告继续保留给诊断调用方。
+            // Keep the full diagnostic contract separate from the player-facing checklist.
+            // 完整诊断继续保留；玩家界面只显示准备清单。
             readinessSummary = PlacementFeedbackMapper.GetReadinessSummary(report);
             readinessDetails = PlacementFeedbackMapper.GetReadinessDetails(report);
             FullReadinessMessage = PlacementFeedbackMapper.GetPlayerMessage(report);
             if (appearance != null)
             {
-                readinessSummary = appearance.ReadinessSummary(report);
-                readinessDetails = appearance.ReadinessDetails(report, richText: true);
+                readinessSummary = appearance.ChecklistSummary(report);
+                readinessDetails = appearance.ChecklistDetails(report);
                 FullReadinessMessage = appearance.ReadinessDiagnosticMessage(report);
+                checklistReport = report;
+                hasChecklistReport = true;
+                IsDetailsExpanded = decorationMode;
+                RefreshChecklistRows();
             }
-            IsDetailsExpanded = false;
+            else IsDetailsExpanded = false;
             // IDs remain available to diagnostics without appearing in player-facing text.
             DiagnosticIds = report.Failures.SelectMany(f => new[]
                 { f.InstanceId, f.SupportFurnitureInstanceId, f.SurfaceSlotId })
                 .Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToArray();
             // A healthy confirmed layout is useful state, but not an actionable HUD message.
             // 健康报告保留给诊断；只有 warning / blocking 问题占用玩家画面。
-            if (report.CanOpenForBusiness && report.Failures.Count == 0)
+            if (appearance == null && report.CanOpenForBusiness && report.Failures.Count == 0)
             {
                 var wasVisible = IsVisible;
                 SetDisclosureVisible(false);
@@ -147,15 +173,12 @@ namespace AnimalCafe.UI.Feedback
             }
             if (appearance != null)
             {
-                var state = !report.CanOpenForBusiness ? "error" : "warning";
-                appearance.Paint(background as Image, "notice_" + state);
-                appearance.Paint(statusIcon, "status_" + state, false);
-                AnimalCafe.UI.P8R.P8RButtonLayout.StatusIcon(statusIcon);
-                if (statusIcon != null) statusIcon.enabled = true;
+                if (background != null) background.enabled = false;
+                if (statusIcon != null) statusIcon.enabled = false;
                 messageLabel.font = appearance.Font;
                 messageLabel.color = AnimalCafe.UI.P8R.P8RAppearance.Cocoa;
             }
-            SetDisclosureVisible(readinessDetails.Length != 0);
+            SetDisclosureVisible(appearance == null && readinessDetails.Length != 0);
             RefreshReadinessMessage();
             // P8R publishes only when its actual screen bounds change; legacy has no bounds publisher.
             // P8R 由真实屏幕边界变化通知；legacy 没有该路径，保留显式通知。
@@ -181,8 +204,6 @@ namespace AnimalCafe.UI.Feedback
         {
             if (this == null || hasPendingPreview == pending) return;
             hasPendingPreview = pending;
-            if (appearance != null && IsVisible && IsDetailsExpanded && readinessSummary.Length > 0)
-                RefreshReadinessMessage();
         }
 
         private void RefreshReadinessMessage()
@@ -192,16 +213,38 @@ namespace AnimalCafe.UI.Feedback
                 ShowMessage(IsDetailsExpanded ? readinessSummary + "\n" + readinessDetails : readinessSummary);
                 return;
             }
-            if (!IsDetailsExpanded)
+            if (normalSummaryLabel != null) normalSummaryLabel.enabled = false;
+            SetChecklistPanelVisible(decorationMode);
+            if (!decorationMode)
             {
-                ShowMessage(readinessSummary);
-                return;
+                foreach (var row in checklistRows) if (row != null) row.gameObject.SetActive(false);
+                if (checklistReport.CanOpenForBusiness)
+                {
+                    var wasVisible = IsVisible;
+                    HidePresentation();
+                    if (wasVisible) DetailsVisibilityChanged?.Invoke();
+                    return;
+                }
+                if (normalSummaryLabel == null)
+                {
+                    var node = new GameObject("NormalReadinessSummary", typeof(RectTransform), typeof(TextMeshProUGUI));
+                    node.transform.SetParent(transform, false);
+                    normalSummaryLabel = node.GetComponent<TMP_Text>();
+                    normalSummaryLabel.raycastTarget = false;
+                    normalSummaryLabel.alignment = TextAlignmentOptions.TopLeft;
+                    normalSummaryLabel.textWrappingMode = TextWrappingModes.Normal;
+                }
+                normalSummaryLabel.font = appearance.Font;
+                normalSummaryLabel.fontSharedMaterial = checklistOutlineMaterial;
+                normalSummaryLabel.color = AnimalCafe.UI.P8R.P8RAppearance.Cocoa;
+                normalSummaryLabel.UpdateMeshPadding();
+                normalSummaryLabel.text = appearance.Text("readiness.normal.incomplete");
+                normalSummaryLabel.enabled = true;
+                ShowMessage(normalSummaryLabel.text);
             }
-            var text = readinessSummary + "\n\n" + readinessDetails;
-            if (hasPendingPreview) text += "\n\n" + appearance.Text("readiness.preview_hint");
-            ShowMessage(text, richText: true);
+            else ShowMessage(readinessDetails, richText: true);
+            messageLabel.enabled = false; // Retain CurrentMessage without drawing duplicate text.
         }
-
         private void SetDisclosureVisible(bool visible)
         {
             if (visible && disclosureButton == null)
@@ -255,11 +298,11 @@ namespace AnimalCafe.UI.Feedback
             var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
             if (appearance != null)
             {
-                // The compact strip keeps disclosure at the right; diagnostics use the same scroll area.
-                // 详情按钮独占右侧，完整诊断仍在可滚动区域中，不覆盖正文。
+                // Reserve a separate disclosure target; checklist rows share the existing scroll area.
+                // 展开按钮独占右侧，清单沿用可滚动区域，不覆盖正文。
                 if (viewport != null)
                 {
-                    viewport.offsetMin = new Vector2(metrics.Units(40), metrics.Units(6));
+                    viewport.offsetMin = new Vector2(metrics.Units(12), metrics.Units(6));
                     viewport.offsetMax = new Vector2(-metrics.Units(visible ? 52 : 10), -metrics.Units(6));
                 }
                 if (visible && disclosureButton != null)
@@ -307,7 +350,12 @@ namespace AnimalCafe.UI.Feedback
 
         private void ResetReadinessDisclosure()
         {
+            SetChecklistPanelVisible(false);
+            if (normalSummaryLabel != null) normalSummaryLabel.enabled = false;
             readinessSummary = readinessDetails = FullReadinessMessage = string.Empty;
+            hasChecklistReport = false;
+            checklistReport = null;
+            foreach (var row in checklistRows) if (row != null) row.gameObject.SetActive(false);
             hasPendingPreview = false;
             IsDetailsExpanded = false;
             SetDisclosureVisible(false);
@@ -315,6 +363,13 @@ namespace AnimalCafe.UI.Feedback
 
         private void RefreshScrollLayout()
         {
+            if (appearance != null && hasChecklistReport)
+            {
+                if (refreshingLayout) return;
+                refreshingLayout = true;
+                try { RefreshChecklistLayout(); } finally { refreshingLayout = false; }
+                return;
+            }
             var scroll = GetComponent<ScrollRect>();
             if (refreshingLayout || scroll == null || scroll.viewport == null || scroll.content == null) return;
             refreshingLayout = true;
@@ -357,38 +412,236 @@ namespace AnimalCafe.UI.Feedback
             finally { refreshingLayout = false; }
         }
 
+        private void OnDestroy()
+        {
+            if (checklistOutlineMaterial == null) return;
+            if (Application.isPlaying) Destroy(checklistOutlineMaterial);
+            else DestroyImmediate(checklistOutlineMaterial);
+        }
+
+        // Separate opacity: translucent fill with the original opaque panel border.
+        // 底色透明度独立设置；边框直接复用原 panel 素材，保持原色。
+        private void EnsureChecklistPanel()
+        {
+            if (checklistPanelFill != null) return;
+            Image CreateLayer(string name, bool fillCenter, float alpha)
+            {
+                var node = new GameObject(name, typeof(RectTransform), typeof(Image));
+                node.transform.SetParent(transform, false);
+                var image = node.GetComponent<Image>();
+                appearance.Paint(image, "panel_cream");
+                image.fillCenter = fillCenter;
+                if (!fillCenter) image.sprite = AnimalCafe.UI.P8R.P8RButtonLayout.BorderSprite(image.sprite);
+                image.color = new Color(1, 1, 1, alpha);
+                image.raycastTarget = false;
+                image.rectTransform.anchorMin = Vector2.zero;
+                image.rectTransform.anchorMax = Vector2.one;
+                image.rectTransform.offsetMin = image.rectTransform.offsetMax = Vector2.zero;
+                return image;
+            }
+            checklistPanelFill = CreateLayer("ChecklistPanelFill", true, .75f);
+            checklistPanelBorder = CreateLayer("ChecklistPanelBorder", false, 1f);
+            checklistPanelBorder.transform.SetAsFirstSibling();
+            checklistPanelFill.transform.SetAsFirstSibling();
+            SetChecklistPanelVisible(decorationMode);
+        }
+
+        private void SetChecklistPanelVisible(bool visible)
+        {
+            if (checklistPanelFill != null) checklistPanelFill.enabled = visible;
+            if (checklistPanelBorder != null) checklistPanelBorder.enabled = visible;
+        }
+
+        private void RefreshChecklistRows()
+        {
+            EnsureChecklistPanel();
+            var texts = appearance.ChecklistRows(checklistReport);
+            var summaries = new[] { checklistReport.CashRegisters, checklistReport.CoffeeMachines, checklistReport.PickUpPoints };
+            for (var i = 0; i < checklistRows.Length; i++)
+            {
+                if (checklistRows[i] == null)
+                {
+                    var row = new GameObject("ChecklistRow" + i, typeof(RectTransform));
+                    row.transform.SetParent(transform, false);
+                    checklistRows[i] = (RectTransform)row.transform;
+                    var icon = new GameObject("Status", typeof(RectTransform), typeof(Image));
+                    icon.transform.SetParent(row.transform, false);
+                    checklistIcons[i] = icon.GetComponent<Image>();
+                    checklistIcons[i].preserveAspect = true;
+                    var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+                    label.transform.SetParent(row.transform, false);
+                    checklistLabels[i] = label.GetComponent<TMP_Text>();
+                }
+                checklistRows[i].gameObject.SetActive(true);
+                checklistLabels[i].font = appearance.Font;
+                checklistLabels[i].color = AnimalCafe.UI.P8R.P8RAppearance.Cocoa;
+                if (checklistOutlineMaterial == null)
+                {
+                    // Own this material locally, leaving the shared font untouched.
+                    // 描边材质仅限当前清单，避免影响其他字体。
+                    checklistOutlineMaterial = new Material(appearance.Font.material);
+                    checklistOutlineMaterial.EnableKeyword("OUTLINE_ON");
+                    checklistOutlineMaterial.SetColor(ShaderUtilities.ID_OutlineColor, ChecklistCream);
+                    checklistOutlineMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, .12f);
+                    // Move the outline outwards instead of thinning the cocoa letter face.
+                    // 描边向外扩，保留棕色字心原有粗细。
+                    checklistOutlineMaterial.SetFloat(ShaderUtilities.ID_FaceDilate, .12f);
+                }
+                checklistLabels[i].fontSharedMaterial = appearance.Font.material;
+                checklistLabels[i].UpdateMeshPadding();
+                checklistLabels[i].alignment = TextAlignmentOptions.TopLeft;
+                checklistLabels[i].textWrappingMode = TextWrappingModes.Normal;
+                checklistLabels[i].richText = true;
+                checklistLabels[i].text = texts[i];
+                var summary = summaries[i];
+                checklistIcons[i].sprite = AnimalCafe.UI.P8R.P8RStatusIcons.Get(
+                    summary.ValidCount > 0 ? 1 : summary.TotalCount == 0 ? 0 : 2);
+                checklistIcons[i].color = Color.white;
+
+            }
+            // This informational list must never claim a scene gesture.
+            // 清单只显示状态；所有图形都让场景输入穿透。
+            foreach (var graphic in GetComponentsInChildren<Graphic>(true)) graphic.raycastTarget = false;
+            if (background != null) background.enabled = false;
+            if (statusIcon != null) statusIcon.enabled = false;
+            var group = GetComponent<CanvasGroup>();
+            if (group != null) { group.alpha = 1; group.interactable = false; group.blocksRaycasts = false; }
+            var scroll = GetComponent<ScrollRect>();
+            if (scroll != null)
+            {
+                scroll.StopMovement(); scroll.enabled = false; scroll.vertical = scroll.horizontal = false;
+                if (scroll.verticalScrollbar != null) scroll.verticalScrollbar.gameObject.SetActive(false);
+            }
+        }
+
+        private void RefreshChecklistLayout()
+        {
+            var rect = (RectTransform)transform;
+            var parent = transform.parent as RectTransform;
+            var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
+            p8rGeometryCanvas = GetComponentInParent<Canvas>()?.rootCanvas;
+            var left = metrics.Units(8);
+            var top = metrics.Units(8);
+            if (parent != null)
+            {
+                lastP8RParentSize = parent.rect.size;
+                if (p8rHud != null)
+                {
+                    var badge = p8rHud.Find("P8RModeBadge") as RectTransform;
+                    if (badge != null)
+                        left = parent.InverseTransformPoint(badge.TransformPoint(new Vector2(badge.rect.xMin, 0))).x - parent.rect.xMin;
+                    lastP8RHudBottom = ReadP8RHudBottom(parent);
+                    hasP8RHudBottom = true;
+                    top = lastP8RHudBottom + metrics.Units(8);
+                }
+            }
+            var width = Mathf.Max(metrics.Units(48), Mathf.Min(metrics.Units(300),
+                parent != null ? parent.rect.width - left - metrics.Units(8) : metrics.Units(300)));
+            if (!decorationMode && normalSummaryLabel != null)
+            {
+                normalSummaryLabel.fontSize = metrics.Units(14);
+                var preferred = normalSummaryLabel.GetPreferredValues(normalSummaryLabel.text, width, Mathf.Infinity);
+                rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
+                rect.anchoredPosition = new Vector2(left, -top);
+                rect.sizeDelta = new Vector2(Mathf.Min(width, Mathf.Ceil(preferred.x)), Mathf.Ceil(preferred.y));
+                var summaryRect = normalSummaryLabel.rectTransform;
+                summaryRect.anchorMin = Vector2.zero;
+                summaryRect.anchorMax = Vector2.one;
+                summaryRect.offsetMin = summaryRect.offsetMax = Vector2.zero;
+                PublishP8RBoundsIfChanged();
+                return;
+            }
+            var padding = metrics.Units(8);
+            var iconSize = metrics.Units(14);
+            var textLeft = metrics.Units(20);
+            var gap = metrics.Units(4);
+            width -= padding * 2;
+            float usedWidth = 0, height = padding;
+            for (var i = 0; i < checklistRows.Length; i++)
+            {
+                var label = checklistLabels[i];
+                label.fontSize = metrics.Units(12);
+                var preferred = label.GetPreferredValues(label.text, width - textLeft, Mathf.Infinity);
+                var rowHeight = Mathf.Max(iconSize, Mathf.Ceil(preferred.y));
+                usedWidth = Mathf.Max(usedWidth, Mathf.Min(width, textLeft + Mathf.Ceil(preferred.x)));
+                var row = checklistRows[i];
+                row.anchorMin = row.anchorMax = row.pivot = new Vector2(0, 1);
+                row.anchoredPosition = new Vector2(padding, -height);
+                row.sizeDelta = new Vector2(width, rowHeight);
+                var icon = checklistIcons[i].rectTransform;
+                icon.anchorMin = icon.anchorMax = icon.pivot = new Vector2(0, 1);
+                icon.anchoredPosition = Vector2.zero;
+                icon.sizeDelta = Vector2.one * iconSize;
+                var textRect = label.rectTransform;
+                textRect.anchorMin = Vector2.zero; textRect.anchorMax = Vector2.one;
+                textRect.offsetMin = new Vector2(textLeft, 0); textRect.offsetMax = Vector2.zero;
+                height += rowHeight + (i < checklistRows.Length - 1 ? gap : 0);
+            }
+            // Publish the actual three-row footprint to existing obstacle consumers.
+            // 整体Rect保留真实三行边界，沿用原有障碍通知。
+            rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
+            rect.anchoredPosition = new Vector2(left, -top);
+            rect.sizeDelta = new Vector2(usedWidth + padding * 2, height + padding);
+            foreach (var row in checklistRows) row.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, usedWidth);
+            // Align to visible first-line glyphs, not TMP's extra font ascender space.
+            // 对齐首行实际字形中心；原因说明换行时，icon仍跟随名称那一行。
+            for (var i = 0; i < checklistRows.Length; i++)
+            {
+                var label = checklistLabels[i];
+                label.ForceMeshUpdate();
+                var bottom = float.PositiveInfinity;
+                var topInk = float.NegativeInfinity;
+                for (var j = 0; j < label.textInfo.characterCount; j++)
+                {
+                    var character = label.textInfo.characterInfo[j];
+                    if (character.lineNumber != 0 || !character.isVisible) continue;
+                    bottom = Mathf.Min(bottom, character.bottomLeft.y);
+                    topInk = Mathf.Max(topInk, character.topRight.y);
+                }
+                if (float.IsInfinity(bottom) || float.IsInfinity(topInk)) continue;
+                var center = checklistRows[i].InverseTransformPoint(label.transform.TransformPoint(
+                    new Vector3(0, (bottom + topInk) * .5f, 0)));
+                checklistIcons[i].rectTransform.anchoredPosition = new Vector2(0, center.y + iconSize * .5f);
+            }
+            PublishP8RBoundsIfChanged();
+        }
         private void RefreshMobileScrollLayout(ScrollRect scroll)
         {
             var rect = (RectTransform)transform;
             var parent = transform.parent as RectTransform;
             if (parent == null) return;
+            lastP8RParentSize = parent.rect.size;
             var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
             p8rGeometryCanvas = GetComponentInParent<Canvas>()?.rootCanvas;
             var availableWidth = parent.rect.width - metrics.Units(16);
-            var maximumWidth = metrics.Units(440);
-            var width = Mathf.Min(maximumWidth, Mathf.Max(metrics.Units(180), availableWidth));
+            var shortLandscape = metrics.LogicalViewport.x > metrics.LogicalViewport.y && metrics.LogicalViewport.y <= 400;
+            // A short landscape checklist shares the row with the complete placement instruction.
+            // 短横屏最多占一半可用宽度，给左侧指令及中央 preview 留出空间；长文字继续滚动。
+            var maximumWidth = shortLandscape
+                ? Mathf.Min(metrics.Units(300), Mathf.Max(metrics.Units(180), availableWidth * .5f))
+                : metrics.Units(300);
+            var width = Mathf.Min(availableWidth, maximumWidth);
             var top = metrics.Units(8);
             hasP8RHudBottom = p8rHud != null;
             if (p8rHud != null)
             {
                 lastP8RHudBottom = ReadP8RHudBottom(parent);
-                top = lastP8RHudBottom + metrics.Units(8);
+                top = lastP8RHudBottom + metrics.Units(12);
             }
-            // Stretch phone strips with their existing safe-area parent; fixed anchors retained stale width.
-            // 手机横条跟随已有 SafeArea 父级缩放，父级变化会触发尺寸回调；平板仍限制为440 logical。
-            rect.anchorMin = rect.pivot = new Vector2(0, 1);
-            rect.anchorMax = new Vector2(availableWidth <= maximumWidth ? 1 : 0, 1);
-            rect.anchoredPosition = new Vector2(metrics.Units(8), -top);
+            // Follow the right safe-area edge while allowing narrow parents to resize the card.
+            // 清单靠右对齐 SafeArea；窄屏仍随父级变化重新计算宽度。
+            rect.anchorMin = new Vector2(availableWidth <= maximumWidth ? 0 : 1, 1);
+            rect.anchorMax = rect.pivot = Vector2.one;
+            rect.anchoredPosition = new Vector2(-metrics.Units(8), -top);
             rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, width);
             messageLabel.fontSize = metrics.Units(14);
             messageLabel.textWrappingMode = TextWrappingModes.Normal;
             ReserveDisclosureSpace(readinessDetails.Length > 0);
-            var textWidth = width - metrics.Units(readinessDetails.Length > 0 ? 92 : 48);
+            var textWidth = width - metrics.Units(readinessDetails.Length > 0 ? 64 : 22);
             var preferred = messageLabel.GetPreferredValues(messageLabel.text, Mathf.Max(1, textWidth), Mathf.Infinity);
-            var shortLandscape = metrics.LogicalViewport.x > metrics.LogicalViewport.y && metrics.LogicalViewport.y <= 400;
             var constrainedShortLandscape = shortLandscape && parent.rect.height < metrics.Units(320);
-            var expandedLogicalLimit = constrainedShortLandscape ? 52 : shortLandscape ? 64 : 112;
-            var limit = IsDetailsExpanded ? Mathf.Min(metrics.Units(expandedLogicalLimit), parent.rect.height * .24f) : metrics.Units(52);
+            var expandedLogicalLimit = constrainedShortLandscape ? 88 : 112;
+            var limit = IsDetailsExpanded ? Mathf.Min(metrics.Units(expandedLogicalLimit), parent.rect.height * .32f) : metrics.Units(52);
             var height = Mathf.Clamp(Mathf.Ceil(preferred.y) + metrics.Units(12), metrics.Units(48), Mathf.Max(metrics.Units(48), limit));
             rect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, height);
             scroll.content.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, Mathf.Ceil(preferred.y));
@@ -416,13 +669,25 @@ namespace AnimalCafe.UI.Feedback
         }
         private void RefreshVisibleLayout() { if (IsVisible) RefreshScrollLayout(); }
 
-        private float ReadP8RHudBottom(RectTransform parent) => parent.rect.yMax
-            - parent.InverseTransformPoint(p8rHud.TransformPoint(new Vector2(0, p8rHud.rect.yMin))).y;
+        private float ReadP8RHudBottom(RectTransform parent)
+        {
+            var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
+            var modeButton = p8rHud.Find("DecorationModeButton") as RectTransform;
+            // On narrow screens the second time row needs its own space; elsewhere anchor to Decor.
+            // 窄屏给第二行时间按钮留空，其他尺寸直接跟随右侧 Decor 底边。
+            var anchor = hasChecklistReport ? p8rHud : modeButton != null && parent.rect.width >= metrics.Units(448) ? modeButton : p8rHud;
+            return parent.rect.yMax - parent.InverseTransformPoint(
+                anchor.TransformPoint(new Vector2(0, anchor.rect.yMin))).y;
+        }
 
         private void LateUpdate()
         {
             if (this == null || !isActiveAndEnabled || appearance == null || !IsVisible
                 || transform.parent is not RectTransform parent) return;
+            // A capped right-anchored card does not receive a width callback when its parent shrinks.
+            // 靠右且限宽的卡片不会自动收到父宽度变化，需在 SafeArea 更新后重新限宽。
+            if ((parent.rect.size - lastP8RParentSize).sqrMagnitude > .0025f)
+                RefreshScrollLayout();
             // Separate Canvas branches can apply SafeArea in either Update order. Compare geometry only
             // after both branches settle; do not read gameplay state or rebuild unchanged TMP content.
             // HUD与提示的SafeArea分支更新顺序不固定；只比较最终边界，变化时才重排，不逐帧重建文字。
@@ -478,6 +743,9 @@ namespace AnimalCafe.UI.Feedback
 
         private void HidePresentation()
         {
+            SetChecklistPanelVisible(false);
+            if (normalSummaryLabel != null) normalSummaryLabel.enabled = false;
+            foreach (var row in checklistRows) if (row != null) row.gameObject.SetActive(false);
             if (messageLabel != null)
             {
                 messageLabel.text = string.Empty;

@@ -94,7 +94,8 @@ namespace AnimalCafe.EditorTools.AssetPipeline
                 new Vector3(0.14f, 0.16f, 0.14f),
                 CeramicCupVisualScale);
 
-            AssetDatabase.SaveAssets();
+            // Generated prefabs and materials are saved at their own write sites.
+            // 不全局保存，避免写入无关资源的未保存 Inspector 修改。
             AssetDatabase.Refresh();
         }
 
@@ -324,6 +325,7 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             material.SetFloat("_Metallic", metallic);
             material.SetFloat("_Smoothness", smoothness);
             EditorUtility.SetDirty(material);
+            AssetDatabase.SaveAssetIfDirty(material);
             return material;
         }
 

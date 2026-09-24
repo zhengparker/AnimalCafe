@@ -179,7 +179,7 @@ namespace AnimalCafe.Tests.PlayMode
 
             Assert.That(button, Is.Not.Null);
             Assert.That(label, Is.Not.Null);
-            var decorationLabel = ReadPrivate<AnimalCafe.UI.P8R.P8RAppearance>(controller, "p8rAppearance") != null ? "Decorate" : "Decoration";
+            var decorationLabel = ReadPrivate<AnimalCafe.UI.P8R.P8RAppearance>(controller, "p8rAppearance") != null ? "Decor" : "Decoration";
             Assert.That(label.text, Is.EqualTo(decorationLabel));
             AssertClosedActiveUiRoot(catalogue.gameObject, catalogueGroup);
             AssertClosedActiveUiRoot(actionBar.gameObject, actionGroup);
@@ -188,7 +188,7 @@ namespace AnimalCafe.Tests.PlayMode
             controller.EnterDecorationMode();
             yield return WaitForUnscaledSeconds(0.2f);
             Assert.That(controller.IsOpen, Is.True);
-            Assert.That(label.text, Is.EqualTo(ReadPrivate<AnimalCafe.UI.P8R.P8RAppearance>(controller, "p8rAppearance") != null ? "Exit Decoration" : "Done"));
+            Assert.That(label.text, Is.EqualTo("Done"));
             Assert.That(catalogue.IsCatalogueVisible, Is.True);
             Assert.That(catalogueGroup.alpha, Is.EqualTo(1f).Within(0.001f));
             Assert.That(catalogueGroup.interactable, Is.True);
@@ -342,7 +342,6 @@ namespace AnimalCafe.Tests.PlayMode
                 var collider = formal.GetComponentInChildren<Collider>(true);
                 Assert.That(collider, Is.Not.Null);
                 var start = FindUiFreeScreenPointOnFormal(camera, formal, collider.bounds);
-                var end = start + new Vector2(100f, 70f);
                 QueueMouseState(mouse, start, false);
                 yield return null;
                 QueueMouseState(mouse, start, true);
@@ -355,6 +354,8 @@ namespace AnimalCafe.Tests.PlayMode
 
                 var session = ReadPrivate<DecorationSession>(controller, "session");
                 var initialCell = session.ActivePreview.ProposedPosition;
+                var end = FindUiFreeFloorDragDestination(camera,
+                    ReadPrivate<Collider>(controller, "floorCollider"), collider.bounds);
                 QueueMouseState(mouse, end, true);
                 yield return null;
                 yield return null;
@@ -546,10 +547,16 @@ namespace AnimalCafe.Tests.PlayMode
                 var cameraBeforePan = camera.transform.position;
                 QueueMouseState(mouse, blankPoints[0], false);
                 yield return null;
+                var blankHits = new List<RaycastResult>();
+                EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = blankPoints[0] }, blankHits);
+                Assert.That(blankHits, Is.Empty, "Blank point changed after hover: " + string.Join(",", blankHits.Select(hit => hit.gameObject.name)));
                 QueueMouseState(mouse, blankPoints[0], true);
                 yield return null;
                 yield return null;
                 Assert.That(source.HasActivePointer, Is.True);
+                var panRouter = ReadPrivate<DecorationTouchRouter>(controller, "touchRouter");
+                Assert.That(panRouter.Owner, Is.EqualTo(DecorationGestureOwner.Camera),
+                    $"Blank press {blankPoints[0]} must acquire Camera ownership; current Mouse={Mouse.current?.deviceId}, fixture={mouse.deviceId}.");
                 QueueMouseState(mouse, blankPoints[1], true);
                 yield return null;
                 yield return null;
@@ -557,7 +564,7 @@ namespace AnimalCafe.Tests.PlayMode
                 yield return null;
                 yield return null;
                 Assert.That(Vector3.Distance(camera.transform.position, cameraBeforePan),
-                    Is.GreaterThan(0.001f), "A blank-floor Mouse drag must pan the camera.");
+                    Is.GreaterThan(0.001f), $"A blank-floor Mouse drag must pan the camera. points={blankPoints[0]}->{blankPoints[1]}, camera={cameraBeforePan}, owner={panRouter.Owner}, dragging={panRouter.IsDragging}, mouse={mouse.position.ReadValue()}, current={Mouse.current?.deviceId}/{mouse.deviceId}");
                 Assert.That(controller.State, Is.EqualTo(DecorationSessionState.BrowsingCatalogue));
                 Assert.That(previewRoot.childCount, Is.Zero);
 
@@ -575,9 +582,11 @@ namespace AnimalCafe.Tests.PlayMode
 
                 var worldBackedTile = catalogue
                     .GetComponentsInChildren<DecorationCatalogueTileView>(true)
-                    .Where(tile => tile.gameObject.activeInHierarchy)
+                    .Where(tile => tile.gameObject.activeInHierarchy && tile.ItemId == "furniture.counter.module.01")
                     .Select(tile => tile.GetComponent<Button>())
                     .First();
+                CatalogueTestScrolling.Reveal(worldBackedTile);
+                yield return null;
                 var worldBackedPoint = ButtonCenter(worldBackedTile);
                 Assert.That(registry.TryGet(InitialInstanceId, out var formal), Is.True);
                 PlaceFurnitureBehindScreenPoint(camera, floor, formal, worldBackedPoint);
@@ -733,7 +742,10 @@ namespace AnimalCafe.Tests.PlayMode
             }
 
             var target = ReadPrivate<Vector2>(catalogue, "expandedAnchoredPosition");
-            return Vector2.SqrMagnitude(rect.anchoredPosition - target) <= 0.01f;
+            // The last tween frame reaches the old target before its final layout refresh.
+            // 等真正完成动画及布局刷新，再选择空地输入坐标。
+            return ReadPrivate<Coroutine>(catalogue, "transitionCoroutine") == null
+                && Vector2.SqrMagnitude(rect.anchoredPosition - target) <= 0.01f;
         }
 
         private static bool CatalogueCollapsedAndSettled(DecorationCatalogueView catalogue)
@@ -745,7 +757,10 @@ namespace AnimalCafe.Tests.PlayMode
             }
 
             var target = ReadPrivate<Vector2>(catalogue, "collapsedAnchoredPosition");
-            return Vector2.SqrMagnitude(rect.anchoredPosition - target) <= 0.01f;
+            // The last tween frame reaches the old target before its final layout refresh.
+            // 等真正完成动画及布局刷新，再选择空地输入坐标。
+            return ReadPrivate<Coroutine>(catalogue, "transitionCoroutine") == null
+                && Vector2.SqrMagnitude(rect.anchoredPosition - target) <= 0.01f;
         }
 
         private static IEnumerator ClickButtonWithRealMouse(
@@ -756,6 +771,11 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(button, Is.Not.Null);
             Assert.That(button.gameObject.activeInHierarchy, Is.True, button.name);
             Assert.That(button.interactable, Is.True, button.name);
+            if (!explicitPoint.HasValue)
+            {
+                CatalogueTestScrolling.Reveal(button);
+                yield return null;
+            }
             var point = explicitPoint ?? ButtonCenter(button);
             var hits = new List<RaycastResult>();
             EventSystem.current.RaycastAll(
@@ -836,6 +856,7 @@ namespace AnimalCafe.Tests.PlayMode
             float minimumSeparation)
         {
             var points = new List<Vector2>();
+            var classifier = (IDecorationTouchHitClassifier)FindAll<DecorationModeController>(camera.gameObject.scene).Single();
             for (var y = 1; y <= 8 && points.Count < count; y++)
             for (var x = 1; x <= 8 && points.Count < count; x++)
             {
@@ -844,8 +865,9 @@ namespace AnimalCafe.Tests.PlayMode
                 EventSystem.current.RaycastAll(
                     new PointerEventData(EventSystem.current) { position = point }, uiHits);
                 if (uiHits.Count != 0
-                    || !Physics.RaycastAll(camera.ScreenPointToRay(point))
-                        .Any(hit => hit.collider == floor)
+                    || Physics.RaycastAll(camera.ScreenPointToRay(point))
+                        .OrderBy(hit => hit.distance).FirstOrDefault().collider != floor
+                    || classifier.ClassifyBegan(MouseDecorationInputSource.PointerId, point).Kind != DecorationTouchHitKind.Scene
                     || points.Any(existing => Vector2.Distance(existing, point) < minimumSeparation))
                 {
                     continue;

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -483,6 +483,9 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(controller.TryChangeMode(DecorationModeKind.WallDecor), Is.True);
 
             var catalogue = Object.FindFirstObjectByType<DecorationCatalogueView>();
+            // Passive checklist must not steal the first real world click after Confirm.
+            var readiness = Object.FindFirstObjectByType<AnimalCafe.UI.Feedback.ValidationMessageView>();
+            P8RCompleteFlowTests.AssertChecklist(readiness);
             var shiba = catalogue.GetComponentsInChildren<DecorationCatalogueTileView>(true)
                 .Single(tile => tile.ItemId == "wall-decor.shiba-painting.01");
             shiba.GetComponent<Button>().onClick.Invoke();
@@ -847,9 +850,6 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var action = Object.FindFirstObjectByType<DecorationActionBarView>();
             var tabs = Object.FindFirstObjectByType<DecorationModeTabsView>();
             var canvas = catalogue.GetComponentInParent<Canvas>().rootCanvas;
-            var scaler = canvas.GetComponent<CanvasScaler>();
-            var productionCamera = Object.FindObjectsByType<UnityEngine.Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None)
-                .Single(item => item.CompareTag("MainCamera"));
             var actionButtons = action.GetComponentsInChildren<Button>(true);
             var actionRect = (RectTransform)actionButtons.Single(x => x.name == "CancelButton").transform.parent;
             var cases = new[]
@@ -859,41 +859,28 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 new Rect(0, 0, 1080, 2400), new Rect(0, 72, 1080, 2256),
                 new Rect(0, 0, 1920, 1080), new Rect(80, 24, 1760, 1032)
             };
-            var originalReference = scaler.referenceResolution;
-            var originalMode = scaler.uiScaleMode;
-            var originalMatch = scaler.matchWidthOrHeight;
-            var originalRenderMode = canvas.renderMode;
-            var originalCanvasCamera = canvas.worldCamera;
-            var originalTargetTexture = productionCamera.targetTexture;
-            RenderTexture responsiveTarget = null;
+            var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            var safeAreas = Object.FindObjectsByType<AnimalCafe.UI.Components.SafeAreaContainer>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var originalAutoApply = safeAreas.Select(area => area.AutoApplyRuntimeSafeArea).ToArray();
             try
             {
                 for (var i = 0; i < cases.Length; i += 2)
                 {
                     var viewport = cases[i]; var safe = cases[i + 1];
-                    if (responsiveTarget != null)
-                    {
-                        productionCamera.targetTexture = originalTargetTexture;
-                        responsiveTarget.Release();
-                        Object.Destroy(responsiveTarget);
-                    }
-                    responsiveTarget = new RenderTexture(
-                        Mathf.RoundToInt(viewport.width), Mathf.RoundToInt(viewport.height), 24)
-                    { name = $"TEST_RUNTIME_IT035_{viewport.width}x{viewport.height}" };
-                    responsiveTarget.Create();
-                    productionCamera.targetTexture = responsiveTarget;
-                    canvas.renderMode = RenderMode.ScreenSpaceCamera;
-                    canvas.worldCamera = productionCamera;
-                    canvas.planeDistance = 1f;
-                    scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                    scaler.referenceResolution = viewport.size;
-                    scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-                    scaler.matchWidthOrHeight = viewport.height >= viewport.width ? 0f : 1f;
+                    // All production canvases must share the actual viewport for EventSystem raycasts.
+                    // 所有正式Canvas使用同一真实屏幕，避免只改目录RenderTexture造成HUD坐标混用。
+                    screen.Resize(viewport.size);
                     yield return null;
+                    foreach (var area in safeAreas)
+                    {
+                        area.AutoApplyRuntimeSafeArea = false;
+                        area.ApplySafeArea(safe, viewport.size);
+                    }
                     Canvas.ForceUpdateCanvases();
                     yield return null;
                     Assert.That(canvas.pixelRect.size, Is.EqualTo(viewport.size),
-                        "IT-035 harness must apply the render-target viewport to the production Canvas.");
+                        "IT-035 harness must apply the actual viewport to every production Canvas.");
                     Assert.That(actionRect.IsChildOf(canvas.transform), Is.True,
                         "Production ActionBar must remain attached to the real Canvas hierarchy.");
 
@@ -968,16 +955,12 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             }
             finally
             {
-                scaler.uiScaleMode = originalMode;
-                scaler.referenceResolution = originalReference;
-                scaler.matchWidthOrHeight = originalMatch;
-                canvas.renderMode = originalRenderMode;
-                canvas.worldCamera = originalCanvasCamera;
-                productionCamera.targetTexture = originalTargetTexture;
-                if (responsiveTarget != null)
+                screen.Dispose();
+                for (var index = 0; index < safeAreas.Length; index++)
                 {
-                    responsiveTarget.Release();
-                    Object.Destroy(responsiveTarget);
+                    if (safeAreas[index] == null) continue;
+                    safeAreas[index].AutoApplyRuntimeSafeArea = originalAutoApply[index];
+                    safeAreas[index].ApplySafeArea(Screen.safeArea, new Vector2(Screen.width, Screen.height));
                 }
                 Canvas.ForceUpdateCanvases();
             }

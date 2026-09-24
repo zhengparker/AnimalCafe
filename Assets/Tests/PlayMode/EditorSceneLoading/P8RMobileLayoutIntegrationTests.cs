@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System;
 using System.Collections;
 using System.Linq;
@@ -90,15 +90,19 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 var hud = Find<TimeControlPanel>();
                 var hudButtons = hud.GetComponentsInChildren<Button>().ToArray();
                 AssertTargets(hudButtons, density); AssertNoOverlap(hudButtons);
-                var normalInk = P8RCompleteFlowTests.MeasuredInk(Field<Button>(hud, "normalButton").transform.Find("Icon").GetComponent<Image>());
-                var fastInk = P8RCompleteFlowTests.MeasuredInk(Field<Button>(hud, "fastButton").transform.Find("Icon").GetComponent<Image>());
-                Assert.That(fastInk.height / normalInk.height, Is.InRange(.85f, 1.05f), "Wide 2x artwork retains optical height compensation.");
+                Assert.That(Field<Button>(hud, "pauseButton").gameObject.activeSelf, Is.False);
+                foreach (var name in new[] { "normalButton", "fastButton" })
+                {
+                    var button = Field<Button>(hud, name);
+                    Assert.That(button.gameObject.activeInHierarchy, Is.True);
+                    Assert.That(button.transform.Find("Label").gameObject.activeSelf, Is.False);
+                    P8RCompleteFlowTests.AssertTextIconGroup(button);
+                }
                 var readiness = Find<ValidationMessageView>();
                 Assert.That(Box(readiness).yMax, Is.LessThanOrEqualTo(hudButtons.Min(button => Box(button).yMin) - density * 4),
                     "The confirmed readiness strip starts below the actual HUD buttons, across separate Canvas branches.");
-                var disclosure = Field<Button>(readiness, "disclosureButton");
-                if (disclosure != null && disclosure.gameObject.activeInHierarchy) AssertTargets(new[] { disclosure }, density);
-                Assert.That(Field<TMP_Text>(readiness, "messageLabel").fontSize * CanvasScale(readiness) / density,
+                P8RCompleteFlowTests.AssertChecklist(readiness);
+                Assert.That(readiness.transform.Find("ChecklistRow0/Label").GetComponent<TMP_Text>().fontSize * CanvasScale(readiness) / density,
                     Is.GreaterThanOrEqualTo(13.9f), "Compact readiness body stays at least 14 platform logical units, not half-sized text.");
 
                 var controller = Find<DecorationModeController>(); controller.EnterDecorationMode();
@@ -204,8 +208,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Assert.That(notice.gameObject.activeInHierarchy, Is.True);
                 Assert.That(notice.IsChildOf(action.transform), Is.False, "The necessary instruction is hosted on the screen, outside the bottom ActionBar hierarchy.");
                 Assert.That(notice.GetComponentInParent<Canvas>().rootCanvas, Is.SameAs(Find<TimeControlPanel>().GetComponentInParent<Canvas>().rootCanvas));
-                Assert.That(Box(notice).center.x, Is.EqualTo(Screen.safeArea.center.x).Within(3f));
-                Assert.That(Box(notice).yMax, Is.LessThanOrEqualTo(Box(readiness).yMin - 1f));
+                AssertInside(Box(notice), Screen.safeArea, "Necessary instruction");
+                Assert.That(Box(notice).Overlaps(Box(readiness)), Is.False);
                 Assert.That(copy.fontSize * CanvasScale(copy) / 3f, Is.InRange(13.9f, 14.1f));
                 Assert.That(copy.maxVisibleLines, Is.EqualTo(2));
                 Assert.That(copy.GetPreferredValues(copy.text, copy.rectTransform.rect.width, Mathf.Infinity).y,
@@ -221,7 +225,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 logicalViewportOverride?.SetValue(null, new Vector2(640, 360));
                 yield return Settle();
                 Assert.That(notice.gameObject.activeInHierarchy, Is.True, "Collapsing the footer cannot disable the instruction owner during resize.");
-                Assert.That(Box(notice).center.x, Is.EqualTo(Screen.safeArea.center.x).Within(3f));
+                AssertInside(Box(notice), Screen.safeArea, "Resized instruction");
+                Assert.That(Box(notice).Overlaps(Box(readiness)), Is.False);
                 Assert.That(copy.fontSize * CanvasScale(copy) / 3f, Is.InRange(13.9f, 14.1f));
                 var modal = Find<DecorationExitModalView>(); modal.Show();
                 yield return Settle();
@@ -264,7 +269,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Assert.DoesNotThrow(() => action.RefreshInstructionLayout(), "Managed teardown references may outlive their Unity component.");
                 Assert.DoesNotThrow(() => action.SetInstructionModalCovered(false));
                 var readiness = Find<ValidationMessageView>();
-                Field<Button>(readiness, "disclosureButton")?.onClick.Invoke();
+                P8RCompleteFlowTests.AssertChecklist(readiness);
                 yield return Settle();
                 modal.Show(); yield return Settle(); modal.Close(); yield return Settle();
             }
@@ -283,8 +288,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 if (mode == DecorationModeKind.Floor) Assert.That(controller.TrySelectFloorRange(SurfaceEditScope.SingleGridFloor), Is.True);
                 yield return Settle();
                 var readiness = Find<ValidationMessageView>();
-                var disclosure = Field<Button>(readiness, "disclosureButton");
-                if (!readiness.IsDetailsExpanded && disclosure != null && disclosure.gameObject.activeInHierarchy) disclosure.onClick.Invoke();
+                P8RCompleteFlowTests.AssertChecklist(readiness);
                 yield return Settle();
                 var catalogue = Find<DecorationCatalogueView>();
                 var notice = Field<RectTransform>(Find<DecorationActionBarView>(), "feedbackRoot");

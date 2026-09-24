@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System.Collections;
 using System.IO;
 using System.Linq;
@@ -68,20 +68,20 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 new LoadSceneParameters(LoadSceneMode.Single));
             yield return null; yield return null; yield return null;
             var view = SceneComponent<ValidationMessageView>();
-            var label = Field<TMP_Text>(view, "messageLabel");
+            var label = view.transform.Find("ChecklistRow1/Label").GetComponent<TMP_Text>();
+            SceneComponent<DecorationModeController>().EnterDecorationMode();
             var diagnostic = view.FullReadinessMessage;
             var ids = view.DiagnosticIds.ToArray();
-            Assert.That(view.CurrentMessage, Does.StartWith("Can't open yet · ").And.Not.Contain("\n"));
-            Field<Button>(view, "disclosureButton").onClick.Invoke();
+            P8RCompleteFlowTests.AssertChecklist(view);
             label.ForceMeshUpdate();
-            Assert.That(label.richText, Is.True, "Only authored checklist markup may be interpreted.");
-            Assert.That(view.CurrentMessage, Does.Contain("<b>Coffee Machine</b>"));
-            Assert.That(label.GetParsedText(), Does.Contain("Coffee Machine\nAdd a Coffee Machine.")
+            Assert.That(label.text, Does.Contain("Coffee Machine"));
+            Assert.That(view.CurrentMessage, Does.Contain("Coffee Machine"));
+            Assert.That(label.GetParsedText(), Does.Contain("Coffee Machine · To place")
                 .And.Not.Contain("Blocking:").And.Not.Contain("Confirmed Layout:").And.Not.Contain("<b>"));
             Assert.That(view.FullReadinessMessage, Is.EqualTo(diagnostic));
             CollectionAssert.AreEqual(ids, view.DiagnosticIds);
             view.ShowStatus("<b>Literal diagnostic</b>");
-            Assert.That(label.richText, Is.False, "Generic status is plain text, not trusted checklist markup.");
+            Assert.That(Field<TMP_Text>(view, "messageLabel").richText, Is.False);
             Assert.That(view.CurrentMessage, Is.EqualTo("<b>Literal diagnostic</b>"));
         }
 
@@ -103,14 +103,13 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(controller.TryBeginWallMountedPreview("wall-decor.monitor.01", "wall.back-left",
                 new WallSlotPosition(4, 0)), Is.True);
             Assert.That(view.CurrentMessage, Is.EqualTo(compact), "Preview never expands or rewrites the confirmed summary.");
-            Field<Button>(view, "disclosureButton").onClick.Invoke();
-            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
             controller.CancelActivePhase7Preview();
             Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
             Assert.That(view.IsDetailsExpanded, Is.True);
             Assert.That(controller.TryBeginWallMountedPreview("wall-decor.monitor.01", "wall.back-left",
                 new WallSlotPosition(4, 0)), Is.True);
-            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
             Assert.That(controller.TryChangeMode(DecorationModeKind.Furniture), Is.True);
             Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
             Assert.That(runtime.CurrentReadiness, Is.SameAs(confirmedReport));
@@ -127,13 +126,12 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var controller = SceneComponent<DecorationModeController>();
             var view = SceneComponent<ValidationMessageView>();
             controller.EnterDecorationMode();
-            Field<Button>(view, "disclosureButton").onClick.Invoke();
             Assert.That(controller.TryChangeMode(DecorationModeKind.Floor), Is.True);
             SceneComponent<DecorationCatalogueView>().GetComponentsInChildren<DecorationCatalogueTileView>(true)
                 .First(tile => tile.gameObject.activeInHierarchy && tile.ItemId != null)
                 .GetComponent<Button>().onClick.Invoke();
             Assert.That(controller.ActiveSurfacePreview, Is.Not.Null);
-            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
             Assert.That(controller.TryConfirmPhase7Preview(), Is.True);
             Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
             Assert.That(controller.TryChangeMode(DecorationModeKind.Wall), Is.True);
@@ -141,8 +139,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 "Assets/Art/Phase7/Catalogues/SC_Paint_Phase7.asset");
             Assert.That(controller.TryBeginWallPreview("wall.back-left", SurfaceStyleKind.Paint,
                 styles.Entries[1].StyleId), Is.True);
-            if (!view.IsDetailsExpanded) Field<Button>(view, "disclosureButton").onClick.Invoke();
-            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
             controller.CancelActivePhase7Preview();
             Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
         }
@@ -163,23 +160,21 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var runtime = SceneComponent<CafeLayoutRuntime>();
             var view = SceneComponent<ValidationMessageView>();
             controller.EnterDecorationMode();
-            Field<Button>(view, "disclosureButton").onClick.Invoke();
             var report = runtime.CurrentReadiness;
             SceneComponent<DecorationCatalogueView>().GetComponentsInChildren<DecorationCatalogueTileView>(true)
                 .First(tile => tile.gameObject.activeInHierarchy && tile.ItemId != null
                     && tile.ItemId.StartsWith("furniture.")).GetComponent<Button>().onClick.Invoke();
-            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
             Assert.That(controller.TryRequestExit(), Is.False);
             Field<Button>(SceneComponent<DecorationExitModalView>(), "discardButton").onClick.Invoke();
             Assert.That(controller.IsOpen, Is.False);
             Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
             Assert.That(runtime.CurrentReadiness, Is.SameAs(report));
             controller.EnterDecorationMode();
-            if (!view.IsDetailsExpanded) Field<Button>(view, "disclosureButton").onClick.Invoke();
             SceneComponent<DecorationCatalogueView>().GetComponentsInChildren<DecorationCatalogueTileView>(true)
                 .First(tile => tile.gameObject.activeInHierarchy && tile.ItemId != null
                     && tile.ItemId.StartsWith("furniture.")).GetComponent<Button>().onClick.Invoke();
-            Assert.That(view.CurrentMessage, Does.Contain("Updates after confirmation."));
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."));
             controller.ExitDecorationMode();
             Assert.That(view.CurrentMessage, Does.Not.Contain("Updates after confirmation."),
                 "Direct shutdown must synchronize after Furniture session.Exit clears its preview.");
@@ -203,7 +198,6 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 yield return null; yield return null; yield return null;
                 var view = SceneComponent<ValidationMessageView>();
                 yield return CaptureReadinessFrame(folder, "phone-collapsed.png");
-                Field<Button>(view, "disclosureButton").onClick.Invoke();
                 yield return CaptureReadinessFrame(folder, "phone-expanded.png");
                 var controller = SceneComponent<DecorationModeController>();
                 controller.EnterDecorationMode();
@@ -323,8 +317,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var instruction = action.VisibleInstructionRect;
             Assert.That(instruction, Is.Not.Null);
             var notice = Box(instruction);
-            Assert.That(notice.yMax, Is.LessThanOrEqualTo(Box(readiness).yMin - 1f),
-                "Published readiness bounds must move the waiting instruction below the card.");
+            Assert.That(notice.Overlaps(Box(readiness)), Is.False,
+                "Published readiness bounds must keep the waiting instruction clear of the card.");
             foreach (var tab in SceneComponent<DecorationModeTabsView>().GetComponentsInChildren<Button>())
                 Assert.That(notice.Overlaps(Box(tab)), Is.False, "Instruction covers tab " + tab.name);
             Assert.That(notice.Overlaps(Box(SceneComponent<DecorationCatalogueView>().VerticalScroll.viewport)), Is.False,
@@ -421,6 +415,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 var readiness = ownedScene.GetRootGameObjects()
                     .SelectMany(root => root.GetComponentsInChildren<ValidationMessageView>(true)).Single();
                 Assert.That(readiness.IsVisible, Is.True, "Use the actual confirmed scene report.");
+                SceneComponent<DecorationModeController>().EnterDecorationMode();
                 var report = readiness.FullReadinessMessage;
                 var ids = readiness.DiagnosticIds.ToArray();
                 var hud = ownedScene.GetRootGameObjects()
@@ -442,9 +437,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 TestContext.WriteLine("Readiness parent=" + ((RectTransform)readiness.transform.parent).rect
                     + "; card=" + Box(readiness) + "; expected safe=" + safePixels);
                 AssertPresentation(readiness, safePixels, hud);
-                var disclosure = Field<Button>(readiness, "disclosureButton");
-                Assert.That(disclosure.gameObject.activeInHierarchy, Is.True);
-                disclosure.onClick.Invoke();
+                P8RCompleteFlowTests.AssertChecklist(readiness);
                 yield return new WaitForSecondsRealtime(.1f);
                 Canvas.ForceUpdateCanvases();
                 Assert.That(readiness.IsDetailsExpanded, Is.True);
@@ -467,26 +460,19 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 "Readiness follows the final HUD bottom after independent safe-area branches update.");
             foreach (var hudButton in hudButtons)
                 Assert.That(card.Overlaps(Box(hudButton)), Is.False, "Readiness covers HUD " + hudButton.name);
-            var disclosure = Field<Button>(readiness, "disclosureButton");
-            var button = Box(disclosure);
-            AssertContained(button, card, "Disclosure in card");
-            AssertContained(button, safePixels, "Disclosure in safe area");
-            Assert.That(button.width / density, Is.GreaterThanOrEqualTo(47.9f));
-            Assert.That(button.height / density, Is.GreaterThanOrEqualTo(47.9f));
-            var label = Field<TMP_Text>(readiness, "messageLabel");
-            var scroll = readiness.GetComponent<ScrollRect>();
-            var viewport = Box(scroll.viewport);
-            AssertContained(viewport, card, "Visible text viewport");
-            AssertContained(viewport, safePixels, "Text safe area");
-            var text = Box(label);
-            Assert.That(text.xMin, Is.GreaterThanOrEqualTo(viewport.xMin - 1f), "Text left edge");
-            Assert.That(text.xMax, Is.LessThanOrEqualTo(viewport.xMax + 1f), "Text right edge");
-            Assert.That(viewport.Overlaps(button), Is.False, "Details cannot cover readable text.");
-            Assert.That(label.fontSize * label.GetComponentInParent<Canvas>().rootCanvas.scaleFactor / density,
-                Is.GreaterThanOrEqualTo(13.9f));
-            // Expanded diagnostics may exceed the viewport vertically; their existing ScrollRect owns clipping.
-            // 详情允许纵向滚动，不能把完整 content 高度误当作可见正文边界。
-            if (text.height > viewport.height + 1f) Assert.That(scroll.vertical, Is.True);
+            P8RCompleteFlowTests.AssertChecklist(readiness);
+            var badge = hud.transform.Find("P8RModeBadge");
+            Assert.That(card.xMin, Is.EqualTo(Box(badge).xMin).Within(1f), "Checklist follows the left Normal badge.");
+            for (var i = 0; i < 3; i++)
+            {
+                var row = readiness.transform.Find("ChecklistRow" + i);
+                AssertContained(Box(row), card, "Actual checklist row");
+                var label = row.Find("Label").GetComponent<TMP_Text>();
+                Assert.That(label.fontSize * label.GetComponentInParent<Canvas>().rootCanvas.scaleFactor / density,
+                    Is.EqualTo(12f).Within(.1f));
+                Assert.That(label.GetPreferredValues(label.text, label.rectTransform.rect.width, Mathf.Infinity).y,
+                    Is.LessThanOrEqualTo(label.rectTransform.rect.height + 1f), "Complete row copy must remain visible.");
+            }
         }
 
         private static void AssertContained(Rect inner, Rect outer, string label)

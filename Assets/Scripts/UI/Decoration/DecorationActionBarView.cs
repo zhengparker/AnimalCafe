@@ -60,7 +60,7 @@ namespace AnimalCafe.UI.Decoration
         private DecorationActionPresentation deferredPresentation;
         private Vector2 deferredPreferredPoint;
         private Rect deferredSafeArea;
-        private Rect? deferredAvoidScreenRect;
+        private Rect? deferredAvoidScreenRect, deferredUiObstacle;
         private Coroutine deferredPresentationCoroutine;
         private bool canStore;
         private bool canConfirm;
@@ -123,12 +123,39 @@ namespace AnimalCafe.UI.Decoration
             var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
             var width = Mathf.Min(metrics.Units(520), instructionHost.rect.width - metrics.Units(16));
             var top = metrics.Units(8);
-            foreach (var obstruction in new[] { instructionHud,
-                instructionReadiness != null && instructionReadiness.IsVisible ? (RectTransform)instructionReadiness.transform : null })
-            {
-                if (obstruction == null || !obstruction.gameObject.activeInHierarchy) continue;
+            var centerX = 0f;
+            if (instructionHud != null && instructionHud.gameObject.activeInHierarchy)
                 top = Mathf.Max(top, instructionHost.rect.yMax - instructionHost.InverseTransformPoint(
-                    obstruction.TransformPoint(new Vector2(0, obstruction.rect.yMin))).y);
+                    instructionHud.TransformPoint(new Vector2(0, instructionHud.rect.yMin))).y);
+            if (instructionReadiness != null && instructionReadiness.IsVisible
+                && instructionReadiness.gameObject.activeInHierarchy)
+            {
+                var checklist = (RectTransform)instructionReadiness.transform;
+                var left = instructionHost.InverseTransformPoint(checklist.TransformPoint(checklist.rect.min)).x;
+                var leftStart = instructionHost.rect.xMin + metrics.Units(8);
+                var leftWidth = left - metrics.Units(8) - leftStart;
+                var right = instructionHost.InverseTransformPoint(checklist.TransformPoint(checklist.rect.max)).x;
+                var rightStart = right + metrics.Units(8);
+                var rightWidth = instructionHost.rect.xMax - metrics.Units(8) - rightStart;
+                // Use the wider side of the actual checklist, including the approved left-side list.
+                // 清单改到左侧后使用右边空间；两侧都放不下才向下排列。
+                if (rightWidth > leftWidth) { leftStart = rightStart; leftWidth = rightWidth; }
+                feedbackLabel.fontSize = metrics.Units(14);
+                feedbackLabel.textWrappingMode = TextWrappingModes.Normal;
+                feedbackLabel.richText = false;
+                var sideTextWidth = leftWidth - metrics.Units(52);
+                var sideTextSize = feedbackLabel.GetPreferredValues(feedbackLabel.text,
+                    Mathf.Max(1, sideTextWidth), Mathf.Infinity);
+                // The full copy, rather than a fixed card width, decides whether two lines fit.
+                // 使用完整文案测量，180宽也可容纳时不再挤到清单下方。
+                if (sideTextWidth > 0 && sideTextSize.x <= sideTextWidth + metrics.Units(.1f)
+                    && sideTextSize.y <= metrics.Units(40))
+                {
+                    width = Mathf.Min(width, leftWidth);
+                    centerX = leftStart + width * .5f - instructionHost.rect.center.x;
+                }
+                else top = Mathf.Max(top, instructionHost.rect.yMax - instructionHost.InverseTransformPoint(
+                    checklist.TransformPoint(new Vector2(0, checklist.rect.yMin))).y);
             }
             feedbackLabel.fontSize = metrics.Units(14);
             feedbackLabel.textWrappingMode = TextWrappingModes.Normal; feedbackLabel.maxVisibleLines = 2;
@@ -137,7 +164,7 @@ namespace AnimalCafe.UI.Decoration
             var height = Mathf.Max(metrics.Units(36), textHeight + metrics.Units(12));
             feedbackRoot.anchorMin = feedbackRoot.anchorMax = feedbackRoot.pivot = new Vector2(.5f, 1);
             feedbackRoot.sizeDelta = new Vector2(width, height);
-            feedbackVisiblePosition = new Vector2(0, -top - metrics.Units(8)); feedbackPositionInitialized = true;
+            feedbackVisiblePosition = new Vector2(centerX, -top - metrics.Units(8)); feedbackPositionInitialized = true;
             feedbackRoot.anchoredPosition = feedbackVisiblePosition;
             var copy = feedbackLabel.rectTransform;
             copy.anchorMin = Vector2.zero; copy.anchorMax = Vector2.one;
@@ -292,7 +319,7 @@ namespace AnimalCafe.UI.Decoration
             DecorationActionPresentation presentation,
             Vector2 preferredScreenPoint,
             Rect safeArea,
-            Rect? avoidScreenRect = null)
+            Rect? avoidScreenRect = null, Rect? uiObstacle = null)
         {
             // Keep an already pressed compact target under its pointer through sheet reflow.
             // 不改变pointer ownership；释放后仍走已有presentation刷新。
@@ -304,6 +331,7 @@ namespace AnimalCafe.UI.Decoration
                 deferredPreferredPoint = preferredScreenPoint;
                 deferredSafeArea = safeArea;
                 deferredAvoidScreenRect = avoidScreenRect;
+                deferredUiObstacle = uiObstacle;
                 return;
             }
             hasDeferredPresentation = false;
@@ -333,6 +361,7 @@ namespace AnimalCafe.UI.Decoration
             var localPreferred = preferredScreenPoint;
             var localSafeArea = safeArea;
             var localAvoid = avoidScreenRect;
+            var localUiObstacle = uiObstacle;
             if (rect.parent is RectTransform parentRect)
             {
                 var canvas = rect.GetComponentInParent<Canvas>();
@@ -353,6 +382,11 @@ namespace AnimalCafe.UI.Decoration
                         Mathf.Min(anchoredMinimum.y, anchoredMaximum.y),
                         Mathf.Max(anchoredMinimum.x, anchoredMaximum.x),
                         Mathf.Max(anchoredMinimum.y, anchoredMaximum.y));
+                    if (uiObstacle.HasValue
+                        && TryScreenToAnchoredPoint(rect, parentRect, eventCamera, uiObstacle.Value.min, out var uiMin)
+                        && TryScreenToAnchoredPoint(rect, parentRect, eventCamera, uiObstacle.Value.max, out var uiMax))
+                        localUiObstacle = Rect.MinMaxRect(Mathf.Min(uiMin.x, uiMax.x), Mathf.Min(uiMin.y, uiMax.y),
+                            Mathf.Max(uiMin.x, uiMax.x), Mathf.Max(uiMin.y, uiMax.y));
                     if (avoidScreenRect.HasValue
                         && TryScreenToAnchoredPoint(rect, parentRect, eventCamera, avoidScreenRect.Value.min, out var avoidMin)
                         && TryScreenToAnchoredPoint(rect, parentRect, eventCamera, avoidScreenRect.Value.max, out var avoidMax))
@@ -375,42 +409,52 @@ namespace AnimalCafe.UI.Decoration
                     localPreferred.y,
                     localSafeArea.yMin + size.y * rect.pivot.y,
                     localSafeArea.yMax - size.y * (1f - rect.pivot.y)));
-            if (appearance != null && localAvoid.HasValue)
-                point = AvoidWorldPresentation(point, size, rect.pivot, localSafeArea, localAvoid.Value);
+            if (appearance != null && (localAvoid.HasValue || localUiObstacle.HasValue))
+                point = AvoidWorldPresentation(point, size, rect.pivot, localSafeArea, localAvoid, localUiObstacle);
             rect.anchoredPosition = point;
         }
 
-        private Vector2 AvoidWorldPresentation(Vector2 point, Vector2 size, Vector2 pivot, Rect safeArea, Rect obstacle)
+        private Vector2 AvoidWorldPresentation(Vector2 point, Vector2 size, Vector2 pivot, Rect safeArea,
+            Rect? worldObstacle, Rect? uiObstacle)
         {
-            var worldBounds = obstacle;
             var gap = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this).Units(8);
-            obstacle = Rect.MinMaxRect(obstacle.xMin - gap, obstacle.yMin - gap, obstacle.xMax + gap, obstacle.yMax + gap);
             var fromPivot = Vector2.Scale(size, pivot);
-            if (!new Rect(point - fromPivot, size).Overlaps(obstacle)) return point;
             var oppositePivot = size - fromPivot;
-            var candidates = new[] {
-                new Vector2(point.x, obstacle.yMax + fromPivot.y),
-                new Vector2(point.x, obstacle.yMin - oppositePivot.y),
-                new Vector2(obstacle.xMin - oppositePivot.x, point.y),
-                new Vector2(obstacle.xMax + fromPivot.x, point.y) };
-            // Prefer above/below the complete support + sign; sides are only a fallback.
-            // 整行先尝试物体上下方；候选必须同时避开世界标记与固定 UI。
-            for (var pass = 0; pass < 2; pass++)
+            var xs = new System.Collections.Generic.List<float> { point.x };
+            var ys = new System.Collections.Generic.List<float> { point.y };
+            var obstacles = new System.Collections.Generic.List<Rect>();
+            foreach (var candidate in new[] { worldObstacle, uiObstacle })
             {
-                var best = point; var distance = float.PositiveInfinity;
-                for (var index = pass * 2; index < pass * 2 + 2; index++)
-                {
-                    var candidate = candidates[index];
-                    var row = new Rect(candidate - fromPivot, size);
-                    if (row.xMin < safeArea.xMin - .01f || row.xMax > safeArea.xMax + .01f
-                        || row.yMin < safeArea.yMin - .01f || row.yMax > safeArea.yMax + .01f || row.Overlaps(worldBounds)) continue;
-                    var delta = (candidate - point).sqrMagnitude;
-                    if (delta < distance) { best = candidate; distance = delta; }
-                }
-                if (!float.IsPositiveInfinity(distance)) return best;
+                if (!candidate.HasValue) continue;
+                var r = candidate.Value;
+                r = Rect.MinMaxRect(r.xMin - gap, r.yMin - gap, r.xMax + gap, r.yMax + gap);
+                obstacles.Add(r);
+                xs.Add(r.xMin - oppositePivot.x); xs.Add(r.xMax + fromPivot.x);
+                ys.Add(r.yMin - oppositePivot.y); ys.Add(r.yMax + fromPivot.y);
             }
-            // Do not escape the fixed UI safe region if no complete row can fit.
-            return point;
+            // Test both local obstacles together; moving around one must not enter the other.
+            // 同时避开世界标记与右侧清单，保留左侧完整可用高度。
+            var best = point;
+            var distance = float.PositiveInfinity;
+            foreach (var x in xs)
+            foreach (var y in ys)
+            {
+                var candidate = new Vector2(
+                    ClampAxis(x, safeArea.xMin + fromPivot.x, safeArea.xMax - oppositePivot.x),
+                    ClampAxis(y, safeArea.yMin + fromPivot.y, safeArea.yMax - oppositePivot.y));
+                var row = new Rect(candidate - fromPivot, size);
+                if (row.xMin < safeArea.xMin - .01f || row.xMax > safeArea.xMax + .01f
+                    || row.yMin < safeArea.yMin - .01f || row.yMax > safeArea.yMax + .01f) continue;
+                var overlaps = false;
+                foreach (var obstacle in obstacles)
+                    if (row.xMax > obstacle.xMin + .01f && row.xMin < obstacle.xMax - .01f
+                        && row.yMax > obstacle.yMin + .01f && row.yMin < obstacle.yMax - .01f)
+                    { overlaps = true; break; }
+                if (overlaps) continue;
+                var delta = (candidate - point).sqrMagnitude;
+                if (delta < distance) { best = candidate; distance = delta; }
+            }
+            return best;
         }
 
         private static bool IsPressed(Button button) => button != null
@@ -1300,7 +1344,7 @@ namespace AnimalCafe.UI.Decoration
             yield return null; // Complete the current UI click before moving its target.
             deferredPresentationCoroutine = null;
             if (hasDeferredPresentation && IsVisible && isActiveAndEnabled)
-                SetPresentation(deferredPresentation, deferredPreferredPoint, deferredSafeArea, deferredAvoidScreenRect);
+                SetPresentation(deferredPresentation, deferredPreferredPoint, deferredSafeArea, deferredAvoidScreenRect, deferredUiObstacle);
         }
 
         private void CancelDeferredPresentation()

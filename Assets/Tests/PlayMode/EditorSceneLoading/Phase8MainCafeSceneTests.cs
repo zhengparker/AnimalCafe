@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System.Collections;
 using System.Linq;
 using AnimalCafe.Content;
@@ -204,6 +204,10 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var catalogue = Object.FindObjectsByType<DecorationCatalogueView>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None).Single();
             Assert.That(catalogue.CategoryRows, Has.Count.EqualTo(3));
+            Assert.That(catalogue.GetComponentsInChildren<TMP_Text>(true).Any(text => text.text == "Opening essentials"), Is.False);
+            Assert.That(catalogue.CategoryRows[0].HorizontalScroll.content.GetComponentsInChildren<DecorationCatalogueTileView>()
+                .Any(tile => tile.ItemId.StartsWith("counter.") || tile.ItemId == "furniture.counter.module.01"), Is.True,
+                "Counters remain the first original furniture category.");
             Assert.That(catalogue.CategoryRows.Select(row => row.HorizontalScroll.content.name),
                 Is.All.Not.Empty);
             var tiles = catalogue.CategoryRows
@@ -349,16 +353,14 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 {
                     var notice = Object.FindFirstObjectByType<ValidationMessageView>();
                     var versionBeforeDetails = runtime.ReadinessVersion;
-                    var detailsButton = notice.GetComponentsInChildren<Button>(true).Single(button => button.name == "ReadinessDetails");
+                    P8RCompleteFlowTests.AssertChecklist(notice);
                     yield return CaptureReviewFrame("readiness-compact.png");
-                    detailsButton.onClick.Invoke();
                     if (UsesP8R(notice)) Assert.That(notice.CurrentMessage,
-                        Does.Contain("<b>Coffee Machine</b>\nAdd a Coffee Machine.")
-                            .And.Contain("<b>Pickup Point</b>\nAdd a Pickup Point."));
+                        Does.Contain("<b>Coffee Machine</b> · To place")
+                            .And.Contain("<b>Pickup Point</b> · To place"));
                     else Assert.That(notice.CurrentMessage, Does.Contain("咖啡机").And.Contain("取餐点"));
                     Assert.That(runtime.ReadinessVersion, Is.EqualTo(versionBeforeDetails));
                     yield return CaptureReviewFrame("readiness-details.png");
-                    detailsButton.onClick.Invoke();
                 }
             }
 
@@ -376,14 +378,15 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Assert.That(customer.Position, Is.EqualTo(new GridPosition(support.Position.X, 2)));
             }
             var feedback = Object.FindFirstObjectByType<ValidationMessageView>();
-            Assert.That(feedback.IsVisible, Is.False,
-                "A confirmed layout with no warnings or blocking failures must not keep a success card visible.");
-            Assert.That(feedback.CurrentMessage, Is.Empty);
+            Assert.That(feedback.IsVisible, Is.True,
+                "The completed checklist keeps all three status rows visible.");
+            Assert.That(feedback.IsDetailsExpanded, Is.True);
+            P8RCompleteFlowTests.AssertChecklist(feedback);
             Assert.That(feedback.FullReadinessMessage,
                 Does.Contain(UsesP8R(feedback) ? "Confirmed Layout: Ready to open" : "已确认布局：已就绪"),
-                "The latest healthy report remains available without occupying HUD space.");
+                "The latest healthy report remains available to diagnostics.");
             var feedbackGroup = feedback.GetComponent<CanvasGroup>();
-            Assert.That(feedbackGroup.alpha, Is.Zero);
+            Assert.That(feedbackGroup.alpha, Is.EqualTo(1));
             Assert.That(feedbackGroup.interactable, Is.False);
             Assert.That(feedbackGroup.blocksRaycasts, Is.False);
             Assert.That(feedback.GetComponent<ScrollRect>(), Is.Not.Null,
@@ -440,7 +443,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var view = Object.FindFirstObjectByType<ValidationMessageView>();
             Assert.That(UsesP8R(view), Is.True, "Exercise the real P8R geometry publisher.");
             view.ShowReadiness(P8RCompleteFlowTests.Report(true));
-            Assert.That(view.IsVisible, Is.False);
+            Assert.That(view.IsVisible, Is.True);
+            Assert.That(view.IsDetailsExpanded, Is.True);
 
             var changes = 0;
             System.Action countChange = () => changes++;
@@ -451,13 +455,21 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     P8RCompleteFlowTests.Failure(LayoutReadinessSeverity.Blocking,
                         LayoutReadinessFailureCode.MissingCoffeeMachine, 0)));
                 Assert.That(view.IsVisible, Is.True);
-                Assert.That(changes, Is.EqualTo(1),
-                    "Showing one actionable card must publish one geometry change.");
+                Assert.That(view.IsDetailsExpanded, Is.True);
+                P8RCompleteFlowTests.AssertChecklist(view);
+                var afterBlocked = changes;
+                view.ShowReadiness(P8RCompleteFlowTests.Report(false,
+                    P8RCompleteFlowTests.Failure(LayoutReadinessSeverity.Blocking,
+                        LayoutReadinessFailureCode.MissingCoffeeMachine, 0)));
+                Assert.That(changes, Is.EqualTo(afterBlocked), "Repeating a stable report must not publish spurious geometry events.");
 
                 view.ShowReadiness(P8RCompleteFlowTests.Report(true));
-                Assert.That(view.IsVisible, Is.False);
-                Assert.That(changes, Is.EqualTo(2),
-                    "Removing the healthy card must publish one additional geometry change.");
+                Assert.That(view.IsVisible, Is.True);
+                Assert.That(view.IsDetailsExpanded, Is.True);
+                P8RCompleteFlowTests.AssertChecklist(view);
+                var afterHealthy = changes;
+                view.ShowReadiness(P8RCompleteFlowTests.Report(true));
+                Assert.That(changes, Is.EqualTo(afterHealthy), "Stable healthy rows must not publish redundant geometry events.");
             }
             finally { view.DetailsVisibilityChanged -= countChange; }
         }
@@ -629,11 +641,9 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             runtime.RecalculateReadiness();
             var view = Object.FindFirstObjectByType<ValidationMessageView>();
             view.ShowReadiness(runtime.CurrentReadiness);
-            view.GetComponentsInChildren<Button>(true).Single(button => button.name == "ReadinessDetails")
-                .onClick.Invoke();
+            P8RCompleteFlowTests.AssertChecklist(view);
             Assert.That(view.IsDetailsExpanded, Is.True);
-            Assert.That(view.CurrentMessage, Does.Contain("员工").And.Contain("阻挡")
-                .And.Not.Contain("Employee").And.Not.Contain("slot.0"));
+            Assert.That(view.CurrentMessage, Does.Contain("Adjust").And.Not.Contain("slot.0"));
             foreach (var id in view.DiagnosticIds)
                 Assert.That(view.CurrentMessage, Does.Not.Contain(id));
             yield return CaptureReviewFrame(folder + "readable-feedback.png");
@@ -750,7 +760,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                         Is.EqualTo(new Vector2(1080, 1920)));
                     Assert.That(new Vector2(UnityEngine.Camera.main.pixelWidth,
                         UnityEngine.Camera.main.pixelHeight), Is.EqualTo(new Vector2(1080, 1920)));
-                    Assert.That(feedback.IsVisible, Is.False);
+                    Assert.That(feedback.IsVisible, Is.True);
+                    Assert.That(feedback.IsDetailsExpanded, Is.True);
                     var canvas = feedback.GetComponentInParent<Canvas>()?.rootCanvas;
                     Assert.That(canvas, Is.Not.Null);
                     Assert.That(canvas.renderMode, Is.EqualTo(RenderMode.ScreenSpaceOverlay));

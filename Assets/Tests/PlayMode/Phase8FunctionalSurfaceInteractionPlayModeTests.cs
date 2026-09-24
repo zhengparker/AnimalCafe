@@ -829,6 +829,57 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [Test]
+        public void Controller_OccupiedSupportStore_ImmediatelyShowsAcknowledgementWithoutStartingTransaction()
+        {
+            using var fixture = new FunctionalViewHarness();
+            var mounted = new SurfaceMountedInstance("33333333333333333333333333333333", RegisterDefinitionId, Address("slot.0"), FurnitureRotation.Degrees0);
+            var coffee = new SurfaceMountedInstance("44444444444444444444444444444444", CoffeeMachineDefinitionId, Address("slot.1"), FurnitureRotation.Degrees0);
+            var pickup = new PickUpPointInstance("55555555555555555555555555555555", Address("slot.2"));
+            Assert.That(fixture.Scenario.Functional.PlaceMounted(mounted).Succeeded, Is.True);
+            Assert.That(fixture.Scenario.Functional.PlaceMounted(coffee).Succeeded, Is.True);
+            Assert.That(fixture.Scenario.Functional.PlacePickUp(pickup).Succeeded, Is.True);
+            fixture.ConfigureStoreModal();
+            Assert.That(fixture.OrdinarySession.BeginExisting(SupportInstanceId).Succeeded, Is.True);
+            var before = fixture.OrdinarySession.ActivePreview;
+            var confirmations = 0;
+            fixture.StoreModal.ConfirmRequested += () => confirmations++;
+
+            Invoke(fixture.Controller, "HandleStoreRequested");
+
+            Assert.That(fixture.StoreModal.IsOpen, Is.True);
+            Assert.That(fixture.OrdinarySession.State, Is.EqualTo(DecorationSessionState.EditingExistingFurniture),
+                "Occupied support must be rejected before the normal Store transaction starts.");
+            Assert.That(fixture.OrdinarySession.ActivePreview, Is.SameAs(before));
+            var title = (TMP_Text)typeof(DecorationStoreModalView).GetField("titleLabel", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(fixture.StoreModal);
+            var body = (TMP_Text)typeof(DecorationStoreModalView).GetField("bodyLabel", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(fixture.StoreModal);
+            Assert.That(title.text, Is.EqualTo("Clear the counter first"));
+            Assert.That(body.text, Does.StartWith("Move or store these items before storing this counter:"));
+            foreach (var item in new[] { "· Cash Register ×1", "· Coffee Machine ×1", "· Pickup Point ×1" })
+                Assert.That(body.text, Does.Contain(item));
+            foreach (var id in new[] { mounted.InstanceId, coffee.InstanceId, pickup.InstanceId })
+                Assert.That(body.text, Does.Not.Contain(id));
+            Assert.That(fixture.StoreCancel.gameObject.activeSelf, Is.False);
+            Assert.That(fixture.StoreConfirm.GetComponentInChildren<TMP_Text>().text, Is.EqualTo("Got it"));
+            fixture.StoreConfirm.onClick.Invoke();
+            Assert.That(confirmations, Is.Zero, "Acknowledgement cannot issue a Store confirmation.");
+            Assert.That(fixture.StoreModal.IsOpen, Is.False);
+            Assert.That(fixture.OrdinarySession.ActivePreview, Is.SameAs(before));
+            Assert.That(fixture.Scenario.Cafe.TryGetFurnitureInstance(SupportInstanceId, out _), Is.True);
+            Assert.That(fixture.Scenario.Functional.MountedInstances, Is.EqualTo(new[] { mounted, coffee }));
+            Assert.That(fixture.Scenario.Functional.PickUpPoints, Is.EqualTo(new[] { pickup }));
+            Invoke(fixture.Controller, "HandleStoreRequested");
+            Assert.That(fixture.StoreModal.TryHandleBack(), Is.True);
+            Assert.That(fixture.OrdinarySession.ActivePreview, Is.SameAs(before));
+            Invoke(fixture.Controller, "HandleStoreRequested");
+            fixture.StoreModal.CloseForOwnerShutdown();
+            Assert.That(fixture.StoreModal.IsOpen, Is.False);
+            fixture.StoreModal.ShowFunctionalSurface(DecorationCatalogueItemKind.CashRegister);
+            Assert.That(fixture.StoreCancel.gameObject.activeSelf, Is.True, "A later ordinary confirmation restores Cancel.");
+            Assert.That(fixture.StoreConfirm.GetComponentInChildren<TMP_Text>().text, Is.EqualTo("Store"));
+            fixture.StoreModal.CloseForOwnerShutdown();
+        }
+
+        [Test]
         public void Controller_BlockedSupportStore_PreservesTopReadinessAndShowsLocalReasonWithExactDiagnostics()
         {
             using var fixture = new FunctionalViewHarness();
@@ -895,7 +946,7 @@ namespace AnimalCafe.Tests.PlayMode
             fixture.ConfigureStoreModal();
             Invoke(fixture.Controller, "HandleStoreRequested");
             Assert.That(fixture.StoreModal.IsOpen, Is.True);
-            fixture.StoreCancel.onClick.Invoke();
+            fixture.StoreConfirm.onClick.Invoke();
             Assert.That(editingLabel.text, Is.EqualTo(storeReason),
                 "Dismissing a repeated Store prompt must preserve the previous failed-operation reason.");
             Assert.That(fixture.Controller.EditingDiagnosticIds,
@@ -2584,6 +2635,44 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(callback?.GetInvocationList().Length ?? 0, Is.EqualTo(expected));
         }
 
+        [TestCase(DecorationCatalogueItemKind.CashRegister, RegisterDefinitionId, false)]
+        [TestCase(DecorationCatalogueItemKind.CashRegister, RegisterDefinitionId, true)]
+        [TestCase(DecorationCatalogueItemKind.CoffeeMachine, CoffeeMachineDefinitionId, false)]
+        [TestCase(DecorationCatalogueItemKind.CoffeeMachine, CoffeeMachineDefinitionId, true)]
+        [TestCase(DecorationCatalogueItemKind.PickUpPoint, null, false)]
+        [TestCase(DecorationCatalogueItemKind.PickUpPoint, null, true)]
+        public void Controller_FunctionalDragOutsideFloor_ClampsAllEdgesAndReturnsToSlot(
+            DecorationCatalogueItemKind kind, string definitionId, bool existing)
+        {
+            using var fixture = new FunctionalViewHarness();
+            if (kind == DecorationCatalogueItemKind.PickUpPoint) fixture.BeginPickUpPreview(existing);
+            else fixture.BeginMountedPreview(kind, definitionId, existing);
+            var report = fixture.Runtime.CurrentReadiness;
+            var version = fixture.Runtime.ReadinessVersion;
+            fixture.RouteMountedPointer(new Vector3(.5f, .72f, .5f), InputTouchPhase.Began, 1);
+            var targets = new[] { new Vector3(-3.5f, 0, 3.5f), new Vector3(12.5f, 0, 3.5f),
+                new Vector3(3.5f, 0, -3.5f), new Vector3(3.5f, 0, 12.5f), new Vector3(12.5f, 0, 12.5f) };
+            var expected = new[] { new GridPosition(0, 3), new GridPosition(7, 3),
+                new GridPosition(3, 0), new GridPosition(3, 7), new GridPosition(7, 7) };
+            for (var i = 0; i < targets.Length; i++)
+            {
+                var result = fixture.RouteMountedPointer(targets[i], InputTouchPhase.Moved, i + 2);
+                Assert.That(result.FunctionalSurfaceDragRequested, Is.True);
+                var cell = (GridPosition?)typeof(DecorationModeController)
+                    .GetField("mountedPreviewFloorPosition", BindingFlags.Instance | BindingFlags.NonPublic)
+                    .GetValue(fixture.Controller);
+                Assert.That(cell, Is.EqualTo(expected[i]), "Drag must stop at the nearest floor edge.");
+                Assert.That(fixture.Controller.ActiveFunctionalSurfacePreview.CanConfirm, Is.False,
+                    "Clamping does not make unsupported equipment placeable.");
+                Assert.That(fixture.Runtime.CurrentReadiness, Is.SameAs(report));
+                Assert.That(fixture.Runtime.ReadinessVersion, Is.EqualTo(version));
+            }
+            fixture.RouteMountedPointer(new Vector3(.5f, .72f, .5f), InputTouchPhase.Moved, 10);
+            Assert.That(fixture.Controller.ActiveFunctionalSurfacePreview.Address, Is.EqualTo(Address("slot.0")));
+            fixture.Controller.CancelFunctionalSurfacePreview();
+            Assert.That(fixture.Controller.ActiveFunctionalSurfacePreview, Is.Null);
+        }
+
         private static int ActiveDirectChildCount(Transform root)
         {
             return Enumerable.Range(0, root.childCount)
@@ -2827,6 +2916,15 @@ namespace AnimalCafe.Tests.PlayMode
                 var blocker = CreateModalButton("Blocker", modalRoot.transform);
                 StoreConfirm = CreateModalButton("Confirm", modalRoot.transform);
                 StoreCancel = CreateModalButton("Cancel", modalRoot.transform);
+                var title = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
+                title.transform.SetParent(modalRoot.transform, false);
+                var body = new GameObject("Body", typeof(RectTransform), typeof(TextMeshProUGUI));
+                body.transform.SetParent(modalRoot.transform, false);
+                var confirmLabel = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+                confirmLabel.transform.SetParent(StoreConfirm.transform, false);
+                confirmLabel.GetComponent<TMP_Text>().text = "Store";
+                Set(StoreModal, "titleLabel", title.GetComponent<TMP_Text>());
+                Set(StoreModal, "bodyLabel", body.GetComponent<TMP_Text>());
                 Set(StoreModal, "modalView", modal);
                 Set(StoreModal, "confirmButton", StoreConfirm);
                 Set(StoreModal, "cancelButton", StoreCancel);

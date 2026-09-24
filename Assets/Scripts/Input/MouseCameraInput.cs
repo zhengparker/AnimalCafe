@@ -25,6 +25,7 @@ namespace AnimalCafe.Input
 
         private Vector2 pressPosition;
         private bool isPointerDown;
+        private bool mouseGestureStartedOnUi;
         private bool exceededDragThreshold;
         private int cachedFrameNumber = -1;
         private CameraInputFrame cachedFrame;
@@ -129,6 +130,9 @@ namespace AnimalCafe.Input
                 isPointerDown = true;
                 exceededDragThreshold = false;
                 pressPosition = pointerPosition;
+                // Ownership follows the press origin until release, even outside the UI.
+                // UI 起点持有整次鼠标手势，拖出面板也不能带动 Camera 或选中场景。
+                mouseGestureStartedOnUi = IsUiAt(pointerPosition);
             }
 
             var activeThreshold = settings != null
@@ -143,15 +147,16 @@ namespace AnimalCafe.Input
                 exceededDragThreshold = true;
             }
 
-            var panDelta = isPointerDown && exceededDragThreshold
+            var panDelta = isPointerDown && exceededDragThreshold && !mouseGestureStartedOnUi
                 ? mouse.delta.ReadValue()
                 : Vector2.zero;
 
             var tapReleased = false;
             if (isPointerDown && pointerReleased)
             {
-                tapReleased = !exceededDragThreshold;
+                tapReleased = !exceededDragThreshold && !mouseGestureStartedOnUi;
                 isPointerDown = false;
+                mouseGestureStartedOnUi = false;
             }
 
             var zoomDelta = mouse.scroll.ReadValue().y;

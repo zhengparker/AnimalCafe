@@ -1,5 +1,15 @@
 {
   "entries": [
+    {"key":"checklist.state.to_place","value":"To place"},
+    {"key":"checklist.state.adjust","value":"Adjust"},
+    {"key":"checklist.state.ready","value":"Ready"},
+    {"key":"checklist.extra","value":"{count} more needs adjustment"},
+    {"key":"checklist.extra_many","value":"{count} more need adjustment"},
+    {"key":"mode.enter","value":"Decor"},
+    {"key":"mode.done","value":"Done"},
+    {"key":"checklist.title","value":"Setup checklist"},
+    {"key":"checklist.complete","value":"✓ Ready to open"},
+    {"key":"checklist.adjust","value":"Keep the access space clear."},
     {"key":"mode.normal","value":"Normal"},
     {"key":"mode.decoration","value":"Decoration"},
     {"key":"catalogue.title","value":"Catalogue"},
@@ -58,6 +68,7 @@
     {"key":"exit.body","value":"Only this preview will be discarded. Your applied changes will stay."},
     {"key":"exit.continue","value":"Continue Editing"},
     {"key":"exit.discard","value":"Discard Preview"},
+    {"key":"readiness.normal.incomplete","value":"Setup incomplete · Enter Decor to finish"},
     {"key":"readiness.ready","value":"Confirmed Layout: Ready to open"},
     {"key":"readiness.warning","value":"Confirmed Layout: Ready, with a warning"},
     {"key":"readiness.blocked","value":"Confirmed Layout: Needs attention"},
@@ -225,6 +236,9 @@
       "key": "store.body",
       "value": "This item will be removed from your layout. You can place it again from the catalogue."
     },
+    { "key": "store.blocked_title", "value": "Clear the counter first" },
+    { "key": "store.blocked_body", "value": "Move or store these items before storing this counter:" },
+    { "key": "store.got_it", "value": "Got it" },
     {
       "key": "placement.None",
       "value": "Ready to place."

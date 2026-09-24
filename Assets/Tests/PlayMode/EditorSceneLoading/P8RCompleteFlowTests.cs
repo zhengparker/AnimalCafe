@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System;
 using System.Collections;
 using System.IO;
@@ -293,17 +293,18 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 .Concat(Find<TimeControlPanel>().GetComponentsInChildren<Button>())
                 .Concat(new[] { Field<Button>(catalogue, "pickUpPointButton") });
             foreach (var button in buttons) AssertTextIconGroup(button);
-            var status = Field<Image>(Find<ValidationMessageView>(), "statusIcon");
-            var ink = MeasuredInk(status); var scale = status.GetComponentInParent<Canvas>().rootCanvas.scaleFactor;
-            Assert.That(Mathf.Max(ink.width, ink.height) / AnimalCafe.UI.P8R.P8RMobileMetrics.For(status).PixelsPerLogicalUnit,
-                Is.GreaterThanOrEqualTo(19.9f), "Compact readiness status ink in platform logical units");
+            var readiness = Find<ValidationMessageView>();
+            Assert.That(Field<Image>(readiness, "statusIcon").enabled, Is.False,
+                "Checklist state is shown by each row, not the retired error icon.");
+            AssertChecklist(readiness);
         }
 
         internal static void AssertTextIconGroup(Button button)
         {
             var icon = button.transform.Find("Icon")?.GetComponent<Image>();
+            var hud = button.GetComponentInParent<TimeControlPanel>();
             Assert.That(icon != null && icon.gameObject.activeInHierarchy, Is.True, button.name);
-            var ink = MeasuredInk(icon); var scale = button.GetComponentInParent<Canvas>().rootCanvas.scaleFactor;
+            var ink = MeasuredButtonInk(button); var scale = button.GetComponentInParent<Canvas>().rootCanvas.scaleFactor;
             var visibleLabel = button.transform.Find("Label").GetComponent<TMP_Text>();
             if (!visibleLabel.gameObject.activeSelf)
             {
@@ -321,7 +322,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Assert.That(face.Contains(ink.min) && face.Contains(ink.max), Is.True);
                 return;
             }
-            var stacked = button.name == "DecorationModeButton" || button.GetComponentInParent<DecorationModeTabsView>() != null;
+            var stacked = button.GetComponentInParent<DecorationModeTabsView>() != null;
             Assert.That(Mathf.Max(ink.width, ink.height) / AnimalCafe.UI.P8R.P8RMobileMetrics.For(button).PixelsPerLogicalUnit,
                 Is.GreaterThanOrEqualTo(19.9f), button.name + " compact platform-logical visible ink, excluding transparent PNG margins");
             var label = button.transform.Find("Label").GetComponent<TMP_Text>(); label.ForceMeshUpdate();
@@ -351,6 +352,16 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         }
 
         // Test-only PNG alpha measurement: expected ink comes from actual immutable art, not runtime layout constants.
+        internal static Rect MeasuredButtonInk(Button button)
+        {
+            var ink = MeasuredInk(button.transform.Find("Icon").GetComponent<Image>());
+            var second = button.transform.Find("SecondTriangle")?.GetComponent<Image>();
+            if (second == null || !second.gameObject.activeInHierarchy) return ink;
+            var other = MeasuredInk(second);
+            return Rect.MinMaxRect(Mathf.Min(ink.xMin, other.xMin), Mathf.Min(ink.yMin, other.yMin),
+                Mathf.Max(ink.xMax, other.xMax), Mathf.Max(ink.yMax, other.yMax));
+        }
+
         internal static Rect MeasuredInk(Image image)
         {
             var texture = new Texture2D(2, 2);
@@ -441,16 +452,27 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var hud = Find<TimeControlPanel>();
             service.SetNormal(); yield return Capture("01-hud-1x.png");
             service.SetFast(); yield return null;
-            Assert.That(Field<Button>(hud, "fastButton").image.sprite.name, Is.EqualTo("tab_selected"));
+            var normal = Field<Button>(hud, "normalButton");
+            var fast = Field<Button>(hud, "fastButton");
+            Assert.That(Field<Button>(hud, "pauseButton").gameObject.activeSelf, Is.False);
+            Assert.That(fast.image.sprite.name, Is.EqualTo("tab_selected"));
+            Assert.That(normal.interactable && fast.interactable, Is.True);
             yield return Capture("02-hud-2x.png");
-            service.SetPaused(); yield return Capture("03-hud-paused.png");
-            service.SetFast();
+            fast.onClick.Invoke();
+            Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+            Assert.That(normal.interactable && fast.interactable, Is.True);
+            Assert.That(normal.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("pause_cocoa"));
+            yield return Capture("03-hud-paused.png");
+            normal.onClick.Invoke();
+            Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
             controller.EnterDecorationMode(); yield return null;
             Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
-            Assert.That(Field<Button>(hud, "pauseButton").GetComponentInChildren<TMP_Text>(true).text, Is.EqualTo("Paused"));
+            Assert.That(normal.interactable || fast.interactable, Is.False);
+            Assert.That(normal.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("lock_muted"));
+            Assert.That(fast.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("resume_muted"));
             yield return Capture("04-hud-decoration-lock.png");
             Assert.That(controller.TryRequestExit(), Is.True);
-            Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
+            Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
             controller.EnterDecorationMode();
             var runtime = Find<CafeLayoutRuntime>();
             var before = runtime.Layout.FurnitureInstances.Count;
@@ -469,7 +491,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             yield return null;
             Assert.That(session.ActivePreview, Is.Null);
             Assert.That(runtime.Layout.FurnitureInstances.Count, Is.EqualTo(before));
-            Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
+            Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
         }
 
         [UnityTest]
@@ -584,41 +606,83 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             c.CancelFunctionalSurfacePreview();
             c.ExitDecorationMode();
             view.ShowReadiness(Report(true));
-            Assert.That(view.IsVisible, Is.False, "A healthy report releases HUD space instead of displaying a success icon.");
+            Assert.That(view.IsVisible, Is.False, "Normal mode hides completed setup.");
+            c.EnterDecorationMode();
+            Assert.That(view.IsVisible, Is.True);
+            Assert.That(view.IsDetailsExpanded, Is.True);
+            AssertChecklist(view);
             Assert.That(Field<Image>(view, "statusIcon").enabled, Is.False);
             Assert.That(view.GetComponent<CanvasGroup>().blocksRaycasts, Is.False);
             yield return Capture("17-readiness-INJECTED-ready.png");
             view.ShowReadiness(Report(true, Failure(LayoutReadinessSeverity.Warning, LayoutReadinessFailureCode.AnchorBlocked, 0)));
-            AssertReadinessIcon(view);
-            yield return Capture("18-readiness-INJECTED-warning.png");
-            var failures = Enumerable.Range(0, 24).Select(i => Failure(i % 2 == 0 ? LayoutReadinessSeverity.Blocking : LayoutReadinessSeverity.Warning,
-                (LayoutReadinessFailureCode)(i % 12), i)).ToArray();
-            view.ShowReadiness(Report(false, failures));
-            AssertReadinessIcon(view);
-            yield return Capture("19-readiness-INJECTED-blocked-collapsed.png");
-            Field<Button>(view, "disclosureButton").onClick.Invoke(); yield return null;
             Assert.That(view.IsDetailsExpanded, Is.True);
-            Assert.That(view.GetComponent<ScrollRect>().vertical, Is.True);
-            yield return Capture("20-readiness-INJECTED-expanded-scroll.png");
-            view.GetComponent<ScrollRect>().verticalNormalizedPosition = 0;
-            yield return Capture("21-readiness-INJECTED-scroll-bottom.png");
-            Field<Button>(view, "disclosureButton").onClick.Invoke();
-            Assert.That(view.IsDetailsExpanded, Is.False);
+            Assert.That(view.CurrentMessage, Does.Contain("1 more needs adjustment"));
+            Assert.That(view.FullReadinessMessage, Does.Contain("Detached diagnostics"));
+            yield return Capture("18-readiness-INJECTED-mixed.png");
+            var blocked = Report(false, Failure(LayoutReadinessSeverity.Blocking, LayoutReadinessFailureCode.AnchorBlocked, 1));
+            view.ShowReadiness(blocked);
+            Assert.That(view.IsDetailsExpanded, Is.True, "Losing readiness expands the checklist.");
+            AssertChecklist(view);
+            Assert.That(view.CurrentMessage, Does.Contain("Coffee Machine"));
+            Assert.That(view.CurrentMessage, Does.Contain("Adjust"));
+            Assert.That(Field<Image>(view, "statusIcon").enabled, Is.False);
+            Assert.That(view.DiagnosticIds, Does.Contain("private-1"));
+            yield return Capture("19-readiness-INJECTED-blocked-expanded.png");
+            Assert.That(view.IsDetailsExpanded, Is.True);
+            view.ShowReadiness(blocked);
+            AssertChecklist(view);
+            view.ShowReadiness(blocked);
+            Assert.That(view.IsDetailsExpanded, Is.True, "Repeated report preserves manual expansion.");
+            AssertChecklist(view);
+            yield return Capture("20-readiness-INJECTED-expanded.png");
+        }
+
+        internal static void AssertChecklist(ValidationMessageView view)
+        {
+            Assert.That(view.IsVisible, Is.True);
+            Assert.That(view.IsDetailsExpanded, Is.True);
+            Assert.That(view.CurrentMessage, Is.EqualTo(string.Join("\n", Enumerable.Range(0, 3)
+                .Select(i => view.transform.Find("ChecklistRow" + i + "/Label").GetComponent<TMP_Text>().text))),
+                "CurrentMessage contains exactly the three displayed status descriptions.");
+            Assert.That(view.CurrentMessage, Does.Not.Contain("Setup checklist").And.Not.Contain("Updates after confirmation."));
+            Assert.That(view.GetComponent<CanvasGroup>().blocksRaycasts, Is.False);
+            Assert.That(view.GetComponent<CanvasGroup>().interactable, Is.False);
+            Assert.That(view.GetComponentsInChildren<Button>().Length, Is.Zero);
+            Assert.That(view.GetComponent<Image>() == null || !view.GetComponent<Image>().enabled, Is.True);
+            var names = new[] { "Cash Register", "Coffee Machine", "Pickup Point" };
+            for (var i = 0; i < 3; i++)
+            {
+                var row = view.transform.Find("ChecklistRow" + i);
+                Assert.That(row, Is.Not.Null);
+                Assert.That(row.gameObject.activeInHierarchy, Is.True);
+                var label = row.Find("Label").GetComponent<TMP_Text>();
+                var icon = row.Find("Status").GetComponent<Image>();
+                Assert.That(label.enabled, Is.True);
+                Assert.That(label.text, Does.Contain(names[i]));
+                Assert.That(icon.enabled && icon.sprite != null, Is.True);
+                foreach (var graphic in row.GetComponentsInChildren<Graphic>())
+                    Assert.That(graphic.raycastTarget, Is.False, graphic.name);
+                if (EventSystem.current != null)
+                {
+                    var hits = new System.Collections.Generic.List<RaycastResult>();
+                    var rect = (RectTransform)row;
+                    EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current)
+                        { position = RectTransformUtility.WorldToScreenPoint(null, rect.TransformPoint(rect.rect.center)) }, hits);
+                    Assert.That(hits.Any(hit => hit.gameObject.transform.IsChildOf(view.transform)), Is.False,
+                        "Checklist rows must pass real EventSystem raycasts to the scene.");
+                }
+            }
         }
 
         private static T Construct<T>(params object[] args) => (T)Activator.CreateInstance(typeof(T), BindingFlags.Instance | BindingFlags.NonPublic, null, args, null);
-        private static void AssertReadinessIcon(ValidationMessageView view)
-        {
-            Canvas.ForceUpdateCanvases();
-            var icon = Field<Image>(view, "statusIcon"); var ink = MeasuredInk(icon);
-            var scale = icon.GetComponentInParent<Canvas>().rootCanvas.scaleFactor;
-            Assert.That(Mathf.Max(ink.width, ink.height) / scale, Is.GreaterThanOrEqualTo(35f));
-            Assert.That(ink.xMax + 8f * scale, Is.LessThanOrEqualTo(ScreenRect(view.GetComponent<ScrollRect>().viewport).xMin));
-        }
         internal static LayoutReadinessReport Report(bool canOpen, params LayoutReadinessFailure[] failures)
         {
-            var summary = Construct<LayoutReadinessSummary>(0, 0);
-            return Construct<LayoutReadinessReport>(canOpen, Array.Empty<StationReadiness>(), failures, summary, summary, summary);
+            // Match category counts to the injected state; extra invalid stations keep valid peers.
+            // 人工报告也包含有效设施；额外失败实例不能抹掉已经就绪的设施。
+            var ready = Construct<LayoutReadinessSummary>(1, 1);
+            var affected = failures.Select(f => f.InstanceId).Distinct().Count();
+            var coffee = Construct<LayoutReadinessSummary>(canOpen ? 1 + affected : Math.Max(1, affected), canOpen ? 1 : 0);
+            return Construct<LayoutReadinessReport>(canOpen, Array.Empty<StationReadiness>(), failures, ready, coffee, ready);
         }
         internal static LayoutReadinessFailure Failure(LayoutReadinessSeverity severity, LayoutReadinessFailureCode code, int index) =>
             Construct<LayoutReadinessFailure>(severity, code, (LayoutStationType?)LayoutStationType.CoffeeMachine, "private-" + index,

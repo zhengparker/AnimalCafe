@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System.Collections;
 using System.Linq;
 using System.Reflection;
@@ -45,137 +45,90 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         }
 
         [UnityTest]
-        public IEnumerator TimeButtons_FormOneContinuousStrip_WithoutOverlappingTouchRoots()
+        public IEnumerator TwoTimeControls_KeepSeparateAccessibleTouchRoots()
         {
-            using (var screen = new P8RReferenceLayoutTests.NativeScreenSize())
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            var profile = ChromeProfile.All[0];
+            screen.Resize(profile.Pixels);
+            yield return Load(profile);
+            var hud = Component<TimeControlPanel>();
+            var buttons = TimeButtons(hud);
+            var density = P8RMobileMetrics.For(hud).PixelsPerLogicalUnit;
+            AssertTargets(buttons, density, profile.SafePixels);
+            AssertNoOverlap(buttons);
+            AssertTimeStrip(hud, buttons, density, profile.Name);
+        }
+
+        [UnityTest]
+        public IEnumerator TwoTimeControls_StateRefreshesReuseFacesAndPreservePauseSpeedSemantics()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            var profile = ChromeProfile.All[0];
+            screen.Resize(profile.Pixels);
+            yield return Load(profile);
+            var hud = Component<TimeControlPanel>();
+            var buttons = TimeButtons(hud);
+            var pause = buttons[0]; var speed = buttons[1];
+            var faces = buttons.Select(button => button.image).ToArray();
+            var time = Component<AnimalCafe.Core.Time.GameTimeService>();
+            var density = P8RMobileMetrics.For(hud).PixelsPerLogicalUnit;
+            time.SetNormal();
+            AssertTimeStrip(hud, buttons, density, profile.Name + " normal");
+            Assert.That(buttons[0].image.sprite.name, Is.EqualTo("tab_selected"));
+            speed.onClick.Invoke();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(AnimalCafe.Core.Time.GameSpeed.Fast));
+            Assert.That(buttons[1].transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("resume_cocoa"));
+            Assert.That(speed.image.sprite.name, Is.EqualTo("tab_selected"));
+            speed.onClick.Invoke();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(AnimalCafe.Core.Time.GameSpeed.Paused));
+            Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("pause_cocoa"));
+            Assert.That(speed.interactable, Is.True);
+            Assert.That(buttons[1].transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("resume_cocoa"));
+            hud.SetDecorationPauseLock(true);
+            Assert.That(buttons.All(button => !button.interactable), Is.True);
+            Assert.That(buttons.All(button => button.image.sprite.name == "tab_unavailable"), Is.True);
+            Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("lock_muted"));
+            hud.SetDecorationPauseLock(false);
+            hud.enabled = false; hud.enabled = true;
+            Assert.That(pause.interactable, Is.True);
+            Assert.That(speed.interactable, Is.True, "Unlock preserves the still-paused service.");
+            pause.onClick.Invoke();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(AnimalCafe.Core.Time.GameSpeed.Normal));
+            Assert.That(buttons.Select(button => button.image), Is.EqualTo(faces));
+            AssertTimeStrip(hud, buttons, density, profile.Name + " resumed");
+        }
+
+        [UnityTest]
+        public IEnumerator TwoTimeControls_ResizeReusesStateFacesAndHitTargets()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            var portrait = ChromeProfile.All[0]; var landscape = ChromeProfile.All[2];
+            screen.Resize(portrait.Pixels);
+            yield return Load(portrait);
+            var hud = Component<TimeControlPanel>();
+            var buttons = TimeButtons(hud);
+            buttons[1].onClick.Invoke();
+            var faces = buttons.Select(button => button.image).ToArray();
+            var strip = hud.transform.Find("P8RTimeStrip");
+            foreach (var profile in new[] { landscape, portrait })
             {
-                var profile = ChromeProfile.All[0];
                 screen.Resize(profile.Pixels);
-                yield return Load(profile);
-                var hud = Component<TimeControlPanel>();
-                var buttons = new[] { "pauseButton", "normalButton", "fastButton" }
-                    .Select(name => Field<Button>(hud, name)).ToArray();
+                P8RMobileMetrics.EditorLogicalViewportOverride = profile.Logical;
+                foreach (var area in Components<SafeAreaContainer>())
+                {
+                    area.AutoApplyRuntimeSafeArea = false;
+                    area.ApplySafeArea(profile.SafePixels, profile.Pixels);
+                }
+                yield return Settle();
                 var density = P8RMobileMetrics.For(hud).PixelsPerLogicalUnit;
                 AssertTargets(buttons, density, profile.SafePixels);
                 AssertNoOverlap(buttons);
                 AssertTimeStrip(hud, buttons, density, profile.Name);
+                Assert.That(buttons[1].transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("resume_cocoa"));
+                Assert.That(hud.transform.Find("P8RTimeStrip"), Is.SameAs(strip));
+                Assert.That(buttons.Select(button => button.image), Is.EqualTo(faces));
             }
         }
-
-        [UnityTest]
-        public IEnumerator TimeStrip_StateRefreshesReusePresentation_AndPreserveIconStates()
-        {
-            using (var screen = new P8RReferenceLayoutTests.NativeScreenSize())
-            {
-                var profile = ChromeProfile.All[0];
-                screen.Resize(profile.Pixels);
-                yield return Load(profile);
-                var hud = Component<TimeControlPanel>();
-                var pause = Field<Button>(hud, "pauseButton");
-                var normal = Field<Button>(hud, "normalButton");
-                var fast = Field<Button>(hud, "fastButton");
-                var buttons = new[] { pause, normal, fast };
-                var density = P8RMobileMetrics.For(hud).PixelsPerLogicalUnit;
-
-                normal.onClick.Invoke();
-                yield return null;
-                AssertTimeStrip(hud, buttons, density, profile.Name + " normal");
-                Assert.That(normal.image.sprite.name, Is.EqualTo("tab_selected"));
-                Assert.That(pause.image.sprite.name, Is.EqualTo("tab_idle"));
-                Assert.That(fast.image.sprite.name, Is.EqualTo("tab_idle"));
-
-                fast.onClick.Invoke();
-                yield return null;
-                AssertTimeStrip(hud, buttons, density, profile.Name + " fast");
-                Assert.That(fast.image.sprite.name, Is.EqualTo("tab_selected"));
-
-                pause.onClick.Invoke();
-                yield return null;
-                AssertTimeStrip(hud, buttons, density, profile.Name + " paused");
-                Assert.That(pause.image.sprite.name, Is.EqualTo("tab_selected"));
-                Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name,
-                    Is.EqualTo("resume_cocoa"));
-
-                hud.SetDecorationPauseLock(true);
-                Canvas.ForceUpdateCanvases();
-                AssertTimeStrip(hud, buttons, density, profile.Name + " locked");
-                Assert.That(buttons.All(button => !button.interactable), Is.True);
-                Assert.That(buttons.All(button => button.image.sprite.name == "tab_unavailable"), Is.True);
-                Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name,
-                    Is.EqualTo("lock_muted"));
-
-                hud.SetDecorationPauseLock(false);
-                hud.enabled = false;
-                hud.enabled = true;
-                Canvas.ForceUpdateCanvases();
-                AssertTimeStrip(hud, buttons, density, profile.Name + " re-enabled");
-                Assert.That(buttons.All(button => button.interactable), Is.True);
-                AssertInk(pause.transform.Find("Icon").GetComponent<Image>(), 18f, density);
-                AssertInk(normal.transform.Find("Icon").GetComponent<Image>(), 18f, density);
-                AssertInk(fast.transform.Find("Icon").GetComponent<Image>(), 26f, density);
-            }
-        }
-
-        [UnityTest]
-        public IEnumerator TimeStrip_PortraitLandscapePortraitResize_ReusesStateLayoutAndHitTargets()
-        {
-            using (var screen = new P8RReferenceLayoutTests.NativeScreenSize())
-            {
-                var portrait = ChromeProfile.All[0];
-                var landscape = ChromeProfile.All[2];
-                screen.Resize(portrait.Pixels);
-                yield return Load(portrait);
-                var hud = Component<TimeControlPanel>();
-                var buttons = new[] { "pauseButton", "normalButton", "fastButton" }
-                    .Select(name => Field<Button>(hud, name)).ToArray();
-                buttons[2].onClick.Invoke();
-                yield return null;
-                AssertTimeStrip(hud, buttons, P8RMobileMetrics.For(hud).PixelsPerLogicalUnit,
-                    portrait.Name + " before resize");
-
-                var hudId = hud.GetEntityId();
-                var stripId = hud.transform.Find("P8RTimeStrip").GetEntityId();
-                var separatorIds = hud.transform.Find("P8RTimeStrip").Cast<Transform>()
-                    .Where(child => child.name.StartsWith("P8RTimeSeparator"))
-                    .OrderBy(child => child.name).Select(child => child.GetEntityId()).ToArray();
-                var clipIds = buttons.Select(button =>
-                    button.transform.Find("P8RTimeSegmentClip").GetEntityId()).ToArray();
-                var faceIds = buttons.Select(button => button.image.GetEntityId()).ToArray();
-
-                foreach (var profile in new[] { landscape, portrait })
-                {
-                    screen.Resize(profile.Pixels);
-                    P8RMobileMetrics.EditorLogicalViewportOverride = profile.Logical;
-                    foreach (var area in Components<SafeAreaContainer>())
-                    {
-                        area.AutoApplyRuntimeSafeArea = false;
-                        area.ApplySafeArea(profile.SafePixels, profile.Pixels);
-                    }
-
-                    yield return Settle();
-                    Assert.That(hud.GetEntityId(), Is.EqualTo(hudId),
-                        profile.Name + ": resize must keep the same HUD instance.");
-                    Assert.That(new Vector2(Screen.width, Screen.height), Is.EqualTo(profile.Pixels), profile.Name);
-                    var density = P8RMobileMetrics.For(hud).PixelsPerLogicalUnit;
-                    AssertTargets(buttons, density, profile.SafePixels);
-                    AssertNoOverlap(buttons);
-                    AssertTimeStrip(hud, buttons, density, profile.Name + " same-scene resize");
-                    Assert.That(buttons[2].image.sprite.name, Is.EqualTo("tab_selected"),
-                        profile.Name + ": resize preserves the active 2x state.");
-                    Assert.That(hud.transform.Find("P8RTimeStrip").GetEntityId(), Is.EqualTo(stripId), profile.Name);
-                    Assert.That(hud.transform.Find("P8RTimeStrip").Cast<Transform>()
-                        .Where(child => child.name.StartsWith("P8RTimeSeparator"))
-                        .OrderBy(child => child.name).Select(child => child.GetEntityId()),
-                        Is.EqualTo(separatorIds), profile.Name + ": separators are reused.");
-                    Assert.That(buttons.Select(button =>
-                        button.transform.Find("P8RTimeSegmentClip").GetEntityId()),
-                        Is.EqualTo(clipIds), profile.Name + ": clips are reused.");
-                    Assert.That(buttons.Select(button => button.image.GetEntityId()),
-                        Is.EqualTo(faceIds), profile.Name + ": state/press graphics are reused.");
-                }
-            }
-        }
-
         [UnityTest]
         public IEnumerator CatalogueTabs_RestoreAdjacentEqualWidthFaces_AfterModeSwitch()
         {
@@ -309,65 +262,42 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var fast = Field<Button>(hud, "fastButton");
             var mode = hud.transform.Find("DecorationModeButton").GetComponent<Button>();
             var density = P8RMobileMetrics.For(hud).PixelsPerLogicalUnit;
-            var timeButtons = new[] { pause, normal, fast };
+            var timeButtons = new[] { normal, fast };
 
             AssertTargets(timeButtons.Append(mode).ToArray(), density, profile.SafePixels);
             AssertNoOverlap(timeButtons.Append(mode).ToArray());
             AssertTimeStrip(hud, timeButtons, density, profile.Name);
-            AssertFace(mode, 40f, density);
-            AssertInk(pause.transform.Find("Icon").GetComponent<Image>(), 18f, density);
-            AssertInk(normal.transform.Find("Icon").GetComponent<Image>(), 18f, density);
-            AssertInk(fast.transform.Find("Icon").GetComponent<Image>(), 26f, density);
+            Assert.That(Box(mode.image).height / density, Is.EqualTo(48f).Within(.2f));
+            AssertInk(normal.transform.Find("Icon").GetComponent<Image>(), 20f, density);
             AssertInk(mode.transform.Find("Icon").GetComponent<Image>(), 20f, density);
             var normalInk = P8RCompleteFlowTests.MeasuredInk(normal.transform.Find("Icon").GetComponent<Image>());
             var fastInk = P8RCompleteFlowTests.MeasuredInk(fast.transform.Find("Icon").GetComponent<Image>());
-            Assert.That(fastInk.height / normalInk.height, Is.InRange(.86f, 1.02f),
-                profile.Name + ": compact 2x keeps the same optical height as 1x.");
-
+            Assert.That(fastInk.height, Is.EqualTo(normalInk.height).Within(.2f * density));
+            Assert.That(fastInk.width / density, Is.LessThanOrEqualTo(36.1f));
             var badge = hud.transform.Find("P8RModeBadge").GetComponentInChildren<TMP_Text>(true);
             AssertFont(badge, 14f, density, profile.Name + " mode badge");
             var badgeBox = Box(badge.transform.parent);
-            if (badgeBox.xMax < Box(pause).xMin)
+            if (badgeBox.xMax < Box(normal).xMin)
             {
-                Assert.That(badgeBox.center.y, Is.EqualTo(Box(pause).center.y).Within(1f),
+                Assert.That(badgeBox.center.y, Is.EqualTo(Box(normal).center.y).Within(1f),
                     profile.Name + ": wide badge and time roots share one visual row.");
             }
             else
             {
-                Assert.That(badgeBox.yMin, Is.GreaterThanOrEqualTo(Box(pause).yMax - 1f),
+                Assert.That(badgeBox.yMin, Is.GreaterThanOrEqualTo(Box(normal).yMax - 1f),
                     profile.Name + ": narrow badge remains above the time roots.");
             }
 
             var readiness = Component<ValidationMessageView>();
+            Canvas.ForceUpdateCanvases();
+            P8RCompleteFlowTests.AssertChecklist(readiness);
             var card = Box(readiness);
             AssertInside(card, profile.SafePixels, profile.Name + " readiness");
-            Assert.That(card.height / density, Is.InRange(47.9f, 52.1f),
-                profile.Name + ": collapsed readiness is compact without shrinking its disclosure target.");
+            Assert.That(card.xMin, Is.EqualTo(Box(hud.transform.Find("P8RModeBadge")).xMin).Within(1f));
             foreach (var button in timeButtons.Append(mode))
-            {
-                Assert.That(card.Overlaps(Box(button)), Is.False,
-                    profile.Name + ": readiness overlaps HUD " + button.name);
-            }
-
-            var message = Field<TMP_Text>(readiness, "messageLabel");
-            var status = Field<Image>(readiness, "statusIcon");
-            var disclosure = Field<Button>(readiness, "disclosureButton");
-            AssertFont(message, 14f, density, profile.Name + " readiness body");
-            AssertInk(status, 20f, density);
-            AssertTargets(new[] { disclosure }, density, profile.SafePixels);
-            AssertFace(disclosure, 34f, density);
-            AssertInk(disclosure.transform.Find("Icon").GetComponent<Image>(), 20f, density);
-            AssertFont(Field<TMP_Text>(readiness, "disclosureLabel"), 14f, density,
-                profile.Name + " disclosure copy");
-
-            disclosure.onClick.Invoke();
-            Canvas.ForceUpdateCanvases();
-            Assert.That(readiness.IsDetailsExpanded, Is.True, profile.Name);
-            Assert.That(Box(readiness).height / density, Is.LessThanOrEqualTo(112.1f),
-                profile.Name + ": expanded diagnostics use a compact scrolling card.");
-            AssertTargets(new[] { disclosure }, density, profile.SafePixels);
-            AssertInside(Box(readiness), profile.SafePixels, profile.Name + " expanded readiness");
-            disclosure.onClick.Invoke();
+                Assert.That(card.Overlaps(Box(button)), Is.False, "Checklist overlaps HUD " + button.name);
+            foreach (var label in readiness.GetComponentsInChildren<TMP_Text>().Where(label => label.enabled))
+                AssertFont(label, 14f, density, profile.Name + " readiness body");
         }
 
         private IEnumerator AssertFloatingActionsAndInstruction(ChromeProfile profile)
@@ -379,15 +309,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var pause = Field<Button>(hud, "pauseButton");
             var normal = Field<Button>(hud, "normalButton");
             var fast = Field<Button>(hud, "fastButton");
-            var timeButtons = new[] { pause, normal, fast };
-            var normalInk = P8RCompleteFlowTests.MeasuredInk(normal.transform.Find("Icon").GetComponent<Image>());
-            var fastInk = P8RCompleteFlowTests.MeasuredInk(fast.transform.Find("Icon").GetComponent<Image>());
-            AssertInk(normal.transform.Find("Icon").GetComponent<Image>(), 18f,
-                P8RMobileMetrics.For(hud).PixelsPerLogicalUnit);
-            AssertInk(fast.transform.Find("Icon").GetComponent<Image>(), 26f,
-                P8RMobileMetrics.For(hud).PixelsPerLogicalUnit);
-            Assert.That(fastInk.height / normalInk.height, Is.InRange(.86f, 1.02f),
-                profile.Name + ": decoration-lock state refresh preserves 1x/2x optical balance.");
+            var timeButtons = new[] { normal, fast };
+            Assert.That(timeButtons.All(button => !button.interactable), Is.True);
             var catalogue = Component<DecorationCatalogueView>();
             var tabs = Component<DecorationModeTabsView>();
             var furnitureTab = Field<Button>(tabs, "furnitureButton");
@@ -410,10 +333,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 profile.Name + " re-enabled HUD");
             AssertFaceLifecycle(furnitureTab, profile.Name + " re-enabled colored tab");
             AssertFaceLifecycle(pickup, profile.Name + " re-enabled TextButton");
-            AssertInk(normal.transform.Find("Icon").GetComponent<Image>(), 18f,
-                P8RMobileMetrics.For(hud).PixelsPerLogicalUnit);
-            AssertInk(fast.transform.Find("Icon").GetComponent<Image>(), 26f,
-                P8RMobileMetrics.For(hud).PixelsPerLogicalUnit);
+            Assert.That(normal.transform.Find("Label").gameObject.activeSelf, Is.False);
             AssertTabFace(furnitureTab, P8RMobileMetrics.For(tabs).PixelsPerLogicalUnit);
             var pickupFace = Box(pickup.image);
             var pickupDensity = P8RMobileMetrics.For(catalogue).PixelsPerLogicalUnit;
@@ -527,109 +447,43 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             AssertInside(face, Box(button), button.name + " face inside touch root");
         }
 
-        private static void AssertTimeStrip(
-            TimeControlPanel hud,
-            Button[] buttons,
-            float density,
-            string profile)
+        private static Button[] TimeButtons(TimeControlPanel hud) => new[] { "normalButton", "fastButton" }
+            .Select(name => Field<Button>(hud, name)).ToArray();
+        private static TMP_Text SpeedLabel(TimeControlPanel hud) => Field<Button>(hud, "normalButton")
+            .transform.Find("Label").GetComponent<TMP_Text>();
+
+        private static void AssertTimeStrip(TimeControlPanel hud, Button[] buttons, float density, string profile)
         {
-            var strips = hud.GetComponentsInChildren<RectTransform>(true)
+            var containers = hud.GetComponentsInChildren<RectTransform>(true)
                 .Where(rect => rect.name == "P8RTimeStrip").ToArray();
-            Assert.That(strips.Length, Is.EqualTo(1),
-                profile + ": time state refresh must reuse one shared strip background.");
-            var strip = strips[0];
-            var stripImage = strip.GetComponent<Image>();
-            Assert.That(stripImage, Is.Not.Null, profile + ": shared time strip background Image");
-            Assert.That(stripImage.raycastTarget, Is.False,
-                profile + ": shared time strip cannot steal button raycasts.");
-            Assert.That(stripImage.sprite, Is.Not.Null);
-            Assert.That(stripImage.sprite.name, Is.EqualTo("tab_idle"),
-                profile + ": shared time strip keeps the original B palette.");
-            Assert.That(strip.gameObject.layer, Is.EqualTo(hud.gameObject.layer),
-                profile + ": runtime strip inherits the HUD layer.");
-
-            var ordered = buttons.OrderBy(button => Box(button).xMin).ToArray();
-            var stripBox = Box(strip);
-            Assert.That(stripBox.width / density, Is.EqualTo(144f + 2f / 64f).Within(.2f),
-                profile + ": one strip spans all three 48-unit segments and both subpixel guards.");
-            Assert.That(stripBox.height / density, Is.EqualTo(32f).Within(.2f),
-                profile + ": shared strip keeps the approved visible height.");
-            Assert.That(stripBox.xMin, Is.EqualTo(Box(ordered[0]).xMin).Within(1f), profile);
-            Assert.That(stripBox.xMax, Is.EqualTo(Box(ordered[2]).xMax).Within(1f), profile);
-            Assert.That(stripBox.center.y, Is.EqualTo(Box(ordered[1]).center.y).Within(1f), profile);
-
-            foreach (var button in ordered)
+            Assert.That(containers.Length, Is.EqualTo(1), profile + ": reusable time container");
+            Assert.That(buttons.Length, Is.EqualTo(2));
+            Assert.That(Field<Button>(hud, "pauseButton").gameObject.activeInHierarchy, Is.False);
+            Assert.That(containers[0].GetComponentsInChildren<Button>(), Has.Length.EqualTo(2));
+            Assert.That(containers[0].gameObject.layer, Is.EqualTo(hud.gameObject.layer));
+            AssertNoOverlap(buttons);
+            foreach (var button in buttons)
             {
+                Assert.That(button.gameObject.activeInHierarchy, Is.True);
                 var rootImage = button.GetComponent<Image>();
-                Assert.That(rootImage, Is.Not.Null, profile + ": time root Image");
-                Assert.That(rootImage.color.a, Is.Zero.Within(.001f),
-                    profile + ": time root remains visually transparent.");
-                Assert.That(rootImage.raycastTarget, Is.True,
-                    profile + ": 48-unit time root retains the touch raycast.");
-                Assert.That(button.image, Is.Not.Null, profile + ": time state/press graphic");
-                Assert.That(button.image, Is.Not.SameAs(rootImage), profile);
-                Assert.That(button.image.raycastTarget, Is.False,
-                    profile + ": clipped state graphic cannot steal the root raycast.");
-                Assert.That(button.image.gameObject.layer, Is.EqualTo(button.gameObject.layer), profile);
-                Assert.That(button.GetComponentsInChildren<Image>(true)
-                    .Count(image => image.name == "P8RFace"), Is.EqualTo(1),
-                    profile + ": refresh must reuse one time state/press graphic.");
-
-                var clips = button.GetComponentsInChildren<RectMask2D>(true)
-                    .Where(mask => mask.name == "P8RTimeSegmentClip").ToArray();
-                Assert.That(clips.Length, Is.EqualTo(1),
-                    profile + ": refresh must reuse one clip for each strip segment.");
-                Assert.That(clips[0].gameObject.layer, Is.EqualTo(button.gameObject.layer), profile);
-                var icon = button.transform.Find("Icon");
-                Assert.That(icon, Is.Not.Null, profile + ": time icon");
-                Assert.That(clips[0].transform.GetSiblingIndex(), Is.LessThan(icon.GetSiblingIndex()),
-                    profile + ": clipped background must render behind the icon.");
-                var clip = Box(clips[0]);
-                Assert.That(clip.width, Is.EqualTo(Box(button).width).Within(1f),
-                    profile + ": each clip fills its 48-unit segment.");
-                Assert.That(clip.height / density, Is.EqualTo(32f).Within(.2f),
-                    profile + ": each clip shares the strip height.");
-                AssertInside(clip, Box(button), profile + ": segment clip inside touch root");
-                AssertInside(clip, stripBox, profile + ": segment clip inside shared strip");
-
-                var face = Box(button.image);
-                Assert.That(face.width, Is.EqualTo(stripBox.width).Within(1f),
-                    profile + ": each clip samples the same full-width state/press sprite.");
-                Assert.That(face.height / density, Is.EqualTo(32f).Within(.2f),
-                    profile + ": state/press sprite shares the strip height.");
-                Assert.That(face.xMin, Is.EqualTo(stripBox.xMin).Within(1f), profile);
-                Assert.That(face.xMax, Is.EqualTo(stripBox.xMax).Within(1f), profile);
-                var label = button.transform.Find("Label");
-                if (label != null)
-                {
-                    Assert.That(label.gameObject.activeSelf, Is.False,
-                        profile + ": time strip remains icon-only.");
-                }
+                Assert.That(rootImage.raycastTarget, Is.True);
+                Assert.That(rootImage.color.a, Is.Zero.Within(.001f));
+                Assert.That(button.image, Is.Not.SameAs(rootImage));
+                Assert.That(button.image.raycastTarget, Is.False);
+                Assert.That(button.image.sprite.name, Is.EqualTo("tab_idle").Or.EqualTo("tab_selected").Or.EqualTo("tab_unavailable"),
+                    profile + ": retain the original time-control skin family");
+                Assert.That(button.GetComponentsInChildren<Image>(true).Count(image => image.name == "P8RFace"), Is.EqualTo(1));
+                AssertInside(Box(button.image), Box(button), profile + ": face inside touch target");
+                Assert.That(Box(button).width / density, Is.GreaterThanOrEqualTo(47.9f));
+                Assert.That(Box(button).height / density, Is.GreaterThanOrEqualTo(47.9f));
             }
-
-            var separators = strip.GetComponentsInChildren<Image>(true)
-                .Where(image => image.name.StartsWith("P8RTimeSeparator"))
-                .OrderBy(image => Box(image).center.x).ToArray();
-            Assert.That(separators.Length, Is.EqualTo(2),
-                profile + ": the three segments need exactly two reusable separators.");
-            for (var index = 0; index < separators.Length; index++)
-            {
-                var separator = separators[index];
-                var separatorBox = Box(separator);
-                var boundary = (Box(ordered[index]).xMax + Box(ordered[index + 1]).xMin) * .5f;
-                Assert.That(separator.raycastTarget, Is.False,
-                    profile + ": separator cannot steal button raycasts.");
-                Assert.That(separator.gameObject.layer, Is.EqualTo(strip.gameObject.layer), profile);
-                Assert.That(separatorBox.width / density, Is.InRange(.5f, 1.1f),
-                    profile + ": separator stays visually thin.");
-                Assert.That(separatorBox.height, Is.LessThanOrEqualTo(stripBox.height + 1f), profile);
-                Assert.That(separatorBox.center.x, Is.EqualTo(boundary).Within(1f),
-                    profile + ": separator is centered between adjacent hit roots.");
-                Assert.That(separator.color, Is.EqualTo(P8RAppearance.Cocoa),
-                    profile + ": separator keeps the original B cocoa palette.");
-            }
+            Assert.That(SpeedLabel(hud).gameObject.activeInHierarchy, Is.False);
+            var fastInk = P8RCompleteFlowTests.MeasuredInk(buttons[1].transform.Find("Icon").GetComponent<Image>());
+            Assert.That(fastInk.height / density, Is.EqualTo(20f).Within(.25f), "Fast keeps the single triangle's visible height.");
+            Assert.That(fastInk.width / density, Is.LessThanOrEqualTo(36.1f));
+            Assert.That(buttons[1].transform.Find("Label").gameObject.activeSelf, Is.False);
+            AssertInk(buttons[0].transform.Find("Icon").GetComponent<Image>(), 20, density);
         }
-
         private static void AssertTabFace(Button button, float density)
         {
             AssertFaceLifecycle(button, button.name);

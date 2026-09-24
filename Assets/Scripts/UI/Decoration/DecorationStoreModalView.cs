@@ -35,6 +35,9 @@ namespace AnimalCafe.UI.Decoration
         private bool completionConsumed;
         private Coroutine presentationClosedRoutine;
         private bool refreshingMobileLayout;
+        private bool acknowledgementOnly;
+        private string originalConfirmText;
+        private bool originalConfirmIconActive;
         private AnimalCafe.UI.P8R.P8RModalSafeAreaHost mobileSafeAreaHost;
 
         public event Action ConfirmRequested;
@@ -112,6 +115,7 @@ namespace AnimalCafe.UI.Decoration
                 throw new ArgumentNullException(nameof(definition));
             }
 
+            SetAcknowledgementMode(false);
             completionConsumed = false;
             if (titleLabel != null)
             {
@@ -136,6 +140,7 @@ namespace AnimalCafe.UI.Decoration
                 throw new ArgumentNullException(nameof(definition));
             }
 
+            SetAcknowledgementMode(false);
             completionConsumed = false;
             if (titleLabel != null)
             {
@@ -163,6 +168,7 @@ namespace AnimalCafe.UI.Decoration
                 _ => throw new ArgumentOutOfRangeException(nameof(kind), kind,
                     "Store confirmation requires a functional surface item.")
             };
+            SetAcknowledgementMode(false);
             completionConsumed = false;
             if (titleLabel != null)
             {
@@ -183,11 +189,55 @@ namespace AnimalCafe.UI.Decoration
             RefreshP8RContentLayout();
         }
 
+        public void ShowBlockedContents(string contents)
+        {
+            SetAcknowledgementMode(true);
+            completionConsumed = false;
+            if (titleLabel != null) titleLabel.text = appearance != null ? appearance.Text("store.blocked_title") : "Clear the counter first";
+            if (bodyLabel != null) bodyLabel.text = (appearance != null ? appearance.Text("store.blocked_body")
+                : "Move or store these items before storing this counter:") + "\n" + contents;
+            modalView.Open();
+            RefreshP8RContentLayout();
+        }
+
+        private void SetAcknowledgementMode(bool value)
+        {
+            acknowledgementOnly = value;
+            var label = confirmButton.transform.Find("Label")?.GetComponent<TMP_Text>();
+            var icon = confirmButton.transform.Find("Icon");
+            if (originalConfirmText == null)
+            {
+                originalConfirmText = label != null ? label.text : string.Empty;
+                originalConfirmIconActive = icon != null && icon.gameObject.activeSelf;
+            }
+            if (appearance != null)
+                appearance.Button(confirmButton, value ? "confirm" : "store", value ? "primary" : "destructive");
+            cancelButton.gameObject.SetActive(!value);
+            if (label != null) label.text = value ? (appearance != null ? appearance.Text("store.got_it") : "Got it") : originalConfirmText;
+            if (icon != null) icon.gameObject.SetActive(!value && originalConfirmIconActive);
+        }
+
         private void RefreshP8RContentLayout()
         {
             if (appearance == null || refreshingMobileLayout) return;
             refreshingMobileLayout = true;
-            try { AnimalCafe.UI.P8R.P8RButtonLayout.Modal(ContentRect, titleLabel, bodyLabel, cancelButton, confirmButton); }
+            try
+            {
+                AnimalCafe.UI.P8R.P8RButtonLayout.Modal(ContentRect, titleLabel, bodyLabel, cancelButton, confirmButton);
+                if (acknowledgementOnly)
+                {
+                    // The existing cream card and confirm button serve as a single acknowledgement.
+                    // 复用现有底板和按钮，只居中唯一关闭入口，不创建第二套Modal。
+                    var rect = (RectTransform)confirmButton.transform;
+                    var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
+                    rect.anchoredPosition = new Vector2(0, metrics.Units(36));
+                    rect.sizeDelta = new Vector2(Mathf.Min(metrics.Units(160), ContentRect.rect.width - metrics.Units(24)), metrics.Units(48));
+                    AnimalCafe.UI.P8R.P8RButtonLayout.TextOnly(confirmButton);
+                    // The acknowledgement uses the existing primary skin and a full readable face.
+                    // 说明弹窗不是危险操作：复用主按钮素材，底板填满原点击区域。
+                    confirmButton.image.rectTransform.sizeDelta = rect.sizeDelta;
+                }
+            }
             finally { refreshingMobileLayout = false; }
         }
 
@@ -291,7 +341,8 @@ namespace AnimalCafe.UI.Decoration
             }
 
             completionConsumed = true;
-            ConfirmRequested?.Invoke();
+            if (acknowledgementOnly) DismissRequested?.Invoke();
+            else ConfirmRequested?.Invoke();
         }
 
         private void HandleCancel()

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -236,87 +236,49 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         }
 
         [UnityTest]
-        public IEnumerator MouseWheelOverExpandedReadiness_ScrollsMessageWithoutZoomingCamera()
+        public IEnumerator MouseWheelOverBlockedChecklist_ZoomsScene()
         {
             var readiness = Object.FindFirstObjectByType<ValidationMessageView>();
-            Assert.That(readiness, Is.Not.Null);
             readiness.ShowReadiness(ScrollableReadinessReport());
-            readiness.GetComponentsInChildren<Button>(true)
-                .Single(button => button.name == "ReadinessDetails").onClick.Invoke();
             Canvas.ForceUpdateCanvases();
             yield return null;
-            Canvas.ForceUpdateCanvases();
-
-            var scroll = readiness.GetComponent<ScrollRect>();
-            Assert.That(readiness.IsDetailsExpanded, Is.True);
-            Assert.That(scroll.vertical, Is.True);
-            Assert.That(scroll.content.rect.height, Is.GreaterThan(scroll.viewport.rect.height));
-            scroll.StopMovement();
-            scroll.verticalNormalizedPosition = 1f;
-            Canvas.ForceUpdateCanvases();
-
-            var mouse = InputSystem.AddDevice<Mouse>();
-            mouse.MakeCurrent();
-            try
-            {
-                var position = CenterOf(scroll.viewport);
-                AssertTopUiHitBelongsTo(position, readiness.transform);
-                yield return QueueMouseStateAndWaitForConsumption(mouse,
-                    new MouseState { position = position });
-                var camera = UnityEngine.Camera.main;
-                var cameraBefore = camera.orthographicSize;
-                var contentBefore = scroll.content.anchoredPosition;
-                yield return QueueMouseStateAndWaitForConsumption(mouse, new MouseState
-                {
-                    position = position,
-                    scroll = new Vector2(0f, -1f)
-                });
-                var deadline = Time.realtimeSinceStartup + 2f;
-                while (Vector2.Distance(scroll.content.anchoredPosition, contentBefore) < .01f
-                       && Time.realtimeSinceStartup < deadline)
-                    yield return null;
-
-                Assert.That(Vector2.Distance(scroll.content.anchoredPosition, contentBefore),
-                    Is.GreaterThan(.01f), "The hovered expanded readiness message must receive the real wheel.");
-                Assert.That(camera.orthographicSize, Is.EqualTo(cameraBefore).Within(.0001f),
-                    "Readiness owns its hovered wheel; the same input must not also zoom the scene.");
-            }
-            finally
-            {
-                if (mouse.added) InputSystem.RemoveDevice(mouse);
-            }
+            P8RCompleteFlowTests.AssertChecklist(readiness);
+            var position = CenterOf((RectTransform)readiness.transform.Find("ChecklistRow1"));
+            var hits = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = position }, hits);
+            Assert.That(hits, Is.Empty, "The real checklist row must leave the scene wheel unobstructed.");
+            yield return AssertWheelZoomsOneStepAt(position);
         }
 
         [UnityTest]
-        public IEnumerator MouseWheelOverReadinessAtScrollLimit_DoesNotZoomCamera()
+        public IEnumerator MouseWheelOverRepeatedChecklist_ZoomsScene()
         {
             var readiness = Object.FindFirstObjectByType<ValidationMessageView>();
             readiness.ShowReadiness(ScrollableReadinessReport());
-            readiness.GetComponentsInChildren<Button>(true)
-                .Single(button => button.name == "ReadinessDetails").onClick.Invoke();
+            readiness.ShowReadiness(ScrollableReadinessReport());
             Canvas.ForceUpdateCanvases();
             yield return null;
-            var scroll = readiness.GetComponent<ScrollRect>();
-            scroll.StopMovement();
-            scroll.verticalNormalizedPosition = 0f;
-            Canvas.ForceUpdateCanvases();
-
-            yield return AssertWheelDoesNotZoomAt(CenterOf(scroll.viewport));
+            P8RCompleteFlowTests.AssertChecklist(readiness);
+            var position = CenterOf((RectTransform)readiness.transform.Find("ChecklistRow1"));
+            var hits = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = position }, hits);
+            Assert.That(hits, Is.Empty, "The real checklist row must leave the scene wheel unobstructed.");
+            yield return AssertWheelZoomsOneStepAt(position);
         }
 
         [UnityTest]
-        public IEnumerator MouseWheelOverVisibleNonScrollableReadiness_DoesNotZoomCamera()
+        public IEnumerator MouseWheelOverHealthyChecklist_ZoomsScene()
         {
             var readiness = Object.FindFirstObjectByType<ValidationMessageView>();
-            readiness.ShowReadiness(ScrollableReadinessReport());
+            readiness.ShowReadiness(P8RCompleteFlowTests.Report(true));
             Canvas.ForceUpdateCanvases();
             yield return null;
-
-            var scroll = readiness.GetComponent<ScrollRect>();
-            Assert.That(readiness.IsVisible, Is.True);
-            Assert.That(readiness.IsDetailsExpanded, Is.False);
-            Assert.That(scroll.vertical, Is.False);
-            yield return AssertWheelDoesNotZoomAt(CenterOf((RectTransform)readiness.transform));
+            P8RCompleteFlowTests.AssertChecklist(readiness);
+            var position = CenterOf((RectTransform)readiness.transform.Find("ChecklistRow1"));
+            var hits = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = position }, hits);
+            Assert.That(hits, Is.Empty, "The real checklist row must leave the scene wheel unobstructed.");
+            yield return AssertWheelZoomsOneStepAt(position);
         }
 
         [UnityTest]
@@ -357,84 +319,55 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         }
 
         [UnityTest]
-        public IEnumerator NormalMode_MouseWheelOverExpandedReadiness_ScrollsWithoutZoomingCamera()
-        {
-            Object.FindFirstObjectByType<DecorationModeController>().ExitDecorationMode();
-            var readiness = Object.FindFirstObjectByType<ValidationMessageView>();
-            readiness.ShowReadiness(ScrollableReadinessReport());
-            readiness.GetComponentsInChildren<Button>(true)
-                .Single(button => button.name == "ReadinessDetails").onClick.Invoke();
-            Canvas.ForceUpdateCanvases();
-            yield return null;
-            Canvas.ForceUpdateCanvases();
-
-            var scroll = readiness.GetComponent<ScrollRect>();
-            scroll.StopMovement();
-            scroll.verticalNormalizedPosition = 1f;
-            var mouse = InputSystem.AddDevice<Mouse>();
-            mouse.MakeCurrent();
-            try
-            {
-                var position = CenterOf(scroll.viewport);
-                AssertTopUiHitBelongsTo(position, readiness.transform);
-                yield return QueueMouseStateAndWaitForConsumption(mouse,
-                    new MouseState { position = position });
-                var camera = UnityEngine.Camera.main;
-                var cameraBefore = camera.orthographicSize;
-                var contentBefore = scroll.content.anchoredPosition;
-                yield return QueueMouseStateAndWaitForConsumption(mouse, new MouseState
-                {
-                    position = position,
-                    scroll = new Vector2(0f, -1f)
-                });
-                var deadline = Time.realtimeSinceStartup + 2f;
-                while (Vector2.Distance(scroll.content.anchoredPosition, contentBefore) < .01f
-                       && Time.realtimeSinceStartup < deadline)
-                    yield return null;
-
-                Assert.That(Vector2.Distance(scroll.content.anchoredPosition, contentBefore),
-                    Is.GreaterThan(.01f));
-                Assert.That(camera.orthographicSize, Is.EqualTo(cameraBefore).Within(.0001f),
-                    "Normal camera input must also respect the hovered readiness owner.");
-            }
-            finally
-            {
-                if (mouse.added) InputSystem.RemoveDevice(mouse);
-            }
-        }
-
-        [UnityTest]
-        public IEnumerator NormalMode_MouseWheelOverReadinessAtScrollLimit_DoesNotZoomCamera()
-        {
-            Object.FindFirstObjectByType<DecorationModeController>().ExitDecorationMode();
-            var readiness = Object.FindFirstObjectByType<ValidationMessageView>();
-            readiness.ShowReadiness(ScrollableReadinessReport());
-            readiness.GetComponentsInChildren<Button>(true)
-                .Single(button => button.name == "ReadinessDetails").onClick.Invoke();
-            Canvas.ForceUpdateCanvases();
-            yield return null;
-            var scroll = readiness.GetComponent<ScrollRect>();
-            scroll.StopMovement();
-            scroll.verticalNormalizedPosition = 0f;
-            Canvas.ForceUpdateCanvases();
-
-            yield return AssertWheelDoesNotZoomAt(CenterOf(scroll.viewport));
-        }
-
-        [UnityTest]
-        public IEnumerator NormalMode_MouseWheelOverVisibleNonScrollableReadiness_DoesNotZoomCamera()
+        public IEnumerator NormalMode_MouseWheelOverBlockedChecklist_ZoomsScene()
         {
             Object.FindFirstObjectByType<DecorationModeController>().ExitDecorationMode();
             var readiness = Object.FindFirstObjectByType<ValidationMessageView>();
             readiness.ShowReadiness(ScrollableReadinessReport());
             Canvas.ForceUpdateCanvases();
             yield return null;
-
-            var scroll = readiness.GetComponent<ScrollRect>();
             Assert.That(readiness.IsVisible, Is.True);
-            Assert.That(readiness.IsDetailsExpanded, Is.False);
-            Assert.That(scroll.vertical, Is.False);
-            yield return AssertWheelDoesNotZoomAt(CenterOf((RectTransform)readiness.transform));
+            Assert.That(readiness.transform.Find("ChecklistRow0").gameObject.activeSelf, Is.False);
+            var position = CenterOf((RectTransform)readiness.transform);
+            var hits = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = position }, hits);
+            Assert.That(hits, Is.Empty, "The real checklist row must leave the scene wheel unobstructed.");
+            yield return AssertWheelZoomsOneStepAt(position);
+        }
+
+        [UnityTest]
+        public IEnumerator NormalMode_MouseWheelOverRepeatedChecklist_ZoomsScene()
+        {
+            Object.FindFirstObjectByType<DecorationModeController>().ExitDecorationMode();
+            var readiness = Object.FindFirstObjectByType<ValidationMessageView>();
+            readiness.ShowReadiness(ScrollableReadinessReport());
+            readiness.ShowReadiness(ScrollableReadinessReport());
+            Canvas.ForceUpdateCanvases();
+            yield return null;
+            Assert.That(readiness.IsVisible, Is.True);
+            Assert.That(readiness.transform.Find("ChecklistRow0").gameObject.activeSelf, Is.False);
+            var position = CenterOf((RectTransform)readiness.transform);
+            var hits = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = position }, hits);
+            Assert.That(hits, Is.Empty, "The real checklist row must leave the scene wheel unobstructed.");
+            yield return AssertWheelZoomsOneStepAt(position);
+        }
+
+        [UnityTest]
+        public IEnumerator NormalMode_MouseWheelOverHealthyChecklist_ZoomsScene()
+        {
+            Object.FindFirstObjectByType<DecorationModeController>().ExitDecorationMode();
+            var readiness = Object.FindFirstObjectByType<ValidationMessageView>();
+            readiness.ShowReadiness(P8RCompleteFlowTests.Report(true));
+            Canvas.ForceUpdateCanvases();
+            yield return null;
+            Assert.That(readiness.IsVisible, Is.False);
+            Assert.That(readiness.transform.Find("ChecklistRow0").gameObject.activeSelf, Is.False);
+            var position = CenterOf((RectTransform)readiness.transform);
+            var hits = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current) { position = position }, hits);
+            Assert.That(hits, Is.Empty, "The real checklist row must leave the scene wheel unobstructed.");
+            yield return AssertWheelZoomsOneStepAt(position);
         }
 
         [UnityTest]
@@ -536,10 +469,82 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     (InteractionRole?)InteractionRole.Employee,
                     (GridPosition?)new GridPosition(2, 3 + index),
                     "Detached diagnostic cause")).ToArray();
-            var summary = Construct<LayoutReadinessSummary>(0, 0);
+            var summary = Construct<LayoutReadinessSummary>(2, 1);
             return Construct<LayoutReadinessReport>(false, Array.Empty<StationReadiness>(), failures,
                 summary, summary, summary);
         }
+
+        [UnityTest]
+        public IEnumerator NormalHudMouseDrag_StaysUiOwnedAndNextSceneDragWorks()
+        {
+            var controller = Object.FindFirstObjectByType<DecorationModeController>();
+            controller.ExitDecorationMode();
+            yield return null;
+            Assert.That(controller.IsOpen, Is.False);
+            var cameraController = Object.FindFirstObjectByType<AnimalCafe.Camera.CafeCameraController>();
+            Assert.That(cameraController.isActiveAndEnabled, Is.True);
+            var readiness = Object.FindFirstObjectByType<ValidationMessageView>();
+            Assert.That(readiness.IsVisible, Is.True);
+            Assert.That(readiness.transform.Find("ChecklistRow0").gameObject.activeSelf, Is.False);
+            var hud = Object.FindFirstObjectByType<AnimalCafe.UI.TimeControlPanel>();
+            // Use the actual HUD input target; the passive checklist is no longer an input owner.
+            // 保留真实 UI 按住拖出边界验证，改用现有 HUD 按钮。
+            var button = (Button)typeof(AnimalCafe.UI.TimeControlPanel)
+                .GetField("normalButton", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(hud);
+            var position = CenterOf((RectTransform)button.transform);
+            AssertTopUiHitBelongsTo(position, button.transform);
+            var mouse = InputSystem.AddDevice<Mouse>();
+            mouse.MakeCurrent();
+            try
+            {
+                yield return QueueMouseStateAndWaitForConsumption(mouse, new MouseState { position = position });
+                yield return null;
+                var camera = UnityEngine.Camera.main;
+                Assert.That(camera, Is.Not.Null);
+                var cameraBefore = camera.transform.position;
+                yield return QueueMouseStateAndWaitForConsumption(mouse,
+                    new MouseState { position = position }.WithButton(MouseButton.Left));
+                yield return null;
+                for (var step = 0; step < 4; step++)
+                {
+                    var delta = Vector2.up * 12f;
+                    position += delta;
+                    yield return QueueMouseStateAndWaitForConsumption(mouse,
+                        new MouseState { position = position, delta = delta }.WithButton(MouseButton.Left));
+                    yield return null;
+                }
+                // Holding a UI-owned gesture outside the panel must not hand it to the scene.
+                // 按住拖出 UI 后仍属于原来的 UI 手势。
+                var outside = FindScenePointOutsideUi();
+                yield return QueueMouseStateAndWaitForConsumption(mouse,
+                    new MouseState { position = outside, delta = outside - position }.WithButton(MouseButton.Left));
+                yield return null;
+                position = outside;
+                var cameraDistance = Vector3.Distance(cameraBefore, camera.transform.position);
+                yield return QueueMouseStateAndWaitForConsumption(mouse, new MouseState { position = position });
+                yield return null;
+                Assert.That(cameraDistance, Is.LessThan(.0001f), "Dragging the real HUD target must not pan the Camera.");
+
+                // Releasing UI ownership must allow a fresh scene gesture.
+                // 松手后新的场景拖动仍应正常移动 Camera。
+                position = FindScenePointOutsideUi();
+                cameraBefore = camera.transform.position;
+                yield return QueueMouseStateAndWaitForConsumption(mouse,
+                    new MouseState { position = position }.WithButton(MouseButton.Left));
+                yield return null;
+                position += Vector2.right * 20f;
+                yield return QueueMouseStateAndWaitForConsumption(mouse,
+                    new MouseState { position = position, delta = Vector2.right * 20f }.WithButton(MouseButton.Left));
+                yield return null;
+                Assert.That(Vector3.Distance(cameraBefore, camera.transform.position), Is.GreaterThan(.001f));
+                yield return QueueMouseStateAndWaitForConsumption(mouse, new MouseState { position = position });
+            }
+            finally
+            {
+                if (mouse.added) InputSystem.RemoveDevice(mouse);
+            }
+        }
+
 
         private static T Construct<T>(params object[] arguments) => (T)Activator.CreateInstance(
             typeof(T), BindingFlags.Instance | BindingFlags.NonPublic, null, arguments, null);

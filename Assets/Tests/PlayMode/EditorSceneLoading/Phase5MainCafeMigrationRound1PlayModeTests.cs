@@ -36,7 +36,7 @@ namespace AnimalCafe.Tests.PlayMode
             var firstMouse = InputSystem.AddDevice<Mouse>();
             try
             {
-                yield return Click(firstMouse, Find<Button>(firstScene, "PauseButton"));
+                yield return Click(firstMouse, Find<Button>(firstScene, "NormalButton"));
                 Assert.That(firstService.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
 
                 QueueMouseState(firstMouse, new Vector2(Screen.width * 0.1f, Screen.height * 0.8f), true);
@@ -59,8 +59,8 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(Find<SceneInteractionController>(secondScene, "Phase0_Runtime").CurrentSelection, Is.Null,
                     "The first physical release after reload must not complete a stale scene gesture.");
 
-                yield return Click(firstMouse, Find<Button>(secondScene, "NormalButton"));
-                Assert.That(secondService.CurrentSpeed, Is.EqualTo(GameSpeed.Normal),
+                yield return Click(firstMouse, Find<Button>(secondScene, "FastButton"));
+                Assert.That(secondService.CurrentSpeed, Is.EqualTo(GameSpeed.Fast),
                     "A fresh real UI click must work after a reload interrupted an earlier gesture.");
             }
             finally
@@ -98,7 +98,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(events[0].Previous, Is.Null);
                 Assert.That(events[0].Current, Is.SameAs(selectable));
 
-                yield return Click(mouse, Find<Button>(scene, "PauseButton"));
+                yield return Click(mouse, Find<Button>(scene, "NormalButton"));
                 Assert.That(interaction.CurrentSelection, Is.SameAs(selectable));
                 Assert.That(events, Has.Count.EqualTo(1),
                     "A migrated UI tap must not also select or deselect a world object.");
@@ -118,7 +118,7 @@ namespace AnimalCafe.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator PauseNormalFast_EmitOneOrderedGameSpeedEventPerRealUiClick()
+        public IEnumerator PauseResumeAndSpeedToggle_EmitOneOrderedEventPerRealUiClick()
         {
             yield return LoadMainCafe();
             var scene = SceneManager.GetActiveScene();
@@ -128,10 +128,11 @@ namespace AnimalCafe.Tests.PlayMode
             var mouse = InputSystem.AddDevice<Mouse>();
             try
             {
-                yield return Click(mouse, Find<Button>(scene, "PauseButton"));
+                yield return Click(mouse, Find<Button>(scene, "NormalButton"));
+                Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+                Assert.That(events, Has.Count.EqualTo(1));
                 yield return Click(mouse, Find<Button>(scene, "NormalButton"));
                 yield return Click(mouse, Find<Button>(scene, "FastButton"));
-
                 Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
                 Assert.That(events, Has.Count.EqualTo(3));
                 AssertSpeedEvent(events[0], GameSpeed.Normal, GameSpeed.Paused);
