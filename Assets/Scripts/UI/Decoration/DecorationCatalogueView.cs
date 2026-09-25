@@ -186,6 +186,7 @@ namespace AnimalCafe.UI.Decoration
         /// <summary>Keep browsing positions only for this Decoration session, keyed by Tab and CategoryId.</summary>
         public void BindCategories(string contextKey, IReadOnlyList<DecorationCategoryModel> categories, Action<DecorationCatalogueItemModel> selected)
         {
+            CloseCategoryHelp();
             RememberBrowsingPosition();
             CancelBrowsingRestore();
             StopBrowsingMotion();
@@ -226,6 +227,8 @@ namespace AnimalCafe.UI.Decoration
                 ConfigureNestedPointerDrag(row, scroll);
                 var label = row.GetComponentInChildren<TMP_Text>(true);
                 if (label != null) label.text = appearance != null ? appearance.Text("category." + category.CategoryId) : category.DisplayName;
+                if (appearance != null && (category.CategoryId == "cash-register" || category.CategoryId == "coffee-machine"))
+                    CreateCategoryInfo(row.transform, category.CategoryId);
                 var itemContent = scroll.content;
                 if (itemContent == null)
                 {
@@ -683,6 +686,7 @@ namespace AnimalCafe.UI.Decoration
         {
             if (appearance == null || refreshingP8RLayout || expandedRoot == null || transform is not RectTransform root) return;
             refreshingP8RLayout = true;
+            CloseCategoryHelp();
             try
             {
                 var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
@@ -994,6 +998,86 @@ namespace AnimalCafe.UI.Decoration
             finally { refreshingP8RLayout = false; }
         }
 
+        private Button categoryHelpDismiss;
+        private AnimalCafe.UI.Feedback.TooltipView categoryHelp;
+        private RectTransform categoryHelpCard;
+        private TMP_Text categoryHelpText;
+
+        private void CreateCategoryInfo(Transform row, string categoryId)
+        {
+            var node = new GameObject("CategoryInfo", typeof(RectTransform), typeof(Image), typeof(Button));
+            node.transform.SetParent(row, false);
+            node.GetComponent<Image>().color = Color.clear;
+            var button = node.GetComponent<Button>();
+            button.transition = Selectable.Transition.None;
+            var iconNode = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+            iconNode.transform.SetParent(node.transform, false);
+            var icon = iconNode.GetComponent<Image>();
+            appearance.Paint(icon, "status_info", false);
+            icon.raycastTarget = false;
+            button.onClick.AddListener(() => ShowCategoryHelp((RectTransform)node.transform, categoryId));
+        }
+
+        private void ShowCategoryHelp(RectTransform anchor, string categoryId)
+        {
+            if (!IsExpandedPanelVisible || !anchor.gameObject.activeInHierarchy) return;
+            var panel = (RectTransform)expandedRoot.transform;
+            if (categoryHelpDismiss == null)
+            {
+                // An in-panel dismiss layer keeps help taps from selecting furniture behind it.
+                // 面板内的关闭层拦住点击，避免阅读说明时误选背后的家具。
+                var dismiss = new GameObject("CategoryHelpDismiss", typeof(RectTransform), typeof(Image), typeof(Button));
+                dismiss.transform.SetParent(panel, false);
+                var rect = (RectTransform)dismiss.transform;
+                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+                rect.offsetMin = rect.offsetMax = Vector2.zero;
+                dismiss.GetComponent<Image>().color = Color.clear;
+                categoryHelpDismiss = dismiss.GetComponent<Button>();
+                categoryHelpDismiss.transition = Selectable.Transition.None;
+                categoryHelpDismiss.onClick.AddListener(CloseCategoryHelp);
+                var card = new GameObject("CategoryHelpCard", typeof(RectTransform), typeof(Image));
+                card.transform.SetParent(dismiss.transform, false);
+                categoryHelpCard = (RectTransform)card.transform;
+                appearance.Paint(card.GetComponent<Image>(), "panel_cream");
+                var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+                label.transform.SetParent(card.transform, false);
+                categoryHelpText = label.GetComponent<TMP_Text>();
+                categoryHelpText.font = appearance.Font;
+                categoryHelpText.color = AnimalCafe.UI.P8R.P8RAppearance.Cocoa;
+                categoryHelpText.alignment = TextAlignmentOptions.MidlineLeft;
+                categoryHelpText.textWrappingMode = TextWrappingModes.Normal;
+                categoryHelpText.richText = false;
+                categoryHelpText.raycastTarget = false;
+                categoryHelp = label.AddComponent<AnimalCafe.UI.Feedback.TooltipView>();
+                categoryHelp.Configure(categoryHelpText, card);
+            }
+            var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
+            var padding = metrics.Units(12);
+            var width = Mathf.Min(metrics.Units(280), panel.rect.width - padding * 2);
+            categoryHelpText.fontSize = metrics.Units(12);
+            var message = appearance.Text("category.help." + categoryId);
+            var height = categoryHelpText.GetPreferredValues(message, width - padding * 2, Mathf.Infinity).y + padding * 2;
+            categoryHelpCard.anchorMin = categoryHelpCard.anchorMax = categoryHelpCard.pivot = new Vector2(.5f, 1);
+            categoryHelpCard.sizeDelta = new Vector2(width, height);
+            var belowTitle = panel.rect.yMax - panel.InverseTransformPoint(anchor.TransformPoint(new Vector2(0, anchor.rect.yMin))).y;
+            categoryHelpCard.anchoredPosition = new Vector2(0, -Mathf.Clamp(belowTitle, padding,
+                Mathf.Max(padding, panel.rect.height - height - padding)));
+            categoryHelpText.rectTransform.anchorMin = Vector2.zero;
+            categoryHelpText.rectTransform.anchorMax = Vector2.one;
+            categoryHelpText.rectTransform.offsetMin = Vector2.one * padding;
+            categoryHelpText.rectTransform.offsetMax = -Vector2.one * padding;
+            categoryHelpDismiss.gameObject.SetActive(true);
+            categoryHelpDismiss.transform.SetAsLastSibling();
+            categoryHelp.SetMessage(message);
+            categoryHelp.OnPointerClick(null);
+        }
+
+        private void CloseCategoryHelp()
+        {
+            if (categoryHelp != null) categoryHelp.Close();
+            if (categoryHelpDismiss != null) categoryHelpDismiss.gameObject.SetActive(false);
+        }
+
         private Image mobileOverflowIndicator;
         private void RefreshMobileCategoryRows(bool hideRepeatedFloorHeading = false, float firstHeadingHeight = 28f)
         {
@@ -1001,6 +1085,8 @@ namespace AnimalCafe.UI.Decoration
             foreach (var row in categoryRows)
             {
                 var headingHeight = row == categoryRows[0] ? firstHeadingHeight : 28f;
+                var info = row.HorizontalScroll != null ? row.HorizontalScroll.transform.Find("CategoryInfo") as RectTransform : null;
+                if (info != null) headingHeight = 48f;
                 var scroll = row.HorizontalScroll; if (scroll == null) continue;
                 var element = scroll.GetComponent<LayoutElement>() ?? scroll.gameObject.AddComponent<LayoutElement>();
                 element.minHeight = element.preferredHeight = metrics.Units(hideRepeatedFloorHeading ? 84 : 88 + headingHeight);
@@ -1011,6 +1097,22 @@ namespace AnimalCafe.UI.Decoration
                     label.fontSize = metrics.Units(14);
                     label.rectTransform.offsetMin = new Vector2(0, -metrics.Units(headingHeight));
                     label.rectTransform.offsetMax = Vector2.zero;
+                    if (info != null)
+                    {
+                        label.alignment = TextAlignmentOptions.MidlineLeft;
+                        label.rectTransform.offsetMax = new Vector2(-metrics.Units(52), 0);
+                        info.anchorMin = info.anchorMax = info.pivot = new Vector2(0, 1);
+                        var titleWidth = label.GetPreferredValues(label.text).x;
+                        info.anchoredPosition = new Vector2(Mathf.Min(titleWidth + metrics.Units(4),
+                            ((RectTransform)scroll.transform).rect.width - metrics.Units(48)), 0);
+                        info.sizeDelta = Vector2.one * metrics.Units(48);
+                        var icon = info.Find("Icon").GetComponent<Image>();
+                        // Keep the 48-unit hit target, but align the visible icon beside the title.
+                        // 保留48单位点击区域，让可见图标紧靠标题。
+                        icon.rectTransform.anchorMin = icon.rectTransform.anchorMax = icon.rectTransform.pivot = new Vector2(0, .5f);
+                        icon.rectTransform.anchoredPosition = Vector2.zero;
+                        icon.rectTransform.sizeDelta = Vector2.one * metrics.Units(18);
+                    }
                 }
                 if (scroll.viewport != null) scroll.viewport.offsetMax = new Vector2(scroll.viewport.offsetMax.x,
                     -metrics.Units(hideRepeatedFloorHeading ? 0 : headingHeight));
@@ -1308,6 +1410,7 @@ namespace AnimalCafe.UI.Decoration
 
         private void OnDisable()
         {
+            CloseCategoryHelp();
             AnimalCafe.UI.P8R.P8RMobileMetrics.Changed -= RefreshP8RLayout;
             if (verticalScroll != null) verticalScroll.onValueChanged.RemoveListener(RefreshOverflowIndicator);
             RememberBrowsingPosition();
@@ -1385,6 +1488,7 @@ namespace AnimalCafe.UI.Decoration
 
         private void BeginTransition(DecorationCatalogueState state)
         {
+            CloseCategoryHelp();
             var targetPosition = state switch
             {
                 DecorationCatalogueState.Expanded => expandedAnchoredPosition,

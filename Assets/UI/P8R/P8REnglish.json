@@ -1,5 +1,7 @@
 {
   "entries": [
+    {"key":"category.help.cash-register","value":"Customers pay here. Place it on a counter and keep the customer side accessible."},
+    {"key":"category.help.coffee-machine","value":"Makes coffee for customers. Place it on a counter."},
     {"key":"checklist.state.to_place","value":"To place"},
     {"key":"checklist.state.adjust","value":"Adjust"},
     {"key":"checklist.state.ready","value":"Ready"},

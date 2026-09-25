@@ -159,6 +159,8 @@ namespace AnimalCafe.UI.Decoration
                 {
                     var icon = buttons[i]?.transform.Find("Icon")?.GetComponent<Image>();
                     if (icon != null) appearance.Paint(icon, i == 0 ? "whole_room_cocoa" : "single_grid_cocoa", false);
+                    var label = buttons[i]?.GetComponentInChildren<TMPro.TMP_Text>(true);
+                    if (label != null) label.fontStyle = TMPro.FontStyles.Bold;
                     AnimalCafe.UI.P8R.P8RButtonLayout.SurfaceButton(buttons[i]);
                     if (buttons[i] != null && buttons[i].image != null)
                         buttons[i].image.rectTransform.sizeDelta = new Vector2(layout.Widths[i] - AnimalCafe.UI.P8R.P8RMobileMetrics.For(this).Units(4),

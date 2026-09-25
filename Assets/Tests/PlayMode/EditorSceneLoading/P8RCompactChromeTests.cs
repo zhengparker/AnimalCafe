@@ -45,6 +45,49 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         }
 
         [UnityTest]
+        public IEnumerator CategoryInfo_ShowsStationHelp_DismissesAndClosesWithCatalogue()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            var profile = ChromeProfile.All[0]; screen.Resize(profile.Pixels);
+            yield return Load(profile);
+            var controller = Component<DecorationModeController>(); controller.EnterDecorationMode();
+            var view = Component<DecorationCatalogueView>(); view.ShowCatalogue();
+            yield return Settle();
+            var infos = view.GetComponentsInChildren<Button>(true).Where(button => button.name == "CategoryInfo").ToArray();
+            Assert.That(infos.Length, Is.EqualTo(2));
+            foreach (var id in new[] { "cash-register", "coffee-machine" })
+            {
+                var button = infos.Single(candidate => candidate.transform.parent.name == "CategoryRow_" + id);
+                CatalogueTestScrolling.Reveal(button);
+                yield return null;
+                var hits = new System.Collections.Generic.List<UnityEngine.EventSystems.RaycastResult>();
+                UnityEngine.EventSystems.EventSystem.current.RaycastAll(new UnityEngine.EventSystems.PointerEventData(
+                    UnityEngine.EventSystems.EventSystem.current) { position = Box(button).center }, hits);
+                Assert.That(hits.First().gameObject.GetComponentInParent<Button>(), Is.SameAs(button));
+                button.onClick.Invoke();
+                yield return null;
+                var dismiss = view.GetComponentsInChildren<Button>().Single(candidate => candidate.name == "CategoryHelpDismiss");
+                var card = dismiss.transform.Find("CategoryHelpCard");
+                var label = card.GetComponentInChildren<TMP_Text>();
+                Assert.That(label.text, Does.Contain("counter"));
+                Assert.That(label.text, Does.Contain(id == "cash-register" ? "pay" : "coffee"));
+                AssertTextFits(label, id);
+                AssertInside(Box(card), Box(dismiss), id);
+                dismiss.onClick.Invoke();
+                Assert.That(dismiss.gameObject.activeSelf, Is.False);
+                button.onClick.Invoke();
+                view.ShowCollapsedHandle();
+                yield return Settle();
+                Assert.That(dismiss.gameObject.activeSelf, Is.False);
+                view.ShowCatalogue(); yield return Settle();
+            }
+            infos[0].onClick.Invoke();
+            Assert.That(controller.TryChangeMode(DecorationModeKind.Floor), Is.True);
+            yield return Settle();
+            Assert.That(view.GetComponentsInChildren<Button>().Any(button => button.name == "CategoryHelpDismiss"), Is.False);
+        }
+
+        [UnityTest]
         public IEnumerator FloorRanges_StayInOpenPanelWithStableFaces_AndInstructionIsCentered()
         {
             using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
@@ -63,7 +106,11 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             {
                 Assert.That(controller.TrySelectFloorRange(scope), Is.True);
                 yield return Settle();
-                for (var i = 0; i < buttons.Length; i++) Assert.That(Box(buttons[i].image).width, Is.EqualTo(widths[i]).Within(.1f));
+                for (var i = 0; i < buttons.Length; i++)
+                {
+                    Assert.That(Box(buttons[i].image).width, Is.EqualTo(widths[i]).Within(.1f));
+                    Assert.That(buttons[i].GetComponentInChildren<TMP_Text>().fontStyle.HasFlag(FontStyles.Bold), Is.True);
+                }
             }
             controller.TrySelectFloorRange(SurfaceEditScope.SingleGridFloor);
             yield return Settle();
@@ -290,6 +337,17 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     screen.Resize(profile.Pixels);
                     yield return Load(profile);
 
+                    var hud = Component<TimeControlPanel>();
+                    var badge = hud.transform.Find("P8RModeBadge").GetComponentInChildren<TMP_Text>();
+                    var decor = hud.transform.Find("DecorationModeButton/Label").GetComponent<TMP_Text>();
+                    AssertFont(badge, 14f, profile.Density, "Normal badge");
+                    AssertFont(decor, 14f, profile.Density, "Decor button");
+                    var summary = Component<ValidationMessageView>().transform.Find("NormalReadinessSummary").GetComponent<TMP_Text>();
+                    summary.ForceMeshUpdate();
+                    Assert.That(summary.textInfo.lineCount, Is.EqualTo(1), profile.Name);
+                    Assert.That(summary.isTextOverflowing, Is.False, profile.Name);
+                    Assert.That(summary.fontSize, Is.LessThanOrEqualTo(P8RMobileMetrics.For(summary).Units(12) + .01f));
+                    AssertTextFits(summary, profile.Name);
                     Component<DecorationModeController>().EnterDecorationMode();
                     yield return Settle();
                     AssertHudAndReadiness(profile);

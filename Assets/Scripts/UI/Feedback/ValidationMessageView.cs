@@ -231,7 +231,7 @@ namespace AnimalCafe.UI.Feedback
                     normalSummaryLabel.raycastTarget = false;
                     normalSummaryLabel.alignment = TextAlignmentOptions.MidlineGeoAligned;
                     normalSummaryLabel.fontStyle = FontStyles.Bold;
-                    normalSummaryLabel.textWrappingMode = TextWrappingModes.Normal;
+                    normalSummaryLabel.textWrappingMode = TextWrappingModes.NoWrap;
                 }
                 normalSummaryLabel.font = appearance.Font;
                 normalSummaryLabel.fontSharedMaterial = appearance.Font.material;
@@ -520,8 +520,13 @@ namespace AnimalCafe.UI.Feedback
             var padding = metrics.Units(8);
             if (!decorationMode && normalSummaryLabel != null)
             {
-                normalSummaryLabel.fontSize = metrics.Units(14);
-                var preferred = normalSummaryLabel.GetPreferredValues(normalSummaryLabel.text, width - padding * 2, Mathf.Infinity);
+                // Match checklist copy, then fit the complete reminder to one line on narrow screens.
+                // 默认与清单同为12；窄屏按完整文案略缩小，保持单行。
+                normalSummaryLabel.fontSize = metrics.Units(12);
+                var availableTextWidth = Mathf.Max(1, width - padding * 2);
+                var preferred = normalSummaryLabel.GetPreferredValues(normalSummaryLabel.text, Mathf.Infinity, Mathf.Infinity);
+                normalSummaryLabel.fontSize *= Mathf.Min(1f, availableTextWidth / Mathf.Max(1, preferred.x + metrics.Units(1)));
+                preferred = normalSummaryLabel.GetPreferredValues(normalSummaryLabel.text, Mathf.Infinity, Mathf.Infinity);
                 rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
                 rect.anchoredPosition = new Vector2(left, -top);
                 rect.sizeDelta = new Vector2(Mathf.Min(width, Mathf.Ceil(preferred.x) + padding * 2), Mathf.Ceil(preferred.y) + padding * 2);

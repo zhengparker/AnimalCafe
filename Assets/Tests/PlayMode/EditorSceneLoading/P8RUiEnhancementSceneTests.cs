@@ -60,6 +60,23 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Find<DecorationCatalogueView>().ShowCatalogue();
                 yield return new WaitForSecondsRealtime(.4f);
                 yield return Capture(folder, "portrait-furniture.png");
+                foreach (var id in new[] { "cash-register", "coffee-machine" })
+                {
+                    var info = Find<DecorationCatalogueView>().GetComponentsInChildren<UnityEngine.UI.Button>(true)
+                        .Single(button => button.name == "CategoryInfo" && button.transform.parent.name == "CategoryRow_" + id);
+                    CatalogueTestScrolling.Reveal(info);
+                    yield return new WaitForSecondsRealtime(.3f);
+                    yield return Capture(folder, "portrait-" + id + "-info.png");
+                    info.onClick.Invoke();
+                    yield return null;
+                    var helpText = Find<DecorationCatalogueView>().GetComponentsInChildren<TMPro.TMP_Text>()
+                        .Single(label => label.transform.parent.name == "CategoryHelpCard");
+                    helpText.ForceMeshUpdate();
+                    Assert.That(helpText.isTextOverflowing, Is.False, id + " help must fit its panel.");
+                    yield return Capture(folder, "portrait-" + id + "-help.png");
+                    Find<DecorationCatalogueView>().GetComponentsInChildren<UnityEngine.UI.Button>()
+                        .Single(button => button.name == "CategoryHelpDismiss").onClick.Invoke();
+                }
                 Find<DecorationModeController>().TryChangeMode(DecorationModeKind.Floor);
                 Find<DecorationModeController>().TrySelectFloorRange(SurfaceEditScope.SingleGridFloor);
                 yield return new WaitForSecondsRealtime(.4f);

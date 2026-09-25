@@ -53,3 +53,11 @@ Normal/Decoration 模式标识、Decor/Done 按钮与 Normal incomplete 提示�
 ## 2026-09-24 Floor 范围与提示面板
 
 Whole Room / Single Grid 仅随展开目录显示，收起后隐藏并停止拦截点击；已有 Apply/Cancel 预览操作保留。两种范围按较宽的粗体文案预留相同宽度，并固定可见底板尺寸，选中切换不再伸缩。场景指引使用对称文本内边距、居中字形及垂直居中的信息icon；面板底色alpha 0.75，复用原素材的独立不透明边框。
+
+## 2026-09-24 Normal 提示单行字号
+
+Normal/Decor 主控维持14-unit粗体；incomplete 提示默认12-unit，与checklist正文相同，窄屏按可用宽度缩小以保持完整单行。保留原文案、粗体、居中及半透明panel。四种屏幕与Safe Area的现有回归增加单行、无溢出及主控字号一致断言。
+
+## CR / CM 分类帮助与范围粗体
+
+Whole Room 和 Single Grid 始终使用 Bold；选中状态仅由原底色区分，固定尺寸保持。CR/CM 标题旁复用 status_info icon，48-unit点击区域；点击打开现有奶油panel风格的用途/台面放置说明，点击提示或目录空白关闭。帮助显示时阻止误点后面的商品，收起目录、切换分类或布局变化时关闭。文案进入现有英文JSON，复用 TooltipView。
