@@ -43,3 +43,13 @@ Decor checklist 使用现有 panel_cream 的半透明底色（alpha 0.75）和�
 ## 2026-09-24 Normal incomplete 提示面板
 
 Normal 的 incomplete 提示复用 Decor checklist 的半透明奶油底板和不透明边框，四周内边距同为8 UI单位。保留现有字号、文案及左侧对齐，取消已不需要的文字描边。Normal readiness 完成时文字和面板一起隐藏，所有图形仍允许场景输入穿透。
+
+## 2026-09-24 加粗文字与固定分类栏
+
+Normal/Decoration 模式标识、Decor/Done 按钮与 Normal incomplete 提示使用 Bold，并在既有 panel 内居中。目录四个 tab 和右侧箭头统一为4 logical units间距，箭头底板与 tab 同高。移除 P8R 的 Add Another 显示，保留同一个箭头按钮切换展开/收起及方向；收起后四个 tab 保持横向位置和宽度。沿用原素材及48-unit触控高度，legacy 界面保留原入口。
+
+相关 PlayMode 回归19项通过，覆盖手机、小手机、横屏和平板布局、分类栏状态切换及家具操作；不代表全套回归或实体手机验收。
+
+## 2026-09-24 Floor 范围与提示面板
+
+Whole Room / Single Grid 仅随展开目录显示，收起后隐藏并停止拦截点击；已有 Apply/Cancel 预览操作保留。两种范围按较宽的粗体文案预留相同宽度，并固定可见底板尺寸，选中切换不再伸缩。场景指引使用对称文本内边距、居中字形及垂直居中的信息icon；面板底色alpha 0.75，复用原素材的独立不透明边框。

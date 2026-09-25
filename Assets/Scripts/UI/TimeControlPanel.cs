@@ -340,6 +340,7 @@ namespace AnimalCafe.UI
             var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
             if (modeBadgeLabel != null)
             {
+                modeBadgeLabel.fontStyle = FontStyles.Bold;
                 modeBadgeLabel.text = appearance.Text(decorating ? "mode.decoration" : "mode.normal");
                 modeBadgeLabel.alignment = TextAlignmentOptions.MidlineGeoAligned;
                 appearance.Paint(modeBadgeLabel.GetComponentInParent<Image>(), "button_secondary_normal");
@@ -360,6 +361,7 @@ namespace AnimalCafe.UI
             if (label != null)
             {
                 label.text = appearance.Text(decorating ? "mode.done" : "mode.enter");
+                label.fontStyle = FontStyles.Bold;
                 label.fontSize = metrics.Units(14);
                 width = Mathf.Max(width, label.GetPreferredValues(label.text).x + metrics.Units(48));
             }

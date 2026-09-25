@@ -229,7 +229,8 @@ namespace AnimalCafe.UI.Feedback
                     node.transform.SetParent(transform, false);
                     normalSummaryLabel = node.GetComponent<TMP_Text>();
                     normalSummaryLabel.raycastTarget = false;
-                    normalSummaryLabel.alignment = TextAlignmentOptions.TopLeft;
+                    normalSummaryLabel.alignment = TextAlignmentOptions.MidlineGeoAligned;
+                    normalSummaryLabel.fontStyle = FontStyles.Bold;
                     normalSummaryLabel.textWrappingMode = TextWrappingModes.Normal;
                 }
                 normalSummaryLabel.font = appearance.Font;

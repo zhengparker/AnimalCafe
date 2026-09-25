@@ -106,7 +106,8 @@ namespace AnimalCafe.UI.Decoration
             var restoreTools = SheetState != DecorationSheetState.Expanded && scrollingToolParents.Count > 0;
             if (restoreTools) RestoreScrollingTools();
             expandedRoot?.SetActive(SheetState == DecorationSheetState.Expanded);
-            collapsedRoot?.SetActive(SheetState == DecorationSheetState.CompactPreview);
+            GetComponentInChildren<DecorationFloorRangeView>(true)?.RefreshCatalogueVisibility();
+            collapsedRoot?.SetActive(appearance == null && SheetState == DecorationSheetState.CompactPreview);
             sheetActionRoot?.SetActive(SheetState != DecorationSheetState.TabsOnly
                 && SheetState != DecorationSheetState.Hidden);
             if (restoreTools) RefreshP8RLayout();
@@ -565,8 +566,10 @@ namespace AnimalCafe.UI.Decoration
         public DecorationCatalogueState State { get; private set; } =
             DecorationCatalogueState.Hidden;
         public RectTransform CollapsedHandleRect =>
-            collapsedRoot != null ? collapsedRoot.transform as RectTransform : null;
+            appearance != null && collapseButton != null ? collapseButton.transform as RectTransform
+                : collapsedRoot != null ? collapsedRoot.transform as RectTransform : null;
         public RectTransform SurfaceFooterHost => surfaceFooterHost;
+        public bool IsExpandedPanelVisible => expandedRoot != null && expandedRoot.activeSelf;
 
         public void SetEditingContext(string message, bool canReturn)
         {
@@ -831,28 +834,33 @@ namespace AnimalCafe.UI.Decoration
                 if (tabs != null)
                 {
                     var row = (RectTransform)tabs.transform;
-                    // Hidden title/Return/collapse controls must not leave horizontal gaps in the compact bar.
-                    // 收起时标题与返回按钮已隐藏，分类行恢复两侧对称留白，不沿用展开标题行的占位。
-                    // Legacy furniture ShowCollapsedHandle does not update SheetState; use the actual header visibility.
-                    // 家具保留旧的收起入口，此时SheetState可能仍为Expanded；以标题容器实际显示状态为准。
-                    var tabsInHeader = expandedRoot.activeSelf;
-                    var tabsPadding = tabsInHeader ? headerPadding : padding;
-                    var tabsLeading = tabsInHeader && compactHeader
+                    // Preserve the same horizontal tab geometry when the catalogue folds.
+                    // 收起后保留四个 tab 的横向位置和宽度，为原箭头保留空间。
+                    var tabsPadding = headerPadding;
+                    var tabsLeading = compactHeader
                         ? metrics.Units(dualHeaderActions ? 328.03125f : inlineContext ? 188 : pickupInHeader ? 148 : 112) : 0;
-                    var tabsReservation = tabsInHeader
-                        ? (compactHeader ? metrics.Units(dualHeaderActions ? 380.03125f : inlineContext ? 248 : pickupInHeader ? 208 : 172)
-                            : minimalHeader ? metrics.Units(52) : 0) : 0;
+                    var tabsReservation = compactHeader
+                        ? metrics.Units(dualHeaderActions ? 380.03125f : inlineContext ? 240 : pickupInHeader ? 200 : 164)
+                        : minimalHeader ? metrics.Units(52) : 0;
                     row.anchorMin = row.anchorMax = row.pivot = Vector2.zero;
                     row.anchoredPosition = new Vector2(side + tabsPadding + tabsLeading,
                         side + height - header + metrics.Units(4));
                     row.sizeDelta = new Vector2(width - tabsPadding * 2 - tabsReservation, metrics.Units(48));
                     var layout = row.GetComponent<HorizontalLayoutGroup>();
-                    if (layout != null) { layout.spacing = metrics.Units(minimalHeader ? 4 : 6); layout.childControlHeight = true; layout.childForceExpandHeight = false; }
+                    if (layout != null) { layout.spacing = metrics.Units(4); layout.childControlHeight = true; layout.childForceExpandHeight = false; }
                     foreach (var button in tabs.GetComponentsInChildren<Button>(true))
                     {
                         var element = button.GetComponent<LayoutElement>() ?? button.gameObject.AddComponent<LayoutElement>();
                         element.minWidth = metrics.Units(48); element.preferredHeight = metrics.Units(48);
-                        ((RectTransform)button.transform).SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, metrics.Units(48));
+                        var tabRect = (RectTransform)button.transform;
+                        tabRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, metrics.Units(48));
+                        if (layout == null)
+                        {
+                            // Existing prefab uses quarter-width anchors, not a layout group.
+                            // 四等分 anchor 共享剩余宽度，首尾不额外留半个间距。
+                            tabRect.sizeDelta = new Vector2(-metrics.Units(3), metrics.Units(48));
+                            tabRect.anchoredPosition = new Vector2(metrics.Units(4) * (tabRect.anchorMin.x - .375f), 0);
+                        }
                         AnimalCafe.UI.P8R.P8RButtonLayout.StackedButton(button);
                     }
                 }
@@ -871,11 +879,21 @@ namespace AnimalCafe.UI.Decoration
                     var rect = (RectTransform)button.transform;
                     if (button == collapseButton)
                     {
-                        rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.one;
-                        rect.anchoredPosition = new Vector2(-metrics.Units(4), -metrics.Units(4));
+                        // Keep one toggle outside the content that gets hidden.
+                        // 收起时保留同一个箭头按钮，不再使用 Add Another。
+                        if (rect.parent != root) rect.SetParent(root, false);
+                        rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.zero;
+                        var tabRow = tabs != null ? (RectTransform)tabs.transform : null;
+                        rect.anchoredPosition = tabRow != null && (compactHeader || minimalHeader)
+                            ? tabRow.anchoredPosition + new Vector2(tabRow.rect.width + metrics.Units(4), 0)
+                            : new Vector2(side + width - headerPadding - metrics.Units(48), side + height - metrics.Units(52));
                         rect.sizeDelta = Vector2.one * metrics.Units(48);
                         button.transform.Find("Label")?.gameObject.SetActive(false);
                         AnimalCafe.UI.P8R.P8RButtonLayout.IconButton(button);
+                        button.image.rectTransform.sizeDelta = new Vector2(metrics.Units(48), metrics.Units(34));
+                        var arrow = button.transform.Find("Icon");
+                        if (arrow != null) arrow.localRotation = Quaternion.Euler(0, 0, expandedRoot.activeSelf ? 0 : 180);
+                        rect.SetAsLastSibling();
                     }
                     else if (button == pickUpPointButton)
                     {
@@ -912,7 +930,8 @@ namespace AnimalCafe.UI.Decoration
                     handle.anchoredPosition = new Vector2(0, row.anchoredPosition.y - gap - handle.rect.height * .5f);
                     var handleBottom = side + gap * 2 + footerHeight;
                     collapsedAnchoredPosition = expandedAnchoredPosition + new Vector2(0,
-                        SheetState == DecorationSheetState.TabsOnly ? side - row.anchoredPosition.y
+                        appearance != null ? side + (SheetState == DecorationSheetState.TabsOnly ? 0 : footerHeight + gap) - row.anchoredPosition.y
+                            : SheetState == DecorationSheetState.TabsOnly ? side - row.anchoredPosition.y
                             : handleBottom - (handle.anchoredPosition.y - handle.rect.height * .5f));
                     if (IsCollapsed && transitionCoroutine == null)
                     {
@@ -969,6 +988,7 @@ namespace AnimalCafe.UI.Decoration
                     scrollPickup, metrics.Units(48));
                 RefreshMobileCategoryRows(hideFloorHeadingForCap
                     || asideFooter && height - header - surfaceGap < metrics.Units(80), firstHeadingHeight);
+                GetComponentInChildren<DecorationFloorRangeView>(true)?.RefreshCatalogueVisibility();
                 RefreshOverflowIndicator(Vector2.zero);
             }
             finally { refreshingP8RLayout = false; }
@@ -1126,6 +1146,7 @@ namespace AnimalCafe.UI.Decoration
 
         public void ShowCollapsedHandle()
         {
+            if (appearance != null) SheetState = handleHasActivePreview ? DecorationSheetState.CompactPreview : DecorationSheetState.TabsOnly;
             RefreshCollapsedHandleLabel();
             transform.SetAsLastSibling();
             collapsedHandleButton?.transform.SetAsLastSibling();
@@ -1227,6 +1248,11 @@ namespace AnimalCafe.UI.Decoration
 
         private void HandleCollapseRequested()
         {
+            if (appearance != null && IsCatalogueVisible && IsCollapsed && IsEligibleButton(collapseButton))
+            {
+                ShowCatalogue();
+                return;
+            }
             if (!IsCatalogueVisible
                 || IsCollapsed
                 || !IsEligibleButton(collapseButton))
@@ -1349,7 +1375,8 @@ namespace AnimalCafe.UI.Decoration
             var restoreTools = state != DecorationCatalogueState.Expanded && scrollingToolParents.Count > 0;
             if (restoreTools) RestoreScrollingTools();
             expandedRoot?.SetActive(state == DecorationCatalogueState.Expanded);
-            collapsedRoot?.SetActive(state == DecorationCatalogueState.Collapsed);
+            GetComponentInChildren<DecorationFloorRangeView>(true)?.RefreshCatalogueVisibility();
+            collapsedRoot?.SetActive(appearance == null && state == DecorationCatalogueState.Collapsed);
             if (restoreTools) RefreshP8RLayout();
             SetInteraction(IsCatalogueVisible);
             BeginTransition(state);

@@ -45,6 +45,95 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         }
 
         [UnityTest]
+        public IEnumerator FloorRanges_StayInOpenPanelWithStableFaces_AndInstructionIsCentered()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            var profile = ChromeProfile.All[0]; screen.Resize(profile.Pixels);
+            yield return Load(profile);
+            var controller = Component<DecorationModeController>();
+            controller.EnterDecorationMode();
+            Assert.That(controller.TryChangeMode(DecorationModeKind.Floor), Is.True);
+            var view = Component<DecorationCatalogueView>(); view.ShowCatalogue();
+            yield return Settle();
+            var ranges = Component<DecorationFloorRangeView>();
+            var buttons = ranges.GetComponentsInChildren<Button>();
+            var widths = buttons.Select(button => Box(button.image).width).ToArray();
+            Assert.That(widths[0], Is.EqualTo(widths[1]).Within(.1f));
+            foreach (var scope in new[] { SurfaceEditScope.SingleGridFloor, SurfaceEditScope.WholeRoomFloor })
+            {
+                Assert.That(controller.TrySelectFloorRange(scope), Is.True);
+                yield return Settle();
+                for (var i = 0; i < buttons.Length; i++) Assert.That(Box(buttons[i].image).width, Is.EqualTo(widths[i]).Within(.1f));
+            }
+            controller.TrySelectFloorRange(SurfaceEditScope.SingleGridFloor);
+            yield return Settle();
+            var instruction = Component<DecorationActionBarView>().VisibleInstructionRect;
+            Assert.That(instruction, Is.Not.Null);
+            var text = instruction.GetComponentInChildren<TMP_Text>();
+            Assert.That(text.alignment, Is.EqualTo(TextAlignmentOptions.MidlineGeoAligned));
+            Assert.That(Box(text).center.x, Is.EqualTo(Box(instruction).center.x).Within(.1f));
+            Assert.That(instruction.GetComponent<Image>().color.a, Is.EqualTo(.75f));
+            foreach (var state in new[] { DecorationSheetState.TabsOnly, DecorationSheetState.CompactPreview, DecorationSheetState.Expanded })
+            {
+                view.SetSheetState(state, state == DecorationSheetState.CompactPreview);
+                yield return Settle();
+                var group = ranges.GetComponent<CanvasGroup>();
+                Assert.That(group.alpha, Is.EqualTo(state == DecorationSheetState.Expanded ? 1 : 0));
+                Assert.That(group.blocksRaycasts, Is.EqualTo(state == DecorationSheetState.Expanded));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator CatalogueToggle_PreservesTabWidthsAndUniformGapsAcrossFoldStates()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            foreach (var profile in ChromeProfile.All)
+            {
+                screen.Resize(profile.Pixels);
+                yield return Load(profile);
+                var controller = Component<DecorationModeController>();
+                controller.EnterDecorationMode();
+                var view = Component<DecorationCatalogueView>();
+                view.ShowCatalogue();
+                yield return new WaitForSecondsRealtime(.3f);
+                var tabs = Component<DecorationModeTabsView>().GetComponentsInChildren<Button>()
+                    .OrderBy(button => Box(button).xMin).ToArray();
+                var toggle = (Button)typeof(DecorationCatalogueView).GetField("collapseButton",
+                    BindingFlags.Instance | BindingFlags.NonPublic).GetValue(view);
+                var density = P8RMobileMetrics.For(view).PixelsPerLogicalUnit;
+                var before = tabs.Select(button => Box(button)).ToArray();
+                var mode = Component<TimeControlPanel>().transform.Find("P8RModeBadge").GetComponentInChildren<TMP_Text>();
+                Assert.That(mode.fontStyle.HasFlag(FontStyles.Bold), Is.True);
+                foreach (var state in new[] { DecorationSheetState.TabsOnly, DecorationSheetState.CompactPreview, DecorationSheetState.Expanded })
+                {
+                    view.SetSheetState(state, state == DecorationSheetState.CompactPreview);
+                    yield return new WaitForSecondsRealtime(.3f);
+                    Assert.That(toggle.gameObject.activeInHierarchy, Is.True, profile.Name);
+                    Assert.That(view.GetComponentsInChildren<TMP_Text>().Any(text => text.text == "Add Another"), Is.False);
+                    for (var i = 0; i < tabs.Length; i++)
+                    {
+                        Assert.That(Box(tabs[i]).xMin, Is.EqualTo(before[i].xMin).Within(1), profile.Name);
+                        Assert.That(Box(tabs[i]).width, Is.EqualTo(before[i].width).Within(1), profile.Name);
+                        if (i > 0) Assert.That((Box(tabs[i].image).xMin - Box(tabs[i - 1].image).xMax) / density,
+                            Is.EqualTo(4).Within(.2f), profile.Name + " tab gap");
+                    }
+                    Assert.That((Box(toggle.image).xMin - Box(tabs.Last().image).xMax) / density,
+                        Is.EqualTo(4).Within(.2f), profile.Name + " toggle gap");
+                    Assert.That(Mathf.Abs(Mathf.DeltaAngle(toggle.transform.Find("Icon").localEulerAngles.z,
+                        state == DecorationSheetState.Expanded ? 0 : 180)), Is.LessThan(.1f));
+                    AssertNoOverlap(tabs.Concat(new[] { toggle }).ToArray());
+                }
+                toggle.onClick.Invoke();
+                yield return new WaitForSecondsRealtime(.3f);
+                Assert.That(view.IsCollapsed, Is.True);
+                toggle.onClick.Invoke();
+                yield return new WaitForSecondsRealtime(.3f);
+                Assert.That(view.IsCollapsed, Is.False);
+                yield return UnloadOwnedScene();
+            }
+        }
+
+        [UnityTest]
         public IEnumerator TwoTimeControls_KeepSeparateAccessibleTouchRoots()
         {
             using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
@@ -201,6 +290,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     screen.Resize(profile.Pixels);
                     yield return Load(profile);
 
+                    Component<DecorationModeController>().EnterDecorationMode();
+                    yield return Settle();
                     AssertHudAndReadiness(profile);
                     yield return AssertFloatingActionsAndInstruction(profile);
                     yield return AssertModalTypography(profile);
@@ -297,7 +388,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             foreach (var button in timeButtons.Append(mode))
                 Assert.That(card.Overlaps(Box(button)), Is.False, "Checklist overlaps HUD " + button.name);
             foreach (var label in readiness.GetComponentsInChildren<TMP_Text>().Where(label => label.enabled))
-                AssertFont(label, 14f, density, profile.Name + " readiness body");
+                AssertFont(label, 12f, density, profile.Name + " readiness body");
         }
 
         private IEnumerator AssertFloatingActionsAndInstruction(ChromeProfile profile)

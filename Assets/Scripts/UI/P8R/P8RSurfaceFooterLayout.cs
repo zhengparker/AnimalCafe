@@ -49,6 +49,8 @@ namespace AnimalCafe.UI.P8R
                 var padding = floor && i < 2 ? 36 : 12;
                 result.Widths[i] = Mathf.Max(metrics.Units(48), textWidth + metrics.Units(padding));
             }
+            if (floor)
+                result.Widths[0] = result.Widths[1] = Mathf.Max(result.Widths[0], result.Widths[1]);
             if (measurementLabel != null)
             {
                 measurementLabel.font = oldFont; measurementLabel.fontSize = oldSize; measurementLabel.fontStyle = oldStyle;

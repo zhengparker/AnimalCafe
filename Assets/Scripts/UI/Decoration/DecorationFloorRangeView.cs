@@ -19,6 +19,20 @@ namespace AnimalCafe.UI.Decoration
 
         public void RefreshMobileLayout() => ApplySelectedVisual();
 
+        public void RefreshCatalogueVisibility()
+        {
+            if (appearance == null) return;
+            var catalogue = GetComponentInParent<DecorationCatalogueView>();
+            var visible = catalogue == null || catalogue.IsExpandedPanelVisible;
+            // Range choices belong to the open panel; preview actions stay in their own footer.
+            // 范围选项随目录收起；Apply/Cancel 等预览操作保持独立。
+            var group = GetComponent<CanvasGroup>();
+            if (group == null) group = gameObject.AddComponent<CanvasGroup>();
+            group.alpha = visible ? 1f : 0f;
+            group.interactable = group.blocksRaycasts = visible;
+        }
+
+
         public void Configure(Button wholeRoom, Button singleGrid)
         {
             UnbindListeners();
@@ -146,7 +160,11 @@ namespace AnimalCafe.UI.Decoration
                     var icon = buttons[i]?.transform.Find("Icon")?.GetComponent<Image>();
                     if (icon != null) appearance.Paint(icon, i == 0 ? "whole_room_cocoa" : "single_grid_cocoa", false);
                     AnimalCafe.UI.P8R.P8RButtonLayout.SurfaceButton(buttons[i]);
+                    if (buttons[i] != null && buttons[i].image != null)
+                        buttons[i].image.rectTransform.sizeDelta = new Vector2(layout.Widths[i] - AnimalCafe.UI.P8R.P8RMobileMetrics.For(this).Units(4),
+                            AnimalCafe.UI.P8R.P8RMobileMetrics.For(this).Units(32));
                 }
+                RefreshCatalogueVisibility();
                 refreshingLayout = false;
             }
         }

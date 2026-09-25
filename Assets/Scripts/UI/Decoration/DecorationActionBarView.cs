@@ -69,6 +69,7 @@ namespace AnimalCafe.UI.Decoration
         private DecorationModeKind currentMode = DecorationModeKind.Furniture;
         private RectTransform instructionHost, instructionHud;
         private AnimalCafe.UI.Feedback.ValidationMessageView instructionReadiness;
+        private Image instructionPanelBorder;
         private bool persistentInstruction, instructionModalCovered, refreshingMobileLayout;
         private bool refreshingInstructionLayout, lastInstructionVisible;
         private Rect lastInstructionBounds;
@@ -143,7 +144,7 @@ namespace AnimalCafe.UI.Decoration
                 feedbackLabel.fontSize = metrics.Units(14);
                 feedbackLabel.textWrappingMode = TextWrappingModes.Normal;
                 feedbackLabel.richText = false;
-                var sideTextWidth = leftWidth - metrics.Units(52);
+                var sideTextWidth = leftWidth - metrics.Units(80);
                 var sideTextSize = feedbackLabel.GetPreferredValues(feedbackLabel.text,
                     Mathf.Max(1, sideTextWidth), Mathf.Infinity);
                 // The full copy, rather than a fixed card width, decides whether two lines fit.
@@ -160,7 +161,7 @@ namespace AnimalCafe.UI.Decoration
             feedbackLabel.fontSize = metrics.Units(14);
             feedbackLabel.textWrappingMode = TextWrappingModes.Normal; feedbackLabel.maxVisibleLines = 2;
             feedbackLabel.richText = false;
-            var textHeight = feedbackLabel.GetPreferredValues(feedbackLabel.text, width - metrics.Units(52), Mathf.Infinity).y;
+            var textHeight = feedbackLabel.GetPreferredValues(feedbackLabel.text, width - metrics.Units(80), Mathf.Infinity).y;
             var height = Mathf.Max(metrics.Units(36), textHeight + metrics.Units(12));
             feedbackRoot.anchorMin = feedbackRoot.anchorMax = feedbackRoot.pivot = new Vector2(.5f, 1);
             feedbackRoot.sizeDelta = new Vector2(width, height);
@@ -169,11 +170,30 @@ namespace AnimalCafe.UI.Decoration
             var copy = feedbackLabel.rectTransform;
             copy.anchorMin = Vector2.zero; copy.anchorMax = Vector2.one;
             copy.offsetMin = new Vector2(metrics.Units(40), metrics.Units(6));
-            copy.offsetMax = new Vector2(-metrics.Units(12), -metrics.Units(6));
+            copy.offsetMax = new Vector2(-metrics.Units(40), -metrics.Units(6));
+            feedbackLabel.alignment = TextAlignmentOptions.MidlineGeoAligned;
+            if (feedbackRoot.GetComponent<Image>() is { } panel)
+            {
+                panel.color = new Color(1, 1, 1, .75f);
+                if (instructionPanelBorder == null)
+                {
+                    var node = new GameObject("InstructionPanelBorder", typeof(RectTransform), typeof(Image));
+                    node.transform.SetParent(feedbackRoot, false);
+                    node.transform.SetAsFirstSibling();
+                    instructionPanelBorder = node.GetComponent<Image>();
+                    appearance.Paint(instructionPanelBorder, "panel_cream");
+                    instructionPanelBorder.sprite = AnimalCafe.UI.P8R.P8RButtonLayout.BorderSprite(appearance.Sprite("panel_cream"));
+                    instructionPanelBorder.fillCenter = false;
+                    instructionPanelBorder.rectTransform.anchorMin = Vector2.zero;
+                    instructionPanelBorder.rectTransform.anchorMax = Vector2.one;
+                    instructionPanelBorder.rectTransform.offsetMin = instructionPanelBorder.rectTransform.offsetMax = Vector2.zero;
+                }
+                instructionPanelBorder.color = Color.white;
+            }
             if (feedbackStateShape != null && feedbackStateShape.transform is RectTransform state)
             {
-                state.anchorMin = state.anchorMax = state.pivot = new Vector2(0, 1);
-                state.anchoredPosition = new Vector2(metrics.Units(10), -metrics.Units(8));
+                state.anchorMin = state.anchorMax = state.pivot = new Vector2(0, .5f);
+                state.anchoredPosition = new Vector2(metrics.Units(10), 0);
                 state.sizeDelta = Vector2.one * metrics.Units(20);
             }
             foreach (var graphic in feedbackRoot.GetComponentsInChildren<Graphic>(true)) graphic.raycastTarget = false;
