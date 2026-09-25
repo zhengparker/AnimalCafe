@@ -39,3 +39,7 @@ Decor checklist 使用现有 panel_cream 的半透明底色（alpha 0.75）和�
 ## 场地内拖动限制
 
 普通 furniture 沿用现有完整占地 clamp。CR、CM、Pickup Point 离开桌面后的地面悬浮预览限制在 grid bounds 内，拖出四边/角落时停在最近场内格；无桌面时初始悬浮位置也限制在场内。仅修正预览位置，不允许在地面确认功能设施，不改变 confirmed layout、readiness 或有效 Slot 规则。
+
+## 2026-09-24 Normal incomplete 提示面板
+
+Normal 的 incomplete 提示复用 Decor checklist 的半透明奶油底板和不透明边框，四周内边距同为8 UI单位。保留现有字号、文案及左侧对齐，取消已不需要的文字描边。Normal readiness 完成时文字和面板一起隐藏，所有图形仍允许场景输入穿透。

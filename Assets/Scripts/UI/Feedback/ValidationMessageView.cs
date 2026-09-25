@@ -35,12 +35,10 @@ namespace AnimalCafe.UI.Feedback
         private readonly RectTransform[] checklistRows = new RectTransform[3];
         private readonly TMP_Text[] checklistLabels = new TMP_Text[3];
         private readonly Image[] checklistIcons = new Image[3];
-        private Material checklistOutlineMaterial;
         private TMP_Text normalSummaryLabel;
         private Image checklistPanelFill;
         private Image checklistPanelBorder;
         private bool decorationMode;
-        private static readonly Color ChecklistCream = new Color(1f, .96f, .88f, 1f);
         private RectTransform disclosureViewport;
         private Vector2 viewportOffsetBeforeDisclosure;
         private bool refreshingLayout;
@@ -214,7 +212,7 @@ namespace AnimalCafe.UI.Feedback
                 return;
             }
             if (normalSummaryLabel != null) normalSummaryLabel.enabled = false;
-            SetChecklistPanelVisible(decorationMode);
+            SetChecklistPanelVisible(decorationMode || !checklistReport.CanOpenForBusiness);
             if (!decorationMode)
             {
                 foreach (var row in checklistRows) if (row != null) row.gameObject.SetActive(false);
@@ -235,7 +233,7 @@ namespace AnimalCafe.UI.Feedback
                     normalSummaryLabel.textWrappingMode = TextWrappingModes.Normal;
                 }
                 normalSummaryLabel.font = appearance.Font;
-                normalSummaryLabel.fontSharedMaterial = checklistOutlineMaterial;
+                normalSummaryLabel.fontSharedMaterial = appearance.Font.material;
                 normalSummaryLabel.color = AnimalCafe.UI.P8R.P8RAppearance.Cocoa;
                 normalSummaryLabel.UpdateMeshPadding();
                 normalSummaryLabel.text = appearance.Text("readiness.normal.incomplete");
@@ -412,13 +410,6 @@ namespace AnimalCafe.UI.Feedback
             finally { refreshingLayout = false; }
         }
 
-        private void OnDestroy()
-        {
-            if (checklistOutlineMaterial == null) return;
-            if (Application.isPlaying) Destroy(checklistOutlineMaterial);
-            else DestroyImmediate(checklistOutlineMaterial);
-        }
-
         // Separate opacity: translucent fill with the original opaque panel border.
         // 底色透明度独立设置；边框直接复用原 panel 素材，保持原色。
         private void EnsureChecklistPanel()
@@ -475,18 +466,6 @@ namespace AnimalCafe.UI.Feedback
                 checklistRows[i].gameObject.SetActive(true);
                 checklistLabels[i].font = appearance.Font;
                 checklistLabels[i].color = AnimalCafe.UI.P8R.P8RAppearance.Cocoa;
-                if (checklistOutlineMaterial == null)
-                {
-                    // Own this material locally, leaving the shared font untouched.
-                    // 描边材质仅限当前清单，避免影响其他字体。
-                    checklistOutlineMaterial = new Material(appearance.Font.material);
-                    checklistOutlineMaterial.EnableKeyword("OUTLINE_ON");
-                    checklistOutlineMaterial.SetColor(ShaderUtilities.ID_OutlineColor, ChecklistCream);
-                    checklistOutlineMaterial.SetFloat(ShaderUtilities.ID_OutlineWidth, .12f);
-                    // Move the outline outwards instead of thinning the cocoa letter face.
-                    // 描边向外扩，保留棕色字心原有粗细。
-                    checklistOutlineMaterial.SetFloat(ShaderUtilities.ID_FaceDilate, .12f);
-                }
                 checklistLabels[i].fontSharedMaterial = appearance.Font.material;
                 checklistLabels[i].UpdateMeshPadding();
                 checklistLabels[i].alignment = TextAlignmentOptions.TopLeft;
@@ -537,21 +516,24 @@ namespace AnimalCafe.UI.Feedback
             }
             var width = Mathf.Max(metrics.Units(48), Mathf.Min(metrics.Units(300),
                 parent != null ? parent.rect.width - left - metrics.Units(8) : metrics.Units(300)));
+            var padding = metrics.Units(8);
             if (!decorationMode && normalSummaryLabel != null)
             {
                 normalSummaryLabel.fontSize = metrics.Units(14);
-                var preferred = normalSummaryLabel.GetPreferredValues(normalSummaryLabel.text, width, Mathf.Infinity);
+                var preferred = normalSummaryLabel.GetPreferredValues(normalSummaryLabel.text, width - padding * 2, Mathf.Infinity);
                 rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
                 rect.anchoredPosition = new Vector2(left, -top);
-                rect.sizeDelta = new Vector2(Mathf.Min(width, Mathf.Ceil(preferred.x)), Mathf.Ceil(preferred.y));
+                rect.sizeDelta = new Vector2(Mathf.Min(width, Mathf.Ceil(preferred.x) + padding * 2), Mathf.Ceil(preferred.y) + padding * 2);
                 var summaryRect = normalSummaryLabel.rectTransform;
                 summaryRect.anchorMin = Vector2.zero;
                 summaryRect.anchorMax = Vector2.one;
-                summaryRect.offsetMin = summaryRect.offsetMax = Vector2.zero;
+                // Reuse the checklist panel padding for the Normal reminder.
+                // Normal 提示沿用清单面板留白。
+                summaryRect.offsetMin = Vector2.one * padding;
+                summaryRect.offsetMax = -Vector2.one * padding;
                 PublishP8RBoundsIfChanged();
                 return;
             }
-            var padding = metrics.Units(8);
             var iconSize = metrics.Units(14);
             var textLeft = metrics.Units(20);
             var gap = metrics.Units(4);

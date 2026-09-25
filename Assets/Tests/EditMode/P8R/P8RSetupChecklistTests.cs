@@ -127,6 +127,20 @@ namespace AnimalCafe.Tests.EditMode.P8R
             Assert.That(view.IsVisible, Is.True);
             Assert.That(view.CurrentMessage, Is.EqualTo("Setup incomplete · Enter Decor to finish"));
             Assert.That(root.transform.Find("ChecklistRow0").gameObject.activeSelf, Is.False);
+            var fill = root.transform.Find("ChecklistPanelFill").GetComponent<Image>();
+            var border = root.transform.Find("ChecklistPanelBorder").GetComponent<Image>();
+            Assert.That(fill.enabled && border.enabled, Is.True);
+            Assert.That(fill.color.a, Is.EqualTo(.75f));
+            var summary = root.transform.Find("NormalReadinessSummary").GetComponent<TMP_Text>();
+            Assert.That(summary.fontSharedMaterial, Is.SameAs(appearance.Font.material));
+            var padding = P8RMobileMetrics.For(view).Units(8);
+            Assert.That(summary.rectTransform.offsetMin, Is.EqualTo(Vector2.one * padding));
+            Assert.That(summary.rectTransform.offsetMax, Is.EqualTo(-Vector2.one * padding));
+            foreach (var graphic in root.GetComponentsInChildren<Graphic>(true))
+                Assert.That(graphic.raycastTarget, Is.False);
+            view.ShowReadiness(Report(true, 1, 1, 1, 1, 1, 1));
+            Assert.That(fill.enabled || border.enabled || summary.enabled, Is.False);
+
         }
 
         private static LayoutReadinessReport Report(bool connected, int ct, int cv, int mt, int mv, int pt, int pv)
