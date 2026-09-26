@@ -22,7 +22,7 @@ namespace AnimalCafe.UI.P8R
             var metrics = P8RMobileMetrics.For(owner);
             // Floor uses 12-unit copy and adjacent touch roots; visible faces supply the small gap.
             // 地板缩小文字和留白，点击范围仍至少48；极小边界保护避免浮点误差造成重叠。
-            var gap = metrics.Units(floor ? 1f / 64f : 4f);
+            var gap = metrics.Units(1f / 64f);
             var actions = floor ? (includeActions
                 ? new[] { "whole_room", "single_grid", "undo", "rotate", "apply_all", "cancel", "confirm" }
                 : new[] { "whole_room", "single_grid" })
@@ -43,10 +43,14 @@ namespace AnimalCafe.UI.P8R
                 // Both surface modes display Apply, never the transient generic Confirm copy.
                 // 两种表面模式都按最终 Apply 文案测量，避免预留看不见的 Confirm 空白。
                 var copy = appearance.Text("action." + (actions[i] == "confirm" ? "apply" : actions[i]));
+                // Range and primary Apply labels are bold; other actions use normal weight.
+                // 范围及主要Apply标签为粗体，其他操作为常规字重，按实际样式测量。
+                if (measurementLabel != null)
+                    measurementLabel.fontStyle = floor && i < 2 || actions[i] == "confirm" ? FontStyles.Bold : FontStyles.Normal;
                 var textWidth = measurementLabel != null ? measurementLabel.GetPreferredValues(copy).x : metrics.Units(copy.Length * 9);
-                // Floor range: 20 icon + 4 gap + 6 padding per side. Every surface action uses 6 per side.
-                // Floor范围保留图文宽度；Floor/Wall操作按钮统一使用每侧6单位留白。
-                var padding = floor && i < 2 ? 36 : 12;
+                // Actions reserve 6 visible padding plus 2 transparent units per side, giving 4 between faces.
+                // 操作按钮每侧6可见留白加2透明边距，相邻可见底板间距约4。
+                var padding = floor && i < 2 ? 36 : 16;
                 result.Widths[i] = Mathf.Max(metrics.Units(48), textWidth + metrics.Units(padding));
             }
             if (floor)

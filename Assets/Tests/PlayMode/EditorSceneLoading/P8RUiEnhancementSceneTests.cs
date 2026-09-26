@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using AnimalCafe.Decoration;
 using AnimalCafe.UI;
+using AnimalCafe.UI.Components;
 using AnimalCafe.UI.Decoration;
 using AnimalCafe.UI.Feedback;
 using AnimalCafe.UI.P8R;
@@ -60,6 +61,35 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Find<DecorationCatalogueView>().ShowCatalogue();
                 yield return new WaitForSecondsRealtime(.4f);
                 yield return Capture(folder, "portrait-furniture.png");
+                // Simulate a narrow safe area while keeping the requested native image resolution.
+                // 保持1080x1920截图，用窄屏Safe Area展示8单位外层留白。
+                var safeAreas = UnityEngine.Object.FindObjectsByType<SafeAreaContainer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+                var autoSafe = safeAreas.Select(area => area.AutoApplyRuntimeSafeArea).ToArray();
+                P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(320, 1920f / 3.375f);
+                foreach (var area in safeAreas)
+                {
+                    area.AutoApplyRuntimeSafeArea = false;
+                    area.ApplySafeArea(new Rect(54, 0, 972, 1920), new Vector2(1080, 1920));
+                }
+                yield return new WaitForSecondsRealtime(.4f);
+                yield return Capture(folder, "portrait-narrow-inset.png");
+                P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(360, 640);
+                for (var i = 0; i < safeAreas.Length; i++)
+                {
+                    safeAreas[i].ApplySafeArea(Screen.safeArea, new Vector2(1080, 1920));
+                    safeAreas[i].AutoApplyRuntimeSafeArea = autoSafe[i];
+                }
+                yield return new WaitForSecondsRealtime(.4f);
+                // Keep native screenshots 1080x1920 while exercising the >700-height and wide layouts.
+                // 截图始终1080x1920，等比例logical profile分别覆盖长屏分支与平板分支。
+                P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(396, 704);
+                yield return new WaitForSecondsRealtime(.4f);
+                yield return Capture(folder, "portrait-tall-header.png");
+                P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(576, 1024);
+                yield return new WaitForSecondsRealtime(.4f);
+                yield return Capture(folder, "portrait-tablet-header.png");
+                P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(360, 640);
+                yield return new WaitForSecondsRealtime(.4f);
                 foreach (var id in new[] { "cash-register", "coffee-machine" })
                 {
                     var info = Find<DecorationCatalogueView>().GetComponentsInChildren<UnityEngine.UI.Button>(true)
@@ -77,10 +107,27 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     Find<DecorationCatalogueView>().GetComponentsInChildren<UnityEngine.UI.Button>()
                         .Single(button => button.name == "CategoryHelpDismiss").onClick.Invoke();
                 }
+                foreach (var mode in new[] { DecorationModeKind.Wall, DecorationModeKind.WallDecor })
+                {
+                    Find<DecorationModeController>().TryChangeMode(mode);
+                    Find<DecorationCatalogueView>().ShowCatalogue();
+                    yield return new WaitForSecondsRealtime(.4f);
+                    yield return Capture(folder, "portrait-" + mode.ToString().ToLowerInvariant() + "-panel.png");
+                }
                 Find<DecorationModeController>().TryChangeMode(DecorationModeKind.Floor);
                 Find<DecorationModeController>().TrySelectFloorRange(SurfaceEditScope.SingleGridFloor);
                 yield return new WaitForSecondsRealtime(.4f);
                 yield return Capture(folder, "portrait-floor-panel.png");
+                Find<DecorationModeController>().TrySelectFloorRange(SurfaceEditScope.WholeRoomFloor);
+                Find<DecorationCatalogueView>().GetComponentsInChildren<DecorationCatalogueTileView>()
+                    .Single(tile => tile.ItemId == "floor.warm-wood")
+                    .GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                Find<DecorationCatalogueView>().ShowCatalogue();
+                yield return new WaitForSecondsRealtime(.4f);
+                yield return Capture(folder, "portrait-floor-footer-preview.png");
+                Find<DecorationActionBarView>().GetComponentsInChildren<UnityEngine.UI.Button>(true)
+                    .Single(button => button.name == "CancelButton").onClick.Invoke();
+                Find<DecorationModeController>().TrySelectFloorRange(SurfaceEditScope.SingleGridFloor);
                 Find<DecorationCatalogueView>().ShowCollapsedHandle();
                 yield return new WaitForSecondsRealtime(.4f);
                 yield return Capture(folder, "portrait-floor-folded.png");

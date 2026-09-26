@@ -574,6 +574,8 @@ namespace AnimalCafe.UI.Decoration
                 }
                 AnimalCafe.UI.P8R.P8RButtonLayout.SurfaceButton(
                     button, isFloor && layout.CompactUtilityIcons && i < 3);
+                if (button.image != null)
+                    button.image.rectTransform.sizeDelta = new Vector2(layout.Widths[slot] - metrics.Units(4), metrics.Units(32));
             }
         }
 

@@ -61,3 +61,21 @@ Normal/Decor 主控维持14-unit粗体；incomplete 提示默认12-unit，与che
 ## CR / CM 分类帮助与范围粗体
 
 Whole Room 和 Single Grid 始终使用 Bold；选中状态仅由原底色区分，固定尺寸保持。CR/CM 标题旁复用 status_info icon，48-unit点击区域；点击打开现有奶油panel风格的用途/台面放置说明，点击提示或目录空白关闭。帮助显示时阻止误点后面的商品，收起目录、切换分类或布局变化时关闭。文案进入现有英文JSON，复用 TooltipView。
+
+## 2026-09-26 Shared category spacing
+
+四个tab共用CategorySpacing：标题行24、标题到卡片6、category间18、横向卡片间8，卡片高度84（逻辑单位）。普通标题与CR/CM标题采用相同行高；info点击范围保持48并使用category留白，避免覆盖相邻卡片。极短屏沿用隐藏重复Floor标题的规则；其余标题不单独压缩。顶部tab按钮左右及上方留白统一12，极窄屏优先保留点击范围。
+
+## 2026-09-26 Header spacing follow-up
+
+长屏是否采用单行tab+toggle仅由可用宽度决定，取消700逻辑高度分界。宽屏header预留从52增到57，可见按钮上边距统一12，同时给下面内容保留原间隔。用户确认保留48 info点击范围，标题到卡片6、category间18。窄屏8侧边距和footer规则本次不改。
+
+## 2026-09-26 Narrow outer inset (S3)
+
+目录panel可用宽度不足280 logical units时，上方/左右/分类内容起点统一8，否则12。单排tab+toggle至少需要272宽度，保证五个48点击区和四个4间距；更窄时沿用分行布局，不把侧边距继续压到4。标题到卡片6、category间18不变。Footer独立规则（S4）待下一步确认，本次不改。相关9项回归通过。
+
+## 2026-09-26 Footer spacing (S4)
+
+Footer横向容器留白与header共用12/8 profile；Pickup和Floor/Wall可见按钮到底边也统一12/8，计算时扣除48点击框内的透明边距。按钮组继续居中，不强制撑满；同排可见底板间距约4。操作按钮按实际字重测量（范围与Apply粗体，其他常规），保留6单位可见文字内边距及至少48点击范围。短横屏侧栏居中及滚动布局保留，category 6/18不变。
+
+相关PlayMode回归12/12通过，原生Game View截图1/1通过；1080×1920截图目录outputs/p8r-ui-enhancement/native-20260926-214246。此结果不代表旧全套5个失败用例已迁移或实体手机验收。

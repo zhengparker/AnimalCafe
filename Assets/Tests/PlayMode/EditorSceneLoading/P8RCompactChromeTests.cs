@@ -45,6 +45,173 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         }
 
         [UnityTest]
+        public IEnumerator SpacingAudit_WhenRequested_ExportGeometry()
+        {
+            if (System.Environment.GetEnvironmentVariable("ANIMALCAFE_SPACING_AUDIT") != "1")
+                Assert.Ignore("Opt-in spacing geometry audit.");
+            var lines = new System.Collections.Generic.List<string> { "profile,tab,state,metric,logical_units" };
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            var profiles = ChromeProfile.All.Concat(new[] {
+                new ChromeProfile("tall phone 360x800", new Vector2(360,800),3,new Rect(0,0,360,800)),
+                new ChromeProfile("reference 360x640",new Vector2(360,640),3,new Rect(0,0,360,640)) });
+            foreach (var profile in profiles)
+            {
+                screen.Resize(profile.Pixels); yield return Load(profile);
+                var controller = Component<DecorationModeController>(); controller.EnterDecorationMode();
+                var view = Component<DecorationCatalogueView>();
+                foreach (var mode in new[] { DecorationModeKind.Furniture, DecorationModeKind.Floor, DecorationModeKind.Wall, DecorationModeKind.WallDecor })
+                {
+                    controller.TryChangeMode(mode); view.ShowCatalogue(); yield return Settle();
+                    var density = P8RMobileMetrics.For(view).PixelsPerLogicalUnit;
+                    var panel = Field<GameObject>(view,"expandedRoot");
+                    var tabs = Component<DecorationModeTabsView>().GetComponentsInChildren<Button>().OrderBy(b=>Box(b).xMin).ToArray();
+                    var toggle = Field<Button>(view,"collapseButton");
+                    foreach (var state in new[] { DecorationSheetState.Expanded, DecorationSheetState.TabsOnly, DecorationSheetState.CompactPreview })
+                    {
+                        view.SetSheetState(state,state == DecorationSheetState.CompactPreview); yield return Settle();
+                        void Add(string metric,float value) => lines.Add(profile.Name+","+mode+","+state+","+metric+","+(value/density).ToString("F3",System.Globalization.CultureInfo.InvariantCulture));
+                        Add("tabs_top_from_panel",Box(panel.transform).yMax-Box(tabs[0].image).yMax);
+                        Add("tabs_left_from_panel",Box(tabs[0].image).xMin-Box(panel.transform).xMin);
+                        Add("toggle_right_from_panel",Box(panel.transform).xMax-Box(toggle.image).xMax);
+                        Add("toggle_top_from_panel",Box(panel.transform).yMax-Box(toggle.image).yMax);
+                        Add("tab_gap",Box(tabs[1].image).xMin-Box(tabs[0].image).xMax);
+                        Add("toggle_gap",Box(toggle.image).xMin-Box(tabs[3].image).xMax);
+                        if(state != DecorationSheetState.Expanded) continue;
+                        var labels = view.GetComponentsInChildren<TMP_Text>().Where(t=>t.name=="CategoryLabel").OrderByDescending(t=>Box(t).yMax).ToArray();
+                        Rect? previous = null;
+                        foreach(var label in labels)
+                        {
+                            var cards=label.transform.parent.GetComponentsInChildren<DecorationCatalogueTileView>();
+                            if(cards.Length==0)continue;
+                            var card=Box(cards[0]);var title=Box(label);
+                            Add(label.text+"_title_to_card",title.yMin-card.yMax);
+                            Add(label.text+"_title_left",title.xMin-Box(panel.transform).xMin);
+                            if(previous.HasValue) Add(label.text+"_category_gap",previous.Value.yMin-title.yMax);
+                            previous=card;
+                        }
+                        if(mode==DecorationModeKind.Floor)
+                        {
+                            var range=Component<DecorationFloorRangeView>();
+                            var buttons=range.GetComponentsInChildren<Button>().OrderBy(b=>Box(b).xMin).ToArray();
+                            if(buttons.Length==2) {
+                                Add("range_left_from_panel",Box(buttons[0].image).xMin-Box(panel.transform).xMin);
+                                Add("range_right_from_panel",Box(panel.transform).xMax-Box(buttons[1].image).xMax);
+                                Add("range_bottom_from_panel",Box(buttons[0].image).yMin-Box(panel.transform).yMin);
+                                Add("range_gap",Box(buttons[1].image).xMin-Box(buttons[0].image).xMax);
+                            }
+                        }
+                    }
+                }
+                yield return UnloadOwnedScene();
+            }
+            System.IO.File.WriteAllLines("outputs/p8r-ui-enhancement/spacing-audit-geometry.csv",lines);
+        }
+
+        [UnityTest]
+        public IEnumerator HeaderSpacing_AllFourTabs_UseMatchingOuterInsets()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            foreach (var profile in ChromeProfile.All.Concat(new[] {
+                         new ChromeProfile("tall phone", new Vector2(360,800),3,new Rect(0,0,360,800)) }))
+            {
+                screen.Resize(profile.Pixels); yield return Load(profile);
+                var controller = Component<DecorationModeController>(); controller.EnterDecorationMode();
+                var view = Component<DecorationCatalogueView>();
+                foreach(var mode in new[] {DecorationModeKind.Furniture,DecorationModeKind.Floor,DecorationModeKind.Wall,DecorationModeKind.WallDecor})
+                {
+                    controller.TryChangeMode(mode); view.ShowCatalogue(); yield return Settle();
+                    var panel=Field<GameObject>(view,"expandedRoot");
+                    var tabs=Component<DecorationModeTabsView>().GetComponentsInChildren<Button>().OrderBy(b=>Box(b).xMin).ToArray();
+                    var toggle=Field<Button>(view,"collapseButton");
+                    var density=P8RMobileMetrics.For(view).PixelsPerLogicalUnit;
+                    foreach(var state in new[] {DecorationSheetState.Expanded,DecorationSheetState.TabsOnly,DecorationSheetState.CompactPreview})
+                    {
+                        view.SetSheetState(state,state==DecorationSheetState.CompactPreview); yield return Settle();
+                        var expectedInset=Box(panel.transform).width/density >= 279.99f ? 12 : 8;
+                        Assert.That((Box(panel.transform).yMax-Box(tabs[0].image).yMax)/density,Is.EqualTo(expectedInset).Within(.1f),profile.Name+" "+mode);
+                        Assert.That((Box(panel.transform).xMax-Box(toggle.image).xMax)/density,Is.EqualTo(expectedInset).Within(.1f));
+                        if(expectedInset==8) Assert.That((Box(tabs[0].image).xMin-Box(panel.transform).xMin)/density,Is.EqualTo(8).Within(.1f));
+                        if(state==DecorationSheetState.Expanded)
+                            foreach(var title in view.GetComponentsInChildren<TMP_Text>().Where(t=>t.name=="CategoryLabel"))
+                                Assert.That((Box(title).xMin-Box(panel.transform).xMin)/density,Is.EqualTo(expectedInset).Within(.1f));
+                        Assert.That(Box(toggle.image).center.y,Is.EqualTo(Box(tabs[0].image).center.y).Within(.1f));
+                        Assert.That((Box(toggle.image).xMin-Box(tabs.Last().image).xMax)/density,Is.EqualTo(4).Within(.1f));
+                        AssertNoOverlap(tabs.Append(toggle).ToArray());
+                    }
+                }
+                yield return UnloadOwnedScene();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator FooterFaces_UseOuterInsetAndCenteredGroups_OnNormalAndNarrowPhones()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            foreach(var profile in ChromeProfile.All.Take(2))
+            {
+                screen.Resize(profile.Pixels); yield return Load(profile);
+                var controller=Component<DecorationModeController>();controller.EnterDecorationMode();
+                var view=Component<DecorationCatalogueView>();view.ShowCatalogue();yield return Settle();
+                var panel=Field<GameObject>(view,"expandedRoot");
+                var density=P8RMobileMetrics.For(view).PixelsPerLogicalUnit;
+                var expected=Box(panel.transform).width/density>=279.99f?12:8;
+                var pickup=Field<Button>(view,"pickUpPointButton");
+                Assert.That((Box(pickup.image).yMin-Box(panel.transform).yMin)/density,Is.EqualTo(expected).Within(.1f));
+                Assert.That(Box(pickup.image).center.x,Is.EqualTo(Box(panel.transform).center.x).Within(.1f));
+                AssertTargets(new[]{pickup},density,profile.SafePixels);
+                controller.TryChangeMode(DecorationModeKind.Floor);view.ShowCatalogue();yield return Settle();
+                var ranges=Component<DecorationFloorRangeView>().GetComponentsInChildren<Button>().OrderBy(b=>Box(b).xMin).ToArray();
+                foreach(var button in ranges)
+                    Assert.That((Box(button.image).yMin-Box(panel.transform).yMin)/density,Is.EqualTo(expected).Within(.1f));
+                Assert.That((Box(ranges[0].image).xMin+Box(ranges[1].image).xMax)*.5f,Is.EqualTo(Box(panel.transform).center.x).Within(.1f));
+                Assert.That((Box(ranges[1].image).xMin-Box(ranges[0].image).xMax)/density,Is.EqualTo(4).Within(.1f));
+                AssertTargets(ranges,density,profile.SafePixels);AssertNoOverlap(ranges);
+                yield return UnloadOwnedScene();
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator AllTabs_UseConsistentCategorySpacing_WithoutInfoTargetOverlap()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            var profile = ChromeProfile.All[0]; screen.Resize(profile.Pixels);
+            yield return Load(profile);
+            var controller = Component<DecorationModeController>(); controller.EnterDecorationMode();
+            var view = Component<DecorationCatalogueView>();
+            foreach (var mode in new[] { DecorationModeKind.Furniture, DecorationModeKind.Floor,
+                         DecorationModeKind.Wall, DecorationModeKind.WallDecor })
+            {
+                Assert.That(controller.TryChangeMode(mode), Is.True);
+                view.ShowCatalogue(); yield return Settle();
+                var density = P8RMobileMetrics.For(view).PixelsPerLogicalUnit;
+                var labels = view.GetComponentsInChildren<TMP_Text>()
+                    .Where(text => text.name == "CategoryLabel").OrderByDescending(text => Box(text).yMax).ToArray();
+                Assert.That(labels, Is.Not.Empty, mode.ToString());
+                Rect? previousCards = null;
+                foreach (var label in labels)
+                {
+                    var cards = label.transform.parent.GetComponentsInChildren<DecorationCatalogueTileView>();
+                    Assert.That(cards, Is.Not.Empty);
+                    var card = Box(cards[0]); var title = Box(label);
+                    Assert.That(title.height / density, Is.EqualTo(24).Within(.1f), mode + " title height");
+                    Assert.That((title.yMin - card.yMax) / density, Is.EqualTo(6).Within(.1f), mode + " title/card gap");
+                    if (previousCards.HasValue)
+                        Assert.That((previousCards.Value.yMin - title.yMax) / density,
+                            Is.EqualTo(18).Within(.1f), mode + " category gap");
+                    var info = label.transform.parent.Find("CategoryInfo");
+                    if (info != null)
+                    {
+                        var hit = Box(info);
+                        Assert.That(hit.height / density, Is.EqualTo(48).Within(.1f));
+                        foreach (var tile in cards) Assert.That(hit.Overlaps(Box(tile)), Is.False);
+                        if (previousCards.HasValue) Assert.That(hit.yMax, Is.LessThanOrEqualTo(previousCards.Value.yMin + .1f));
+                    }
+                    previousCards = card;
+                }
+            }
+        }
+
+        [UnityTest]
         public IEnumerator CategoryInfo_ShowsStationHelp_DismissesAndClosesWithCatalogue()
         {
             using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
