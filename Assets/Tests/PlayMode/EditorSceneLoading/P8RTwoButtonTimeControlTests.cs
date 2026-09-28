@@ -131,7 +131,11 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             foreach (var speed in new[] { GameSpeed.Normal, GameSpeed.Fast, GameSpeed.Paused })
             {
                 time.TrySetSpeed(speed);
+                var badge = Field<TMP_Text>(Find<TimeControlPanel>(), "modeBadgeLabel");
+                var expected = speed == GameSpeed.Normal ? "1x" : speed == GameSpeed.Fast ? "2x" : "Pause";
+                Assert.That(badge.text, Is.EqualTo(expected));
                 Click(Mode);
+                Assert.That(badge.text, Is.EqualTo("Decor"));
                 Assert.That(Icon(speed == GameSpeed.Fast ? Fast : Normal), Does.Contain("lock"));
                 Assert.That(Icon(speed == GameSpeed.Fast ? Normal : Fast), Does.Not.Contain("lock"));
                 Assert.That(Normal.interactable || Fast.interactable, Is.False);
@@ -140,6 +144,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Click(Mode);
                 yield return null;
                 Assert.That(time.CurrentSpeed, Is.EqualTo(speed));
+                Assert.That(badge.text, Is.EqualTo(expected));
             }
         }
 
@@ -151,9 +156,11 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             hud.enabled = false;
             time.SetFast(); time.SetPaused();
             hud.enabled = true;
+            Assert.That(Field<TMP_Text>(hud, "modeBadgeLabel").text, Is.EqualTo("Pause"));
             Assert.That(Icon(Normal), Does.Contain("pause"));
             Click(Normal);
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+            Assert.That(Field<TMP_Text>(hud, "modeBadgeLabel").text, Is.EqualTo("1x"));
         }
 
         [UnityTest] public IEnumerator ModeFaces_StayEqualHeightAndVisuallyAlignedAcrossMetrics()

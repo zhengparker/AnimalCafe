@@ -341,7 +341,12 @@ namespace AnimalCafe.UI
             if (modeBadgeLabel != null)
             {
                 modeBadgeLabel.fontStyle = FontStyles.Bold;
-                modeBadgeLabel.text = appearance.Text(decorating ? "mode.decoration" : "mode.normal");
+                // Decor takes priority over its pause lease; otherwise show the actual speed.
+                // Decor优先于装修持有的暂停状态，退出后显示恢复的实际速度。
+                var speed = gameTimeService != null ? gameTimeService.CurrentSpeed : GameSpeed.Normal;
+                var badgeKey = decorating ? "mode.decoration" : speed == GameSpeed.Paused
+                    ? "mode.paused" : speed == GameSpeed.Fast ? "mode.fast" : "mode.normal";
+                modeBadgeLabel.text = appearance.Text(badgeKey);
                 modeBadgeLabel.alignment = TextAlignmentOptions.MidlineGeoAligned;
                 appearance.Paint(modeBadgeLabel.GetComponentInParent<Image>(), "button_secondary_normal");
                 var textRect = modeBadgeLabel.rectTransform;
