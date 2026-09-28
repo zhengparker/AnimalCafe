@@ -26,3 +26,19 @@ Editor fixtures 和原生 Game View 不等于 Android/iOS 真机验收。程序�
 全量PlayMode日志包含旧readiness fixture的中文缺字警告；当前P8R英文UI截图已检查，中文本地化视觉验收不在本次范围内。
 
 本 PR 不启动 Phase 9。
+
+## 2026-09-28 合并后收尾 / Phase 9 readiness
+
+**结论：READY FOR PHASE 9 DESIGN；Phase 9 implementation 尚未批准。**
+
+- PR #8 已合并，main merge commit为 `0417d627a3e355206fb4a6310c41690d6a9fdec2`，已验证分支head为 `f50e8708cb04e910ffee74d7fa194effd1e024b1`。两者Git tree完全相同；本地main已fast-forward到merge commit。本次只更新收尾文档，依照项目流程不重复已经通过的Unity全量回归。
+- 本次review未发现阻止纯逻辑Order Domain设计的已确认Critical/Important。已检查Roadmap、Game Design、readiness只读报告、现有layout IDs与time service边界；没有现成OrderService需要迁移。
+- Phase 9范围仍为唯一Order ID、单一OrderService状态所有权、FIFO waiting queue、create/claim/transition/complete/fail和重复操作保护。Customer/NPC、NavMesh、capacity/reservation、付款、库存、Save和完整经营循环属于后续阶段，不因Game Design全局描述而提前实现。
+- Phase 9 design需先确定合法state transition表、claim ownership、重复请求的返回语义、ID递增/溢出及作用域、failure与queue一致性。现有家具StableId是GUID，不能直接当作Roadmap要求的递增Order ID。上述是新阶段正常设计工作，不是本轮遗漏的产品修复。
+- Owner已通过连续UI反馈逐项批准修改，并明确授权full review、merge及本地收尾。没有单独记录完整manual checklist或实体Android/iOS PASS；保留前述视觉与设备限制。此readiness结论允许设计准备，不代替Owner对Phase 9 design和implementation plan的批准。
+
+### 本地证据与清理
+
+- 主项目：`E:/Unity/Project/AnimalCafe`。原有 `.gitignore`、`AnimalCafe.slnx`及Roadmap在fast-forward前备份，fast-forward后逐字节校验未改变。备份位于 `outputs/p8r-closeout-20260928/main-before-fast-forward/`；Roadmap随后仅在本次收尾范围内更新，其已确认Existing Feature Enhancement方向保留。其他未跟踪资料不动。
+- 原worktree全部outputs（3578文件、701116318 bytes）、Logs（7文件）和UserSettings（5文件）移动到 `outputs/p8r-closeout-20260928/worktree-evidence/`，移动前后文件数和总字节一致。最终测试证据位于该目录下 `outputs/p8r-review-fixes/`；原生截图位于 `outputs/p8r-ui-enhancement/native-20260928-131817/`。最终四份XML归档后重新读取，counts与上文一致。原始log只留本机，不上传。
+- 已移除 `.worktrees/p8r-existing-feature-enhancement` 与本地 `codex/p8r-existing-feature-enhancement`。Git移除因Windows长路径留下部分目录；确认worktree登记已解除、证据已归档及精确目标路径后，清除剩余缓存/已提交文件。没有删除远端branch，也没有清理其他worktree。

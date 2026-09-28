@@ -777,7 +777,7 @@ Store Expansion 稳定后，高级结构编辑可复用 Surface ID、attachment 
 
 `Completed — merged to main`（2026-09-21）。Studio Owner 已确认朋友 review 完成，并授权 PR #7 merge、Phase 8 完成、本地 fast-forward 与归档后清理；以上步骤均已完成。本次合并包含已批准并实现的 P8R UI / input / feedback enhancements；merge commit 为 `8ee0026247c2c3200bd1bc9ac471b7007e4a4f32`。Merged-main fresh 回归覆盖 2110 个不同 EditMode 用例（1755 full-suite PASS + 355 独立补测 PASS），PlayMode 1015 PASS / 0 FAIL / 2 opt-in screenshot SKIP；所有 inconclusive 为 0。完整报告、Owner 决定及归档位置统一见 `Docs/Phase8_Beginner_Guide.md` 第 37 节。
 
-Current Next Step：由 Owner 确认 Roadmap 中独立 Phase 8R design gate 的具体范围；本轮不自动启动 Phase 8R 或 Phase 9。已有 P8R 实现随本 PR 集成，不因此把仍为 TBD 的后续规划 gate 自动标为完成。
+Current Next Step（2026-09-28）：独立 Phase 8R 优化已通过 PR #8 合并并完成工程收尾，下一步可进入 Phase 9 Order Domain 的 design / test cases / implementation plan 准备。Phase 9 实施仍须 Owner 批准；最新证据与验收边界见 `Phase8R_PR8_Review_2026-09-28.md` 的收尾记录。
 
 #### 历史 gate 快照（2026-09-09）
 
@@ -851,24 +851,31 @@ Anchors 使用 furniture-local coordinates。家具位置或旋转变化后重�
 
 ---
 
-## Phase 8R — Decoration & Functional Layout Review & Polish
+## Phase 8R — Existing Feature Enhancement（现有功能优化）
+
+### Status
+
+`Merged — engineering closeout complete; ready for Phase 9 design`（2026-09-28）。用户逐项确认的现有功能优化已交付；PR #8 合入 main，merge commit `0417d627a3e355206fb4a6310c41690d6a9fdec2`。Owner 已授权 full review、merge、本地 fast-forward 与本地 branch 清理；这些步骤均已完成。此状态不补造逐项人工或实体手机 PASS，也不代表 Phase 9 implementation 已批准。
+
+Phase 8 继续保持 `Completed`。此前随 PR #7 交付的 `P8R` UI / input / feedback enhancements 属于已完成成果；本节描述的是其后的独立优化阶段，不重命名已有代码、assets 或历史测试编号。
 
 ### Goal
 
-对 Phase 1–8 已完成的系统与玩家体验进行集中 Review 和 Polish，为进入 `Milestone B — Core Cafe Loop` 建立稳定基线。具体目标 `TBD`。
+在 Phase 9 前，继续优化 Phase 1–8 已有功能的使用体验与稳定性，以经过确认的优化项、实际改进和回归验证作为交付结果，为进入 `Milestone B — Core Cafe Loop` 建立稳定基线。
 
 ### Confirmed Scope
 
-- 只 Review 和 Polish Phase 1–8 已存在的系统、功能与内容。
-- 只优化、修复或打磨现有行为，不加入任何新的 system 或 feature。
+- 仅优化、修复或打磨 Phase 1–8 已存在的功能与行为，不加入任何新的 system 或 feature，也不以“小功能增强”的名义扩展范围。
+- Review 用于识别已有功能的实际问题，并形成有优先级的优化清单；每项需明确当前问题、预期改善和验收方法，由 Owner 确认后实施。
+- 保持已完成 Phase 的状态和既有功能边界；若某项优化需要调整已确认的玩家规则或接口合同，先说明影响、返工或迁移需求、风险及回归范围，再取得单独批准。
 
-### Review / Polish Areas
+### Enhancement Areas
 
-`TBD`。在 Phase 8 完成后，由 Studio Owner 另行决定具体检查与打磨项目。
+已交付：双按钮时间控制和1x/2x/Pause/Decor状态标识、Normal summary与Decor checklist、原样式透明panel、occupied Store提示、CR/CM分类帮助、目录tabs/fold和category/footer统一spacing、家具与功能设施拖动边界，以及直接相关Editor保存隔离和输入修正。逐次批准的规则见 `Phase8R_UI_Enhancement_Design.md`；历史Minor backlog不自动扩大本轮范围。
 
 ### Tests 与 Manual Acceptance
 
-`TBD`。根据最终批准的 Review / Polish 项目确定 focused regression、完整 regression 与人工验收范围。
+最终回归：EditMode全量加隔离补跑覆盖2123个不同用例全部PASS；PlayMode 1036 PASS、0 FAIL、4项opt-in SKIP；另行启用原生截图1/1 PASS，并检查1080×1920关键状态。合并树与已验证分支树完全相同，本轮只有收尾文档变化，不重复Unity全量测试。Owner交互反馈和收尾授权保留，不将其转换为未记录的整套manual checklist；实体Android/iOS、极短横屏和中文字体视觉限制仍保留，详见收尾记录。
 
 ### Not Included
 
@@ -879,7 +886,7 @@ Anchors 使用 furniture-local coordinates。家具位置或旋转变化后重�
 
 ### Milestone Gate
 
-`TBD`。Phase 8R 完成并由 Studio Owner 验收后，才进入 `Milestone B — Core Cafe Loop`。
+工程与集成基线可用于Phase 9 design准备，无已确认的Critical/Important产品阻塞。正式实施前仍需完成并批准Phase 9 design、test cases和implementation plan；视觉/设备验收边界继续明确保留，不以自动化结果替代Owner人工验收。Phase 9的Order Domain定位与后续阶段顺序不变。
 
 ---
 
@@ -2726,6 +2733,6 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 - **Phase 5 — UI Architecture & Design System** 已完成 approved design、TDD implementation、review hardening、Studio Owner `MT001–MT034` manual acceptance、PR #4 merge 与 merged-main regression，状态为 `Completed`。Merged-main evidence（2026-08-15）：EditMode `690 / 690`、Editor PlayMode `121 / 121`、Windows standalone PlayMode `103 / 103` passed；failed、skipped、inconclusive 均为 `0`。
 - **Phase 6 — Basic Decoration Mode** 已完成 approved design、TDD implementation、independent review、Studio Owner manual acceptance 与 fresh full regression，状态为 `Completed`。Merge-preparation evidence（2026-08-22）：EditMode `1136 / 1136`、Editor PlayMode `446 / 446` passed，failed、skipped、inconclusive 均为 `0`；Windows standalone build 为 `Success`，无 C# warning/error；Studio Owner applicable manual set 为 `29 / 29 PASS`。`P6-M-023` 的真实 Android + iOS two-finger Pinch 已按 scope decision 移至 Phase 51，不计入 Phase 6 denominator。
 - Phase 6 清理只删除 obsolete Phase 4 MainCafe manual-review setup 与两份 temporary materials；`ManualReviewPingPongMover` 及其 regression test 因仍有 Phase 5 live consumers 而保留。
-- **Current Next Step（2026-09-21）：Phase 8 已 Completed，等待 Owner 确认独立 Phase 8R design gate 的具体范围。** PR #7 已合入 main，merged-main 回归、本地 fast-forward、归档及旧本地 branch/worktree 清理均完成；最终证据见 `Docs/Phase8_Beginner_Guide.md` 第 37 节。不自动进入 Phase 9。2026-09-12 的 UI 排版交接与截图数量保留在 Guide 第 15 节；15.6 的历史截图误覆盖限制和 M6 incompatible Slot 未覆盖项不因合并而消失。
+- **Current Next Step（2026-09-28）：Phase 8 已 Completed；Phase 8R 已合并并完成工程收尾，可进入Phase 9 Order Domain设计准备。** PR #8、全量回归、本地fast-forward、证据归档及P8R本地branch/worktree清理已完成；见 `Docs/Phase8R_PR8_Review_2026-09-28.md`。Phase 9代码实施尚未批准；历史人工与设备验收限制不因收尾而消失，Phase 8历史证据继续见 `Docs/Phase8_Beginner_Guide.md` 第37节及15.6节。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
 - 不开始 cafe day loop、Customer / NPC movement、Order、Queue、NavMesh / pathfinding agents、economy 或 Save 等后续 gameplay scope。
