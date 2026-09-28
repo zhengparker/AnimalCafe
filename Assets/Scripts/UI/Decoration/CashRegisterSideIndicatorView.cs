@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using AnimalCafe.Content;
 using AnimalCafe.Decoration;
 using AnimalCafe.Layout;
@@ -26,6 +26,7 @@ namespace AnimalCafe.UI.Decoration
         private CanvasGroup group;
         private UnityEngine.Camera worldCamera, uiCamera;
         private Func<Rect> safeArea;
+        private Func<Rect?> uiObstacle;
         private Transform ghost, floor;
         private Renderer[] ghostRenderers;
         private ResolvedStationAnchors anchors = ResolvedStationAnchors.Empty;
@@ -52,10 +53,11 @@ namespace AnimalCafe.UI.Decoration
 
         public void Configure(P8RAppearance appearance, UnityEngine.Camera camera,
             Func<Rect> safeAreaProvider, RectTransform actions, Material footprintMaterial,
-            Transform ground, DecorationGridSpace space)
+            Transform ground, DecorationGridSpace space, Func<Rect?> obstacleProvider = null)
         {
             worldCamera = camera;
             safeArea = safeAreaProvider;
+            uiObstacle = obstacleProvider;
             actionPanel = actions;
             if (actions != null) actionButtons = actions.GetComponentsInChildren<Button>(true);
             floor = ground;
@@ -171,6 +173,17 @@ namespace AnimalCafe.UI.Decoration
             var minimumOffset = Mathf.Max(minimumHover + amplitude,
                 area.yMin + iconPixels * .5f + pixels + amplitude - Mathf.Min(first.y, second.y));
             var maximumOffset = area.yMax - iconPixels * .5f - pixels - amplitude - Mathf.Max(first.y, second.y);
+            // Only a role actually below the local checklist needs its upper limit reduced.
+            // 清单左侧保留完整高度；两角色仍共享相对于地面箭头的高度。
+            var obstacle = uiObstacle?.Invoke();
+            if (obstacle.HasValue)
+            {
+                var card = Inset(obstacle.Value, -4 * pixels);
+                foreach (var point in new[] { first, second })
+                    if (point.x + iconPixels * .5f > card.xMin && point.x - iconPixels * .5f < card.xMax)
+                        maximumOffset = Mathf.Min(maximumOffset,
+                            card.yMin - iconPixels * .5f - amplitude - point.y);
+            }
             if (maximumOffset < minimumOffset) { ClearPresentation(); return; }
             // Match the confirmed Pickup sign's visible center at the authored camera angle.
             // 对齐常驻取餐牌的视觉高度（台面 + lift + billboard 中心），不包含拖动额外抬高。

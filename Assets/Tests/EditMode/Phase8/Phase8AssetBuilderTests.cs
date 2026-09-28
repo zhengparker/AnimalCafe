@@ -8,6 +8,7 @@ using AnimalCafe.Layout;
 using AnimalCafe.UI.Decoration;
 using NUnit.Framework;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,6 +17,77 @@ namespace AnimalCafe.Tests.EditMode.Phase8
     public sealed class Phase8AssetBuilderTests
     {
         private const string SourceFontPath = "Assets/UI/Phase5/Fonts/NotoSansSC-Regular.otf";
+
+        [TestCase(false, true)]
+        [TestCase(true, true)]
+        [TestCase(true, false)]
+        public void PickUpUpdate_PreservesOpenPrefabStage(bool dirty, bool target)
+        {
+            if (PrefabStageUtility.GetCurrentPrefabStage() != null)
+                Assert.Ignore("Preserve caller-owned Prefab Mode; run this test in an isolated Editor.");
+            AnimalCafe.EditorTools.P8R.P8RFurnitureUiBuilder.RequireCleanLoadedAssets();
+            var paths = new[] { Phase8AssetPaths.PickUpPointIndicatorPrefabPath,
+                "Assets/UI/Phase8/Materials/M_PickUpPoint_Indicator.mat",
+                "Assets/UI/P8R/WorldMarkers/pickup_point.png.meta" };
+            var before = paths.ToDictionary(path => path, File.ReadAllBytes);
+            var selection = Selection.objects;
+            var activeSelection = Selection.activeObject;
+            var autoSave = typeof(PrefabStage).GetProperty("autoSave",
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+            Assert.That(autoSave, Is.Not.Null);
+            PrefabStage stage = null;
+            var originalAutoSave = false;
+            try
+            {
+                stage = PrefabStageUtility.OpenPrefab(target
+                    ? Phase8AssetPaths.PickUpPointIndicatorPrefabPath
+                    : Phase8AssetPaths.FunctionalSurfacePreviewPrefabPath);
+                originalAutoSave = (bool)autoSave.GetValue(stage);
+                autoSave.SetValue(stage, false);
+                var root = stage.prefabContentsRoot;
+                if (dirty)
+                {
+                    root.name = "Unsaved artist pick-up edit";
+                    EditorSceneManager.MarkSceneDirty(stage.scene);
+                }
+                Assert.That(stage.scene.isDirty, Is.EqualTo(dirty));
+                var rootName = root.name;
+                if (target)
+                {
+                    var error = Assert.Throws<System.InvalidOperationException>(
+                        Phase8AssetBuilder.UpdatePickUpIndicatorAssets);
+                    Assert.That(error.Message, Does.Contain("Prefab Mode"));
+                }
+                else Assert.DoesNotThrow(Phase8AssetBuilder.UpdatePickUpIndicatorAssets);
+                Assert.That(PrefabStageUtility.GetCurrentPrefabStage(), Is.SameAs(stage));
+                Assert.That(stage.prefabContentsRoot, Is.SameAs(root));
+                Assert.That(root.name, Is.EqualTo(rootName));
+                Assert.That(stage.scene.isDirty, Is.EqualTo(dirty));
+                foreach (var path in paths)
+                    Assert.That(File.ReadAllBytes(path), Is.EqualTo(before[path]), path);
+            }
+            finally
+            {
+                // Discard only this fixture's unsaved stage and restore its editor preferences.
+                // 只清理测试自己打开的 PrefabStage，保留调用者原有编辑现场。
+                if (stage != null && PrefabStageUtility.GetCurrentPrefabStage() == stage)
+                {
+                    stage.ClearDirtiness();
+                    autoSave.SetValue(stage, originalAutoSave);
+                    StageUtility.GoToMainStage();
+                }
+                var changed = false;
+                foreach (var path in paths)
+                    if (!File.ReadAllBytes(path).SequenceEqual(before[path]))
+                    {
+                        File.WriteAllBytes(path, before[path]);
+                        changed = true;
+                    }
+                if (changed) AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+                Selection.objects = selection;
+                Selection.activeObject = activeSelection;
+            }
+        }
 
         [TestCase("builder")]
         [TestCase("scene")]

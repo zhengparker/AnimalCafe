@@ -106,7 +106,8 @@ namespace AnimalCafe.UI.Decoration
             var restoreTools = SheetState != DecorationSheetState.Expanded && scrollingToolParents.Count > 0;
             if (restoreTools) RestoreScrollingTools();
             expandedRoot?.SetActive(SheetState == DecorationSheetState.Expanded);
-            collapsedRoot?.SetActive(SheetState == DecorationSheetState.CompactPreview);
+            GetComponentInChildren<DecorationFloorRangeView>(true)?.RefreshCatalogueVisibility();
+            collapsedRoot?.SetActive(appearance == null && SheetState == DecorationSheetState.CompactPreview);
             sheetActionRoot?.SetActive(SheetState != DecorationSheetState.TabsOnly
                 && SheetState != DecorationSheetState.Hidden);
             if (restoreTools) RefreshP8RLayout();
@@ -185,6 +186,7 @@ namespace AnimalCafe.UI.Decoration
         /// <summary>Keep browsing positions only for this Decoration session, keyed by Tab and CategoryId.</summary>
         public void BindCategories(string contextKey, IReadOnlyList<DecorationCategoryModel> categories, Action<DecorationCatalogueItemModel> selected)
         {
+            CloseCategoryHelp();
             RememberBrowsingPosition();
             CancelBrowsingRestore();
             StopBrowsingMotion();
@@ -225,6 +227,8 @@ namespace AnimalCafe.UI.Decoration
                 ConfigureNestedPointerDrag(row, scroll);
                 var label = row.GetComponentInChildren<TMP_Text>(true);
                 if (label != null) label.text = appearance != null ? appearance.Text("category." + category.CategoryId) : category.DisplayName;
+                if (appearance != null && (category.CategoryId == "cash-register" || category.CategoryId == "coffee-machine"))
+                    CreateCategoryInfo(row.transform, category.CategoryId);
                 var itemContent = scroll.content;
                 if (itemContent == null)
                 {
@@ -565,8 +569,10 @@ namespace AnimalCafe.UI.Decoration
         public DecorationCatalogueState State { get; private set; } =
             DecorationCatalogueState.Hidden;
         public RectTransform CollapsedHandleRect =>
-            collapsedRoot != null ? collapsedRoot.transform as RectTransform : null;
+            appearance != null && collapseButton != null ? collapseButton.transform as RectTransform
+                : collapsedRoot != null ? collapsedRoot.transform as RectTransform : null;
         public RectTransform SurfaceFooterHost => surfaceFooterHost;
+        public bool IsExpandedPanelVisible => expandedRoot != null && expandedRoot.activeSelf;
 
         public void SetEditingContext(string message, bool canReturn)
         {
@@ -680,6 +686,7 @@ namespace AnimalCafe.UI.Decoration
         {
             if (appearance == null || refreshingP8RLayout || expandedRoot == null || transform is not RectTransform root) return;
             refreshingP8RLayout = true;
+            CloseCategoryHelp();
             try
             {
                 var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
@@ -692,12 +699,16 @@ namespace AnimalCafe.UI.Decoration
                 var inlineContext = compactHeader && hasContext
                     && (editingContextLabel == null || !editingContextLabel.gameObject.activeSelf)
                     && width >= padding * 2 + metrics.Units(248 + 4 * 48 + 3 * 6);
-                // Short phones keep the four categories and collapse target on one row.
-                // 矮手机省去重复的 Catalogue 标题，不省略按钮，也不缩小点击区域。
-                var minimalHeader = !compactHeader && metrics.LogicalViewport.y <= 700f
-                    && width + metrics.Units(.01f) >= metrics.Units(5 * 48 + 4 * 4 + 8);
-                var headerPadding = minimalHeader ? metrics.Units(4) : padding;
-                var header = metrics.Units(compactHeader ? 52 : minimalHeader ? 56 : 108);
+                // Any phone width that fits the targets keeps tabs and toggle on one row.
+                // 是否同排取决于宽度，长屏手机也不恢复旧的两行header。
+                var minimalHeader = !compactHeader
+                    && width + metrics.Units(.01f) >= metrics.Units(5 * 48 + 4 * 4 + 16);
+                // Use one outer inset for the header and catalogue content. Do not shrink touch targets.
+                // 标题栏与目录内容共用外层留白；极窄屏用8，其余用12，不缩点击范围。
+                var headerPadding = width + metrics.Units(.01f) >= metrics.Units(5 * 48 + 4 * 4 + 24)
+                    ? padding : metrics.Units(8);
+                var header = compactHeader ? metrics.Units(57)
+                    : minimalHeader ? metrics.Units(44) + headerPadding : metrics.Units(108);
                 var availableHeight = root.rect.height - metrics.Units(compactHeader ? 128 : 164);
                 foreach (var obstruction in new[] { p8rTopObstruction, p8rInstructionObstruction })
                 {
@@ -710,10 +721,14 @@ namespace AnimalCafe.UI.Decoration
                 var uncappedHeight = Mathf.Min(metrics.Units(520), Mathf.Max(metrics.Units(120), availableHeight));
                 // The complete sheet stays within 45% of safe height; overflow uses its ScrollRect.
                 // 整个面板最多占安全区45%，高度不足的工具使用已有目录滚动区。
-                var safeHeightCap = root.rect.height * .45f;
+                var safeHeightCap = Mathf.Min(root.rect.height * .45f, Mathf.Max(0, availableHeight));
                 var measure = collapseButton != null ? collapseButton.GetComponentInChildren<TMP_Text>(true) : null;
                 var surface = browsingContextKey == "Floor" || browsingContextKey == "Wall";
-                var footerPadding = minimalHeader ? metrics.Units(4) : padding;
+                var footerPadding = headerPadding;
+                // Visible footer edges share the outer inset; 48-unit roots include transparent margins.
+                // Footer按可见边框统一留白，减去48点击框里的透明边距。
+                var surfaceBottomInset = footerPadding - metrics.Units(8);
+                var pickupBottomInset = footerPadding - metrics.Units(7);
                 var footer = surface ? AnimalCafe.UI.P8R.P8RSurfaceFooterLayout.Measure(this, width - footerPadding * 2,
                     appearance, measure, browsingContextKey == "Floor", handleHasActivePreview) : null;
                 var footerHeight = footer != null ? footer.Height : 0;
@@ -739,15 +754,15 @@ namespace AnimalCafe.UI.Decoration
                 var asideFooterHeight = asideLayout != null ? asideLayout.Height : 0;
                 var asideFooter = surface && SheetState == DecorationSheetState.Expanded
                     && shortLandscape
-                    && width >= asideWidth + padding * 2 + gap + metrics.Units(76)
-                    && safeHeightCap - header - footerHeight - surfaceGap * 2 < metrics.Units(76);
+                    && width >= asideWidth + padding * 2 + gap + metrics.Units(CategorySpacing.HeadingHeight + 48)
+                    && safeHeightCap - header - footerHeight - surfaceGap * 2 < metrics.Units(CategorySpacing.HeadingHeight + 48);
                 var contentGap = safeHeightCap - header - gap < metrics.Units(80)
                     ? metrics.Units(4) : gap;
                 var fixedBottomReservation = surface
-                    ? asideFooter ? surfaceGap * 2 : footerHeight + surfaceGap * 2
-                    : pickupIsVisible && !pickupInHeader ? metrics.Units(64) : contentGap;
+                    ? asideFooter ? surfaceGap * 2 : footerHeight + surfaceBottomInset + surfaceGap
+                    : pickupIsVisible && !pickupInHeader ? metrics.Units(48) + pickupBottomInset + gap : contentGap;
                 var contextGap = minimalHeader && safeHeightCap < header + metrics.Units(48)
-                    + gap + fixedBottomReservation + metrics.Units(76) ? metrics.Units(4) : gap;
+                    + gap + fixedBottomReservation + metrics.Units(CategorySpacing.HeadingHeight + 48) ? metrics.Units(4) : gap;
                 var fixedContextReservation = hasContext && !inlineContext ? metrics.Units(48) + contextGap : 0;
                 var fixedReservations = header + fixedContextReservation + fixedBottomReservation;
                 var canScrollTools = expandedRoot.activeSelf && categoryContent != null;
@@ -757,41 +772,41 @@ namespace AnimalCafe.UI.Decoration
                 {
                     asideFooter = false;
                     // Scroll content uses the card column's full width, not the old footer padding.
-                    footer = AnimalCafe.UI.P8R.P8RSurfaceFooterLayout.Measure(this, width - padding * 2,
+                    footer = AnimalCafe.UI.P8R.P8RSurfaceFooterLayout.Measure(this, width - footerPadding * 2,
                         appearance, measure, browsingContextKey == "Floor", handleHasActivePreview);
                     footerHeight = footer.Height;
-                    fixedBottomReservation = metrics.Units(4);
+                    fixedBottomReservation = surfaceBottomInset;
                 }
                 var scrollPickup = canScrollTools && pickupIsVisible && !pickupInHeader
                     && safeHeightCap + metrics.Units(.01f) < header + fixedContextReservation
-                        + fixedBottomReservation + metrics.Units(76);
-                if (scrollPickup) fixedBottomReservation = metrics.Units(4);
+                        + fixedBottomReservation + metrics.Units(CategorySpacing.HeadingHeight + 48);
+                if (scrollPickup) fixedBottomReservation = pickupBottomInset;
                 var scrollContext = canScrollTools && hasContext && !inlineContext
                     && safeHeightCap + metrics.Units(.01f) < header + fixedContextReservation
-                        + fixedBottomReservation + metrics.Units(76);
+                        + fixedBottomReservation + metrics.Units(CategorySpacing.HeadingHeight + 48);
                 if (scrollContext) fixedContextReservation = 0;
                 fixedReservations = header + fixedContextReservation + fixedBottomReservation;
-                // A normal row needs its 28-logical heading plus a 48-logical visible card slice.
+                // A normal row needs the shared heading area plus a 48-logical visible card slice.
                 // When only that redundant Floor heading prevents the cap, hide it using the
                 // existing short-layout pattern instead of clipping the real tile target.
-                // 普通行需28标题+48卡片；仅重复Floor标题挡住时沿用既有隐藏模式。
+                // 普通行需共用标题区域+48卡片；仅重复Floor标题挡住时沿用既有隐藏模式。
                 var hideFloorHeadingForCap = browsingContextKey == "Floor"
                     && safeHeightCap + metrics.Units(.01f) >= fixedReservations + metrics.Units(48)
-                    && safeHeightCap < fixedReservations + metrics.Units(76);
-                // Keep Furniture/Wall Decor category names; trim only the first heading's blank space.
-                // 保留家具与墙饰分类名称，仅在极短屏压缩首行标题下的空白。
-                var firstHeadingHeight = Mathf.Clamp((safeHeightCap - fixedReservations) / metrics.Units(1) - 52.125f, 20f, 28f);
-                var minimumContentReservation = metrics.Units(hideFloorHeadingForCap ? 48 : 48 + firstHeadingHeight);
+                    && safeHeightCap < fixedReservations + metrics.Units(CategorySpacing.HeadingHeight + 48);
+                // Keep the same title-to-card spacing, including the first category.
+                // 首个category也保持统一间距，不再单独压缩标题。
+                var firstHeadingHeight = CategorySpacing.HeadingHeight;
+                var minimumContentReservation = metrics.Units(hideFloorHeadingForCap ? 48 : 50 + firstHeadingHeight);
                 if (asideFooter) minimumContentReservation = Mathf.Max(minimumContentReservation, asideFooterHeight);
                 var minimumUsableHeight = fixedReservations + minimumContentReservation;
                 var height = Mathf.Min(safeHeightCap, Mathf.Max(Mathf.Min(uncappedHeight, safeHeightCap), minimumUsableHeight));
                 // Short content shrinks below the cap. Each row owns an 84-logical card,
-                // a 28-logical heading and a small separation; fixed controls keep their reservation.
-                // 内容较少时继续收紧；每行保留84卡片、28标题和少量间距。
+                // the shared heading and category gap; fixed controls keep their reservation.
+                // 内容较少时继续收紧；每行采用同一个标题、卡片和分类间距profile。
                 if (!hasContext && categoryRows.Count > 0)
                 {
-                    var rowsHeight = categoryRows.Count * metrics.Units(116)
-                        + Mathf.Max(0, categoryRows.Count - 1) * gap;
+                    var rowsHeight = categoryRows.Count * metrics.Units(CategorySpacing.CardHeight + CategorySpacing.HeadingHeight)
+                        + Mathf.Max(0, categoryRows.Count - 1) * metrics.Units(CategorySpacing.BetweenCategories);
                     var lowerReservation = fixedBottomReservation;
                     height = Mathf.Min(height, header + rowsHeight + lowerReservation);
                 }
@@ -813,7 +828,7 @@ namespace AnimalCafe.UI.Decoration
                 }
                 surfaceFooterExpandedAnchoredPosition = new Vector2(
                     asideFooter ? root.rect.width * .5f - side - footerPadding - asideWidth * .5f : 0,
-                    side + surfaceGap + (asideFooter ? Mathf.Max(0, height - header - footerHeight - surfaceGap * 2) * .5f : 0));
+                    side + (asideFooter ? surfaceGap : surfaceBottomInset) + (asideFooter ? Mathf.Max(0, height - header - footerHeight - surfaceGap * 2) * .5f : 0));
                 if (surfaceFooterHost != null)
                 {
                     surfaceFooterHost.anchorMin = asideFooter ? new Vector2(.5f, 0) : Vector2.zero;
@@ -831,28 +846,35 @@ namespace AnimalCafe.UI.Decoration
                 if (tabs != null)
                 {
                     var row = (RectTransform)tabs.transform;
-                    // Hidden title/Return/collapse controls must not leave horizontal gaps in the compact bar.
-                    // 收起时标题与返回按钮已隐藏，分类行恢复两侧对称留白，不沿用展开标题行的占位。
-                    // Legacy furniture ShowCollapsedHandle does not update SheetState; use the actual header visibility.
-                    // 家具保留旧的收起入口，此时SheetState可能仍为Expanded；以标题容器实际显示状态为准。
-                    var tabsInHeader = expandedRoot.activeSelf;
-                    var tabsPadding = tabsInHeader ? headerPadding : padding;
-                    var tabsLeading = tabsInHeader && compactHeader
+                    // Preserve the same horizontal tab geometry when the catalogue folds.
+                    // 收起后保留四个 tab 的横向位置和宽度，为原箭头保留空间。
+                    var tabsPadding = headerPadding;
+                    var tabsLeading = compactHeader
                         ? metrics.Units(dualHeaderActions ? 328.03125f : inlineContext ? 188 : pickupInHeader ? 148 : 112) : 0;
-                    var tabsReservation = tabsInHeader
-                        ? (compactHeader ? metrics.Units(dualHeaderActions ? 380.03125f : inlineContext ? 248 : pickupInHeader ? 208 : 172)
-                            : minimalHeader ? metrics.Units(52) : 0) : 0;
+                    var tabsReservation = compactHeader
+                        ? metrics.Units(dualHeaderActions ? 380.03125f : inlineContext ? 240 : pickupInHeader ? 200 : 164)
+                        : minimalHeader ? metrics.Units(52) : 0;
                     row.anchorMin = row.anchorMax = row.pivot = Vector2.zero;
+                    // Visible faces use the same top and side inset (12 normal / 8 narrow).
+                    // 可见按钮上方和左右共用留白（普通12 / 极窄8）。
                     row.anchoredPosition = new Vector2(side + tabsPadding + tabsLeading,
-                        side + height - header + metrics.Units(4));
+                        side + height - header + metrics.Units(minimalHeader ? 3 : 4));
                     row.sizeDelta = new Vector2(width - tabsPadding * 2 - tabsReservation, metrics.Units(48));
                     var layout = row.GetComponent<HorizontalLayoutGroup>();
-                    if (layout != null) { layout.spacing = metrics.Units(minimalHeader ? 4 : 6); layout.childControlHeight = true; layout.childForceExpandHeight = false; }
+                    if (layout != null) { layout.spacing = metrics.Units(4); layout.childControlHeight = true; layout.childForceExpandHeight = false; }
                     foreach (var button in tabs.GetComponentsInChildren<Button>(true))
                     {
                         var element = button.GetComponent<LayoutElement>() ?? button.gameObject.AddComponent<LayoutElement>();
                         element.minWidth = metrics.Units(48); element.preferredHeight = metrics.Units(48);
-                        ((RectTransform)button.transform).SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, metrics.Units(48));
+                        var tabRect = (RectTransform)button.transform;
+                        tabRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, metrics.Units(48));
+                        if (layout == null)
+                        {
+                            // Existing prefab uses quarter-width anchors, not a layout group.
+                            // 四等分 anchor 共享剩余宽度，首尾不额外留半个间距。
+                            tabRect.sizeDelta = new Vector2(-metrics.Units(3), metrics.Units(48));
+                            tabRect.anchoredPosition = new Vector2(metrics.Units(4) * (tabRect.anchorMin.x - .375f), 0);
+                        }
                         AnimalCafe.UI.P8R.P8RButtonLayout.StackedButton(button);
                     }
                 }
@@ -861,7 +883,7 @@ namespace AnimalCafe.UI.Decoration
                 {
                     title.gameObject.SetActive(!minimalHeader && !inlineContext && !pickupInHeader);
                     title.anchorMin = title.anchorMax = title.pivot = new Vector2(0, 1);
-                    title.anchoredPosition = new Vector2(padding, -metrics.Units(compactHeader ? 12 : 8));
+                    title.anchoredPosition = new Vector2(headerPadding, -metrics.Units(compactHeader ? 12 : 8));
                     title.sizeDelta = new Vector2(compactHeader ? metrics.Units(104) : width - metrics.Units(84), metrics.Units(32));
                     var copy = title.GetComponent<TMP_Text>(); if (copy != null) copy.fontSize = metrics.Units(16);
                 }
@@ -871,25 +893,35 @@ namespace AnimalCafe.UI.Decoration
                     var rect = (RectTransform)button.transform;
                     if (button == collapseButton)
                     {
-                        rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.one;
-                        rect.anchoredPosition = new Vector2(-metrics.Units(4), -metrics.Units(4));
+                        // Keep one toggle outside the content that gets hidden.
+                        // 收起时保留同一个箭头按钮，不再使用 Add Another。
+                        if (rect.parent != root) rect.SetParent(root, false);
+                        rect.anchorMin = rect.anchorMax = rect.pivot = Vector2.zero;
+                        var tabRow = tabs != null ? (RectTransform)tabs.transform : null;
+                        rect.anchoredPosition = tabRow != null && (compactHeader || minimalHeader)
+                            ? tabRow.anchoredPosition + new Vector2(tabRow.rect.width + metrics.Units(4), 0)
+                            : new Vector2(side + width - headerPadding - metrics.Units(48), side + height - metrics.Units(52));
                         rect.sizeDelta = Vector2.one * metrics.Units(48);
                         button.transform.Find("Label")?.gameObject.SetActive(false);
                         AnimalCafe.UI.P8R.P8RButtonLayout.IconButton(button);
+                        button.image.rectTransform.sizeDelta = new Vector2(metrics.Units(48), metrics.Units(34));
+                        var arrow = button.transform.Find("Icon");
+                        if (arrow != null) arrow.localRotation = Quaternion.Euler(0, 0, expandedRoot.activeSelf ? 0 : 180);
+                        rect.SetAsLastSibling();
                     }
                     else if (button == pickUpPointButton)
                     {
                         if (pickupInHeader)
                         {
                             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
-                            rect.anchoredPosition = new Vector2(padding + (dualHeaderActions ? metrics.Units(188.015625f) : 0), 0);
+                            rect.anchoredPosition = new Vector2(padding + (dualHeaderActions ? metrics.Units(188.015625f) : 0), -metrics.Units(5));
                             rect.sizeDelta = new Vector2(metrics.Units(140), metrics.Units(48));
                         }
                         else
                         {
                             rect.anchorMin = Vector2.zero; rect.anchorMax = new Vector2(1, 0); rect.pivot = new Vector2(.5f, 0);
-                            rect.anchoredPosition = new Vector2(0, gap);
-                            rect.sizeDelta = new Vector2(-padding * 2, metrics.Units(48));
+                            rect.anchoredPosition = new Vector2(0, pickupBottomInset);
+                            rect.sizeDelta = new Vector2(-footerPadding * 2, metrics.Units(48));
                         }
                         var icon = button.transform.Find("Icon")?.GetComponent<Image>();
                         if (icon != null)
@@ -912,7 +944,8 @@ namespace AnimalCafe.UI.Decoration
                     handle.anchoredPosition = new Vector2(0, row.anchoredPosition.y - gap - handle.rect.height * .5f);
                     var handleBottom = side + gap * 2 + footerHeight;
                     collapsedAnchoredPosition = expandedAnchoredPosition + new Vector2(0,
-                        SheetState == DecorationSheetState.TabsOnly ? side - row.anchoredPosition.y
+                        appearance != null ? side + (SheetState == DecorationSheetState.TabsOnly ? 0 : footerHeight + gap) - row.anchoredPosition.y
+                            : SheetState == DecorationSheetState.TabsOnly ? side - row.anchoredPosition.y
                             : handleBottom - (handle.anchoredPosition.y - handle.rect.height * .5f));
                     if (IsCollapsed && transitionCoroutine == null)
                     {
@@ -945,10 +978,10 @@ namespace AnimalCafe.UI.Decoration
                     }
                     context.anchorMin = new Vector2(0, 1);
                     context.anchorMax = new Vector2(inlineContext ? 0 : 1, 1);
-                    context.offsetMin = inlineContext ? new Vector2(padding, -metrics.Units(48))
-                        : new Vector2(padding, -header - contextHeight);
-                    context.offsetMax = inlineContext ? new Vector2(padding + returnWidth + gap, 0)
-                        : new Vector2(-padding, -header);
+                    context.offsetMin = inlineContext ? new Vector2(headerPadding, -metrics.Units(53))
+                        : new Vector2(headerPadding, -header - contextHeight);
+                    context.offsetMax = inlineContext ? new Vector2(headerPadding + returnWidth + gap, -metrics.Units(5))
+                        : new Vector2(-headerPadding, -header);
                 }
                 if (verticalScroll != null)
                 {
@@ -956,9 +989,9 @@ namespace AnimalCafe.UI.Decoration
                     var host = viewport.parent as RectTransform;
                     if (host != null)
                     {
-                        host.offsetMax = new Vector2(-padding - (asideFooter ? asideWidth + gap : 0),
+                        host.offsetMax = new Vector2(-headerPadding - (asideFooter ? asideWidth + gap : 0),
                             -header - (hasContext && !inlineContext && !scrollContext ? contextHeight + contextGap : 0));
-                        host.offsetMin = new Vector2(padding, asideFooter ? surfaceGap : fixedBottomReservation);
+                        host.offsetMin = new Vector2(headerPadding, asideFooter ? surfaceGap : fixedBottomReservation);
                     }
                     viewport.offsetMin = viewport.offsetMax = Vector2.zero;
                 }
@@ -968,29 +1001,142 @@ namespace AnimalCafe.UI.Decoration
                 SetScrollingTool(pickUpPointButton != null ? (RectTransform)pickUpPointButton.transform : null,
                     scrollPickup, metrics.Units(48));
                 RefreshMobileCategoryRows(hideFloorHeadingForCap
-                    || asideFooter && height - header - surfaceGap < metrics.Units(80), firstHeadingHeight);
+                    || asideFooter && height - header - surfaceGap < metrics.Units(80));
+                GetComponentInChildren<DecorationFloorRangeView>(true)?.RefreshCatalogueVisibility();
                 RefreshOverflowIndicator(Vector2.zero);
             }
             finally { refreshingP8RLayout = false; }
         }
 
+        private Button categoryHelpDismiss;
+        private AnimalCafe.UI.Feedback.TooltipView categoryHelp;
+        private RectTransform categoryHelpCard;
+        private TMP_Text categoryHelpText;
+
+        private void CreateCategoryInfo(Transform row, string categoryId)
+        {
+            var node = new GameObject("CategoryInfo", typeof(RectTransform), typeof(Image), typeof(Button));
+            node.transform.SetParent(row, false);
+            node.GetComponent<Image>().color = Color.clear;
+            var button = node.GetComponent<Button>();
+            button.transition = Selectable.Transition.None;
+            var iconNode = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+            iconNode.transform.SetParent(node.transform, false);
+            var icon = iconNode.GetComponent<Image>();
+            appearance.Paint(icon, "status_info", false);
+            icon.raycastTarget = false;
+            button.onClick.AddListener(() => ShowCategoryHelp((RectTransform)node.transform, categoryId));
+        }
+
+        private void ShowCategoryHelp(RectTransform anchor, string categoryId)
+        {
+            if (!IsExpandedPanelVisible || !anchor.gameObject.activeInHierarchy) return;
+            var panel = (RectTransform)expandedRoot.transform;
+            if (categoryHelpDismiss == null)
+            {
+                // An in-panel dismiss layer keeps help taps from selecting furniture behind it.
+                // 面板内的关闭层拦住点击，避免阅读说明时误选背后的家具。
+                var dismiss = new GameObject("CategoryHelpDismiss", typeof(RectTransform), typeof(Image), typeof(Button));
+                dismiss.transform.SetParent(panel, false);
+                var rect = (RectTransform)dismiss.transform;
+                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+                rect.offsetMin = rect.offsetMax = Vector2.zero;
+                dismiss.GetComponent<Image>().color = Color.clear;
+                categoryHelpDismiss = dismiss.GetComponent<Button>();
+                categoryHelpDismiss.transition = Selectable.Transition.None;
+                categoryHelpDismiss.onClick.AddListener(CloseCategoryHelp);
+                var card = new GameObject("CategoryHelpCard", typeof(RectTransform), typeof(Image));
+                card.transform.SetParent(dismiss.transform, false);
+                categoryHelpCard = (RectTransform)card.transform;
+                appearance.Paint(card.GetComponent<Image>(), "panel_cream");
+                var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+                label.transform.SetParent(card.transform, false);
+                categoryHelpText = label.GetComponent<TMP_Text>();
+                categoryHelpText.font = appearance.Font;
+                categoryHelpText.color = AnimalCafe.UI.P8R.P8RAppearance.Cocoa;
+                categoryHelpText.alignment = TextAlignmentOptions.MidlineLeft;
+                categoryHelpText.textWrappingMode = TextWrappingModes.Normal;
+                categoryHelpText.richText = false;
+                categoryHelpText.raycastTarget = false;
+                categoryHelp = label.AddComponent<AnimalCafe.UI.Feedback.TooltipView>();
+                categoryHelp.Configure(categoryHelpText, card);
+            }
+            var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
+            var padding = metrics.Units(12);
+            var width = Mathf.Min(metrics.Units(280), panel.rect.width - padding * 2);
+            categoryHelpText.fontSize = metrics.Units(12);
+            var message = appearance.Text("category.help." + categoryId);
+            var height = categoryHelpText.GetPreferredValues(message, width - padding * 2, Mathf.Infinity).y + padding * 2;
+            categoryHelpCard.anchorMin = categoryHelpCard.anchorMax = categoryHelpCard.pivot = new Vector2(.5f, 1);
+            categoryHelpCard.sizeDelta = new Vector2(width, height);
+            var belowTitle = panel.rect.yMax - panel.InverseTransformPoint(anchor.TransformPoint(new Vector2(0, anchor.rect.yMin))).y;
+            categoryHelpCard.anchoredPosition = new Vector2(0, -Mathf.Clamp(belowTitle, padding,
+                Mathf.Max(padding, panel.rect.height - height - padding)));
+            categoryHelpText.rectTransform.anchorMin = Vector2.zero;
+            categoryHelpText.rectTransform.anchorMax = Vector2.one;
+            categoryHelpText.rectTransform.offsetMin = Vector2.one * padding;
+            categoryHelpText.rectTransform.offsetMax = -Vector2.one * padding;
+            categoryHelpDismiss.gameObject.SetActive(true);
+            categoryHelpDismiss.transform.SetAsLastSibling();
+            categoryHelp.SetMessage(message);
+            categoryHelp.OnPointerClick(null);
+        }
+
+        private void CloseCategoryHelp()
+        {
+            if (categoryHelp != null) categoryHelp.Close();
+            if (categoryHelpDismiss != null) categoryHelpDismiss.gameObject.SetActive(false);
+        }
+
+        // Shared logical-unit spacing for all four catalogue tabs.
+        // 四个tab共用同一组逻辑单位，屏幕缩放只由metrics处理。
+        private static class CategorySpacing
+        {
+            public const float TitleHeight = 24f;
+            public const float TitleToCard = 6f;
+            public const float BetweenCategories = 18f;
+            public const float BetweenCards = 8f;
+            public const float CardHeight = 84f;
+            public const float HeadingHeight = TitleHeight + TitleToCard;
+        }
+
         private Image mobileOverflowIndicator;
-        private void RefreshMobileCategoryRows(bool hideRepeatedFloorHeading = false, float firstHeadingHeight = 28f)
+        private void RefreshMobileCategoryRows(bool hideRepeatedFloorHeading = false)
         {
             var metrics = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this);
             foreach (var row in categoryRows)
             {
-                var headingHeight = row == categoryRows[0] ? firstHeadingHeight : 28f;
+                var headingHeight = CategorySpacing.HeadingHeight;
+                var info = row.HorizontalScroll != null ? row.HorizontalScroll.transform.Find("CategoryInfo") as RectTransform : null;
                 var scroll = row.HorizontalScroll; if (scroll == null) continue;
                 var element = scroll.GetComponent<LayoutElement>() ?? scroll.gameObject.AddComponent<LayoutElement>();
-                element.minHeight = element.preferredHeight = metrics.Units(hideRepeatedFloorHeading ? 84 : 88 + headingHeight);
+                element.minHeight = element.preferredHeight = metrics.Units(CategorySpacing.CardHeight + (hideRepeatedFloorHeading ? 0 : headingHeight));
                 var label = scroll.GetComponentInChildren<TMP_Text>(true);
                 if (label != null && label.name == "CategoryLabel")
                 {
                     label.gameObject.SetActive(!hideRepeatedFloorHeading);
                     label.fontSize = metrics.Units(14);
-                    label.rectTransform.offsetMin = new Vector2(0, -metrics.Units(headingHeight));
+                    label.alignment = TextAlignmentOptions.MidlineLeft;
+                    label.rectTransform.offsetMin = new Vector2(0, -metrics.Units(CategorySpacing.TitleHeight));
                     label.rectTransform.offsetMax = Vector2.zero;
+                    if (info != null)
+                    {
+                        label.alignment = TextAlignmentOptions.MidlineLeft;
+                        label.rectTransform.offsetMax = new Vector2(-metrics.Units(52), 0);
+                        info.anchorMin = info.anchorMax = info.pivot = new Vector2(0, 1);
+                        var titleWidth = label.GetPreferredValues(label.text).x;
+                        info.anchoredPosition = new Vector2(Mathf.Min(titleWidth + metrics.Units(4),
+                            ((RectTransform)scroll.transform).rect.width - metrics.Units(48)),
+                            metrics.Units(48 - CategorySpacing.HeadingHeight));
+                        info.sizeDelta = Vector2.one * metrics.Units(48);
+                        var icon = info.Find("Icon").GetComponent<Image>();
+                        // Keep the 48-unit hit target, but align the visible icon beside the title.
+                        // 保留48单位点击区域，让可见图标紧靠标题。
+                        icon.rectTransform.anchorMin = icon.rectTransform.anchorMax = icon.rectTransform.pivot = new Vector2(0, .5f);
+                        icon.rectTransform.anchoredPosition = new Vector2(0,
+                            -metrics.Units(24 - CategorySpacing.TitleHeight * .5f - CategorySpacing.TitleToCard));
+                        icon.rectTransform.sizeDelta = Vector2.one * metrics.Units(18);
+                    }
                 }
                 if (scroll.viewport != null) scroll.viewport.offsetMax = new Vector2(scroll.viewport.offsetMax.x,
                     -metrics.Units(hideRepeatedFloorHeading ? 0 : headingHeight));
@@ -999,21 +1145,22 @@ namespace AnimalCafe.UI.Decoration
                     var layout = scroll.content.GetComponent<HorizontalLayoutGroup>();
                     if (layout != null)
                     {
-                        layout.spacing = metrics.Units(8); layout.childControlWidth = true; layout.childControlHeight = true;
+                        layout.spacing = metrics.Units(CategorySpacing.BetweenCards); layout.childControlWidth = true; layout.childControlHeight = true;
                         layout.childForceExpandWidth = false; layout.childForceExpandHeight = false;
                     }
                     foreach (var tile in scroll.content.GetComponentsInChildren<DecorationCatalogueTileView>())
                     {
                         var item = tile.GetComponent<LayoutElement>() ?? tile.gameObject.AddComponent<LayoutElement>();
                         item.minWidth = item.preferredWidth = metrics.Units(68);
-                        item.minHeight = item.preferredHeight = metrics.Units(84);
+                        item.minHeight = item.preferredHeight = metrics.Units(CategorySpacing.CardHeight);
                         tile.RefreshMobileLayout();
                     }
                 }
             }
             if (categoryContent != null)
             {
-                var layout = categoryContent.GetComponent<VerticalLayoutGroup>(); if (layout != null) layout.spacing = metrics.Units(8);
+                var layout = categoryContent.GetComponent<VerticalLayoutGroup>();
+                if (layout != null) layout.spacing = metrics.Units(CategorySpacing.BetweenCategories);
                 LayoutRebuilder.ForceRebuildLayoutImmediate(categoryContent);
             }
         }
@@ -1126,6 +1273,7 @@ namespace AnimalCafe.UI.Decoration
 
         public void ShowCollapsedHandle()
         {
+            if (appearance != null) SheetState = handleHasActivePreview ? DecorationSheetState.CompactPreview : DecorationSheetState.TabsOnly;
             RefreshCollapsedHandleLabel();
             transform.SetAsLastSibling();
             collapsedHandleButton?.transform.SetAsLastSibling();
@@ -1227,6 +1375,11 @@ namespace AnimalCafe.UI.Decoration
 
         private void HandleCollapseRequested()
         {
+            if (appearance != null && IsCatalogueVisible && IsCollapsed && IsEligibleButton(collapseButton))
+            {
+                ShowCatalogue();
+                return;
+            }
             if (!IsCatalogueVisible
                 || IsCollapsed
                 || !IsEligibleButton(collapseButton))
@@ -1282,6 +1435,7 @@ namespace AnimalCafe.UI.Decoration
 
         private void OnDisable()
         {
+            CloseCategoryHelp();
             AnimalCafe.UI.P8R.P8RMobileMetrics.Changed -= RefreshP8RLayout;
             if (verticalScroll != null) verticalScroll.onValueChanged.RemoveListener(RefreshOverflowIndicator);
             RememberBrowsingPosition();
@@ -1349,7 +1503,8 @@ namespace AnimalCafe.UI.Decoration
             var restoreTools = state != DecorationCatalogueState.Expanded && scrollingToolParents.Count > 0;
             if (restoreTools) RestoreScrollingTools();
             expandedRoot?.SetActive(state == DecorationCatalogueState.Expanded);
-            collapsedRoot?.SetActive(state == DecorationCatalogueState.Collapsed);
+            GetComponentInChildren<DecorationFloorRangeView>(true)?.RefreshCatalogueVisibility();
+            collapsedRoot?.SetActive(appearance == null && state == DecorationCatalogueState.Collapsed);
             if (restoreTools) RefreshP8RLayout();
             SetInteraction(IsCatalogueVisible);
             BeginTransition(state);
@@ -1358,6 +1513,7 @@ namespace AnimalCafe.UI.Decoration
 
         private void BeginTransition(DecorationCatalogueState state)
         {
+            CloseCategoryHelp();
             var targetPosition = state switch
             {
                 DecorationCatalogueState.Expanded => expandedAnchoredPosition,

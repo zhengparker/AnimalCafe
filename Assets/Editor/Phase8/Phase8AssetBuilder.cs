@@ -24,10 +24,15 @@ namespace AnimalCafe.EditorTools.Phase8
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 throw new InvalidOperationException("Exit Play Mode before updating the pick-up sign.");
+            var prefabPath = Phase8AssetPaths.PickUpPointIndicatorPrefabPath;
+            var stage = PrefabStageUtility.GetCurrentPrefabStage();
+            // A PrefabStage owns an in-memory copy, including when it is currently clean.
+            // 打开的 PrefabStage 持有自己的编辑副本；任何导入或写入前先保护它。
+            if (stage != null && stage.assetPath == prefabPath)
+                throw new InvalidOperationException("Close pick-up indicator Prefab Mode before updating: " + prefabPath);
             RequireNoDirtyProjectAssets();
             const string artworkPath = "Assets/UI/P8R/WorldMarkers/pickup_point.png";
             const string materialPath = "Assets/UI/Phase8/Materials/M_PickUpPoint_Indicator.mat";
-            var prefabPath = Phase8AssetPaths.PickUpPointIndicatorPrefabPath;
             RequireAsset<GameObject>(prefabPath, "Pick-up Point indicator Prefab");
             var shader = Shader.Find("Universal Render Pipeline/Unlit")
                 ?? throw new InvalidOperationException("Pick-up sign requires the URP Unlit shader.");

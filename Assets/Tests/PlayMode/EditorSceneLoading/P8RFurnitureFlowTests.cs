@@ -126,7 +126,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(session.ActivePreview, Is.Not.Null);
             Assert.That(runtime.Layout.FurnitureInstances.Count, Is.EqualTo(1));
             Assert.That(runtime.FunctionalSurfaceLayout.MountedInstances.Count, Is.EqualTo(1));
-            Assert.That(Field<TMP_Text>(action, "feedbackLabel").text, Does.Contain("Cash Register (1)"));
+            Assert.That(modal.GetComponentsInChildren<TMP_Text>(true).Any(text => text.text.Contains("Cash Register ×1")), Is.True);
             yield return new WaitForSecondsRealtime(.3f);
             Assert.That(modal.IsOpen, Is.False);
             AssertActionDoesNotCoverCatalogueControls();

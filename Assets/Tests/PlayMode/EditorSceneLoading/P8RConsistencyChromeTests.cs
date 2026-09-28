@@ -246,7 +246,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var preferred = label.GetPreferredValues(label.text);
             var root = (RectTransform)button.transform;
             var face = button.image.rectTransform;
-            var expectedFaceWidth = preferred.x / units + 12f;
+            var expectedFaceWidth = Mathf.Max(44f, preferred.x / units + 12f);
 
             Assert.That(label.text, Is.EqualTo(expectedCopy), context + " " + button.name + " final copy");
             Assert.That(button.interactable, Is.EqualTo(expectedInteractable), context + " " + button.name + " state");
@@ -256,7 +256,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 context + " " + button.name + " needs 6 logical units on each side of its final copy");
             if (expectedCopy == "Apply")
             {
-                Assert.That(root.rect.width / units, Is.EqualTo(Mathf.Max(48f, expectedFaceWidth)).Within(.25f),
+                Assert.That(root.rect.width / units, Is.EqualTo(Mathf.Max(48f, expectedFaceWidth + 4f)).Within(.25f),
                     context + " " + button.name + " root must be measured from final Apply, not transient Confirm");
             }
             Assert.That(root.rect.height / units, Is.GreaterThanOrEqualTo(47.99f), context + " " + button.name + " touch height");

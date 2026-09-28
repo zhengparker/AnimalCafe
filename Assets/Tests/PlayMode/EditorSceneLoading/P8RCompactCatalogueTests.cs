@@ -579,6 +579,13 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     yield return Settle();
                     foreach (var button in buttons)
                     {
+                        var range = button.GetComponentInParent<DecorationFloorRangeView>();
+                        if (range != null)
+                        {
+                            Assert.That(range.GetComponent<CanvasGroup>().alpha, Is.Zero, "Range choices belong to the open panel.");
+                            Assert.That(range.GetComponent<CanvasGroup>().blocksRaycasts, Is.False);
+                            continue;
+                        }
                         Assert.That(button.gameObject.activeInHierarchy, Is.True, mode + " collapsed tool");
                         AssertTarget(button, density, safe);
                         AssertRaycastResolvesTo(button, Box(button).center);

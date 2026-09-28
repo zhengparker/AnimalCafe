@@ -1,4 +1,4 @@
-using System.Linq;
+﻿using System.Linq;
 using System.Collections;
 using System.Reflection;
 using AnimalCafe.Decoration;
@@ -263,19 +263,21 @@ namespace AnimalCafe.Tests.EditMode.P8R
                 typeof(GameTimeService).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(service, null);
                 panel.Configure(service, Field<Button>(panel, "pauseButton"), Field<Button>(panel, "normalButton"), Field<Button>(panel, "fastButton"));
                 service.SetFast();
-                Assert.That(Field<Button>(panel, "fastButton").image.sprite?.name, Is.EqualTo("tab_selected"));
+                Assert.That(Field<Button>(panel, "pauseButton").gameObject.activeSelf, Is.False);
+                Assert.That(Field<Button>(panel, "fastButton").image.sprite.name, Is.EqualTo("tab_selected"));
                 panel.SetDecorationPauseLock(true);
-                Assert.That(Field<Button>(panel, "pauseButton").GetComponentInChildren<TMP_Text>(true).text, Is.EqualTo("Paused"));
                 Assert.That(Field<Button>(panel, "fastButton").interactable, Is.False);
+                Assert.That(Field<Button>(panel, "normalButton").interactable, Is.False);
                 panel.SetDecorationPauseLock(false);
                 service.SetNormal();
-                Assert.That(Field<Button>(panel, "normalButton").image.sprite?.name, Is.EqualTo("tab_selected"));
+                Assert.That(Field<Button>(panel, "normalButton").image.sprite.name, Is.EqualTo("tab_selected"));
+                Assert.That(Field<Button>(panel, "normalButton").interactable, Is.True);
             }
             finally { EditorSceneManager.CloseScene(scene, true); }
         }
 
         [Test]
-        public void Readiness_EnglishDisclosureRetainsEveryCauseAndDetachedId()
+        public void Readiness_ThreeRowsRetainEveryDiagnosticCauseAndDetachedId()
         {
             var scene = EditorSceneManager.OpenScene("Assets/Scenes/MainCafe.unity", OpenSceneMode.Additive);
             try
@@ -284,15 +286,35 @@ namespace AnimalCafe.Tests.EditMode.P8R
                 var failures = System.Enum.GetValues(typeof(LayoutReadinessFailureCode)).Cast<LayoutReadinessFailureCode>()
                     .Select((code, i) => Construct<LayoutReadinessFailure>(i % 2 == 0 ? LayoutReadinessSeverity.Blocking : LayoutReadinessSeverity.Warning,
                         code, (LayoutStationType?)LayoutStationType.CoffeeMachine, "private-" + i, "support-id", "slot-id",
-                        (InteractionRole?)InteractionRole.Employee, (GridPosition?)new GridPosition(i, 2), "diagnostic-only")).ToArray();
+                        (InteractionRole?)InteractionRole.Employee, (GridPosition?)new GridPosition(i, 2), "diagnostic-only-" + i)).ToArray();
                 var summary = Construct<LayoutReadinessSummary>(0, 0);
+                view.SetDecorationMode(true);
                 view.ShowReadiness(Construct<LayoutReadinessReport>(false, new StationReadiness[0], failures, summary, summary, summary));
-                Assert.That(view.CurrentMessage, Is.EqualTo("Can't open yet · 6 issues"));
-                Assert.That(view.FullReadinessMessage.Split('\n').Length, Is.GreaterThanOrEqualTo(13));
-                Assert.That(view.FullReadinessMessage, Does.Contain("Coffee Machine / Employee (11, 2)"));
+                var rows = Enumerable.Range(0, 3).Select(i => view.transform.Find("ChecklistRow" + i)).ToArray();
+                Assert.That(rows.All(row => row != null && row.gameObject.activeInHierarchy), Is.True);
+                Assert.That(view.CurrentMessage, Is.EqualTo(string.Join("\n", rows.Select(row => row.Find("Label").GetComponent<TMP_Text>().text))));
+                Assert.That(view.CurrentMessage, Does.Not.Contain("Setup checklist"));
+                Assert.That(view.CurrentMessage, Does.Contain("Cash Register").And.Contain("Coffee Machine").And.Contain("Pickup Point"));
+                Assert.That(view.IsDetailsExpanded, Is.True);
                 Assert.That(view.FullReadinessMessage, Does.Not.Contain("private-"));
-                Assert.That(view.DiagnosticIds, Does.Contain("private-11"));
-                Assert.That(Field<Button>(view, "disclosureButton").image.sprite?.name, Is.EqualTo("button_secondary_normal"));
+                CollectionAssert.AreEquivalent(failures.Select(f => f.InstanceId).Concat(new[] { "support-id", "slot-id" }), view.DiagnosticIds);
+                var appearance = Field<P8RAppearance>(view, "appearance");
+                for (var i = 0; i < failures.Length; i++)
+                {
+                    Assert.That(view.FullReadinessMessage, Does.Contain("diagnostic-only-" + i)
+                        .And.Contain("(" + i + ", 2)").And.Contain(appearance.Text("readiness." + failures[i].Code)));
+                    Assert.That(view.CurrentMessage, Does.Not.Contain("private-" + i));
+                }
+                Assert.That(view.CurrentMessage, Does.Not.Contain("support-id").And.Not.Contain("slot-id"));
+                Assert.That(view.GetComponentsInChildren<Button>().Length, Is.Zero);
+                Assert.That(view.GetComponent<CanvasGroup>().blocksRaycasts, Is.False);
+                Assert.That(view.GetComponent<Image>() == null || !view.GetComponent<Image>().enabled, Is.True);
+                foreach (var row in rows)
+                {
+                    var status = row.Find("Status").GetComponent<Image>();
+                    Assert.That(status.enabled && status.sprite != null, Is.True);
+                    Assert.That(status.raycastTarget, Is.False);
+                }
             }
             finally { EditorSceneManager.CloseScene(scene, true); }
         }

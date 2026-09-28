@@ -50,12 +50,12 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var controller = Find<DecorationModeController>();
             var catalogue = Find<DecorationCatalogueView>();
             var hudButton = Field<Button>(controller, "decorationModeButton");
-            AssertAction(hudButton, "decorate", iconOnly: true);
+            AssertAction(hudButton, "decorate", iconOnly: false);
 
             controller.EnterDecorationMode();
             yield return null;
             Canvas.ForceUpdateCanvases();
-            AssertAction(hudButton, "exit", iconOnly: true);
+            AssertAction(hudButton, "exit", iconOnly: false);
 
             var pickup = Field<Button>(catalogue, "pickUpPointButton");
             Assert.That(pickup.interactable, Is.True, "The enabled Furniture Pickup action must use cocoa art.");
@@ -113,6 +113,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var label = button.transform.Find("Label").GetComponent<TMP_Text>();
             Assert.That(label.gameObject.activeSelf, Is.EqualTo(!iconOnly), action + " label visibility");
             if (action == "pickup") Assert.That(label.text, Is.EqualTo("Pickup Point"));
+            else Assert.That(label.text, Is.EqualTo(action == "decorate" ? "Decor" : "Done"));
         }
     }
 }

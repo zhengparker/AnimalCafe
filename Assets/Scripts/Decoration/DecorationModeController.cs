@@ -1542,8 +1542,9 @@ namespace AnimalCafe.Decoration
                 activePointerDeviceFamily = PointerDeviceFamily.None;
 
                 // Pause first so a rejected request leaves normal Scene input untouched.
+                var enteringSpeed = ResolveGameTimeService().CurrentSpeed;
                 pauseHandle = pauseCoordinator.Acquire(modeView);
-                timeControlPanel.SetDecorationPauseLock(true);
+                timeControlPanel.SetDecorationPauseLock(true, enteringSpeed);
                 sceneInputSuppressionHandle = sceneInteraction.AcquireInputSuppression(this);
 
                 cameraEnabledBeforeEnter = cameraController.enabled;
@@ -1686,6 +1687,7 @@ namespace AnimalCafe.Decoration
 
         private void SyncHudLabel()
         {
+            validationMessageView?.SetDecorationMode(isOpen);
             if (decorationModeButtonLabel != null)
             {
                 if (p8rAppearance != null)
@@ -1967,12 +1969,19 @@ namespace AnimalCafe.Decoration
         private bool IsMousePointerOverVisibleReadiness()
         {
             var mouse = Mouse.current;
-            return mouse != null
-                && validationMessageView != null
-                && validationMessageView.IsVisible
-                && validationMessageView.gameObject.activeInHierarchy
-                && TryGetScreenRect((RectTransform)validationMessageView.transform, out var screenRect)
-                && screenRect.Contains(mouse.position.ReadValue());
+            if (mouse == null || validationMessageView == null || !validationMessageView.IsVisible
+                || !validationMessageView.gameObject.activeInHierarchy
+                || !IsUiAt(mouse.position.ReadValue())) return false;
+
+            // Only an actual readiness Graphic hit owns the wheel. Informational lists pass through.
+            // 仅真实命中的 readiness UI 拦截滚轮；无底板清单让场景输入穿透。
+            foreach (var hit in uiRaycastResults)
+            {
+                if (hit.module is GraphicRaycaster raycaster && raycaster.isActiveAndEnabled
+                    && hit.gameObject != null
+                    && hit.gameObject.transform.IsChildOf(validationMessageView.transform)) return true;
+            }
+            return false;
         }
 
         private void ConfigureViews()
@@ -2709,6 +2718,14 @@ namespace AnimalCafe.Decoration
             }
 
             cameraDriver.StopEdgeAutoPan();
+            // Read the same support contents as ConfirmStore before offering a destructive confirmation.
+            // 只读预检查复用domain支持关系；正式事务仍保留自己的最终检查。
+            var blockers = layoutRuntime?.FunctionalSurfaceLayout?.GetContentIdsForSupport(preview.SourceInstanceId);
+            if (blockers != null && blockers.Count > 0)
+            {
+                storeModalView.ShowBlockedContents(GetSupportStoreContents(blockers));
+                return;
+            }
             if (!session.BeginStoreConfirmation())
             {
                 return;
@@ -2926,6 +2943,27 @@ namespace AnimalCafe.Decoration
             if (coffeeMachines > 0) contents.Add($"咖啡机（{coffeeMachines}）");
             if (pickUpPoints > 0) contents.Add($"取餐点（{pickUpPoints}）");
             return message + "，" + string.Join("，", contents);
+        }
+
+        private string GetSupportStoreContents(IReadOnlyList<string> blockerIds)
+        {
+            var layout = layoutRuntime.FunctionalSurfaceLayout;
+            var names = new List<string>();
+            foreach (var id in blockerIds)
+            {
+                var mounted = layout.MountedInstances.FirstOrDefault(item => item.InstanceId == id);
+                if (mounted != null)
+                {
+                    var fallback = "Item";
+                    if (contentCatalog.TryGetDefinitionAsset(mounted.DefinitionId, out var definition))
+                        fallback = definition.FunctionType == FurnitureFunctionType.CashRegister ? "Cash Register"
+                            : definition.FunctionType == FurnitureFunctionType.CoffeeMachine ? "Coffee Machine" : definition.DisplayName;
+                    names.Add(p8rAppearance != null ? p8rAppearance.ItemName(mounted.DefinitionId, fallback) : fallback);
+                }
+                else if (layout.PickUpPoints.Any(item => item.InstanceId == id))
+                    names.Add(p8rAppearance != null ? p8rAppearance.Text("catalogue.pickup") : "Pickup Point");
+            }
+            return string.Join("\n", names.GroupBy(name => name).Select(group => "· " + group.Key + " ×" + group.Count()));
         }
 
         private bool CanMutatePreview()
@@ -3350,7 +3388,7 @@ namespace AnimalCafe.Decoration
                 presentation,
                 preferred,
                 safeArea,
-                avoidWorldRect);
+                avoidWorldRect, GetReadinessPresentationObstacle());
         }
 
         private void RebindReadinessPresentation(ValidationMessageView view)
@@ -3458,6 +3496,12 @@ namespace AnimalCafe.Decoration
             return preferred + new Vector2(8f, 8f);
         }
 
+        private Rect? GetReadinessPresentationObstacle()
+        {
+            return p8rAppearance != null && validationMessageView != null && validationMessageView.IsVisible
+                && TryGetScreenRect((RectTransform)validationMessageView.transform, out var rect) ? rect : (Rect?)null;
+        }
+
         private Rect GetActionPresentationSafeArea()
         {
             var safeArea = Screen.safeArea;
@@ -3497,14 +3541,6 @@ namespace AnimalCafe.Decoration
                 && TryGetScreenRect(catalogueView.CollapsedHandleRect, out var handleRect))
             {
                 ExcludeVerticalObstacle(ref safeArea, handleRect, preferUpperRegion: true);
-            }
-
-            if (p8rAppearance != null && validationMessageView != null && validationMessageView.IsVisible
-                && TryGetScreenRect((RectTransform)validationMessageView.transform, out var readinessRect))
-            {
-                // Confirmed diagnostics can expand below the HUD; floating actions stay below that card.
-                // 已确认布局详情展开后，浮动操作仍避开实际card边界。
-                safeArea.yMax = Mathf.Max(safeArea.yMin, Mathf.Min(safeArea.yMax, readinessRect.yMin - 8f));
             }
 
             if (p8rAppearance != null && catalogueView != null && catalogueView.IsCollapsed
@@ -3737,8 +3773,9 @@ namespace AnimalCafe.Decoration
                 }
                 if (!result.CurrentHit.FunctionalSurfaceAddress.HasValue)
                 {
-                    mountedPreviewFloorPosition = result.CurrentHit.FloorPosition
-                        ?? mountedPreviewFloorPosition;
+                    if (result.CurrentHit.FloorPosition.HasValue)
+                        mountedPreviewFloorPosition = ClampFunctionalPreviewFloorPosition(
+                            result.CurrentHit.FloorPosition.Value);
                 }
                 TryMoveFunctionalSurfacePreview(
                     result.CurrentHit.FunctionalSurfaceAddress ?? default);
@@ -3795,6 +3832,18 @@ namespace AnimalCafe.Decoration
             }
         }
 
+        // A floor-hovering station occupies one cell; stop at the nearest floor cell.
+        // 设备离开桌面后只限制悬浮位置，仍须放回有效桌面 Slot 才能确认。
+        private GridPosition ClampFunctionalPreviewFloorPosition(GridPosition position)
+        {
+            var bounds = gridSpace.Bounds;
+            // Non-visual sessions can exist before grid presentation is configured.
+            if (bounds.Size.Width <= 0 || bounds.Size.Height <= 0) return position;
+            return new GridPosition(
+                Math.Clamp(position.X, bounds.Origin.X, checked(bounds.Origin.X + bounds.Size.Width - 1)),
+                Math.Clamp(position.Y, bounds.Origin.Y, checked(bounds.Origin.Y + bounds.Size.Height - 1)));
+        }
+
         private void ShowFunctionalSurfacePreviewChrome()
         {
             catalogueView?.ShowCollapsedHandle();
@@ -3826,7 +3875,7 @@ namespace AnimalCafe.Decoration
                     && targetCamera != null
                     && TryProjectScreenToGrid(targetCamera.pixelRect.center, out var initialCell))
                 {
-                    mountedPreviewFloorPosition = initialCell;
+                    mountedPreviewFloorPosition = ClampFunctionalPreviewFloorPosition(initialCell);
                 }
                 if (mountedPreviewFloorPosition.HasValue)
                 {
@@ -3892,7 +3941,7 @@ namespace AnimalCafe.Decoration
                     actionBarView.transform.Find("ActionPanel") as RectTransform,
                     functionalSurfacePreviewPrefab != null
                         ? functionalSurfacePreviewPrefab.transform.Find("Footprint")?.GetComponent<Renderer>()?.sharedMaterial : null,
-                    gridRoot, gridSpace);
+                    gridRoot, gridSpace, GetReadinessPresentationObstacle);
                 cashRegisterSideIndicators.PresentationChanged += HandleCashRegisterPresentationChanged;
             }
             var preview = functionalSurfaceSession.ActivePreview;
@@ -3964,6 +4013,7 @@ namespace AnimalCafe.Decoration
                 return;
             }
 
+            validationMessageView.SetDecorationMode(isOpen);
             validationMessageView.ShowReadiness(readiness);
             validationMessageView.SetPreviewPending(HasAnyActivePreview());
             hasPublishedReadinessFeedback = true;
