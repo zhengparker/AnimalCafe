@@ -101,12 +101,15 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 var readiness = Find<ValidationMessageView>();
                 Assert.That(Box(readiness).yMax, Is.LessThanOrEqualTo(hudButtons.Min(button => Box(button).yMin) - density * 4),
                     "The confirmed readiness strip starts below the actual HUD buttons, across separate Canvas branches.");
-                P8RCompleteFlowTests.AssertChecklist(readiness);
-                Assert.That(readiness.transform.Find("ChecklistRow0/Label").GetComponent<TMP_Text>().fontSize * CanvasScale(readiness) / density,
-                    Is.GreaterThanOrEqualTo(13.9f), "Compact readiness body stays at least 14 platform logical units, not half-sized text.");
+                Assert.That(readiness.IsDetailsExpanded, Is.False);
+                Assert.That(readiness.CurrentMessage, Is.EqualTo("Setup incomplete · Enter Decor to finish"));
+                Assert.That(readiness.transform.Find("ChecklistRow0").gameObject.activeInHierarchy, Is.False);
 
                 var controller = Find<DecorationModeController>(); controller.EnterDecorationMode();
                 yield return Settle();
+                P8RCompleteFlowTests.AssertChecklist(readiness);
+                Assert.That(readiness.transform.Find("ChecklistRow0/Label").GetComponent<TMP_Text>().fontSize * CanvasScale(readiness) / density,
+                    Is.EqualTo(12f).Within(.1f), "Decor checklist uses the approved 12-unit body profile.");
                 var catalogue = Find<DecorationCatalogueView>();
                 var tabs = Find<DecorationModeTabsView>().GetComponentsInChildren<Button>().ToArray();
                 var collapse = Field<Button>(catalogue, "collapseButton");

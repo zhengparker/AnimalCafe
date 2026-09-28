@@ -427,10 +427,30 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             yield return Capture("26-floor-compact.png");
             var handle = ScreenRect(catalogue.CollapsedHandleRect);
             var tabs = ScreenRect((RectTransform)Find<DecorationModeTabsView>().transform);
-            var gap = 6f * AnimalCafe.UI.P8R.P8RMobileMetrics.For(catalogue).PixelsPerLogicalUnit;
-            Assert.That(handle.yMin, Is.GreaterThanOrEqualTo(range.Max(b => ScreenRect((RectTransform)b.transform).yMax) + gap),
-                "Compact Floor order: actions, range, handle, tabs; all remain separate.");
-            Assert.That(tabs.yMin, Is.GreaterThanOrEqualTo(handle.yMax + gap));
+            var hiddenRange = Find<DecorationFloorRangeView>();
+            var rangeGroup = hiddenRange.GetComponent<CanvasGroup>();
+            Assert.That(rangeGroup.alpha, Is.Zero, "Folded catalogue hides range controls.");
+            Assert.That(rangeGroup.interactable || rangeGroup.blocksRaycasts, Is.False);
+            foreach (var button in hiddenRange.GetComponentsInChildren<Button>(true))
+            {
+                var hits = new System.Collections.Generic.List<RaycastResult>();
+                EventSystem.current.RaycastAll(new PointerEventData(EventSystem.current)
+                    { position = ScreenRect((RectTransform)button.transform).center }, hits);
+                Assert.That(hits.Any(hit => hit.gameObject.transform.IsChildOf(hiddenRange.transform)), Is.False);
+            }
+            var activeActions = Find<DecorationActionBarView>();
+            Assert.That(Field<Button>(activeActions, "confirmButton").gameObject.activeInHierarchy, Is.True);
+            Assert.That(Field<Button>(activeActions, "cancelButton").gameObject.activeInHierarchy, Is.True);
+            foreach (var tab in Find<DecorationModeTabsView>().GetComponentsInChildren<Button>())
+            {
+                var tabRect = ScreenRect((RectTransform)tab.transform);
+                Assert.That(tabRect.center.y, Is.EqualTo(handle.center.y).Within(1f));
+                Assert.That(tabRect.Overlaps(handle), Is.False, "Toggle shares the tab row without overlapping it.");
+                foreach (var action in Find<DecorationActionBarView>().GetComponentsInChildren<Button>())
+                    Assert.That(tabRect.Overlaps(ScreenRect((RectTransform)action.transform)), Is.False);
+            }
+            foreach (var action in Find<DecorationActionBarView>().GetComponentsInChildren<Button>())
+                Assert.That(handle.Overlaps(ScreenRect((RectTransform)action.transform)), Is.False);
             Assert.That(tabs.yMax, Is.LessThanOrEqualTo(Screen.height));
         }
         private static Rect ScreenRect(RectTransform rect)
@@ -649,6 +669,13 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(view.GetComponent<CanvasGroup>().interactable, Is.False);
             Assert.That(view.GetComponentsInChildren<Button>().Length, Is.Zero);
             Assert.That(view.GetComponent<Image>() == null || !view.GetComponent<Image>().enabled, Is.True);
+            var fill = view.transform.Find("ChecklistPanelFill").GetComponent<Image>();
+            var border = view.transform.Find("ChecklistPanelBorder").GetComponent<Image>();
+            Assert.That(fill.gameObject.activeInHierarchy && fill.enabled, Is.True);
+            Assert.That(border.gameObject.activeInHierarchy && border.enabled, Is.True);
+            Assert.That(fill.color.a, Is.EqualTo(.75f).Within(.001f));
+            Assert.That(border.color.a, Is.EqualTo(1f));
+            Assert.That(fill.raycastTarget || border.raycastTarget, Is.False);
             var names = new[] { "Cash Register", "Coffee Machine", "Pickup Point" };
             for (var i = 0; i < 3; i++)
             {

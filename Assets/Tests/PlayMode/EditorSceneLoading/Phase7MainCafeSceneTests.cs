@@ -257,7 +257,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var catalogue = Object.FindFirstObjectByType<DecorationCatalogueView>();
             Assert.That(catalogue.GetComponentsInChildren<DecorationCatalogueTileView>(true)
                 .Where(x => x.gameObject.activeInHierarchy).All(x => x.Definition != null), Is.True);
-            var collapse = catalogue.transform.Find("ExpandedSheet/CollapseButton").GetComponent<Button>();
+            var collapse = catalogue.CollapsedHandleRect.GetComponent<Button>();
             var center = RectTransformUtility.WorldToScreenPoint(null, ((RectTransform)collapse.transform).TransformPoint(((RectTransform)collapse.transform).rect.center));
             var data = new PointerEventData(EventSystem.current) { position = center };
             var hits = new System.Collections.Generic.List<RaycastResult>(); EventSystem.current.RaycastAll(data, hits);
@@ -275,7 +275,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var catalogue = Object.FindFirstObjectByType<DecorationCatalogueView>();
             catalogue.ShowCollapsedHandle();
             yield return new WaitForSecondsRealtime(.2f);
-            var handle = catalogue.transform.Find("CollapsedHandle").GetComponent<Button>();
+            var handle = catalogue.CollapsedHandleRect.GetComponent<Button>();
             AssertTop(handle);
             var done = (Button)typeof(DecorationModeController).GetField("decorationModeButton",
                 System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(controller);
@@ -299,7 +299,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var confirm = action.GetComponentsInChildren<Button>(true).Single(x => x.name == "ConfirmButton");
             AssertTop(rotate); AssertTop(confirm);
             confirm.onClick.Invoke(); yield return null;
-            AssertTop(catalogue.transform.Find("CollapsedHandle").GetComponent<Button>());
+            AssertTop(catalogue.CollapsedHandleRect.GetComponent<Button>());
         }
 
         [UnityTest]
@@ -679,6 +679,22 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var canvasScale = catalogue.GetComponentInParent<Canvas>().scaleFactor;
             var minimumGap = Mathf.Max(1f, 6f * canvasScale);
 
+            if (AppearanceOf(tabs) != null)
+            {
+                var group = range.GetComponent<CanvasGroup>();
+                Assert.That(group.alpha, Is.Zero);
+                Assert.That(group.interactable || group.blocksRaycasts, Is.False);
+                foreach (var tab in tabs.GetComponentsInChildren<Button>())
+                {
+                    var rect = WorldRect((RectTransform)tab.transform);
+                    Assert.That(rect.center.y, Is.EqualTo(handle.center.y).Within(.1f));
+                    Assert.That(rect.Overlaps(handle), Is.False);
+                    AssertTop(tab);
+                }
+                AssertTop(catalogue.CollapsedHandleRect.GetComponent<Button>());
+                yield break;
+            }
+
             Assert.That(rangeRects, Has.Length.EqualTo(2));
             Assert.That(rangeRects.Any(rect => rect.Overlaps(handle)), Is.False,
                 $"Compact Catalogue handle must not cover Whole Room / Single Grid. handle={handle}, range={string.Join(",", rangeRects)}");
@@ -825,10 +841,10 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 var safeBottom = Mathf.Max(viewport.yMin, Screen.safeArea.yMin);
                 Assert.That(collapsedHandleRect.height / density, Is.EqualTo(48f).Within(.1f));
                 Assert.That(collapsedTabRect.height / density, Is.EqualTo(48f).Within(.1f));
-                Assert.That((collapsedTabRect.yMin - collapsedHandleRect.yMax) / density,
-                    Is.EqualTo(8f).Within(.1f), "Tabs must stay attached directly above the expand handle.");
+                Assert.That(collapsedTabRect.center.y, Is.EqualTo(collapsedHandleRect.center.y).Within(.1f));
+                Assert.That(collapsedTabRect.Overlaps(collapsedHandleRect), Is.False);
                 Assert.That((collapsedHandleRect.yMin - safeBottom) / density,
-                    Is.EqualTo(24f).Within(.1f), "Furniture's collapsed handle must retain its fixed safe-bottom inset.");
+                    Is.EqualTo(8f).Within(.1f), "The shared tab/toggle row retains its safe-bottom inset.");
             }
             Assert.That(catalogue.CollapsedHandleRect.gameObject.activeInHierarchy, Is.True);
             Assert.That(collapsedHandleRect.yMin, Is.GreaterThanOrEqualTo(viewport.yMin),

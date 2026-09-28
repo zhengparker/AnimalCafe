@@ -322,8 +322,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             {
                 if (catalogue.IsCollapsed)
                 {
-                    var handle = catalogue.GetComponentsInChildren<Button>(true)
-                        .Single(button => button.name == "CollapsedHandle");
+                    var handle = catalogue.CollapsedHandleRect.GetComponent<Button>();
                     Assert.That(handle.gameObject.activeInHierarchy && handle.interactable, Is.True,
                         $"Step {index + 1}: the visible handle must reopen the catalogue.");
                     handle.onClick.Invoke();
@@ -443,8 +442,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var view = Object.FindFirstObjectByType<ValidationMessageView>();
             Assert.That(UsesP8R(view), Is.True, "Exercise the real P8R geometry publisher.");
             view.ShowReadiness(P8RCompleteFlowTests.Report(true));
-            Assert.That(view.IsVisible, Is.True);
-            Assert.That(view.IsDetailsExpanded, Is.True);
+            Assert.That(view.IsVisible, Is.False);
+            Assert.That(view.IsDetailsExpanded, Is.False);
 
             var changes = 0;
             System.Action countChange = () => changes++;
@@ -455,8 +454,9 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     P8RCompleteFlowTests.Failure(LayoutReadinessSeverity.Blocking,
                         LayoutReadinessFailureCode.MissingCoffeeMachine, 0)));
                 Assert.That(view.IsVisible, Is.True);
-                Assert.That(view.IsDetailsExpanded, Is.True);
-                P8RCompleteFlowTests.AssertChecklist(view);
+                Assert.That(view.IsDetailsExpanded, Is.False);
+                Assert.That(view.CurrentMessage, Is.EqualTo("Setup incomplete · Enter Decor to finish"));
+                Assert.That(changes, Is.EqualTo(1), "Showing the Normal summary publishes one geometry event.");
                 var afterBlocked = changes;
                 view.ShowReadiness(P8RCompleteFlowTests.Report(false,
                     P8RCompleteFlowTests.Failure(LayoutReadinessSeverity.Blocking,
@@ -464,9 +464,9 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Assert.That(changes, Is.EqualTo(afterBlocked), "Repeating a stable report must not publish spurious geometry events.");
 
                 view.ShowReadiness(P8RCompleteFlowTests.Report(true));
-                Assert.That(view.IsVisible, Is.True);
-                Assert.That(view.IsDetailsExpanded, Is.True);
-                P8RCompleteFlowTests.AssertChecklist(view);
+                Assert.That(view.IsVisible, Is.False);
+                Assert.That(view.IsDetailsExpanded, Is.False);
+                Assert.That(changes, Is.EqualTo(2), "Hiding the Normal summary publishes one geometry event.");
                 var afterHealthy = changes;
                 view.ShowReadiness(P8RCompleteFlowTests.Report(true));
                 Assert.That(changes, Is.EqualTo(afterHealthy), "Stable healthy rows must not publish redundant geometry events.");

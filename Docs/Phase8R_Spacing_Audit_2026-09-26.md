@@ -99,3 +99,7 @@ EditMode执行后，M_WallProjection_Invalid.mat出现3行序列化变化（两�
 用户批准第4项。Footer共用12/8外层profile；Pickup及Floor/Wall按钮可见底部留白一致，按钮组居中、同排可见间距约4、点击范围至少48。修正Apply/Cancel测量字重与实际显示字重不一致造成的额外空白。短横屏侧栏与滚动适配保留。
 
 footer-profile-play.xml：12 PASS、0 FAIL；footer-profile-native.xml：1 PASS、0 FAIL。1080×1920实际Game View截图位于native-20260926-214246，已检查Furniture/Pickup和Floor预览Footer。旧全套5项FAIL仍待迁移，不宣称全套已绿；本轮未push。
+
+## 2026-09-28 PR #8 合并前收尾
+
+上述5项旧断言已迁移并通过，进一步全项目回归发现的旧按钮引用和Touch fixture坐标问题也已修正。最终全量PlayMode为1036 PASS、0 FAIL、4项opt-in SKIP；EditMode含隔离补跑，按用例去重2123项全部有PASS证据。详细范围、初次失败、补跑和验收边界见 `Phase8R_PR8_Review_2026-09-28.md`；本报告前文保留为当时的审查记录。

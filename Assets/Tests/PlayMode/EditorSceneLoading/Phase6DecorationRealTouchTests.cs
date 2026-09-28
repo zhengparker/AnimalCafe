@@ -247,6 +247,8 @@ namespace AnimalCafe.Tests.PlayMode
         [UnityTest]
         public IEnumerator MainCafeRealTouch_CatalogueTileCreatesNearestPreviewAndDragUsesOffsetWithoutCameraPan()
         {
+            screenOverride = new EditorSceneLoading.P8RReferenceLayoutTests.NativeScreenSize();
+            screenOverride.Resize(new Vector2(1080, 1920));
             yield return LoadMainCafe();
             var context = CaptureMainCafe();
             var touch = AddTouchscreen();
@@ -316,10 +318,10 @@ namespace AnimalCafe.Tests.PlayMode
 
                 var cancel = FindNamed<Button>(context.Scene, "CancelButton");
                 var crossedUiRecorder = cancel.gameObject.AddComponent<PointerRecorder>();
-                var freshStart = GridCellScreenCenter(
-                    context, ActivePreview(context.Controller).ProposedPosition);
                 var blank = UiFreeCell(context,
                     new[] { new GridPosition(6, 6), new GridPosition(0, 6), new GridPosition(6, 1) });
+                var freshStart = FindUiFreeScreenPointOnActivePreview(context, blank);
+                AssertWorldPointIsUiFree(context.EventSystem, freshStart);
                 yield return BeginContact(touch, 114, freshStart);
                 var router = ReadPrivate<DecorationTouchRouter>(context.Controller, "touchRouter");
                 Assert.That(router.Owner, Is.EqualTo(DecorationGestureOwner.Furniture));
@@ -361,7 +363,7 @@ namespace AnimalCafe.Tests.PlayMode
                 var beforeLayout = SnapshotLayout(context.Layout);
                 var beforeSelection = context.SceneInteraction.CurrentSelection;
                 var furniturePoint = FormalFurnitureScreenPoint(context, InitialInstanceId);
-                var collapsedHandle = FindNamed<Button>(context.Scene, "CollapsedHandle");
+                var collapsedHandle = context.Catalogue.CollapsedHandleRect.GetComponent<Button>();
                 var crossedUiRecorder = collapsedHandle.gameObject.AddComponent<PointerRecorder>();
                 yield return BeginContact(touch, 123, blank);
                 yield return MoveContact(touch, 123, blank + new Vector2(90f, 35f));
@@ -629,6 +631,8 @@ namespace AnimalCafe.Tests.PlayMode
         [UnityTest]
         public IEnumerator MainCafeRealTouch_FurnitureEdgeDragStartsBoundedPanAndEveryExcludedOrTerminalStateStopsIt()
         {
+            screenOverride = new EditorSceneLoading.P8RReferenceLayoutTests.NativeScreenSize();
+            screenOverride.Resize(new Vector2(1080, 1920));
             var edges = new[]
             {
                 (Name: "Left", Intent: new Vector2(1f, 0f)),
@@ -745,6 +749,13 @@ namespace AnimalCafe.Tests.PlayMode
                             }),
                         2f,
                         edgeCase.Name + " terminal Touch did not clear before the independent owner-disable gesture.");
+                    // Give the independent disable branch a fresh, touch-reachable preview.
+                    // 独立的disable检查使用新场景，避免前段pan把预览留在UI遮挡区。
+                    yield return LoadMainCafe();
+                    context = CaptureMainCafe();
+                    yield return EnterByTouch(context, touch, id + 4);
+                    yield return SelectTileByTouch(context, touch, id + 5, 0);
+                    driver = ReadPrivate<DecorationCameraDriver>(context.Controller, "cameraDriver");
                     var disableEdge = FindUiFreeEdgePoint(context, edgeCase.Name);
                     Assert.That(disableEdge.HasValue, Is.True,
                         edgeCase.Name + " must expose a fresh UI-free point for owner-disable coverage.");
@@ -1121,6 +1132,8 @@ namespace AnimalCafe.Tests.PlayMode
         [UnityTest]
         public IEnumerator MainCafeRealTouch_ConfirmExitReenterPreservesLayoutRepresentationAndCatalogueAvailability()
         {
+            screenOverride = new EditorSceneLoading.P8RReferenceLayoutTests.NativeScreenSize();
+            screenOverride.Resize(new Vector2(1080, 1920));
             yield return LoadMainCafe();
             var context = CaptureMainCafe();
             var touch = AddTouchscreen();
@@ -1135,7 +1148,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(context.Layout.FurnitureInstances.Count(item => item.DefinitionId == definitionId), Is.EqualTo(2));
                 Assert.That(context.Catalogue.IsCollapsed, Is.True);
                 Assert.That(ActiveTiles(context.Catalogue), Is.Empty);
-                yield return TapButton(touch, 2231, FindNamed<Button>(context.Scene, "CollapsedHandle"));
+                yield return TapButton(touch, 2231, context.Catalogue.CollapsedHandleRect.GetComponent<Button>());
                 Assert.That(ActiveTiles(context.Catalogue), Has.Length.EqualTo(4));
                 var firstNew = context.Layout.FurnitureInstances.Single(item => !idsBefore.Contains(item.InstanceId));
                 Assert.That(context.Registry.TryGet(firstNew.InstanceId, out var firstRepresentation), Is.True);
@@ -1145,7 +1158,7 @@ namespace AnimalCafe.Tests.PlayMode
                 yield return TapButton(touch, 224, context.HudButton);
                 yield return TapButton(touch, 225, context.HudButton);
                 yield return TapButton(touch, 226, FindNamed<Button>(context.Scene, "CollapseButton"));
-                var handle = FindNamed<Button>(context.Scene, "CollapsedHandle");
+                var handle = context.Catalogue.CollapsedHandleRect.GetComponent<Button>();
                 yield return TapButton(touch, 227, handle);
                 Assert.That(context.Registry.TryGet(firstNew.InstanceId, out var persistedRepresentation), Is.True);
                 Assert.That(persistedRepresentation.transform.position, Is.EqualTo(firstFormalPosition));
@@ -1160,7 +1173,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(matching.Select(item => item.InstanceId).Distinct().ToArray(), Has.Length.EqualTo(3));
                 Assert.That(context.Catalogue.IsCollapsed, Is.True);
                 Assert.That(ActiveTiles(context.Catalogue), Is.Empty);
-                yield return TapButton(touch, 2291, FindNamed<Button>(context.Scene, "CollapsedHandle"));
+                yield return TapButton(touch, 2291, context.Catalogue.CollapsedHandleRect.GetComponent<Button>());
                 Assert.That(ActiveTiles(context.Catalogue), Has.Length.EqualTo(4));
                 var placed = matching.Where(item => !idsBefore.Contains(item.InstanceId)).ToArray();
                 Assert.That(placed, Has.Length.EqualTo(2));
@@ -1280,23 +1293,25 @@ namespace AnimalCafe.Tests.PlayMode
             };
             UnityEngine.Events.UnityAction onCollapse = () =>
             {
-                collapseClicked++;
-                collapseStartedAt = Time.unscaledTime;
-            };
-            UnityEngine.Events.UnityAction onExpand = () =>
-            {
-                expandClicked++;
-                expandStartedAt = Time.unscaledTime;
+                if (context.Catalogue.IsCollapsed)
+                {
+                    collapseClicked++;
+                    collapseStartedAt = Time.unscaledTime;
+                }
+                else
+                {
+                    expandClicked++;
+                    expandStartedAt = Time.unscaledTime;
+                }
             };
             context.Catalogue.Selected += onSelected;
             context.ActionBar.CancelRequested += onCancel;
             context.ActionBar.StoreRequested += onStore;
             context.StoreModal.DismissRequested += onDismiss;
             var collapse = FindNamed<Button>(context.Scene, "CollapseButton");
-            var expand = FindNamed<Button>(context.Scene, "CollapsedHandle");
+            var expand = context.Catalogue.CollapsedHandleRect.GetComponent<Button>();
             context.HudButton.onClick.AddListener(onHud);
             collapse.onClick.AddListener(onCollapse);
-            expand.onClick.AddListener(onExpand);
             try
             {
                 var catalogueGroup = ReadPrivate<CanvasGroup>(context.Catalogue, "canvasGroup");
@@ -1400,7 +1415,6 @@ namespace AnimalCafe.Tests.PlayMode
                 context.StoreModal.DismissRequested -= onDismiss;
                 context.HudButton.onClick.RemoveListener(onHud);
                 collapse.onClick.RemoveListener(onCollapse);
-                expand.onClick.RemoveListener(onExpand);
                 CleanupTouchscreen(touch);
             }
         }
@@ -1446,7 +1460,7 @@ namespace AnimalCafe.Tests.PlayMode
                             "UI pointer ownership must be released when the real Touch ends.");
                     }
 
-                    var collapsedHandle = FindNamed<Button>(context.Scene, "CollapsedHandle");
+                    var collapsedHandle = context.Catalogue.CollapsedHandleRect.GetComponent<Button>();
                     yield return WaitUntil(() => IsTopButton(context.EventSystem, collapsedHandle), 2f,
                         "CollapsedHandle did not become the actionable Phase 6 UI target.");
                     var movingRecorder = collapsedHandle.gameObject.AddComponent<PointerRecorder>();

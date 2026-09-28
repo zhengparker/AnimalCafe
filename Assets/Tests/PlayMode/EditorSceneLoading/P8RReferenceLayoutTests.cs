@@ -911,12 +911,17 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                         Assert.That(Box(back).center.y, Is.EqualTo(Box(tab).center.y).Within(1f));
                     }
                     var state = controller.State;
+                    var expandedTabRects = tabs.Select(tab => Box(tab)).ToArray();
                     back.onClick.Invoke(); yield return new WaitForSecondsRealtime(.3f);
                     Assert.That(controller.State, Is.EqualTo(state), "Return only changes presentation, not the preview transaction.");
                     Assert.That(catalogue.IsCollapsed, Is.True);
                     Canvas.ForceUpdateCanvases();
-                    Assert.That((tabs.Min(tab => Box(tab).xMin) + tabs.Max(tab => Box(tab).xMax)) * .5f,
-                        Is.EqualTo(Box(catalogue).center.x).Within(1f), "Collapsed tabs must not reserve space for the hidden wide header.");
+                    for (var i = 0; i < tabs.Length; i++)
+                    {
+                        Assert.That(Box(tabs[i]).xMin, Is.EqualTo(expandedTabRects[i].xMin).Within(1f),
+                            "Folding keeps the tabs in their original horizontal positions.");
+                        Assert.That(Box(tabs[i]).width, Is.EqualTo(expandedTabRects[i].width).Within(1f));
+                    }
                     foreach (var wide in new[] { false, true })
                     {
                         P8RMobileMetrics.EditorLogicalViewportOverride = wide ? new Vector2(800, 360) : new Vector2(360, 640);
@@ -957,7 +962,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     Assert.That((Box(instruction).yMin - Box(panel).yMax) / density, Is.GreaterThanOrEqualTo(64f),
                         "Waiting for a floor tap must leave scene space between the instruction and the catalogue without an extra collapse step.");
                     var viewport = Box(catalogue.VerticalScroll.viewport);
-                    Assert.That(viewport.height / density, Is.InRange(115.9f, 124f),
+                    Assert.That(viewport.height / density, Is.EqualTo(24f + 6f + 84f).Within(.1f),
                         "A one-row catalogue keeps its full cards, but does not fill the remaining screen with blank space.");
                     var first = catalogue.GetComponentsInChildren<DecorationCatalogueTileView>()
                         .Where(tile => !string.IsNullOrEmpty(tile.ItemId)).OrderBy(tile => Box(tile).xMin).First();
@@ -1764,6 +1769,11 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 yield return P8RCompleteFlowTests.Capture("14-real-confirmed-readiness.png", folder);
                 var failures = Enumerable.Range(0, 24).Select(i => P8RCompleteFlowTests.Failure(AnimalCafe.Layout.LayoutReadinessSeverity.Blocking,
                     (AnimalCafe.Layout.LayoutReadinessFailureCode)(i % 12), i)).ToArray();
+                readiness.ShowReadiness(P8RCompleteFlowTests.Report(false, failures));
+                Assert.That(readiness.IsDetailsExpanded, Is.False);
+                Assert.That(readiness.CurrentMessage, Is.EqualTo("Setup incomplete · Enter Decor to finish"));
+                Assert.That(readiness.transform.Find("ChecklistRow0").gameObject.activeInHierarchy, Is.False);
+                controller.EnterDecorationMode();
                 readiness.ShowReadiness(P8RCompleteFlowTests.Report(false, failures));
                 Assert.That(readiness.IsDetailsExpanded, Is.True);
                 // Diagnostics are summarized into three categories; 24 failures no longer imply 24 UI rows.

@@ -537,8 +537,7 @@ namespace AnimalCafe.Tests.PlayMode
                 controller.EnterDecorationMode();
                 yield return WaitUntil(() => CatalogueExpandedAndSettled(catalogue),
                     2f, "Catalogue did not become expanded.");
-                var collapse = catalogue.transform.Find("ExpandedSheet/CollapseButton")
-                    .GetComponent<Button>();
+                var collapse = catalogue.CollapsedHandleRect.GetComponent<Button>();
                 yield return ClickButtonWithRealMouse(mouse, collapse);
                 yield return WaitUntil(() => CatalogueCollapsedAndSettled(catalogue), 2f,
                     "Real Mouse did not collapse the Catalogue.");
@@ -568,8 +567,7 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(controller.State, Is.EqualTo(DecorationSessionState.BrowsingCatalogue));
                 Assert.That(previewRoot.childCount, Is.Zero);
 
-                var expand = catalogue.transform.Find("CollapsedHandle")
-                    .GetComponent<Button>();
+                var expand = catalogue.CollapsedHandleRect.GetComponent<Button>();
                 var cameraBeforeUi = camera.transform.position;
                 yield return ClickButtonWithRealMouse(mouse, expand);
                 yield return WaitUntil(() => CatalogueExpandedAndSettled(catalogue), 2f,
