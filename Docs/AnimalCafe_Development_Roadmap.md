@@ -934,6 +934,10 @@ Order 是完整 Cafe Loop 的业务核心，先以纯逻辑验证，不混入 NP
 
 ## Phase 10 — Capacity & Reservation
 
+Status（2026-09-29）：`In Progress`。Owner 已批准 design、automatic/manual test cases 与 implementation plan，并要求在现有 `codex/phase-9-order-domain` 分支继续开发，可使用 sub-agents。基线 `94cc48d`；不等待 main merge，不替 P9 自动 closeout。详见 `Docs/superpowers/plans/2026-09-29-phase-10-capacity-reservation.md`。
+
+Implementation / verification（2026-09-29）：容量domain与临时Debug窗口已实现；最终Engineering及QA整体review均PASS，无开放Critical/Important/Minor。完整EditMode原始2008 PASS / 355 SKIP，经精确对应的独立补跑后有效2363 PASS；完整PlayMode1042 PASS / 4 opt-in SKIP / 0 FAIL。M-001…010通过（Codex获授权代跑，M-009拖动由Owner实际补验）；Owner接受委托验收并授权review后commit/push到同一P9分支。开发和验收完成，main merge与正式closeout未执行，故Status仍In Progress。证据与操作见 `Docs/Phase10_Beginner_Guide.md` 和原P10 test cases。
+
 ### Goal
 
 统一管理 active customers、Counter Queue 和 Pick-up 的容量及预留。
@@ -946,6 +950,8 @@ Order 是完整 Cafe Loop 的业务核心，先以纯逻辑验证，不混入 NP
 - Reserve / occupy / release
 - Atomic capacity transactions
 
+Approved rules（2026-09-29）：Total=`floor(已铺室内Floor格数/4)`，Pick-up=Total，Counter=`ceil(Total*50%)`；家具不扣格。入店前原子预留三项各1，离开对应位置/店铺后分别释放；正确取走商品即 Completed，不自动释放容量。面积下降保留已有顾客和预约，允许暂时超额、暂停新申请，正常释放后恢复。
+
 ### Why Separate From Orders
 
 Capacity bugs 会造成负数、超员、reservation leak 和系统死锁，必须独立测试。
@@ -956,7 +962,7 @@ Service 返回明确 reservation token / ownership，只有 owner 可以完成�
 
 ### Risks / Likely Bugs
 
-- Capacity 超过 max 或低于 zero。
+- 新 Reserve 造成或扩大超额，或计数低于 zero；合法缩容导致的暂时 Used > Limit 必须保留旧名额，不能误当损坏清除。
 - Reserve 失败却部分修改状态。
 - Repeated release。
 - Customer 离开后 reservation 未释放。
@@ -969,6 +975,8 @@ Service 返回明确 reservation token / ownership，只有 owner 可以完成�
 - Pick-up 满时拒绝新 reservation。
 - Release 后可以再次 reserve。
 - Reservation ownership 正确。
+- 面积公式、Floor来源去重/bounds、缩容保留旧预约、已有Reserved仍可Occupy、三项有余量后恢复。
+- 旧token重复Release不得影响后来取得的新名额；Order Completed与实际离位/离店分开。
 
 ---
 
@@ -1018,6 +1026,8 @@ Customer 和 Employee state machines 只需要处理 movement result，不重复
 ---
 
 ## Phase 12 — Customer Spawn & Counter Queue
+
+P10交接（2026-09-29）：使用 random interval 安排顾客到店，容量恢复不批量补齐或补发积压顾客；interval 分布与恢复计时策略在本Phase设计。接入P10三项入店预留，验证真实站位/可达性及离位/离店事件；不要以逻辑额度通过替代队伍空间验证。
 
 ### Goal
 
@@ -1696,6 +1706,8 @@ Events 会读取 Order、Economy、Character、Mood 和 Relationships，必须�
 ---
 
 ## Phase 28 — Store Expansion
+
+P10交接（2026-09-29）：扩建后的正式Floor面积更新三项顾客容量。当前P10以已确认Interior区域代表铺好地面；若本Phase支持“先解锁、后铺设”，必须提供独立confirmed Floor来源或保证区域/地板原子发布，不能仅解锁就增加容量。
 
 ### Goal
 
@@ -2721,6 +2733,8 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 
 ## 7. Current Next Step
 
+**Current Next Step（2026-09-29）：将已通过最终review与验收的P10交付到同一P9分支，之后等待Owner决定main merge或后续阶段。** P10自动回归、M-001…010及Engineering/QA整体review均PASS；Owner已授权commit/push至 `codex/phase-9-order-domain`。P10提交基于P9 `94cc48d7d8c6b43261b96e73bf2d2b6541fafbf4`，不另开分支。P9/P10的main merge、正式closeout、Roadmap Completed尚未完成；不将旧main视为包含这些工作。下方2026-09-28及更早的“下一步”描述保留为历史记录。
+
 **Phase 1 — Layout Data Model** 已完成 implementation、automated verification、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
 
 **Phase 2 — Grid Occupancy & Placement Rules** 已完成 approved design、implementation、automated verification、review、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
@@ -2733,6 +2747,6 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 - **Phase 5 — UI Architecture & Design System** 已完成 approved design、TDD implementation、review hardening、Studio Owner `MT001–MT034` manual acceptance、PR #4 merge 与 merged-main regression，状态为 `Completed`。Merged-main evidence（2026-08-15）：EditMode `690 / 690`、Editor PlayMode `121 / 121`、Windows standalone PlayMode `103 / 103` passed；failed、skipped、inconclusive 均为 `0`。
 - **Phase 6 — Basic Decoration Mode** 已完成 approved design、TDD implementation、independent review、Studio Owner manual acceptance 与 fresh full regression，状态为 `Completed`。Merge-preparation evidence（2026-08-22）：EditMode `1136 / 1136`、Editor PlayMode `446 / 446` passed，failed、skipped、inconclusive 均为 `0`；Windows standalone build 为 `Success`，无 C# warning/error；Studio Owner applicable manual set 为 `29 / 29 PASS`。`P6-M-023` 的真实 Android + iOS two-finger Pinch 已按 scope decision 移至 Phase 51，不计入 Phase 6 denominator。
 - Phase 6 清理只删除 obsolete Phase 4 MainCafe manual-review setup 与两份 temporary materials；`ManualReviewPingPongMover` 及其 regression test 因仍有 Phase 5 live consumers 而保留。
-- **Current Next Step（2026-09-28）：Phase 8 已 Completed；Phase 8R 已合并并完成工程收尾，可进入Phase 9 Order Domain设计准备。** PR #8、全量回归、本地fast-forward、证据归档及P8R本地branch/worktree清理已完成；见 `Docs/Phase8R_PR8_Review_2026-09-28.md`。Phase 9代码实施尚未批准；历史人工与设备验收限制不因收尾而消失，Phase 8历史证据继续见 `Docs/Phase8_Beginner_Guide.md` 第37节及15.6节。
+- **历史 Next Step（2026-09-28）：Phase 8 已 Completed；Phase 8R 已合并并完成工程收尾，当时可进入Phase 9 Order Domain设计准备。** PR #8、全量回归、本地fast-forward、证据归档及P8R本地branch/worktree清理已完成；见 `Docs/Phase8R_PR8_Review_2026-09-28.md`。当时Phase 9代码实施尚未批准；最新授权与交接以上方2026-09-29记录为准。历史人工与设备验收限制不因收尾而消失，Phase 8历史证据继续见 `Docs/Phase8_Beginner_Guide.md` 第37节及15.6节。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
-- 不开始 cafe day loop、Customer / NPC movement、Order、Queue、NavMesh / pathfinding agents、economy 或 Save 等后续 gameplay scope。
+- 当前只执行获批P10容量domain与诊断工具；真实cafe day loop、Customer/NPC movement、排队/生成、NavMesh、economy和Save仍按各自Phase开展。
