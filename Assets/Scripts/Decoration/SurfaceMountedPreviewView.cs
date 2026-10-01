@@ -45,7 +45,8 @@ namespace AnimalCafe.Decoration
         public void Show(
             FunctionalSurfacePlacementPreview preview,
             Vector3 hoverOffset = default,
-            Pose? floorPose = null)
+            Pose? floorPose = null,
+            bool placementAllowed = true)
         {
             EnsureConfigured();
             if (preview == null)
@@ -97,7 +98,7 @@ namespace AnimalCafe.Decoration
             PreparePreviewObject(CurrentGhost);
             CurrentGhost.SetActive(true);
 
-            var color = preview.CanConfirm
+            var color = preview.CanConfirm && placementAllowed
                 ? theme.Colors.Accent
                 : theme.Colors.Destructive;
             SetColor(CurrentFootprint, color);

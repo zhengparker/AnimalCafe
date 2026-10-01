@@ -982,6 +982,15 @@ Service 返回明确 reservation token / ownership，只有 owner 可以完成�
 
 ## Phase 11 — Navigation & Movement Recovery
 
+**状态（2026-09-30）：开发与验收完成（现有 `codex/phase-9-order-domain` 分支），M-001～M-011 全部 Owner PASS。** Owner 已确认新版 walk、避让、时间控制、recovery、装修碰撞与堵路修复、MainCafe 回归，并补充“11也完成了”关闭柜台站位与转向验收。Owner 已授权 review 后 push 和创建 PR；最新 P9–P11 review、完整回归、已知限制与交付状态统一见 [合并前 Review](Phase9_Phase11_Merge_Review.md)。尚未 merge main，P12 未开始。
+
+此前自动证据：原版完整 PlayMode 1102 PASS / 0 FAIL / 5 opt-in SKIP，指定 Integration 27 PASS / 0 FAIL / 1 SKIP；完整 Edit 原始 2432 PASS / 1 FAIL，唯一失败由批准的精确补测解决。后续 walk 1.5 倍 focused Edit 8 / Play 8 PASS；crowd8 / detour 修复 focused Edit 14 PASS、直接 Play 66 PASS / 0 FAIL / 1 SKIP；红色 footprint / teardown focused Play 14 PASS / 0 FAIL / 0 SKIP。各组覆盖重叠，保留为历史，不合计为最新完整回归；最新结果以合并前 Review 为准。
+
+- 独立验证场景：`Assets/Scenes/Validation/Phase11Navigation.unity`，8 个原尺寸角色、真实 P8 装修与恢复营业 gate。
+- MainCafe 仅接入 passive Navigation，零营业 NPC，保留既有装修/时间行为；正式 Customer / Employee 接入时须显式开启 business readiness。
+- 操作与验收：[Beginner Guide](Phase11_Beginner_Guide.md)；准确自动结果、SKIP 和实现决策：[验证报告](Phase11_Validation_Report.md)。
+- 本阶段不接入 P9 Order、P10 Capacity、Customer queue、Employee tasks、经济、Save、多楼层或新动画。
+
 ### Goal
 
 提供 Customer 和 Employee 共用的可靠 NavMesh movement。
@@ -2733,7 +2742,9 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 
 ## 7. Current Next Step
 
-**Current Next Step（2026-09-29）：将已通过最终review与验收的P10交付到同一P9分支，之后等待Owner决定main merge或后续阶段。** P10自动回归、M-001…010及Engineering/QA整体review均PASS；Owner已授权commit/push至 `codex/phase-9-order-domain`。P10提交基于P9 `94cc48d7d8c6b43261b96e73bf2d2b6541fafbf4`，不另开分支。P9/P10的main merge、正式closeout、Roadmap Completed尚未完成；不将旧main视为包含这些工作。下方2026-09-28及更早的“下一步”描述保留为历史记录。
+**Current Next Step（2026-09-30）：Owner 审阅 P9–P11 合并前 review 与最终 PR，决定是否 merge main。** 本轮 push 现有 `codex/phase-9-order-domain` 分支与创建 PR 的交付授权已记录；实际 review、RED/GREEN、完整回归和交付状态见 [P9–P11 Merge Review](Phase9_Phase11_Merge_Review.md)。P9/P10 已有验收记录，P11 M-001～M-011 全部 Owner PASS，无待补手动项。MainCafe 仍为 passive 接线、零营业 NPC；尚未 merge main，P12 未开始。
+
+**历史 Next Step（2026-09-29，P10 交付时）：将已通过最终review与验收的P10交付到同一P9分支，之后等待Owner决定main merge或后续阶段。** P10自动回归、M-001…010及Engineering/QA整体review均PASS；Owner当时已授权commit/push至 `codex/phase-9-order-domain`。P10提交基于P9 `94cc48d7d8c6b43261b96e73bf2d2b6541fafbf4`，不另开分支。P9/P10的main merge、正式closeout、Roadmap Completed未在这份历史记录中完成；不将旧main视为包含这些工作。下方2026-09-28及更早的“下一步”描述保留为历史记录。
 
 **Phase 1 — Layout Data Model** 已完成 implementation、automated verification、manual acceptance、merge 和 merged-main regression，状态为 `Completed`。
 
@@ -2749,4 +2760,4 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 - Phase 6 清理只删除 obsolete Phase 4 MainCafe manual-review setup 与两份 temporary materials；`ManualReviewPingPongMover` 及其 regression test 因仍有 Phase 5 live consumers 而保留。
 - **历史 Next Step（2026-09-28）：Phase 8 已 Completed；Phase 8R 已合并并完成工程收尾，当时可进入Phase 9 Order Domain设计准备。** PR #8、全量回归、本地fast-forward、证据归档及P8R本地branch/worktree清理已完成；见 `Docs/Phase8R_PR8_Review_2026-09-28.md`。当时Phase 9代码实施尚未批准；最新授权与交接以上方2026-09-29记录为准。历史人工与设备验收限制不因收尾而消失，Phase 8历史证据继续见 `Docs/Phase8_Beginner_Guide.md` 第37节及15.6节。
 - 不执行旧版 Phase 1 Core Cafe Loop plan。
-- 当前只执行获批P10容量domain与诊断工具；真实cafe day loop、Customer/NPC movement、排队/生成、NavMesh、economy和Save仍按各自Phase开展。
+- 历史 P10 scope：当时只执行获批容量domain与诊断工具，真实cafe day loop、Customer/NPC movement、排队/生成、NavMesh、economy和Save按各自Phase开展。当前 P11 Navigation 进展以上方最新记录为准。

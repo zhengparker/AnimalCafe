@@ -26,6 +26,17 @@ namespace AnimalCafe.UI.Foundation
         private GameSpeed speedBeforeFirstPause;
         private bool hasSavedSpeed;
         private bool hasPendingRestore;
+        private int savedChoiceVersion;
+        private bool RestoreIsCurrent => !(gameTimeService is GameTimeService concrete)
+            || savedChoiceVersion == concrete.ExplicitChoiceVersion;
+        private bool SetAutomatic(GameSpeed speed) => gameTimeService is GameTimeService concrete
+            ? concrete.TrySetAutomaticSpeed(speed) : gameTimeService.TrySetSpeed(speed);
+        private void RetireStaleRestore()
+        {
+            if (RestoreIsCurrent) return;
+            hasSavedSpeed = false;
+            hasPendingRestore = false;
+        }
 
         public UiPauseCoordinator(IGameTimeService gameTimeService)
         {
@@ -58,15 +69,17 @@ namespace AnimalCafe.UI.Foundation
 
             if (activePauseReasons.Count == 0)
             {
+                RetireStaleRestore();
                 var capturedSpeedForThisRequest = false;
                 if (!hasSavedSpeed)
                 {
                     speedBeforeFirstPause = gameTimeService.CurrentSpeed;
+                    savedChoiceVersion = gameTimeService is GameTimeService concrete ? concrete.ExplicitChoiceVersion : 0;
                     hasSavedSpeed = true;
                     capturedSpeedForThisRequest = true;
                 }
 
-                if (!gameTimeService.TrySetSpeed(GameSpeed.Paused))
+                if (!SetAutomatic(GameSpeed.Paused))
                 {
                     if (capturedSpeedForThisRequest)
                     {
@@ -88,12 +101,13 @@ namespace AnimalCafe.UI.Foundation
         /// </summary>
         public bool TryRestorePendingSpeed()
         {
+            RetireStaleRestore();
             if (!hasPendingRestore || activePauseReasons.Count != 0)
             {
                 return false;
             }
 
-            if (!gameTimeService.TrySetSpeed(speedBeforeFirstPause))
+            if (!SetAutomatic(speedBeforeFirstPause))
             {
                 return false;
             }
@@ -142,12 +156,13 @@ namespace AnimalCafe.UI.Foundation
 
         private void RestorePreviousSpeedIfNoReasonsRemain()
         {
+            RetireStaleRestore();
             if (activePauseReasons.Count != 0 || !hasSavedSpeed)
             {
                 return;
             }
 
-            if (gameTimeService.TrySetSpeed(speedBeforeFirstPause))
+            if (SetAutomatic(speedBeforeFirstPause))
             {
                 hasSavedSpeed = false;
                 hasPendingRestore = false;

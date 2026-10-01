@@ -4633,6 +4633,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Decoration.DecorationModeController
   p8rAppearance: {fileID: 11400000, guid: 6bf1ac72f6e850349a356a167819f6ea, type: 2}
   layoutRuntime: {fileID: 1437096831}
+  navigationBridge: {fileID: 1590706616}
   contentCatalog: {fileID: 11400000, guid: f5a3ceba61ecaf949aa330a98e4df68f, type: 2}
   catalogueAsset: {fileID: 11400000, guid: f3e6bd456ce1cea46821a7f42a21c32a, type: 2}
   phase8FurnitureCatalogueAsset: {fileID: 11400000, guid: 26d4e008f0e741d458ebd0aecacd8568, type: 2}
@@ -5466,6 +5467,102 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3513609957406928349, guid: f2fb88287e92d864997d99874d6dfdaa, type: 3}
   m_PrefabInstance: {fileID: 1797970160}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1590706615
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1590706619}
+  - component: {fileID: 1590706618}
+  - component: {fileID: 1590706617}
+  - component: {fileID: 1590706616}
+  m_Layer: 0
+  m_Name: Phase11 Passive Navigation
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1590706616
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1590706615}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: af462677dbcdb0b4abb460e2f5ac41a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Navigation.NavigationDecorationBridge
+  adapter: {fileID: 1590706617}
+  enforceBusinessReadiness: 0
+  gameTimeService: {fileID: 1368244272}
+--- !u!114 &1590706617
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1590706615}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d53dd886160c9be419877f5a42ab0854, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Navigation.NavigationLayoutAdapter
+  layoutRuntime: {fileID: 1437096831}
+  contentCatalog: {fileID: 11400000, guid: f5a3ceba61ecaf949aa330a98e4df68f, type: 2}
+  gridRoot: {fileID: 2099846907}
+  furnitureRepresentationRoot: {fileID: 1791880001}
+  surfaceMountedRepresentationRoot: {fileID: 2058909322}
+  floor: {fileID: 310150536}
+  walls: []
+  confirmedFurnitureRoots: []
+  wallDefinitions:
+  - {fileID: 11400000, guid: 1d9e35d5e66cc51468e808485d79b627, type: 2}
+  - {fileID: 11400000, guid: c858e227937003f49b71fd7e33604f9d, type: 2}
+  - {fileID: 11400000, guid: 03556cfdda5818142a0a3b7cc85e381a, type: 2}
+  - {fileID: 11400000, guid: d0d8f7cbee7795b4f959d8bc2c522bb0, type: 2}
+  - {fileID: 11400000, guid: 2cedb16a05b8aca4486f63c8857f5ff3, type: 2}
+  - {fileID: 11400000, guid: d8655deb49935a843b905ef3e2e731c0, type: 2}
+  - {fileID: 11400000, guid: b39986114ee064b408969310192cef84, type: 2}
+  - {fileID: 11400000, guid: 22563e2be1896d6429a4b1330aefb734, type: 2}
+  - {fileID: 11400000, guid: 706d4ca4f65f3c441bc17b2125f4c301, type: 2}
+  wallAuthoring:
+  - {fileID: 1299826040}
+  - {fileID: 840894696}
+  world: {fileID: 1590706618}
+  enforceBusinessReadiness: 0
+--- !u!114 &1590706618
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1590706615}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f0c9fc130699d64ab023cba5efcee87, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Navigation.NavigationWorld
+--- !u!4 &1590706619
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1590706615}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1679497553
 GameObject:
   m_ObjectHideFlags: 0
@@ -6629,6 +6726,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.TimeControlPanel
   appearance: {fileID: 11400000, guid: 6bf1ac72f6e850349a356a167819f6ea, type: 2}
   modeBadgeLabel: {fileID: 1563623471}
+  resumeBlockSourceFont: {fileID: 12800000, guid: 864990ee39142b943a8bb5800962fcbd, type: 3}
   gameTimeService: {fileID: 1368244272}
   pauseButton: {fileID: 1463375396}
   normalButton: {fileID: 1981441264}
@@ -6675,3 +6773,4 @@ SceneRoots:
   - {fileID: 1437096832}
   - {fileID: 479589003}
   - {fileID: 495853947}
+  - {fileID: 1590706619}
