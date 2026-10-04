@@ -66,6 +66,72 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         }
 
         [UnityTest]
+        public IEnumerator Catalogue_CurrentTabButtonReopensAndPreservesFurniturePreviewAndBrowsing()
+        {
+            yield return Load();
+            var controller = Object.FindFirstObjectByType<DecorationModeController>();
+            var catalogue = Object.FindFirstObjectByType<DecorationCatalogueView>();
+            ((RectTransform)catalogue.transform).SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, 320f);
+            controller.EnterDecorationMode();
+            yield return new WaitForSecondsRealtime(.25f);
+            var tab = Object.FindFirstObjectByType<DecorationModeTabsView>()
+                .GetComponentsInChildren<Button>(true).Single(button => button.name == "furnitureButton");
+            catalogue.GetComponentsInChildren<DecorationCatalogueTileView>(true)
+                .First(tile => tile.gameObject.activeInHierarchy && tile.ItemId.StartsWith("furniture."))
+                .GetComponent<Button>().onClick.Invoke();
+            yield return new WaitForSecondsRealtime(.25f);
+            Assert.That(catalogue.IsCollapsed, Is.True);
+            var view = Object.FindFirstObjectByType<FurniturePreviewView>();
+            var preview = view.CurrentPreviewTransform;
+            Assert.That(preview, Is.Not.Null);
+            var position = preview.position;
+            var rotation = preview.rotation;
+
+            // Set non-default scroll positions after the editing layout has settled.
+            // 先展开并等待编辑态布局稳定，再设置非默认浏览位置。
+            tab.onClick.Invoke();
+            yield return new WaitForSecondsRealtime(.25f);
+            Assert.That(catalogue.SheetState, Is.EqualTo(DecorationSheetState.Expanded));
+            Canvas.ForceUpdateCanvases();
+            var vertical = catalogue.VerticalScroll;
+            var rows = catalogue.CategoryRows.Select(row => row.HorizontalScroll).ToArray();
+            var scrollableRow = rows.FirstOrDefault(row => row.content.rect.width
+                > (row.viewport != null ? row.viewport.rect.width : ((RectTransform)row.transform).rect.width));
+            Assert.That(vertical.content.rect.height, Is.GreaterThan(vertical.viewport.rect.height));
+            Assert.That(scrollableRow, Is.Not.Null, "Use an actually scrollable production row.");
+            vertical.StopMovement();
+            scrollableRow.StopMovement();
+            vertical.verticalNormalizedPosition = .35f;
+            scrollableRow.horizontalNormalizedPosition = .6f;
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            Assert.That(vertical.verticalNormalizedPosition, Is.EqualTo(.35f).Within(.015f));
+            Assert.That(scrollableRow.horizontalNormalizedPosition, Is.EqualTo(.6f).Within(.015f));
+            var scrollPositions = rows.Select(row => row.horizontalNormalizedPosition).ToArray();
+            catalogue.ShowCollapsedHandle();
+            yield return new WaitForSecondsRealtime(.25f);
+            Assert.That(catalogue.IsCollapsed, Is.True);
+
+            // Use the production button listener, including a second tap while already expanded.
+            // 经过生产按钮的 listener；第二次点击同时验证已展开时保持状态。
+            for (var tap = 0; tap < 2; tap++)
+            {
+                tab.onClick.Invoke();
+                yield return new WaitForSecondsRealtime(.25f);
+                Assert.That(catalogue.SheetState, Is.EqualTo(DecorationSheetState.Expanded));
+                Assert.That(catalogue.IsExpandedPanelVisible, Is.True);
+                Assert.That(view.CurrentPreviewTransform, Is.SameAs(preview));
+                Assert.That(preview.position, Is.EqualTo(position));
+                Assert.That(preview.rotation, Is.EqualTo(rotation));
+                Assert.That(vertical.verticalNormalizedPosition, Is.EqualTo(.35f).Within(.015f));
+                Assert.That(catalogue.CategoryRows.Select(row => row.HorizontalScroll), Is.EqualTo(rows));
+                for (var row = 0; row < rows.Length; row++)
+                    Assert.That(rows[row].horizontalNormalizedPosition,
+                        Is.EqualTo(scrollPositions[row]).Within(.015f));
+            }
+        }
+
+        [UnityTest]
         public IEnumerator FootprintLight_ProductionControllerWiresFloorAndWallFills()
         {
             yield return Load();

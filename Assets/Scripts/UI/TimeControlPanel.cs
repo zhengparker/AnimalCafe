@@ -14,6 +14,8 @@ namespace AnimalCafe.UI
     {
         [SerializeField] private AnimalCafe.UI.P8R.P8RAppearance appearance;
         [SerializeField] private TMP_Text modeBadgeLabel;
+        [SerializeField] private Font resumeBlockSourceFont;
+        private TMP_FontAsset ownedResumeBlockFont;
         [SerializeField]
         private GameTimeService gameTimeService;
 
@@ -43,6 +45,7 @@ namespace AnimalCafe.UI
         private bool decorationPauseLocked;
         private GameSpeed decorationEntrySpeed;
         private bool refreshingP8RLayout;
+        private TMP_Text resumeBlockReasonLabel;
 
         private void Start()
         {
@@ -82,6 +85,7 @@ namespace AnimalCafe.UI
             Button fast)
         {
             RemoveListeners();
+            RemoveSpeedListener();
             gameTimeService = service;
             pauseButton = pause;
             normalButton = normal;
@@ -171,6 +175,7 @@ namespace AnimalCafe.UI
             }
 
             GameEventBus.GameSpeedChanged += HandleGameSpeedChanged;
+            gameTimeService.ResumeAvailabilityChanged += RefreshSelectedVisuals;
             speedListenerRegistered = true;
         }
 
@@ -195,6 +200,7 @@ namespace AnimalCafe.UI
             }
 
             GameEventBus.GameSpeedChanged -= HandleGameSpeedChanged;
+            if(gameTimeService != null) gameTimeService.ResumeAvailabilityChanged -= RefreshSelectedVisuals;
             speedListenerRegistered = false;
         }
 
@@ -214,12 +220,17 @@ namespace AnimalCafe.UI
         private void RefreshSelectedVisuals(GameSpeed speed)
         {
             ResolvePauseLabel();
+            var blocked=gameTimeService != null && gameTimeService.IsResumeBlocked;
+            RefreshBlockReason(blocked);
+            if(normalButton != null) normalButton.interactable=!decorationPauseLocked && !blocked;
+            if(fastButton != null) fastButton.interactable=!decorationPauseLocked && !blocked;
+            if(pauseButton != null) pauseButton.interactable=!decorationPauseLocked && !blocked;
             if (appearance != null)
             {
                 pauseButton.gameObject.SetActive(false);
                 normalButton.gameObject.SetActive(true);
                 fastButton.gameObject.SetActive(true);
-                normalButton.interactable = fastButton.interactable = !decorationPauseLocked;
+                normalButton.interactable = fastButton.interactable = !decorationPauseLocked && !blocked;
                 var lockFast = decorationPauseLocked && decorationEntrySpeed == GameSpeed.Fast;
                 var lockNormal = decorationPauseLocked && !lockFast;
                 appearance.Tab(normalButton, "clock", !decorationPauseLocked && speed != GameSpeed.Fast,
@@ -235,7 +246,7 @@ namespace AnimalCafe.UI
             }
             if (pauseLabel != null)
             {
-                pauseLabel.text = speed == GameSpeed.Paused ? "Resume" : "Pause";
+                pauseLabel.text = blocked ? "Blocked" : speed == GameSpeed.Paused ? "Resume" : "Pause";
             }
 
             if (decorationPauseLocked)
@@ -383,6 +394,51 @@ namespace AnimalCafe.UI
             pauseLabel ??= pauseButton != null
                 ? pauseButton.GetComponentInChildren<TMP_Text>(true)
                 : null;
+        }
+
+        private void RefreshBlockReason(bool blocked)
+        {
+            if(blocked && resumeBlockReasonLabel==null && transform is RectTransform)
+            {
+                var message=new GameObject("NavigationResumeBlockReason",typeof(RectTransform),typeof(TextMeshProUGUI));
+                message.transform.SetParent(transform,false);
+                resumeBlockReasonLabel=message.GetComponent<TextMeshProUGUI>();
+                if(resumeBlockSourceFont!=null)
+                {
+                    ownedResumeBlockFont=TMP_FontAsset.CreateFontAsset(resumeBlockSourceFont,64,8,
+                        UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA,512,512,AtlasPopulationMode.Dynamic,false);
+                    ownedResumeBlockFont.name="Navigation resume reason runtime font";
+                    ownedResumeBlockFont.material.name="Navigation resume reason runtime material";
+                    foreach(var atlas in ownedResumeBlockFont.atlasTextures) atlas.name="Navigation resume reason runtime atlas";
+                    if(!ownedResumeBlockFont.TryAddCharacters(gameTimeService.ResumeBlockReason,out var missing))
+                        Debug.LogError("Navigation resume reason font missing glyphs: "+missing,this);
+                    resumeBlockReasonLabel.font=ownedResumeBlockFont;
+                }
+                else
+                {
+                    Debug.LogError("Navigation resume reason requires its configured Chinese source font",this);
+                    resumeBlockReasonLabel.font=modeBadgeLabel!=null ? modeBadgeLabel.font : pauseLabel?.font;
+                }
+                resumeBlockReasonLabel.fontSize=16; resumeBlockReasonLabel.color=new Color(1,.75f,.3f);
+                resumeBlockReasonLabel.raycastTarget=false;
+                var rect=resumeBlockReasonLabel.rectTransform;
+                rect.anchorMin=new Vector2(0,0); rect.anchorMax=new Vector2(1,0); rect.pivot=new Vector2(.5f,1);
+                rect.anchoredPosition=new Vector2(0,-4); rect.sizeDelta=new Vector2(0,44);
+            }
+            if(resumeBlockReasonLabel==null) return;
+            resumeBlockReasonLabel.gameObject.SetActive(blocked);
+            resumeBlockReasonLabel.text=blocked ? gameTimeService.ResumeBlockReason : string.Empty;
+        }
+
+        private void OnDestroy()
+        {
+            // Only the private generated font/material/atlas belong to this panel.
+            if(ownedResumeBlockFont==null) return;
+            var material=ownedResumeBlockFont.material;
+            var atlases=ownedResumeBlockFont.atlasTextures;
+            Destroy(ownedResumeBlockFont); ownedResumeBlockFont=null;
+            if(material!=null) Destroy(material);
+            foreach(var atlas in atlases) if(atlas!=null) Destroy(atlas);
         }
 
         private static GameObject FindSelectedVisual(Button button)

@@ -88,7 +88,7 @@ Surface 没有数量限制。Surface 卡片以 swatch 本身为主要内容，�
 
 - 系统一次只允许一个 active Preview transaction。
 - 2026-09-12 P8R follow-up：有尚未 Confirm 的 Preview 时，可以直接切换到另一个 Mode Tab；系统先完整 Cancel 当前 Preview，再打开目标分类，不自动 Confirm 或保存。已确认 Layout 不变。
-- 重复点击当前 Tab 保留 Preview、target 和 Catalogue 状态；Store / Exit 确认弹窗仍独占输入。跨 Tab 取消会停止旧拖拽，旧 pointer 的后续移动／抬手不能在新分类继续编辑。
+- 2026-10-04 补充：重复点击当前 Tab 时，若 Catalogue 已收起则展开，已展开则保持；无论有无 active Preview，均保留 Preview、target、已确认 Layout 和目录浏览位置。Store / Exit 确认弹窗仍独占输入，不允许后方 Tab 展开目录。跨 Tab 取消会停止旧拖拽，旧 pointer 的后续移动／抬手不能在新分类继续编辑。
 - 普通点击当前 Mode 不支持的 Scene object 不会切换 Mode，也不会打断 Preview。
 - 每次新进入 Decoration Mode 默认打开 `Furniture`；同一次 Decoration Mode 内记住当前 Tab，退出后不跨 session 保存。
 - 有 active Preview 时尝试退出 Decoration Mode，显示 `Continue Editing / Discard Changes` confirmation；绝不自动 Confirm。

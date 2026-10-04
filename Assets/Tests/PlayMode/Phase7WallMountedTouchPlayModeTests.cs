@@ -1554,6 +1554,57 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(fixture.Catalogue.AreCategoryRowsVisible, Is.True);
         }
 
+        [TestCase(DecorationModeKind.Furniture)]
+        [TestCase(DecorationModeKind.Floor)]
+        [TestCase(DecorationModeKind.Wall)]
+        [TestCase(DecorationModeKind.WallDecor)]
+        public void Controller_CurrentTabFromTabsOnlyReopensExpandedCatalogue(DecorationModeKind mode)
+        {
+            using var fixture = new EnterControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            Assert.That(fixture.Tabs.RequestMode(mode), Is.True);
+            fixture.Catalogue.SetSheetState(DecorationSheetState.TabsOnly, hasActivePreview: false);
+
+            Assert.That(fixture.Tabs.RequestMode(mode), Is.True);
+
+            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(DecorationSheetState.Expanded));
+            Assert.That(fixture.Catalogue.AreCategoryRowsVisible, Is.True);
+            Assert.That(fixture.Controller.ActiveMode, Is.EqualTo(mode));
+        }
+
+        [Test]
+        public void Controller_CurrentTabAfterConfirmReopensWithoutChangingCommittedLayout()
+        {
+            using var fixture = new EnterControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            Assert.That(fixture.Tabs.RequestMode(DecorationModeKind.WallDecor), Is.True);
+            Assert.That(fixture.Controller.TryBeginWallMountedPreview(
+                "decor.clock", "wall.back-left", new WallSlotPosition(0, 0)), Is.True);
+            fixture.Confirm.onClick.Invoke();
+            Assert.That(fixture.Controller.ActiveWallMountedPreview, Is.Null);
+            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(DecorationSheetState.CompactPreview));
+            var committed = JsonUtility.ToJson(fixture.WallLayout.CaptureSnapshot());
+
+            Assert.That(fixture.Tabs.RequestMode(DecorationModeKind.WallDecor), Is.True);
+
+            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(DecorationSheetState.Expanded));
+            Assert.That(fixture.Controller.ActiveWallMountedPreview, Is.Null);
+            Assert.That(JsonUtility.ToJson(fixture.WallLayout.CaptureSnapshot()), Is.EqualTo(committed));
+        }
+
+        [Test]
+        public void Controller_CurrentTabWhileDecorationClosedKeepsCatalogueHidden()
+        {
+            using var fixture = new EnterControllerFixture();
+            fixture.Controller.EnterDecorationMode();
+            fixture.Controller.ExitDecorationMode();
+
+            Assert.That(fixture.Tabs.RequestMode(DecorationModeKind.Furniture), Is.True);
+
+            Assert.That(fixture.Controller.IsOpen, Is.False);
+            Assert.That(fixture.Catalogue.IsCatalogueVisible, Is.False);
+        }
+
         [Test]
         public void Controller_WallModeGuidesTargetSelectionBeforeMaterialSelection()
         {
@@ -1862,7 +1913,7 @@ namespace AnimalCafe.Tests.PlayMode
         [TestCase(DecorationModeKind.Floor)]
         [TestCase(DecorationModeKind.Wall)]
         [TestCase(DecorationModeKind.WallDecor)]
-        public void TabSwitch_SameTabKeepsPendingPreviewTargetsAndChrome(DecorationModeKind mode)
+        public void TabSwitch_SameTabReopensCatalogueAndKeepsPendingPreviewTargets(DecorationModeKind mode)
         {
             using var fixture = new EnterControllerFixture();
             fixture.Controller.EnterDecorationMode();
@@ -1872,11 +1923,21 @@ namespace AnimalCafe.Tests.PlayMode
             var mounted = fixture.Controller.ActiveWallMountedPreview;
             var floorTarget = fixture.Controller.SelectedFloorTarget;
             var wallTarget = TabSwitchField<string>(fixture.Controller, "selectedWallTarget");
-            var sheet = fixture.Catalogue.SheetState;
-            var actionVisible = fixture.Action.IsVisible;
-            var actionParent = fixture.Action.transform.parent;
             var rows = fixture.Catalogue.GetComponentsInChildren<DecorationCatalogueTileView>(true);
+            var room = TabSwitchField<RoomSurfaceLayout>(fixture.Controller, "phase7RoomSurfaceLayout");
+            var roomBefore = JsonUtility.ToJson(room.CaptureSnapshot());
+            var wallBefore = JsonUtility.ToJson(fixture.WallLayout.CaptureSnapshot());
+            var runtime = TabSwitchField<CafeLayoutRuntime>(fixture.Controller, "layoutRuntime");
+            var furnitureBefore = runtime.Layout.FurnitureInstances.ToArray();
+            var transitions = 0;
+            fixture.Catalogue.StateChanged += _ => transitions++;
 
+            Assert.That(fixture.Tabs.RequestMode(mode), Is.True);
+            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(DecorationSheetState.Expanded));
+            Assert.That(fixture.Catalogue.State, Is.EqualTo(DecorationCatalogueState.Expanded));
+            var transitionsAfterExpand = transitions;
+            // Repeated taps while expanded must not restart browsing or presentation.
+            // 已展开时再点当前分类，不重建目录或重复触发展开。
             Assert.That(fixture.Tabs.RequestMode(mode), Is.True);
 
             Assert.That(TabSwitchField<DecorationSession>(fixture.Controller, "session").ActivePreview, Is.SameAs(ordinary));
@@ -1884,9 +1945,11 @@ namespace AnimalCafe.Tests.PlayMode
             Assert.That(fixture.Controller.ActiveWallMountedPreview, Is.SameAs(mounted));
             Assert.That(fixture.Controller.SelectedFloorTarget, Is.EqualTo(floorTarget));
             Assert.That(TabSwitchField<string>(fixture.Controller, "selectedWallTarget"), Is.EqualTo(wallTarget));
-            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(sheet));
-            Assert.That(fixture.Action.IsVisible, Is.EqualTo(actionVisible));
-            Assert.That(fixture.Action.transform.parent, Is.SameAs(actionParent));
+            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(DecorationSheetState.Expanded));
+            Assert.That(transitions, Is.EqualTo(transitionsAfterExpand));
+            Assert.That(JsonUtility.ToJson(room.CaptureSnapshot()), Is.EqualTo(roomBefore));
+            Assert.That(JsonUtility.ToJson(fixture.WallLayout.CaptureSnapshot()), Is.EqualTo(wallBefore));
+            Assert.That(runtime.Layout.FurnitureInstances, Is.EqualTo(furnitureBefore));
             Assert.That(fixture.Catalogue.GetComponentsInChildren<DecorationCatalogueTileView>(true), Is.EqualTo(rows));
         }
 
@@ -1897,10 +1960,12 @@ namespace AnimalCafe.Tests.PlayMode
             fixture.Controller.EnterDecorationMode();
             BeginTabSwitchPreview(fixture, DecorationModeKind.WallDecor);
             var preview = fixture.Controller.ActiveWallMountedPreview;
+            var sheet = fixture.Catalogue.SheetState;
             Assert.That(fixture.Controller.TryRequestExit(), Is.False);
             Assert.That(fixture.Tabs.RequestMode(DecorationModeKind.Floor), Is.False);
             Assert.That(fixture.Tabs.RequestMode(DecorationModeKind.WallDecor), Is.False);
             Assert.That(fixture.Controller.ActiveWallMountedPreview, Is.SameAs(preview));
+            Assert.That(fixture.Catalogue.SheetState, Is.EqualTo(sheet));
             fixture.Continue.onClick.Invoke();
 
             Assert.That(fixture.Tabs.RequestMode(DecorationModeKind.Floor), Is.True);

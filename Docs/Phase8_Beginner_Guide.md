@@ -49,6 +49,17 @@ Phase 8 只负责三件事：把功能设备放到合适位置、自动算出 Em
 
 判定方法很简单：预期现象全部出现、没有新的 Console error/exception，记 `PASS`；任何步骤无法完成、结果与预期不同、或 Console 有新的 error/exception，记 `FAIL`。`FAIL` 时记录 case ID、操作步骤、Scene 状态、Console message，并附截图或短视频；**停止修复，交回团队处理**。
 
+### 4.1 当前分类重新展开目录（2026-10-04）
+
+本次获批规则：目录收起后，再点底部当前分类 Tab 就展开；目录已展开时再点则保持。正在编辑的 Preview、target、已确认 Layout 和目录浏览位置保留；Store / Exit 弹窗仍独占输入，跨分类仍先取消未确认 Preview。
+
+本项在 `codex/phase-9-order-domain` 分支验证；PR #9 合并并完成本地 fast-forward 后，请使用主项目 `E:\Unity\Project\AnimalCafe` 的 `Assets/Scenes/MainCafe.unity`。以下是本次修复的回归步骤，不要求重做已完成的 Phase 8 验收；人工结果尚未记录。
+
+1. Play → Decoration → Furniture，选一件家具，等待目录收起。直接点底部当前 Furniture 分类图标，目录应展开，原 Preview 的位置和方向应保留；无需先点三角按钮。
+2. 目录展开后再次点同一分类，目录应保持展开，浏览位置不跳回起点。收起目录并 Confirm 放置，再点同一分类，应能重新展开并继续选物品。
+3. 在 Floor、Walls、Wall Decor 各检查一次收起后点当前分类；已选的地格／墙面和 Preview 应保留。切到另一个分类时，仍应先取消未确认 Preview。
+4. 编辑已有物件并打开 Store，或带 Preview 尝试退出并打开 Exit 弹窗；点后方分类不能展开目录或改变 Preview。Cancel Store／Continue Editing 后应回到原 Preview。
+
 ## 5. 手动验收清单（早期验收基线）
 
 本节保留早期 manual cases 的操作与预期，便于对照历史 ledger；不是当前版本逐字、逐像素的 UI 规范，也不表示需要重新执行已完成的验收。后续 P8R 已调整 Pick-up 图标、CR 方向提示、Catalogue 名称和 readiness 短提示等表现；实际变更按下方带日期的对应记录核对，当前完成状态以第 37 节为准。当前 readiness 的快速说明见上方第 2、4 节。
