@@ -335,7 +335,7 @@ Phase 8 validation Scene 另外提供 developer-facing anchor gizmos / debug fee
 - 非必要的额外设备只有普通 anchor / reachability 失败时，才可在另一组完整有效组合存在时降为 warning；损坏 binding / definition / direction 数据始终 blocking，不能用额外有效设备掩盖。
 - 缺少方向配置的已确认设备仍保留在 Stations、InvalidCount 与具体 failure 中，不从 report 消失。
 - readiness 按每项 failure 关联设备、中文角色、站位坐标与原因；自身 IDs 只留在 diagnostics，不拼入玩家文本。长文本在顶部 SafeArea 面板内换行、滚动。
-- 一次只允许一个 Preview。2026-09-12 P8R follow-up：切到另一个 Tab 时先完整 Cancel 未确认 Preview，再切换；重复点击当前 Tab 保留 Preview。新物件的临时显示移除，已有家具／CR／CM／Pick-up 恢复正式位置和绑定；confirmed Layout、readiness report/version 不变。Store / Exit 弹窗仍阻止后方 Tab 操作；CR / CM / Pick-up 的 Store Cancel 保持 Preview，确认后才修改正式 layout。
+- 一次只允许一个 Preview。2026-09-12 P8R follow-up：切到另一个 Tab 时先完整 Cancel 未确认 Preview，再切换；新物件的临时显示移除，已有家具／CR／CM／Pick-up 恢复正式位置和绑定，confirmed Layout、readiness report/version 不变。2026-10-04 补充：重复点击当前 Tab 时，若 Catalogue 已收起则展开，已展开则保持；有 Preview 或 Confirm 后无 Preview 时都适用，保留 Preview、target、confirmed Layout、readiness report/version 和目录浏览位置。Store / Exit 弹窗仍阻止后方 Tab 操作；CR / CM / Pick-up 的 Store Cancel 保持 Preview，确认后才修改正式 layout。
 - Furniture Catalogue 不显示绿色 Using check（包括 Counter、Cash Register、Coffee Machine）；可重复摆放的家具不能被表现为互斥选项。正在编辑的条目仍显示 Preview 虚线框；Floor、Wall、Wall Decor 的既有 Using check 规则不变。
 - Pick-up 无可用相邻站位时，action bar 必须给出专用原因，同时保留上一条正式 readiness。
 

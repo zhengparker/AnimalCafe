@@ -1276,9 +1276,14 @@ namespace AnimalCafe.Decoration
                 return false;
             }
 
-            // Selecting the current tab must not reset its preview, target or sheet.
-            // 点击当前分类不取消编辑，也不重建目录或改变收起状态。
-            if (mode == activeMode) return true;
+            // Reopen through the same presentation path as the arrow, preserving the edit and browsing.
+            // 再点当前分类只展开目录，保留 Preview、target 和浏览位置。
+            if (mode == activeMode)
+            {
+                if (isOpen && catalogueView?.IsCatalogueVisible == true && catalogueView.IsCollapsed)
+                    catalogueView.ShowCatalogue();
+                return true;
+            }
 
             CancelPreviewForModeChange();
             wallOcclusionFadeView?.RestoreAllFades();

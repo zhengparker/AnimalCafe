@@ -2,6 +2,18 @@
 
 日期：2026-09-30～2026-10-01（America/Toronto）。分支：`codex/phase-9-order-domain`；目标：`main`。
 
+## 2026-10-04 合并复核
+
+Owner 本次已授权 review、push、合并 PR #9、fast-forward 本地 main，并清理已合并分支。下文 2026-09-30～10-01 的记录保留为历史证据；实际远端状态以 [PR #9](https://github.com/zhengparker/AnimalCafe/pull/9) 为准。P12 尚未开始。
+
+- 本次增量包含已由 Owner 接受的 Shiba/Westie 低反光材质，以及 Decor 当前分类按钮重新展开目录的修复。展开时保留 Preview、target、已有行对象和浏览位置；Modal 仍优先处理输入。
+- 独立 review 的一项 Minor 已补强：真实 MainCafe 按钮测试使用非默认的纵向 `0.35` 和横向 `0.6` 滚动位置，验证折叠后重新展开两次均保留位置。本次修复复核为 **Critical 0 / Important 0 / Minor 0**；历史 3 项非阻塞 Minor 仍见下方限制。
+- 完整 EditMode：**2440 PASS / 0 FAIL / 0 SKIP**，Unity exit 0，1923.724 s。完整 PlayMode：**1124 PASS / 0 FAIL / 5 opt-in SKIP**，1129 total，Unity exit 0，425.510 s。5 个跳过项与下方历史清单一致。
+- PlayMode 包含最终强化的浏览位置用例；EditMode 后仅调整 PlayMode 测试和交付文档，运行时代码未变。`git diff --check` 通过。
+- 完整测试前记录 2221 个文件的 SHA-256；EditMode 生成的 30 个旧资源变化和 PlayMode 的 1 个旧材质变化均保存证据并恢复原字节。模型、场景及测试资料不因清理分支丢失。
+- P9/P10/P11 及低反光材质的既有 Owner 验收继续有效。本次 Decor 修改已通过自动化检查，未另外记录人工点击验收；操作步骤见 `Docs/Phase8_Beginner_Guide.md` §4.1。
+- 本次 XML、日志、恢复记录及本地修改备份位于主 checkout 的 `outputs/merge-p9-p11-20261004/`。主 checkout 的 `.gitignore` 和 `AnimalCafe.slnx` 本地修改保持原字节；6 份旧草案先归档，再采用分支中的已实施版本。worktree 的测试输出、review 资料及本地设置在清理前归档并校验。
+
 ## 范围与当前状态
 
 Owner 已授权完整 review、修复、提交并 push 当前分支，以及创建合并 PR。基线为 `c80f208`，P9 提交 `94cc48d`、P10 提交 `a0877da`；本轮同时审查尚未提交的 P11。
