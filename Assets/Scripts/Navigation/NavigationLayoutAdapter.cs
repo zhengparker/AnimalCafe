@@ -59,6 +59,13 @@ namespace AnimalCafe.Navigation
         public int BakeCount { get; private set; }
         public NavigationWorld World => world;
         public bool EnforceBusinessReadiness => enforceBusinessReadiness;
+        // P12在首次有效营业布局出现后启用gate；空店仍可正常编辑。
+        public void RequireBusinessReadiness()
+        {
+            if(enforceBusinessReadiness) return;
+            enforceBusinessReadiness=true; PublishedRevision=-1;
+            CurrentReadiness=Result(false,"LayoutUnavailable"); world?.SuspendLayout(Revision);
+        }
         public NavigationReadiness CurrentReadiness { get; private set; } = Result(false, "LayoutUnavailable");
         private DecorationGridSpace Grid => new DecorationGridSpace(layoutRuntime.Layout.GridSettings, new LayoutBounds(new GridPosition(0,0),new GridSize(8,8)));
         // A synchronous builder today; revision is still checked at publication, including reentrant callers.
@@ -353,6 +360,20 @@ namespace AnimalCafe.Navigation
         {
             if(!SampleAnchor(from,out var a)||!SampleAnchor(to,out var b)) return false;
             var path=new NavMeshPath(); return NavMesh.CalculatePath(a,b,OwnedFilter,path) && path.status==NavMeshPathStatus.PathComplete;
+        }
+        // 只查询本 adapter 拥有的 NavMesh；供 P12 slot/admission 验证。
+        public bool IsPointWalkable(Vector3 position)
+            => isActiveAndEnabled && ownedData!=null && world!=null && world.LayoutAvailable && SampleAnchor(position,out _);
+        public bool HasClearPath(Vector3 from,Vector3 to)
+            => IsPointWalkable(from) && IsPointWalkable(to) && Path(from,to);
+        // P12只读路径查询；仍使用本adapter拥有的agent type与NavMesh。
+        public IReadOnlyList<Vector3> GetCompletePath(Vector3 from,Vector3 to)
+        {
+            if(!IsPointWalkable(from) || !IsPointWalkable(to) ||
+                !SampleAnchor(from,out var start) || !SampleAnchor(to,out var goal)) return null;
+            var path=new NavMeshPath();
+            if(!NavMesh.CalculatePath(start,goal,OwnedFilter,path) || path.status!=NavMeshPathStatus.PathComplete) return null;
+            return Array.AsReadOnly(path.corners);
         }
         private static NavigationReadiness Result(bool available,string reason) => new NavigationReadiness(available,new Dictionary<string,string>(),reason);
         private static void DestroyOwned(UnityEngine.Object value) { if(Application.isPlaying) Destroy(value); else DestroyImmediate(value); }

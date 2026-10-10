@@ -17,6 +17,10 @@ namespace AnimalCafe.Navigation
         private bool layoutAvailable = true;
         private int? ownedAgentType;
         private NavigationFailure failure;
+        private Vector3[] corners = System.Array.Empty<Vector3>();
+        private Vector3[] rawCorners = System.Array.Empty<Vector3>();
+        private bool[] adjustedCorners = System.Array.Empty<bool>();
+        private int corner;
         private NavMeshQueryFilter Filter => new NavMeshQueryFilter { agentTypeID = ownedAgentType ?? actor.Agent.agentTypeID, areaMask = actor.Agent.areaMask };
         public Vector3 Position => actor.transform.position;
         public Vector3 DesiredVelocity
@@ -24,12 +28,23 @@ namespace AnimalCafe.Navigation
             get
             {
                 if (!moving || !Bound || actor.Agent.pathPending || actor.Agent.isOnOffMeshLink) return Vector3.zero;
+                if (actor.SteadyPathMotion)
+                {
+                    AdvanceCorner();
+                    if (corners.Length == 0) return Vector3.zero;
+                    var toward = Horizontal(corners[corner] - Position);
+                    if (corner == corners.Length - 1 && toward.magnitude <= actor.Settings.Epsilon)
+                    { actor.Agent.isStopped = true; return Vector3.zero; }
+                    return toward.normalized * actor.Settings.MaxSpeed;
+                }
                 if (Vector3.Distance(Position, destination) <= actor.Settings.ArrivalDistance)
                 { actor.Agent.isStopped = true; return Vector3.zero; }
                 return Vector3.ClampMagnitude(actor.Agent.desiredVelocity, actor.Settings.MaxSpeed);
             }
         }
-        internal Vector3? Facing => moving && Vector3.Distance(Position, destination) <= actor.Settings.ArrivalDistance ? target.Facing : null;
+        internal Vector3? Facing => moving && (actor.SteadyPathMotion
+            ? Horizontal(Position - destination).magnitude <= actor.Settings.ArrivalDistance
+            : Vector3.Distance(Position, destination) <= actor.Settings.ArrivalDistance) ? target.Facing : null;
         private bool Bound => actor.gameObject.activeInHierarchy && actor.Agent.enabled && actor.Agent.isOnNavMesh &&
             (!ownedAgentType.HasValue || actor.Agent.agentTypeID==ownedAgentType.Value);
 
@@ -89,9 +104,32 @@ namespace AnimalCafe.Navigation
             var path = new NavMeshPath();
             if (!NavMesh.CalculatePath(Position, destination, Filter, path) || path.status != NavMeshPathStatus.PathComplete)
                 return Fail(NavigationFailure.IncompletePath);
-            pathLength = Length(Position, path.corners);
+            var completeCorners = path.corners;
+            if (completeCorners.Length == 0) return Fail(NavigationFailure.IncompletePath);
             actor.Agent.isStopped = false;
-            if (!actor.Agent.SetPath(path)) return Fail(NavigationFailure.IncompletePath);
+            if (!actor.Agent.SetPath(path))
+            {
+                // A complete query can outlive the Agent's native binding after guarded movement.
+                // 仅校验真实起点后原地重新绑定一次；不Warp、不写Transform、不放宽碰撞。
+                if (!layoutAvailable || !actor.isActiveAndEnabled ||
+                    (actor.World != null && !actor.World.CanStartActor(actor)) || !ValidStart())
+                    return Fail(NavigationFailure.InvalidStart);
+                actor.Agent.enabled = false;
+                if (!TryBind()) return Fail(NavigationFailure.InvalidStart);
+                path = new NavMeshPath();
+                if (!NavMesh.CalculatePath(Position, destination, Filter, path) ||
+                    path.status != NavMeshPathStatus.PathComplete || path.corners.Length == 0)
+                    return Fail(NavigationFailure.IncompletePath);
+                actor.Agent.isStopped = false;
+                if (!actor.Agent.SetPath(path)) return Fail(NavigationFailure.IncompletePath);
+                completeCorners = path.corners;
+            }
+            pathLength = Length(Position, completeCorners);
+            if (actor.SteadyPathMotion)
+            {
+                rawCorners = completeCorners; corners = (Vector3[])completeCorners.Clone();
+                adjustedCorners = new bool[corners.Length]; corner = 0;
+            }
             moving = true;
             return NavigationFailure.None;
         }
@@ -105,7 +143,8 @@ namespace AnimalCafe.Navigation
             else if (actor.Agent.pathPending) state = NavigationPathState.Pending;
             else if (moving && actor.Agent.pathStatus != NavMeshPathStatus.PathComplete)
             { state = NavigationPathState.Invalid; failure = NavigationFailure.IncompletePath; }
-            else if (moving) remaining = Mathf.Max(Vector3.Distance(Position, destination), Length(Position, actor.Agent.path.corners));
+            else if (moving) remaining = actor.SteadyPathMotion ? RemainingCornerDistance()
+                : Mathf.Max(Vector3.Distance(Position, destination), Length(Position, actor.Agent.path.corners));
             var facing = target.Facing.HasValue ? Vector3.Angle(actor.transform.forward, target.Facing.Value) : 0;
             return new NavigationObservation(generation, revision, state, Position, pathLength, remaining, actualSpeed,
                 facing, failure, destination);
@@ -121,6 +160,8 @@ namespace AnimalCafe.Navigation
         public void Stop()
         {
             moving = false; actualSpeed = 0;
+            corners = System.Array.Empty<Vector3>(); corner = 0;
+            rawCorners = System.Array.Empty<Vector3>(); adjustedCorners = System.Array.Empty<bool>();
             if (!Bound) return;
             actor.Agent.isStopped = true; actor.Agent.ResetPath(); actor.Agent.velocity = Vector3.zero;
             actor.Agent.nextPosition = Position;
@@ -155,6 +196,66 @@ namespace AnimalCafe.Navigation
                 Mathf.Abs(sample.position.y - end.y) > .05f) return Vector3.zero;
             return delta;
         }
+
+        // 不越过转角、不补走guard裁剪的距离 / cap each substep at its current corner.
+        internal Vector3 ClampToCurrentCorner(Vector3 delta)
+        {
+            if (!actor.SteadyPathMotion) return delta;
+            if (!moving || corners.Length == 0) return Vector3.zero;
+            AdvanceCorner();
+            return Vector3.ClampMagnitude(delta, Horizontal(corners[corner] - Position).magnitude);
+        }
+        private void AdvanceCorner()
+        {
+            // 只根据真实水平pose推进；忽略NavMesh voxel的微小高度偏移。
+            while (corner < corners.Length - 1)
+            {
+                var distance = Horizontal(corners[corner] - Position).magnitude;
+                if (distance <= actor.Settings.Epsilon) { corner++; continue; }
+                // Native corner按Agent半径生成，可能贴近完整skin。只在原到达范围内，
+                // 且真实pose到下一corner整段通过原guards时，移除这个多余拐点。
+                if (distance <= actor.Settings.ArrivalDistance && actor.World != null &&
+                    actor.World.CanTraverseStraight(actor, corners[corner + 1])) { corner++; break; }
+                if (corner > 0 && !adjustedCorners[corner])
+                {
+                    // 提前检查下一腿；贴桌角可能在进入到站范围前就被skin挡住。
+                    // Failed connections may become safe as the actual pose/bodies change.
+                    if (TrySkinSafeCorner(rawCorners[corner], out var candidate) && actor.World != null &&
+                        actor.World.CanTraverseStraight(actor, candidate))
+                    { corners[corner] = candidate; adjustedCorners[corner] = true; }
+                }
+                break; // 每次只简化一段；最终destination始终保留。
+            }
+        }
+        private bool TrySkinSafeCorner(Vector3 raw, out Vector3 candidate)
+        {
+            candidate = raw; var nearest = float.PositiveInfinity; var normal = Vector3.zero;
+            var point = raw + Vector3.up * (actor.Settings.CapsuleHeight * .5f);
+            foreach (var solid in solids)
+            {
+                if (solid == null || !solid.enabled || solid.isTrigger) continue;
+                var outward = Horizontal(point - solid.ClosestPoint(point)); var distance = outward.magnitude;
+                if (distance >= nearest) continue;
+                nearest = distance; normal = outward;
+            }
+            if (!NavigationCollisionGuard.Finite(normal) || normal.sqrMagnitude < 1e-12f ||
+                nearest > actor.Settings.AgentRadius + actor.Settings.CollisionSkin + actor.Settings.ArrivalDistance) return false;
+            normal.Normalize();
+            // 原到站范围内的单个绕角候选，给相邻圆角连接留边距。
+            // 不改bake/skin/最终目标；只采用完整guards批准的真实连接。
+            candidate = raw + normal * (actor.Settings.ArrivalDistance - actor.Settings.Epsilon);
+            return NavigationCollisionGuard.Finite(candidate) &&
+                Horizontal(candidate - raw).magnitude <= actor.Settings.ArrivalDistance;
+        }
+        private float RemainingCornerDistance()
+        {
+            AdvanceCorner();
+            var previous = Position; var distance = 0f;
+            for (var i = corner; i < corners.Length; i++)
+            { distance += Horizontal(corners[i] - previous).magnitude; previous = corners[i]; }
+            return distance;
+        }
+        private static Vector3 Horizontal(Vector3 value) { value.y = 0; return value; }
 
         private bool SameSide(Vector3 requested, Vector3 sampled)
         {

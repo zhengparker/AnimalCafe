@@ -135,6 +135,18 @@ namespace AnimalCafe.Navigation
         }
         private void Update() => Step(Time.deltaTime); // GameTimeService already owns timeScale.
 
+        internal bool CanTraverseStraight(NavigationActor actor, Vector3 target)
+        {
+            if (!LayoutAvailable || actor == null || !drivers.ContainsKey(actor)) return false;
+            var delta = target - actor.transform.position; delta.y = 0;
+            var filter = new UnityEngine.AI.NavMeshQueryFilter
+                { agentTypeID = actor.Agent.agentTypeID, areaMask = actor.Agent.areaMask };
+            if (UnityEngine.AI.NavMesh.Raycast(actor.transform.position, actor.transform.position + delta, out _, filter)) return false;
+            // 只查询，不投影或移动。必须完整批准原连接，非零位移不能当作安全证明。
+            var approved = guard.ClampDisplacement(actor, delta, actors, solids);
+            return approved.x == delta.x && approved.z == delta.z;
+        }
+
         public void Step(float scaledDeltaTime)
         {
             if (float.IsNaN(scaledDeltaTime) || float.IsInfinity(scaledDeltaTime) || scaledDeltaTime < 0)
@@ -163,7 +175,7 @@ namespace AnimalCafe.Navigation
                     var driver = drivers[actor]; var start = actor.transform.position;
                     var velocity = actor.isActiveAndEnabled ? driver.DesiredVelocity : Vector3.zero;
                     velocity.y = 0;
-                    var proposed = guard.ProjectAvoidance(actor, velocity * dt, actors);
+                    var proposed = guard.ProjectAvoidance(actor, driver.ClampToCurrentCorner(velocity * dt), actors);
                     proposed = guard.ProjectStaticAvoidance(actor, proposed, solids);
                     proposed = driver.ClampToNavMesh(proposed);
                     var delta = guard.ClampDisplacement(actor, proposed, actors, solids);
