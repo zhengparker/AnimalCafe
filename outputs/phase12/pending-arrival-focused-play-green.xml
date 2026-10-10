@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="8" result="Passed" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-09 19:22:56Z" end-time="2026-10-09 19:23:06Z" duration="10.2480829">
+  <test-suite type="TestSuite" id="2376" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1218" result="Passed" start-time="2026-10-09 19:22:56Z" end-time="2026-10-09 19:23:06Z" duration="10.248083" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1476" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-12-customer-queue/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="431" result="Passed" start-time="2026-10-09 19:22:56Z" end-time="2026-10-09 19:23:06Z" duration="10.157326" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="144460" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1477" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="431" result="Passed" start-time="2026-10-09 19:22:56Z" end-time="2026-10-09 19:23:06Z" duration="10.126961" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1478" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="431" result="Passed" start-time="2026-10-09 19:22:56Z" end-time="2026-10-09 19:23:06Z" duration="10.119111" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1479" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="431" result="Passed" start-time="2026-10-09 19:22:56Z" end-time="2026-10-09 19:23:06Z" duration="10.112952" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1480" name="Phase12Integration" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration" runstate="Runnable" testcasecount="79" result="Passed" start-time="2026-10-09 19:22:56Z" end-time="2026-10-09 19:23:06Z" duration="10.079504" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1058" name="CustomerQueueFlowTests" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" testcasecount="35" result="Passed" start-time="2026-10-09 19:22:56Z" end-time="2026-10-09 19:22:58Z" duration="2.460708" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1073" name="ConcurrentAdmissionAtTemporarilyOccupiedTailFollowsMovingEntryAndDrains" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests.ConcurrentAdmissionAtTemporarilyOccupiedTailFollowsMovingEntryAndDrains" methodname="ConcurrentAdmissionAtTemporarilyOccupiedTailFollowsMovingEntryAndDrains" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" seed="1083520800" result="Passed" start-time="2026-10-09 19:22:56Z" end-time="2026-10-09 19:22:56Z" duration="0.476447" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1072" name="ConcurrentAdmissionWaitsForCrossingEntryRouteWithoutReservingCapacity" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests.ConcurrentAdmissionWaitsForCrossingEntryRouteWithoutReservingCapacity" methodname="ConcurrentAdmissionWaitsForCrossingEntryRouteWithoutReservingCapacity" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" seed="790567872" result="Passed" start-time="2026-10-09 19:22:56Z" end-time="2026-10-09 19:22:57Z" duration="0.751976" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1071" name="ConcurrentAdmissionWaitsForOpposingExitRouteWithoutReservingCapacity" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests.ConcurrentAdmissionWaitsForOpposingExitRouteWithoutReservingCapacity" methodname="ConcurrentAdmissionWaitsForOpposingExitRouteWithoutReservingCapacity" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" seed="150158399" result="Passed" start-time="2026-10-09 19:22:57Z" end-time="2026-10-09 19:22:58Z" duration="0.359369" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1068" name="ConcurrentAdmissionWaitsWhenTailWouldBlockEarlierEntryThenRecovers" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests.ConcurrentAdmissionWaitsWhenTailWouldBlockEarlierEntryThenRecovers" methodname="ConcurrentAdmissionWaitsWhenTailWouldBlockEarlierEntryThenRecovers" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" seed="1599942673" result="Passed" start-time="2026-10-09 19:22:58Z" end-time="2026-10-09 19:22:58Z" duration="0.358088" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1074" name="DueArrivalWaitsForEntranceThenSpawnsWithoutAnotherCountdown" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests.DueArrivalWaitsForEntranceThenSpawnsWithoutAnotherCountdown" methodname="DueArrivalWaitsForEntranceThenSpawnsWithoutAnotherCountdown" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" seed="1453910167" result="Passed" start-time="2026-10-09 19:22:58Z" end-time="2026-10-09 19:22:58Z" duration="0.185537" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1075" name="SafeFollowingEntryMayApproachFutureTailBeforePredecessorPassesIt" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests.SafeFollowingEntryMayApproachFutureTailBeforePredecessorPassesIt" methodname="SafeFollowingEntryMayApproachFutureTailBeforePredecessorPassesIt" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" seed="1855855906" result="Passed" start-time="2026-10-09 19:22:58Z" end-time="2026-10-09 19:22:58Z" duration="0.298206" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="1094" name="Phase12CustomerQueueSceneTests" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.Phase12CustomerQueueSceneTests" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.Phase12CustomerQueueSceneTests" runstate="Runnable" testcasecount="44" result="Passed" start-time="2026-10-09 19:22:58Z" end-time="2026-10-09 19:23:06Z" duration="7.614775" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1095" name="NativeDefaultUnattendedOneSecondArrivalsDoNotResetFailedCountdown" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.Phase12CustomerQueueSceneTests.NativeDefaultUnattendedOneSecondArrivalsDoNotResetFailedCountdown" methodname="NativeDefaultUnattendedOneSecondArrivalsDoNotResetFailedCountdown" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.Phase12CustomerQueueSceneTests" runstate="Runnable" seed="144293525" result="Passed" start-time="2026-10-09 19:22:58Z" end-time="2026-10-09 19:23:03Z" duration="4.365296" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[P12_PENDING_EIGHT incoming=(-0.500, 0.000, -3.350),(-0.525, 0.013, 0.000),(-0.650, 0.013, 0.300),(-0.950, 0.013, 0.475),(-1.500, 0.013, 0.592),(-2.025, 0.013, 0.475),(-2.979, 0.013, -0.021),(-3.500, 0.013, -0.500) / 入店通道暂不可用，等待通道腾空后再尝试 / 00000001 Queued (-1.500, 0.000, -1.500) | 00000002 Queued (-1.500, 0.000, -2.500) | 00000003 Queued (-1.500, 0.000, -3.500) | 00000004 Entering (-2.505, 0.000, -0.162) | 00000005 Entering (-1.754, 0.000, 0.536) | 00000006 Entering (-0.523, 0.000, -0.270) | 00000007 Entering (-0.509, 0.000, -2.110) paths=00000001:(-1.500, 0.013, -1.500) | 00000002:(-1.500, 0.013, -2.500) | 00000003:(-1.500, 0.013, -3.500) | 00000004:(-2.505, 0.013, -0.162),(-2.500, 0.013, -3.500) | 00000005:(-1.754, 0.013, 0.536),(-2.025, 0.013, 0.475),(-2.325, 0.013, 0.300),(-2.450, 0.013, 0.000),(-3.500, 0.013, -3.500) | 00000006:(-0.523, 0.013, -0.270),(-0.525, 0.013, 0.000),(-0.650, 0.013, 0.300),(-0.950, 0.013, 0.475),(-1.500, 0.013, 0.592) | 00000007:(-0.509, 0.013, -2.110),(-0.525, 0.013, 0.000),(-0.650, 0.013, 0.300),(-0.950, 0.013, 0.475),(-1.500, 0.013, 0.592)
+]]></output>
+                </test-case>
+                <test-case id="1096" name="NativeDefaultUnattendedTwoSecondArrivalsDoNotResetFailedCountdown" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.Phase12CustomerQueueSceneTests.NativeDefaultUnattendedTwoSecondArrivalsDoNotResetFailedCountdown" methodname="NativeDefaultUnattendedTwoSecondArrivalsDoNotResetFailedCountdown" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.Phase12CustomerQueueSceneTests" runstate="Runnable" seed="1565287121" result="Passed" start-time="2026-10-09 19:23:03Z" end-time="2026-10-09 19:23:06Z" duration="3.229078" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

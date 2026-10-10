@@ -1036,6 +1036,8 @@ Customer 和 Employee state machines 只需要处理 movement result，不重复
 
 ## Phase 12 — Customer Spawn & Counter Queue
 
+状态：`In Progress — Direct Regression PASS / Owner Follow-up Pending`（2026-10-09）。到期保留一位与安全同向跟随已实现；Owner追加批准并完成20fps原生路径提交恢复。仅在完整路径被Agent拒后重验真实起点与World碰撞保护，原地重新绑定并重试一次；无瞬移、身体/skin/容差/速度变化。受影响直接Play112 PASS/0 FAIL/0 SKIP，P11/P12 Edit126 PASS/0 FAIL/0 SKIP；完整30游戏分钟循环与真实场景20fps通过。此前109 PASS/1 FAIL为修复前证据，M1～M8的8/8 Owner PASS与桌角Owner PASS保留为历史快照。本轮只补默认六到八位连续进客与队首离开后的前移视觉观察，不重做整套。Decor reset、容量/FIFO保持，Phase最终验收待收尾；全项目完整suite/Player/真机本轮NOT_RUN。工作区 `.worktrees/phase-12-customer-queue`；无新工具/资源迁移/commit/push/PR/merge，不进入P13/P14。见 [P12 Validation Report](Phase12_Validation_Report.md)。
+
 P10交接（2026-09-29）：使用 random interval 安排顾客到店，容量恢复不批量补齐或补发积压顾客；interval 分布与恢复计时策略在本Phase设计。接入P10三项入店预留，验证真实站位/可达性及离位/离店事件；不要以逻辑额度通过替代队伍空间验证。
 
 ### Goal
@@ -2741,6 +2743,8 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 ---
 
 ## 7. Current Next Step
+
+**Current Next Step（P12，2026-10-09）：20fps修复与受影响回归已通过，补连续来客/前移视觉观察。** 直接Play112 PASS、P11/P12 Edit126 PASS，原失败的排空与30游戏分钟循环通过。真实场景覆盖20fps，原到期计时与安全同向并发回归保持。仅补默认Play等待六到八位、让队首离开两三次的人工观察；M1～M8与桌角既有Owner PASS保留为历史快照。全项目完整suite/Player/真机本轮NOT_RUN，无commit/push/PR/merge。Owner已重新授权提交、push当前branch并创建合并到main的PR；merge与branch/worktree清理未授权，不进入P13。以下P9–P11描述为历史交接。
 
 **Current Next Step（2026-10-04）：按 Owner 授权完成 review、push、PR #9 merge、本地 main fast-forward 和分支清理。** 本次交付包含 P9–P11、已接受的角色材质调整和当前分类重新展开目录的修复；review、RED/GREEN、完整回归与人工验证边界见 [P9–P11 Merge Review](Phase9_Phase11_Merge_Review.md)，远端合并结果见 [PR #9](https://github.com/zhengparker/AnimalCafe/pull/9)。P9/P10 已有验收记录，P11 M-001～M-011 全部 Owner PASS；本次 Decor 补充人工回归尚未记录。MainCafe 仍为 passive 接线、零营业 NPC。合并后的后续阶段由 Owner 决定，P12 未开始。
 

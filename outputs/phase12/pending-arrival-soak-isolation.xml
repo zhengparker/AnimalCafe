@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Failed(Child)" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-09 19:37:03Z" end-time="2026-10-09 19:37:05Z" duration="1.9099317">
+  <test-suite type="TestSuite" id="2377" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1219" result="Failed" site="Child" start-time="2026-10-09 19:37:03Z" end-time="2026-10-09 19:37:05Z" duration="1.909932" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1477" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-12-customer-queue/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="432" result="Failed" site="Child" start-time="2026-10-09 19:37:03Z" end-time="2026-10-09 19:37:05Z" duration="1.884216" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="148316" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1478" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="432" result="Failed" site="Child" start-time="2026-10-09 19:37:03Z" end-time="2026-10-09 19:37:05Z" duration="1.878378" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1479" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="432" result="Failed" site="Child" start-time="2026-10-09 19:37:03Z" end-time="2026-10-09 19:37:05Z" duration="1.872689" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="1480" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="432" result="Failed" site="Child" start-time="2026-10-09 19:37:03Z" end-time="2026-10-09 19:37:05Z" duration="1.867253" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="1481" name="Phase12Integration" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration" runstate="Runnable" testcasecount="80" result="Failed" site="Child" start-time="2026-10-09 19:37:03Z" end-time="2026-10-09 19:37:05Z" duration="1.860446" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="1058" name="CustomerQueueFlowTests" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" testcasecount="36" result="Failed" site="Child" start-time="2026-10-09 19:37:03Z" end-time="2026-10-09 19:37:05Z" duration="1.857754" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="1082" name="QueueDrainsAtTwentyFpsWithoutAnyConcurrentAdmission" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests.QueueDrainsAtTwentyFpsWithoutAnyConcurrentAdmission" methodname="QueueDrainsAtTwentyFpsWithoutAnyConcurrentAdmission" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" seed="505840123" result="Failed" start-time="2026-10-09 19:37:03Z" end-time="2026-10-09 19:37:04Z" duration="1.227811" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  顾客路径受阻（前移：路径不可达），请修复布局后重试 / Blocked,Queued,Queued,Queued
+  Expected: True
+  But was:  False
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests+<Until>d__19.MoveNext () [0x00068] in E:\Unity\Project\AnimalCafe\.worktrees\phase-12-customer-queue\Assets\Tests\PlayMode\EditorSceneLoading\Phase12\CustomerQueueFlowTests.cs:116
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="1081" name="ThirtyGameMinuteControlledLifecycleSoakKeepsCapacityBounded" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests.ThirtyGameMinuteControlledLifecycleSoakKeepsCapacityBounded" methodname="ThirtyGameMinuteControlledLifecycleSoakKeepsCapacityBounded" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" seed="894167268" result="Failed" start-time="2026-10-09 19:37:04Z" end-time="2026-10-09 19:37:05Z" duration="0.609945" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  顾客路径受阻（前移：路径不可达），请修复布局后重试
+  Expected: False
+  But was:  True
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests+<ThirtyGameMinuteControlledLifecycleSoakKeepsCapacityBounded>d__41.MoveNext () [0x005ab] in E:\Unity\Project\AnimalCafe\.worktrees\phase-12-customer-queue\Assets\Tests\PlayMode\EditorSceneLoading\Phase12\CustomerQueueFlowTests.cs:496
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[P12_SOAK_FAIL frame=940 / 顾客路径受阻（前移：路径不可达），请修复布局后重试 / 11391860042a41e98dab3bdc89de7e12-00000003:Exiting:(-0.80610, 0.00000, -0.80610) | 11391860042a41e98dab3bdc89de7e12-00000004:Blocked:(0.00000, 0.00000, 1.00000) | 11391860042a41e98dab3bdc89de7e12-00000005:Queued:(0.00000, 0.00000, 2.00000) | 11391860042a41e98dab3bdc89de7e12-00000006:Queued:(0.00000, 0.00000, 3.00000) | 11391860042a41e98dab3bdc89de7e12-00000007:Queued:(0.00000, 0.00000, 4.00000) | 11391860042a41e98dab3bdc89de7e12-00000008:Queued:(0.00000, 0.00000, 5.00000) | 11391860042a41e98dab3bdc89de7e12-00000009:Queued:(0.00000, 0.00000, 6.00000) | 11391860042a41e98dab3bdc89de7e12-00000010:Queued:(0.00000, 0.00000, 7.00000)
+P12_SOAK_ACTOR 11391860042a41e98dab3bdc89de7e12-00000003 destination=(-4.00000, 0.01250, -4.00000) requested=(-4.00000, 0.00000, -4.00000) sampled=(-4.00000, 0.01250, -4.00000) failure=None
+P12_SOAK_ACTOR 11391860042a41e98dab3bdc89de7e12-00000004 destination=(0.00000, 0.01250, 1.00000) requested=(0.00000, 0.00000, 0.00000) sampled=(0.00000, 0.01250, 0.00000) failure=IncompletePath
+P12_SOAK_PATH next=(0.00000, 0.01250, 1.00000) actual=True:PathComplete:2 sampled=(0.00000, 0.01250, 1.00000):True:PathComplete:2
+P12_SOAK_NATIVE native=True:PathComplete:2 agentCalculate=True setPath=False
+P12_SOAK_ACTOR 11391860042a41e98dab3bdc89de7e12-00000005 destination=(0.00000, 0.01250, 2.00000) requested=(0.00000, 0.00000, 2.00000) sampled=(0.00000, 0.01250, 2.00000) failure=None
+P12_SOAK_ACTOR 11391860042a41e98dab3bdc89de7e12-00000006 destination=(0.00000, 0.01250, 3.00000) requested=(0.00000, 0.00000, 3.00000) sampled=(0.00000, 0.01250, 3.00000) failure=None
+P12_SOAK_ACTOR 11391860042a41e98dab3bdc89de7e12-00000007 destination=(0.00000, 0.01250, 4.00000) requested=(0.00000, 0.00000, 4.00000) sampled=(0.00000, 0.01250, 4.00000) failure=None
+P12_SOAK_ACTOR 11391860042a41e98dab3bdc89de7e12-00000008 destination=(0.00000, 0.01250, 5.00000) requested=(0.00000, 0.00000, 5.00000) sampled=(0.00000, 0.01250, 5.00000) failure=None
+P12_SOAK_ACTOR 11391860042a41e98dab3bdc89de7e12-00000009 destination=(0.00000, 0.01250, 6.00000) requested=(0.00000, 0.00000, 6.00000) sampled=(0.00000, 0.01250, 6.00000) failure=None
+P12_SOAK_ACTOR 11391860042a41e98dab3bdc89de7e12-00000010 destination=(0.00000, 0.01250, 7.00000) requested=(0.00000, 0.00000, 7.00000) sampled=(0.00000, 0.01250, 7.00000) failure=None
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -50,6 +50,20 @@ namespace AnimalCafe.Tests.PlayMode.Phase11
             Assert.That(Vector3.Angle(actor.transform.forward, Vector3.back), Is.LessThanOrEqualTo(5));
         }
 
+        [UnityTest] public IEnumerator RuntimeInstancesRegisterWithDistinctIdsAndCannotRenameWhileRegistered()
+        {
+            Bake(); var first = Actor("authored-a", new Vector3(-2, 0, 0));
+            var second = Actor("authored-b", new Vector3(2, 0, 0));
+            Assert.That(first.TryInitializeRuntimeId("visit-a"), Is.True);
+            Assert.That(second.TryInitializeRuntimeId("visit-b"), Is.True);
+            Assert.That(world.Register(first), Is.True); Assert.That(world.Register(second), Is.True);
+            Assert.That(first.TryInitializeRuntimeId("visit-c"), Is.False);
+            world.Unregister(first);
+            Assert.That(first.TryInitializeRuntimeId("visit-c"), Is.False);
+            Assert.That(first.ActorId, Is.EqualTo("visit-a"));
+            yield return null;
+        }
+
         [UnityTest] public IEnumerator PendingOrPartialNeverArrives()
         {
             Box(new Vector3(0, .7f, 0), new Vector3(.3f, 1.4f, 14), true); Bake();
@@ -369,9 +383,102 @@ namespace AnimalCafe.Tests.PlayMode.Phase11
             Assert.That(result.Value.RetryCount, Is.EqualTo(1));
         }
 
-        private IEnumerator Dual(bool wide)
+        [UnityTest] public IEnumerator MixedSteadyAndDefaultActorsArriveWithoutCrossingSweeps()
+        { Bake(); yield return Dual(true, true); }
+
+        [UnityTest] public IEnumerator MixedSteadyAndDefaultActorsFailSafelyInNarrowCorridor()
+        { Corridor(1); Bake(); yield return Dual(false, true); }
+
+        [UnityTest] public IEnumerator SteadyCornerConnectionRejectsWallAndStationaryBody()
+        {
+            var wall = Box(new Vector3(0, .7f, 0), new Vector3(.3f, 1.4f, 4), true); Bake();
+            var actor = Actor("a", new Vector3(-2, 0, 0)); actor.TryEnableSteadyPathMotion();
+            Assert.That(world.Register(actor), Is.True);
+            var query = typeof(NavigationWorld).GetMethod("CanTraverseStraight", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Assert.That((bool)query.Invoke(world, new object[] { actor, new Vector3(2, 0, 0) }), Is.False, "Cannot skip a wall corner");
+            wall.enabled = false; instance.Remove(); solids.Remove(wall); sources.RemoveAt(sources.Count - 1); Bake();
+            var body = Actor("b", Vector3.zero); Assert.That(world.Register(body), Is.True); body.enabled = false;
+            Assert.That((bool)query.Invoke(world, new object[] { actor, new Vector3(2, 0, 0) }), Is.False, "Disabled visible body still blocks the full connection");
+            Assert.That((bool)query.Invoke(world, new object[] { actor, new Vector3(-2, 0, 2) }), Is.True, "Clear owned connection remains usable");
+            Assert.That(actor.transform.position, Is.EqualTo(new Vector3(-2, 0, 0)), "Query never moves the actor");
+            yield return null;
+        }
+
+        [UnityTest] public IEnumerator SteadyShortFinalTargetKeepsPoseAndFacingWithoutOvershoot()
+        {
+            Bake(); var actor = Actor("a", Vector3.zero); actor.TryEnableSteadyPathMotion(); world.Register(actor);
+            MovementResult? result = null; var target = new Vector3(.03f, 0, 0);
+            world.Service.MoveTo("a", new NavigationTarget(target, Vector3.back), r => result = r);
+            for (var i = 0; i < 120 && !result.HasValue; i++)
+            {
+                yield return null; world.Step(.1f);
+                Assert.That(actor.transform.position.x, Is.InRange(0, .031f), "No overshoot at a target closer than one frame's travel");
+            }
+            Assert.That(result.HasValue, Is.True); Assert.That(result.Value.Status, Is.EqualTo(MovementStatus.Arrived));
+            Assert.That(Vector3.Distance(actor.transform.position, target), Is.LessThanOrEqualTo(.001f));
+            Assert.That(Vector3.Angle(actor.transform.forward, Vector3.back), Is.LessThanOrEqualTo(5));
+        }
+
+        [UnityTest] public IEnumerator SteadyCancelPauseAndRebindDoNotReviveOldCorners()
+        {
+            Bake(); var actor = Actor("a", new Vector3(-2, 0, 0)); actor.TryEnableSteadyPathMotion(); world.Register(actor);
+            var callbacks = 0;
+            var request = world.Service.MoveTo("a", new NavigationTarget(new Vector3(2, 0, 0)), _ => callbacks++);
+            for (var i = 0; i < 20; i++) { yield return null; world.Step(1f / 60); }
+            var paused = actor.transform.position; world.Step(0); Assert.That(actor.transform.position, Is.EqualTo(paused));
+            Assert.That(world.Service.Cancel(request.RequestId), Is.True); Assert.That(callbacks, Is.EqualTo(1));
+            for (var i = 0; i < 3; i++) { yield return null; world.Step(1f / 60); }
+            Assert.That(actor.transform.position, Is.EqualTo(paused));
+            MovementResult? disabled = null;
+            world.Service.MoveTo("a", new NavigationTarget(new Vector3(2, 0, 0)), r => disabled = r);
+            actor.enabled = false; Assert.That(disabled.Value.Reason, Is.EqualTo(NavigationFailure.ActorUnavailable));
+            actor.enabled = true; world.SetLayoutAvailable(false); world.SetLayoutAvailable(true);
+            MovementResult? fresh = null;
+            Assert.That(world.Service.MoveTo("a", new NavigationTarget(new Vector3(-3, 0, 0)), r => fresh = r).Accepted, Is.True);
+            yield return Run(() => fresh.HasValue);
+            Assert.That(fresh.Value.Status, Is.EqualTo(MovementStatus.Arrived));
+            Assert.That(Vector3.Distance(actor.transform.position, new Vector3(-3, 0, 0)), Is.LessThanOrEqualTo(.08f));
+            Assert.That(callbacks, Is.EqualTo(1));
+        }
+
+        [UnityTest] public IEnumerator SteadyLongFrameNeverAccumulatesCatchUpMovement()
+        {
+            Bake(); var actor = Actor("a", new Vector3(-2, 0, 0)); actor.TryEnableSteadyPathMotion(); world.Register(actor);
+            MovementResult? result = null; world.Service.MoveTo("a", new NavigationTarget(new Vector3(2, 0, 0)), r => result = r);
+            yield return null; var before = actor.transform.position; world.Step(100);
+            Assert.That(Vector3.Distance(before, actor.transform.position), Is.LessThanOrEqualTo(1.2f * 16 / 60 + .001f));
+            world.Step(100); Assert.That(result.HasValue, Is.True); Assert.That(result.Value.Status, Is.EqualTo(MovementStatus.Failed));
+        }
+
+        [UnityTest] public IEnumerator SteadySampledFurnitureCornerKeepsOriginalArrivalAndFacingTolerance()
+        {
+            var furniture = Box(new Vector3(0, .7f, 0), new Vector3(2, 1.4f, 2), true); Bake();
+            var actor = Actor("a", new Vector3(-3, 0, 2)); actor.TryEnableSteadyPathMotion(); world.Register(actor);
+            var path = new NavMeshPath();
+            Assert.That(NavMesh.CalculatePath(actor.transform.position, new Vector3(3, 0, -2), NavMesh.AllAreas, path), Is.True);
+            Vector3? cornerTarget = null;
+            foreach (var point in path.corners)
+            {
+                var body = new Vector3(point.x, .65f, point.z);
+                var clearance = Vector3.Distance(body, furniture.ClosestPoint(body));
+                if (clearance >= .45f && clearance < .46f) { cornerTarget = point; break; }
+            }
+            Assert.That(cornerTarget.HasValue, Is.True, "Fixture requires a native corner inside full skin: " + string.Join(",", path.corners));
+            MovementResult? result = null;
+            Assert.That(world.Service.MoveTo("a", new NavigationTarget(cornerTarget.Value, Vector3.back), r => result = r).Accepted, Is.True);
+            yield return Run(() => result.HasValue);
+            Assert.That(result.Value.Status, Is.EqualTo(MovementStatus.Arrived), result.Value.Reason + " at " + actor.transform.position);
+            Assert.That(Vector3.Distance(actor.transform.position, result.Value.FinalPosition), Is.LessThanOrEqualTo(.001f));
+            Assert.That(Vector3.Distance(actor.transform.position, cornerTarget.Value), Is.LessThanOrEqualTo(.08f));
+            Assert.That(Vector3.Angle(actor.transform.forward, Vector3.back), Is.LessThanOrEqualTo(5));
+            var finalBody = actor.transform.position + Vector3.up * .65f;
+            Assert.That(Vector3.Distance(finalBody, furniture.ClosestPoint(finalBody)), Is.GreaterThanOrEqualTo(.459f));
+        }
+
+        private IEnumerator Dual(bool wide, bool mixed = false)
         {
             var a = Actor("a", new Vector3(0, 0, -3)); var b = Actor("b", new Vector3(0, 0, 3));
+            if (mixed) { Assert.That(a.TryEnableSteadyPathMotion(), Is.True); Assert.That(b.SteadyPathMotion, Is.False); }
             Assert.That(world.Register(a), Is.True); Assert.That(world.Register(b), Is.True);
             MovementResult? ra = null, rb = null;
             world.Service.MoveTo("a", new NavigationTarget(new Vector3(0, 0, 3)), r => ra = r);
