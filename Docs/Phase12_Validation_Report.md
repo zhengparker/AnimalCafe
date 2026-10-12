@@ -347,3 +347,23 @@ P11 DetourAtVariableFrameRateMustArrive 在首轮完整Play PASS、第二轮time
 - Owner acceptance：Completed，8/8 PASS。当前代码的Phase最终完整regression/必要修订复核待收尾；commit/push/merge：NOT_RUN。
 
 旧快照曾恢复31项测试生成的无关material/URP/UI/旧验证scene变化。本轮清理数量见M3修复节；保留MainCafe/P12验证scene及代码、测试、文档。
+
+
+## MainCafe 状态条点击反馈修订（2026-10-11）
+
+Owner批准移除“请先完成店铺设置，再开始营业。”临时Toast，改用现有“Setup incomplete · Enter Decor to finish”状态条。MainCafe在setup incomplete时点击开始或2x，仍阻止营业；状态条文字、底色、边框左右轻抖0.3秒（幅度上限±3 logical px），圆角透明红色叠层从alpha 0.18在0.4秒内淡出。使用unscaled time；连续点击重新播放，不累加位移。根Rect/布局边界、文字内容与色彩不变。进入Decor、组件禁用、Clear或setup变有效时取消反馈并恢复。
+
+修改：`TimeControlPanel.cs`移除专用Toast queue并调用状态条；`ValidationMessageView.cs`增加短暂反馈及清理；现有`Phase12CustomerQueueSceneSetup.WireMainCafe`通过真实Unity Editor保存MainCafe的状态条引用并删除旧Toast实例；既有`P8RTwoButtonTimeControlTests.cs`替换过时popup测试，增加暂停动画、连点、禁用、Decor和setup完成场景；Beginner Guide与P8R当前规则同步。不新增dependency、美术或diagnostic脚本。P12 validation scene无diff，其SHA256前后均为`C8821A0A9C14877BB5C8F9CA57170F2C281BC48797F61C482930A401CC938C77`。
+
+证据位于worktree的`outputs/maincafe-time-controls/`：
+
+| 文件 | 结果 | 覆盖/原因 |
+| --- | --- | --- |
+| status-feedback-red.xml | 0 PASS / 3 expected FAIL | 原实现没有状态条闪红层，三个新case检测到缺失 |
+| status-feedback-play.xml | 56 PASS / 3 FAIL / 2 SKIP | 首次实现把负位移交给只接受非负尺寸的Units；测试定位异常后修正为先换算幅度再应用方向 |
+| status-feedback-play-green.xml | **59 PASS / 0 FAIL / 2 SKIP** | 61项相关MainCafe时间控制、Decor、readiness/safe area及选取的P11/P12导航回归，101.73秒；missing-glyph warnings为0 |
+| status-feedback-edit.xml | **7 PASS / 0 FAIL / 0 SKIP** | 共用readiness/checklist的既有EditMode tests |
+
+最终合计**66 PASS / 0 FAIL / 2 SKIP**。两个SKIP为既有opt-in spacing geometry audit和native截图case。`git diff --check`通过，scene diff仅旧Toast移除和状态条引用接线。这是本机真实Unity Editor运行的相关自动测试，不是全项目、Computer Use动画视觉验收或Player/真机测试。本轮未commit/push，云端CI未重跑；先前Unity license的401与本轮UI测试结果分开记录。
+
+Owner复测：打开本worktree `Assets/Scenes/MainCafe.unity`并Play；保持setup incomplete，点开始与2x，检查只出现状态条的轻抖与淡红闪动、营业仍暂停、约0.4秒恢复。快速连点确认没有永久偏移；动画中进入Decor应立即恢复。完成有效confirmed setup后Done，状态条隐藏，开始按钮正常营业。

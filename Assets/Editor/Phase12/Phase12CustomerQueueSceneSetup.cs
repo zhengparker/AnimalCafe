@@ -45,27 +45,11 @@ namespace AnimalCafe.EditorTools.Phase12
                 var time=All<GameTimeService>(scene).Single(); bridge.ConfigureTime(time);
                 var controls=All<TimeControlPanel>(scene).Single();
                 var setupToast=controls.transform.parent.Find("MainCafe Setup Toast");
-                if(validation)
-                {
-                    controls.ConfigureMainCafeControls(null,null);
-                    if(setupToast!=null) UnityEngine.Object.DestroyImmediate(setupToast.gameObject);
-                }
-                else
-                {
-                    if(setupToast==null)
-                    {
-                        var prefab=AssetDatabase.LoadAssetAtPath<GameObject>("Assets/UI/Phase5/Prefabs/PF_UI_Toast.prefab");
-                        setupToast=((GameObject)PrefabUtility.InstantiatePrefab(prefab,scene)).transform;
-                        setupToast.name="MainCafe Setup Toast";
-                        setupToast.SetParent(controls.transform.parent,false);
-                    }
-                    var toastRect=(RectTransform)setupToast;
-                    toastRect.anchorMin=new Vector2(0,1); toastRect.anchorMax=new Vector2(1,1);
-                    toastRect.pivot=new Vector2(.5f,1);
-                    toastRect.anchoredPosition=new Vector2(0,-116); toastRect.sizeDelta=new Vector2(-32,64);
-                    setupToast.GetComponentInChildren<TMP_Text>(true).fontSize=18;
-                    controls.ConfigureMainCafeControls(runtime,setupToast.GetComponent<ToastView>());
-                }
+                // Remove the former popup; MainCafe now draws feedback on its readiness card.
+                // 移除旧提示框，MainCafe 直接用现有状态条反馈。
+                if(setupToast!=null) UnityEngine.Object.DestroyImmediate(setupToast.gameObject);
+                controls.ConfigureMainCafeControls(validation ? null : runtime,
+                    validation ? null : All<ValidationMessageView>(scene).Single());
                 var root=scene.GetRootGameObjects().FirstOrDefault(r=>r.name=="Phase12 Customer Flow");
                 if(root==null) { root=new GameObject("Phase12 Customer Flow"); SceneManager.MoveGameObjectToScene(root,scene); }
                 var flow=root.GetComponent<CustomerFlowController>() ?? root.AddComponent<CustomerFlowController>();

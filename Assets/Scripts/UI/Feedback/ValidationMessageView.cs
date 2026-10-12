@@ -38,6 +38,13 @@ namespace AnimalCafe.UI.Feedback
         private TMP_Text normalSummaryLabel;
         private Image checklistPanelFill;
         private Image checklistPanelBorder;
+        // Brief visual-only feedback; game time can remain paused.
+        // 短暂视觉反馈使用 unscaled time，不修改游戏时间或根布局。
+        private const float SetupShakeDuration = .3f;
+        private const float SetupFlashDuration = .4f;
+        private Image setupAttentionFlash;
+        private float setupAttentionStartedAt;
+        private bool setupAttentionPlaying;
         private bool decorationMode;
         private RectTransform disclosureViewport;
         private Vector2 viewportOffsetBeforeDisclosure;
@@ -65,6 +72,7 @@ namespace AnimalCafe.UI.Feedback
         {
             if (this == null) return; // Owner cleanup may run after the view was destroyed.
             if (decorationMode == active) return;
+            CancelSetupAttention();
             decorationMode = active;
             if (appearance != null && hasChecklistReport) ShowReadiness(checklistReport);
         }
@@ -139,6 +147,7 @@ namespace AnimalCafe.UI.Feedback
         public void ShowReadiness(LayoutReadinessReport report)
         {
             if (report == null) throw new ArgumentNullException(nameof(report));
+            if (report.CanOpenForBusiness) CancelSetupAttention();
             // Keep the full diagnostic contract separate from the player-facing checklist.
             // 完整诊断继续保留；玩家界面只显示准备清单。
             readinessSummary = PlacementFeedbackMapper.GetReadinessSummary(report);
@@ -349,6 +358,7 @@ namespace AnimalCafe.UI.Feedback
 
         private void ResetReadinessDisclosure()
         {
+            CancelSetupAttention();
             SetChecklistPanelVisible(false);
             if (normalSummaryLabel != null) normalSummaryLabel.enabled = false;
             readinessSummary = readinessDetails = FullReadinessMessage = string.Empty;
@@ -409,6 +419,68 @@ namespace AnimalCafe.UI.Feedback
                 if (scroll.verticalScrollbar != null) scroll.verticalScrollbar.gameObject.SetActive(scroll.vertical);
             }
             finally { refreshingLayout = false; }
+        }
+
+        public void PlaySetupAttention()
+        {
+            if (!isActiveAndEnabled || !IsVisible || decorationMode || appearance == null
+                || !hasChecklistReport || checklistReport.CanOpenForBusiness || normalSummaryLabel == null) return;
+            if (setupAttentionFlash == null)
+            {
+                var node = new GameObject("SetupAttentionFlash", typeof(RectTransform), typeof(Image));
+                node.transform.SetParent(checklistPanelFill.transform, false);
+                setupAttentionFlash = node.GetComponent<Image>();
+                // Share the card's rounded silhouette; overlay cannot intercept clicks.
+                // 复用状态条的圆角轮廓；透明叠层不接收点击。
+                setupAttentionFlash.sprite = checklistPanelFill.sprite;
+                setupAttentionFlash.type = checklistPanelFill.type;
+                setupAttentionFlash.pixelsPerUnitMultiplier = checklistPanelFill.pixelsPerUnitMultiplier;
+                setupAttentionFlash.raycastTarget = false;
+                var rect = setupAttentionFlash.rectTransform;
+                rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+                rect.offsetMin = rect.offsetMax = Vector2.zero;
+            }
+            // Retrigger from rest, never add to the previous position.
+            // 连点重新播放，不累加位移。
+            SetSetupVisualOffset(0);
+            setupAttentionStartedAt = Time.unscaledTime;
+            setupAttentionPlaying = true;
+            setupAttentionFlash.color = new Color(1, .05f, .05f, .18f);
+            setupAttentionFlash.enabled = true;
+        }
+
+        private void UpdateSetupAttention()
+        {
+            if (!setupAttentionPlaying) return;
+            var elapsed = Time.unscaledTime - setupAttentionStartedAt;
+            if (elapsed >= SetupFlashDuration)
+            {
+                CancelSetupAttention();
+                return;
+            }
+            var shakeProgress = Mathf.Clamp01(elapsed / SetupShakeDuration);
+            var amplitude = AnimalCafe.UI.P8R.P8RMobileMetrics.For(this).Units(3);
+            SetSetupVisualOffset(Mathf.Sin(shakeProgress * Mathf.PI * 6) * amplitude * (1 - shakeProgress));
+            setupAttentionFlash.color = new Color(1, .05f, .05f,
+                .18f * Mathf.Pow(1 - elapsed / SetupFlashDuration, 2));
+        }
+
+        private void SetSetupVisualOffset(float x)
+        {
+            // These three stretched children have symmetric padding and rest at zero.
+            // 三个视觉子节点的留白对称；根 Rect 和已发布的屏幕边界不移动。
+            var offset = new Vector2(x, 0);
+            if (checklistPanelFill != null) checklistPanelFill.rectTransform.anchoredPosition = offset;
+            if (checklistPanelBorder != null) checklistPanelBorder.rectTransform.anchoredPosition = offset;
+            if (normalSummaryLabel != null) normalSummaryLabel.rectTransform.anchoredPosition = offset;
+        }
+
+        private void CancelSetupAttention()
+        {
+            if (!setupAttentionPlaying) return;
+            setupAttentionPlaying = false;
+            SetSetupVisualOffset(0);
+            if (setupAttentionFlash != null) setupAttentionFlash.enabled = false;
         }
 
         // Separate opacity: translucent fill with the original opaque panel border.
@@ -652,6 +724,7 @@ namespace AnimalCafe.UI.Feedback
         }
         private void OnDisable()
         {
+            CancelSetupAttention();
             AnimalCafe.UI.P8R.P8RMobileMetrics.Changed -= RefreshVisibleLayout;
             hasPublishedP8RBounds = false;
         }
@@ -686,6 +759,7 @@ namespace AnimalCafe.UI.Feedback
                     RefreshScrollLayout(); // 0.05 root-Canvas units ignores harmless float jitter.
             }
             PublishP8RBoundsIfChanged();
+            UpdateSetupAttention();
         }
 
         private void PublishP8RBoundsIfChanged()
@@ -731,6 +805,7 @@ namespace AnimalCafe.UI.Feedback
 
         private void HidePresentation()
         {
+            CancelSetupAttention();
             SetChecklistPanelVisible(false);
             if (normalSummaryLabel != null) normalSummaryLabel.enabled = false;
             foreach (var row in checklistRows) if (row != null) row.gameObject.SetActive(false);

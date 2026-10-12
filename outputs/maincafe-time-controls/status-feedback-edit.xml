@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="7" result="Passed" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.4769599">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2489" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.476960" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="3834" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-12-customer-queue/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2489" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.446843" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="169236" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="3835" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2489" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.422953" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3836" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2489" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.400983" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="3842" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1607" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.377564" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="3851" name="P8R" fullname="AnimalCafe.Tests.EditMode.P8R" runstate="Runnable" testcasecount="355" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.362307" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="3509" name="P8RSetupChecklistTests" fullname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests" classname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.356962" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="3510" name="MissingStations_ShowThreeActionableRowsWithoutErrorSummary" fullname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests.MissingStations_ShowThreeActionableRowsWithoutErrorSummary" methodname="MissingStations_ShowThreeActionableRowsWithoutErrorSummary" classname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests" runstate="Runnable" seed="2034968316" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.301705" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3513" name="MixedInstances_CheckValidTypeAndRetainAdjustmentCount" fullname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests.MixedInstances_CheckValidTypeAndRetainAdjustmentCount" methodname="MixedInstances_CheckValidTypeAndRetainAdjustmentCount" classname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests" runstate="Runnable" seed="770449048" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.003408" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3516" name="NormalMode_ReadyHides_AllValidButDisconnectedStillPrompts_AndDecorRestoresRows" fullname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests.NormalMode_ReadyHides_AllValidButDisconnectedStillPrompts_AndDecorRestoresRows" methodname="NormalMode_ReadyHides_AllValidButDisconnectedStillPrompts_AndDecorRestoresRows" classname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests" runstate="Runnable" seed="1609921536" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.016155" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3515" name="PreviewNote_DoesNotChangeConfirmedRowsOrDisclosure" fullname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests.PreviewNote_DoesNotChangeConfirmedRowsOrDisclosure" methodname="PreviewNote_DoesNotChangeConfirmedRowsOrDisclosure" classname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests" runstate="Runnable" seed="230327061" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.003319" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3512" name="ReadyLayout_RemainsVisibleWithoutPanelTitleOrDisclosure" fullname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests.ReadyLayout_RemainsVisibleWithoutPanelTitleOrDisclosure" methodname="ReadyLayout_RemainsVisibleWithoutPanelTitleOrDisclosure" classname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests" runstate="Runnable" seed="1101853253" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.003498" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3514" name="RepeatedReports_ReuseThreeStatusImagesAndUpdateConfirmedStates" fullname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests.RepeatedReports_ReuseThreeStatusImagesAndUpdateConfirmedStates" methodname="RepeatedReports_ReuseThreeStatusImagesAndUpdateConfirmedStates" classname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests" runstate="Runnable" seed="2061666974" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.005373" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3511" name="ValidTypesWithoutConnectedCombination_DoNotReportOverallReady" fullname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests.ValidTypesWithoutConnectedCombination_DoNotReportOverallReady" methodname="ValidTypesWithoutConnectedCombination_DoNotReportOverallReady" classname="AnimalCafe.Tests.EditMode.P8R.P8RSetupChecklistTests" runstate="Runnable" seed="557684345" result="Passed" start-time="2026-10-12 04:04:06Z" end-time="2026-10-12 04:04:06Z" duration="0.003468" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -190,24 +190,67 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             {
                 Click(button); yield return null;
                 Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
-                var toast = Find<AnimalCafe.UI.Feedback.ToastView>();
-                Assert.That(toast.IsVisible, Is.True);
-                Assert.That(toast.GetComponentInChildren<TMP_Text>(true).text, Does.Contain("完成店铺设置"));
-                Assert.That(toast.GetComponentInChildren<TMP_Text>(true).fontSize /
-                    P8RMobileMetrics.For(Find<TimeControlPanel>()).Units(1), Is.GreaterThanOrEqualTo(13.9f),
-                    "Setup popup must remain legible at phone display density");
+                Assert.That(Find<AnimalCafe.UI.Feedback.ValidationMessageView>().CurrentMessage,
+                    Is.EqualTo("Setup incomplete · Enter Decor to finish"));
             }
-            yield return new WaitForSecondsRealtime(3);
-            Assert.That(Find<AnimalCafe.UI.Feedback.ToastView>().IsVisible, Is.False,
-                "Setup feedback must expire while game time is paused");
+            Assert.That(scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                .Any(node => node.name == "MainCafe Setup Toast"), Is.False, "Remove the obsolete setup popup");
             Click(Mode); yield return null;
             Assert.That(Find<DecorationModeController>().IsOpen, Is.True,
                 "Setup gate must allow entering Decor to repair the layout");
         }
 
-        [UnityTest] public IEnumerator SetupFeedback_RendersChineseAndMergedCountWithoutMissingGlyphWarnings()
+        private Image SetupFlash(AnimalCafe.UI.Feedback.ValidationMessageView view)
+        {
+            var node = view.transform.Find("ChecklistPanelFill/SetupAttentionFlash");
+            Assert.That(node, Is.Not.Null, "Blocked start should flash the existing readiness card");
+            return node.GetComponent<Image>();
+        }
+
+        [UnityTest] public IEnumerator SetupFeedback_ShakesAndFlashesWhilePausedWithoutMovingLayout()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            screen.Resize(new Vector2(1080, 1920));
+            P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(360, 640);
+            yield return Load();
+            var view = Find<AnimalCafe.UI.Feedback.ValidationMessageView>();
+            var root = (RectTransform)view.transform;
+            var summary = view.transform.Find("NormalReadinessSummary").GetComponent<TMP_Text>();
+            var originalRoot = root.anchoredPosition;
+            var originalSize = root.sizeDelta;
+            var originalText = summary.text;
+            var originalTextColor = summary.color;
+            var moved = false;
+            Click(Normal);
+            var flash = SetupFlash(view);
+            Assert.That(flash.raycastTarget, Is.False);
+            Assert.That(flash.color.r, Is.GreaterThan(flash.color.g));
+            Assert.That(flash.color.a, Is.GreaterThan(0).And.LessThanOrEqualTo(.181f));
+            var start = Time.unscaledTime;
+            while (Time.unscaledTime - start < .5f)
+            {
+                yield return null;
+                var offset = summary.rectTransform.anchoredPosition;
+                var logicalOffset = offset.x / P8RMobileMetrics.For(view).Units(1);
+                moved |= Mathf.Abs(logicalOffset) > .05f;
+                Assert.That(Mathf.Abs(logicalOffset), Is.LessThanOrEqualTo(3.01f));
+                Assert.That(offset.y, Is.EqualTo(0).Within(.001f));
+                Assert.That(root.anchoredPosition, Is.EqualTo(originalRoot));
+                Assert.That(root.sizeDelta, Is.EqualTo(originalSize));
+                Assert.That(Find<GameTimeService>().CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+            }
+            Assert.That(moved, Is.True, "The existing status card should visibly shake");
+            Assert.That(flash.enabled, Is.False);
+            Assert.That(summary.rectTransform.anchoredPosition, Is.EqualTo(Vector2.zero));
+            Assert.That(summary.text, Is.EqualTo(originalText));
+            Assert.That(summary.color, Is.EqualTo(originalTextColor));
+            Assert.That(summary.isTextOverflowing, Is.False);
+        }
+
+        [UnityTest] public IEnumerator SetupFeedback_RepeatedClicksRestorePositionAndNeverShowPopupOrGlyphWarnings()
         {
             yield return Load();
+            var view = Find<AnimalCafe.UI.Feedback.ValidationMessageView>();
             var warnings = new System.Collections.Generic.List<string>();
             Application.LogCallback capture = (message, trace, type) =>
             {
@@ -219,36 +262,42 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 for (var i = 0; i < 6; i++)
                 {
                     Click(i % 2 == 0 ? Normal : Fast);
-                    yield return null;
+                    yield return new WaitForSecondsRealtime(.04f);
                 }
-                var label = Find<AnimalCafe.UI.Feedback.ToastView>().GetComponentInChildren<TMP_Text>(true);
-                label.ForceMeshUpdate();
-                Assert.That(label.text, Does.Contain("请先完成店铺设置，再开始营业。").And.Contain("×6"));
-                Assert.That(label.font.HasCharacters(label.text), Is.True,
-                    "The actual popup font must cover every Chinese glyph and the merged click count");
-                Assert.That(warnings, Is.Empty, "Repeated speed clicks must not emit missing-glyph warnings");
+                Assert.That(SetupFlash(view).enabled, Is.True);
+                yield return new WaitForSecondsRealtime(.5f);
+                foreach (var name in new[] { "NormalReadinessSummary", "ChecklistPanelFill", "ChecklistPanelBorder" })
+                    Assert.That(((RectTransform)view.transform.Find(name)).anchoredPosition, Is.EqualTo(Vector2.zero), name);
+                Assert.That(SetupFlash(view).enabled, Is.False);
+                Assert.That(warnings, Is.Empty);
+                Assert.That(view.CurrentMessage, Is.EqualTo("Setup incomplete · Enter Decor to finish"));
+                Assert.That(scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                    .Any(node => node.name == "MainCafe Setup Toast"), Is.False);
             }
             finally { Application.logMessageReceived -= capture; }
         }
 
-        [UnityTest] public IEnumerator SetupFeedback_HasReadableContrastAndDoesNotCoverReadiness()
+        [UnityTest] public IEnumerator SetupFeedback_EnteringDecorDisablingAndCompletingSetupCancelEffect()
         {
-            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
-            screen.Resize(new Vector2(1080, 1920));
-            P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(360, 640);
             yield return Load();
-            Click(Normal); yield return null; yield return null;
-            Canvas.ForceUpdateCanvases();
-            var toast = Find<AnimalCafe.UI.Feedback.ToastView>();
-            var label = toast.GetComponentInChildren<TMP_Text>(true);
-            Assert.That(label.color.grayscale, Is.LessThan(.6f), "Cream popup needs dark readable text");
-            var popupRect = (RectTransform)toast.transform;
-            var readinessRect = (RectTransform)Find<AnimalCafe.UI.Feedback.ValidationMessageView>().transform;
-            var popupCorners = new Vector3[4]; var readinessCorners = new Vector3[4];
-            popupRect.GetWorldCorners(popupCorners); readinessRect.GetWorldCorners(readinessCorners);
-            Assert.That(popupCorners[1].y, Is.LessThan(readinessCorners[0].y),
-                "Setup popup must appear below the persistent readiness reminder");
-            Assert.That(label.isTextOverflowing, Is.False, "The complete message must fit inside the popup");
+            var view = Find<AnimalCafe.UI.Feedback.ValidationMessageView>();
+            Click(Normal);
+            yield return new WaitForSecondsRealtime(.05f);
+            var flash = SetupFlash(view);
+            Click(Mode); yield return null;
+            Assert.That(flash.enabled, Is.False, "Decor checklist must not keep flashing");
+            Assert.That(view.transform.Find("ChecklistRow0").gameObject.activeSelf, Is.True);
+            Click(Mode); yield return null;
+            Click(Fast); yield return new WaitForSecondsRealtime(.05f);
+            view.enabled = false;
+            Assert.That(flash.enabled, Is.False);
+            Assert.That(((RectTransform)view.transform.Find("NormalReadinessSummary")).anchoredPosition, Is.EqualTo(Vector2.zero));
+            view.enabled = true;
+            Click(Normal); yield return null;
+            PrepareBusinessLayout(); yield return null; yield return null;
+            Assert.That(flash.enabled, Is.False, "Completing setup cancels feedback immediately");
+            Assert.That(view.IsVisible, Is.False);
+            Assert.That(Find<GameTimeService>().CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
         }
 
         [UnityTest] public IEnumerator ConfirmedSetup_UnlocksStartAndRemovingRequiredEquipmentPausesAgain()

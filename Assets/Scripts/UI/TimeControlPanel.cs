@@ -50,9 +50,8 @@ namespace AnimalCafe.UI
         private TMP_Text resumeBlockReasonLabel;
         [SerializeField] private bool mainCafeBusinessControls;
         [SerializeField] private CafeLayoutRuntime businessLayoutRuntime;
-        [SerializeField] private ToastView setupToast;
+        [SerializeField] private ValidationMessageView setupReadinessView;
         private System.IDisposable setupResumeBlock;
-        private ToastQueue setupToastQueue;
         private bool started;
         private bool SetupIncomplete => mainCafeBusinessControls &&
             (businessLayoutRuntime == null || businessLayoutRuntime.CurrentReadiness == null ||
@@ -73,24 +72,22 @@ namespace AnimalCafe.UI
             RegisterListeners();
             RegisterSpeedListener();
             started = true;
-            ConfigureSetupToast();
             RefreshBusinessSetupGate();
             RefreshSelectedVisuals();
         }
 
         // Only MainCafe opts in. Validation scenes retain their original time controls.
         // 仅 MainCafe 接入营业设置限制；验证场景继续使用原有时间控制。
-        public void ConfigureMainCafeControls(CafeLayoutRuntime runtime, ToastView toast)
+        public void ConfigureMainCafeControls(CafeLayoutRuntime runtime, ValidationMessageView readinessView)
         {
             var previousBlock = setupResumeBlock;
             setupResumeBlock = null;
             previousBlock?.Dispose();
             businessLayoutRuntime = runtime;
-            setupToast = toast;
+            setupReadinessView = readinessView;
             mainCafeBusinessControls = runtime != null;
             if (Application.isPlaying && started)
             {
-                ConfigureSetupToast();
                 RefreshBusinessSetupGate();
                 RefreshSelectedVisuals();
             }
@@ -115,30 +112,11 @@ namespace AnimalCafe.UI
             }
         }
 
-        private void ConfigureSetupToast()
-        {
-            if (!mainCafeBusinessControls || setupToast == null) return;
-            var label = setupToast.GetComponentInChildren<TMP_Text>(true);
-            // The old static Toast atlas lacks this sentence. Share this panel's owned
-            // dynamic Chinese font, including the queue's merged click-count suffix.
-            // 静态 Toast 字库缺这句中文；复用本面板的动态字体并预载点击合并数字。
-            var font = EnsureResumeBlockFont(SetupMessage + " ×0123456789");
-            if (font != null)
-            {
-                label.font = font;
-                label.fontSharedMaterial = font.material;
-                label.UpdateMeshPadding();
-            }
-            label.color = AnimalCafe.UI.P8R.P8RAppearance.Cocoa;
-            setupToastQueue = new ToastQueue(() => Time.unscaledTime);
-            setupToast.Configure(setupToastQueue, label, setupToast.GetComponentsInChildren<Graphic>(true));
-        }
-
         private bool ExplainIncompleteSetup()
         {
             RefreshBusinessSetupGate();
             if (!SetupIncomplete) return false;
-            setupToastQueue?.Enqueue(new ToastMessage(ToastType.Info, SetupMessage, ToastPriority.Normal, 2.5f));
+            setupReadinessView?.PlaySetupAttention();
             return true;
         }
 
@@ -408,23 +386,6 @@ namespace AnimalCafe.UI
                 root.anchorMin = new Vector2(0, 1); root.anchorMax = Vector2.one; root.pivot = new Vector2(.5f, 1);
                 root.offsetMin = new Vector2(metrics.Units(8), -metrics.Units(height + 8));
                 root.offsetMax = new Vector2(-metrics.Units(8), -metrics.Units(8));
-                if (mainCafeBusinessControls && setupToast != null)
-                {
-                    var toastRect = (RectTransform)setupToast.transform;
-                    toastRect.anchorMin = new Vector2(0, 1); toastRect.anchorMax = Vector2.one;
-                    toastRect.pivot = new Vector2(.5f, 1);
-                    // Leave space for the existing one-line readiness panel and its padding.
-                    // 留出已有 readiness 状态条与间隔，避免临时提示遮住它。
-                    toastRect.anchoredPosition = new Vector2(0, -metrics.Units(height + 64));
-                    toastRect.sizeDelta = new Vector2(-metrics.Units(16), metrics.Units(64));
-                    var label = setupToast.GetComponentInChildren<TMP_Text>(true);
-                    if (label != null)
-                    {
-                        label.fontSize = metrics.Units(14);
-                        label.rectTransform.offsetMin = new Vector2(metrics.Units(12), metrics.Units(8));
-                        label.rectTransform.offsetMax = new Vector2(-metrics.Units(12), -metrics.Units(8));
-                    }
-                }
                 var strip = transform.Find("P8RTimeStrip") as RectTransform;
                 if (strip == null)
                 {

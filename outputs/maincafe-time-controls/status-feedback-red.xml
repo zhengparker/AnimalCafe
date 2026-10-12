@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="3" result="Failed(Child)" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-12 03:56:50Z" end-time="2026-10-12 03:56:52Z" duration="2.2625098">
+  <test-suite type="TestSuite" id="2383" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1225" result="Failed" site="Child" start-time="2026-10-12 03:56:50Z" end-time="2026-10-12 03:56:52Z" duration="2.262510" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1483" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-12-customer-queue/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="438" result="Failed" site="Child" start-time="2026-10-12 03:56:50Z" end-time="2026-10-12 03:56:52Z" duration="2.228932" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="177452" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1484" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="438" result="Failed" site="Child" start-time="2026-10-12 03:56:50Z" end-time="2026-10-12 03:56:52Z" duration="2.223918" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1485" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="438" result="Failed" site="Child" start-time="2026-10-12 03:56:50Z" end-time="2026-10-12 03:56:52Z" duration="2.219613" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="1486" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="438" result="Failed" site="Child" start-time="2026-10-12 03:56:50Z" end-time="2026-10-12 03:56:52Z" duration="2.215289" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="1491" name="EditorSceneLoading" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading" runstate="Runnable" testcasecount="232" result="Failed" site="Child" start-time="2026-10-12 03:56:50Z" end-time="2026-10-12 03:56:52Z" duration="2.205776" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="1378" name="P8RTwoButtonTimeControlTests" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" runstate="Runnable" testcasecount="11" result="Failed" site="Child" start-time="2026-10-12 03:56:50Z" end-time="2026-10-12 03:56:52Z" duration="2.194854" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="1387" name="SetupFeedback_EnteringDecorDisablingAndCompletingSetupCancelEffect" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests.SetupFeedback_EnteringDecorDisablingAndCompletingSetupCancelEffect" methodname="SetupFeedback_EnteringDecorDisablingAndCompletingSetupCancelEffect" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" runstate="Runnable" seed="1483899492" result="Failed" start-time="2026-10-12 03:56:50Z" end-time="2026-10-12 03:56:51Z" duration="1.284412" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Blocked start should flash the existing readiness card
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests.SetupFlash (AnimalCafe.UI.Feedback.ValidationMessageView view) [0x00010] in E:\Unity\Project\AnimalCafe\.worktrees\phase-12-customer-queue\Assets\Tests\PlayMode\EditorSceneLoading\P8RTwoButtonTimeControlTests.cs:206
+at AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests+<SetupFeedback_EnteringDecorDisablingAndCompletingSetupCancelEffect>d__26.MoveNext () [0x00094] in E:\Unity\Project\AnimalCafe\.worktrees\phase-12-customer-queue\Assets\Tests\PlayMode\EditorSceneLoading\P8RTwoButtonTimeControlTests.cs:286
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="1386" name="SetupFeedback_RepeatedClicksRestorePositionAndNeverShowPopupOrGlyphWarnings" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests.SetupFeedback_RepeatedClicksRestorePositionAndNeverShowPopupOrGlyphWarnings" methodname="SetupFeedback_RepeatedClicksRestorePositionAndNeverShowPopupOrGlyphWarnings" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" runstate="Runnable" seed="1500607482" result="Failed" start-time="2026-10-12 03:56:51Z" end-time="2026-10-12 03:56:52Z" duration="0.524521" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Blocked start should flash the existing readiness card
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests.SetupFlash (AnimalCafe.UI.Feedback.ValidationMessageView view) [0x00010] in E:\Unity\Project\AnimalCafe\.worktrees\phase-12-customer-queue\Assets\Tests\PlayMode\EditorSceneLoading\P8RTwoButtonTimeControlTests.cs:206
+at AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests+<SetupFeedback_RepeatedClicksRestorePositionAndNeverShowPopupOrGlyphWarnings>d__25.MoveNext () [0x00109] in E:\Unity\Project\AnimalCafe\.worktrees\phase-12-customer-queue\Assets\Tests\PlayMode\EditorSceneLoading\P8RTwoButtonTimeControlTests.cs:267
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="1385" name="SetupFeedback_ShakesAndFlashesWhilePausedWithoutMovingLayout" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests.SetupFeedback_ShakesAndFlashesWhilePausedWithoutMovingLayout" methodname="SetupFeedback_ShakesAndFlashesWhilePausedWithoutMovingLayout" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" runstate="Runnable" seed="38012981" result="Failed" start-time="2026-10-12 03:56:52Z" end-time="2026-10-12 03:56:52Z" duration="0.366225" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Blocked start should flash the existing readiness card
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests.SetupFlash (AnimalCafe.UI.Feedback.ValidationMessageView view) [0x00010] in E:\Unity\Project\AnimalCafe\.worktrees\phase-12-customer-queue\Assets\Tests\PlayMode\EditorSceneLoading\P8RTwoButtonTimeControlTests.cs:206
+at AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests+<SetupFeedback_ShakesAndFlashesWhilePausedWithoutMovingLayout>d__24.MoveNext () [0x0012e] in E:\Unity\Project\AnimalCafe\.worktrees\phase-12-customer-queue\Assets\Tests\PlayMode\EditorSceneLoading\P8RTwoButtonTimeControlTests.cs:225
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

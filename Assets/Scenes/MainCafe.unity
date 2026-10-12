@@ -3002,9 +3002,6 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 545862087209244677, guid: f60e1cacdc594b84e98eab28d3070167, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2113516755}
-    - targetCorrespondingSourceObject: {fileID: 545862087209244677, guid: f60e1cacdc594b84e98eab28d3070167, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 974300274}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f60e1cacdc594b84e98eab28d3070167, type: 3}
 --- !u!224 &899691620 stripped
@@ -3346,127 +3343,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 35d0e98b402a6094a9aaf4ce308842fa, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Decoration.DecorationStoreModalView
---- !u!1001 &974300272
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 899691620}
-    m_Modifications:
-    - target: {fileID: 625977243038142179, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_fontSize
-      value: 18
-      objectReference: {fileID: 0}
-    - target: {fileID: 625977243038142179, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_fontSizeBase
-      value: 18
-      objectReference: {fileID: 0}
-    - target: {fileID: 4879120574220628529, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_Name
-      value: MainCafe Setup Toast
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_Pivot.x
-      value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_Pivot.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_AnchorMax.x
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_AnchorMax.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_AnchorMin.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_AnchorMin.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_SizeDelta.x
-      value: -32
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_SizeDelta.y
-      value: 64
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_AnchoredPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: -116
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
---- !u!114 &974300273 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 7307019205861142567, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-  m_PrefabInstance: {fileID: 974300272}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 24805ef0fdcbcec42a07c69a508ea347, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Feedback.ToastView
---- !u!224 &974300274 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 5205492995109982115, guid: ccaf47a419f229045a23224d11c77b44, type: 3}
-  m_PrefabInstance: {fileID: 974300272}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1036776549
 GameObject:
   m_ObjectHideFlags: 0
@@ -6982,7 +6858,7 @@ MonoBehaviour:
   pauseLabel: {fileID: 688567886}
   mainCafeBusinessControls: 1
   businessLayoutRuntime: {fileID: 1437096831}
-  setupToast: {fileID: 974300273}
+  setupReadinessView: {fileID: 1679497557}
 --- !u!224 &2113516755
 RectTransform:
   m_ObjectHideFlags: 0
