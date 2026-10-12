@@ -24,6 +24,7 @@ GitHub Actions 对每个 PR、main push 和手动运行，使用 **Unity 6000.5.
 - 本地 YAML parser、3 个 Bash blocks 语法检查通过；报告 guard 的成功、失败、全部 SKIP、无 NUnit XML、inconclusive 五种输入均得到预期结果，也通过真实 Unity XML（55 PASS、0 FAIL、2 SKIP）检查。Unity Test Framework 1.7 可将含可选 SKIP 的成功运行标成 `Skipped:Ignored`；仅在有实际 PASS、零 FAIL、零 inconclusive 时接受此状态。这是配置检查，不等于 GitHub 上真实 Unity 测试运行。
 - 仓库 Actions Secrets 名称列表当时为空，未读任何 Secrets 内容。云端真实运行 **NOT_RUN**，需要有效 license 配置和发布 workflow 后再验证。
 - 2026-10-11 Owner 完成 Personal 配置后，只读 metadata 已确认 `UNITY_EMAIL`、`UNITY_PASSWORD`、`UNITY_LICENSE` 三个名称存在；未读值。本轮将 workflow 发布到现有 P12 PR branch，Secrets 能否成功激活以该 PR 的云端运行结果为准，不能由“名称齐全”推断 PASS。
+- 发布后同步远程 main 的 CI-only commit，解决同路径 workflow 的 add/add 冲突。首次 P12 云端运行 [38200045287](https://github.com/zhengparker/AnimalCafe/actions/runs/38200045287) 的配置检查成功，但 GameCI v4.4 wrapper 下载的 CLI 拒绝 `--no-coverageEnabled`，两项 jobs 在 Unity 激活前失败，不能据此判断 license 无效。现固定官方 v4.3.2 commit `fa6ced25861c16ef56187828c43f76d00df43a23`（不下载浮动 CLI），保留完整 suites / XML guard / artifacts。旧版含 Unity 内置 coverage 启动参数，但主项目不新增 Code Coverage package、不以 coverage 代替测试；禁用额外 GitHub check 写入，只用 Actions job 和汇总 check。
 - 此次未修改 branch protection / Ruleset，未注册 self-hosted runner，未安装 Unity、modules 或 Code Coverage package。
 - GitHub-hosted Linux 全套测试如出现平台差异，应保留失败结果、定位原因；不能删掉失败测试或将其算作 PASS。
 

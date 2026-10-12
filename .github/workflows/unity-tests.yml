@@ -58,7 +58,9 @@ jobs:
 
       - name: Run complete Unity test suite
         id: tests
-        uses: game-ci/unity-test-runner@32e57712352b500e17974b245a6dce9e11a73213 # v4
+        # v4.4's floating CLI rejects its own --no-coverageEnabled argument.
+        # 固定 v4.3.2，避免 wrapper 与浮动 CLI 的参数不兼容。
+        uses: game-ci/unity-test-runner@fa6ced25861c16ef56187828c43f76d00df43a23 # v4.3.2
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -69,7 +71,7 @@ jobs:
           unityVersion: 6000.5.5f1
           testMode: ${{ matrix.testMode }}
           artifactsPath: artifacts/${{ matrix.testMode }}
-          coverageEnabled: false
+          githubToken: ''
 
       - name: Verify and summarize NUnit results
         if: always() && steps.tests.outcome == 'success'
