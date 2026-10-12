@@ -4,6 +4,9 @@ using AnimalCafe.Customers;
 using AnimalCafe.Navigation;
 using AnimalCafe.Decoration;
 using AnimalCafe.Core.Time;
+using AnimalCafe.UI;
+using AnimalCafe.UI.Feedback;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEditor;
@@ -40,6 +43,29 @@ namespace AnimalCafe.EditorTools.Phase12
                 var world=All<NavigationWorld>(scene).Single(); var adapter=All<NavigationLayoutAdapter>(scene).Single(); var bridge=All<NavigationDecorationBridge>(scene).Single();
                 Flag(adapter,"enforceBusinessReadiness",validation); bridge.Configure(adapter);
                 var time=All<GameTimeService>(scene).Single(); bridge.ConfigureTime(time);
+                var controls=All<TimeControlPanel>(scene).Single();
+                var setupToast=controls.transform.parent.Find("MainCafe Setup Toast");
+                if(validation)
+                {
+                    controls.ConfigureMainCafeControls(null,null);
+                    if(setupToast!=null) UnityEngine.Object.DestroyImmediate(setupToast.gameObject);
+                }
+                else
+                {
+                    if(setupToast==null)
+                    {
+                        var prefab=AssetDatabase.LoadAssetAtPath<GameObject>("Assets/UI/Phase5/Prefabs/PF_UI_Toast.prefab");
+                        setupToast=((GameObject)PrefabUtility.InstantiatePrefab(prefab,scene)).transform;
+                        setupToast.name="MainCafe Setup Toast";
+                        setupToast.SetParent(controls.transform.parent,false);
+                    }
+                    var toastRect=(RectTransform)setupToast;
+                    toastRect.anchorMin=new Vector2(0,1); toastRect.anchorMax=new Vector2(1,1);
+                    toastRect.pivot=new Vector2(.5f,1);
+                    toastRect.anchoredPosition=new Vector2(0,-116); toastRect.sizeDelta=new Vector2(-32,64);
+                    setupToast.GetComponentInChildren<TMP_Text>(true).fontSize=18;
+                    controls.ConfigureMainCafeControls(runtime,setupToast.GetComponent<ToastView>());
+                }
                 var root=scene.GetRootGameObjects().FirstOrDefault(r=>r.name=="Phase12 Customer Flow");
                 if(root==null) { root=new GameObject("Phase12 Customer Flow"); SceneManager.MoveGameObjectToScene(root,scene); }
                 var flow=root.GetComponent<CustomerFlowController>() ?? root.AddComponent<CustomerFlowController>();

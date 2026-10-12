@@ -267,6 +267,44 @@ Engineering review 原三项 Important（旧目标恢复、同步 rebuild 丢失
 - QA已核对完整Play XML，自动验收通过；本轮16项新tests均在完整Play内。测试结束后恢复1个Unity自动改写的旧验证材质 `M_WallProjection_Invalid.mat`，未恢复/覆盖MainCafe或P12改动。此后仅更新文档，无生产变更。
 - HUD按钮测试调用真实Button.onClick，装修调用真实session/Confirm handler，证明业务接线；不等于实际pointer命中或Owner视觉接受。截图坐标是估算；匀速断言只覆盖安全余量足够、持续低速不超过0.2游戏秒的条件，真正障碍仍可停止。M-003保持Owner重测Pending，M-004～008 NOT_RUN。
 
+## MainCafe 时间按钮与 Unity CI 修订（2026-10-10）
+
+Owner 已批准：两个 UI 修复只接入 MainCafe，P12 validation 保留原行为；另外准备每 PR 的完整 EditMode / PlayMode CI。此次没有改变顾客动线、员工规则或导航参数。
+
+- MainCafe 暂停时第一按钮显示开始，1x / 2x 运行时显示暂停；运行中点击第一按钮都暂停，再开始回到 1x。
+- 确认布局的 readiness 未满足营业条件时，GameTimeService 持有 setup resume block，无法开始。时间按钮显示不可用颜色，但保留解释点击；显示现有 Toast，文字为“请先完成店铺设置，再开始营业。”，使用 unscaled time，2.5 秒后消失。中文字体与手机 logical 14 字号接入现有 UI metrics。
+- 补齐 setup 后只解锁，不自行开始；移除必需设备后再次暂停并禁止恢复。Decor 自身的暂停限制仍生效。MainCafe scene 通过真实 Unity Editor 的现有 builder 接线；P12 validation scene 的 git diff 为空，生成 validation 时也清除 MainCafe 专用接线。
+
+证据位于 worktree 的 `outputs/maincafe-time-controls/`：
+
+| 证据 | 结果 | 说明 |
+|---|---|---|
+| setup-red-v2.xml | 0 PASS / 2 expected FAIL | setup 不完整和完成 setup 后应保持暂停，旧实现都实际 Normal；首轮无效 GUID fixture 不作为产品 RED |
+| fast-pause-red.xml | 0 PASS / 1 expected FAIL | 2x 下按钮显示暂停但实际返回 1x |
+| popup-density-red.xml | 0 PASS / 1 expected FAIL | 手机密度下 popup 字号只有 logical 6，要求至少 13.9 |
+| ui-regression-v2.xml | **55 PASS / 0 FAIL / 2 SKIP** | 2026-10-10 修订的 57 项相关 PlayMode，103.19 秒；未检查中文 glyph 覆盖和 popup 遮挡 |
+
+本轮覆盖 P8R 时间按钮、compact chrome、safe area、MainCafe、Decor 输入和恢复，以及选取的 P12 默认第四/第五位入店回归。两项 SKIP 是原有可选截图 / spacing audit，不能算 PASS。本轮不是全项目完整 suites、真实 pointer 视觉验收或 Player / 真机验证。
+
+CI workflow 运行全套现有 suites，没有 testFilter；保存 XML / logs 14 天，`Unity CI` 汇总要求两项 jobs 成功。YAML、三个 Bash blocks 语法、报告检查的五种输入及上述真实 Unity XML 均已本地验证。Secrets 名称列表当时为空；Owner 使用 Unity Personal，稍后自行配置。云端 CI **NOT_RUN**，修改尚未 commit / push，branch protection / Ruleset 未更改。配置步骤见 [Unity CI Guide](Unity_CI_Guide.md)。
+
+## MainCafe setup 提示缺字与遮挡修复（2026-10-11）
+
+Owner 截图复现：setup incomplete 时点击 1x / 2x，提示框文字缺失，Console 反复报告 Unicode glyph not found，并遮住已有 readiness 状态条。原因是新提示沿用了 Phase5 Toast 的静态字体，缺少本句中文；原位置没有为 readiness 面板留空间。旧测试只检查 text / fontSize，没有验证实际字体覆盖或面板重叠，因此旧 55 PASS 不代表这两项呈现已验收。
+
+此次仅修改 `TimeControlPanel.cs` 与现有 `P8RTwoButtonTimeControlTests.cs`，另更新本文。复用面板已有的 owned dynamic Chinese font 和现有 source OTF，预载整句中文、标点、`×` 与 0–9；显式接入对应 material 和 Cocoa 文字颜色。面板原 OnDestroy 继续释放所拥有的 font / material / atlas，不更改共享 font asset。提示框移到 readiness 下方，保持手机字号、Touch-through、2.5 秒 unscaled time 和 setup resume block。
+
+本轮 XML / logs 位于 `outputs/maincafe-time-controls/`：
+
+| 证据 | 结果 | 说明 |
+|---|---|---|
+| popup-glyphs-red.xml | 0 PASS / 2 expected FAIL | 真实 MainCafe 字体不覆盖提示与合并次数、popup 覆盖 readiness；日志 88 条 missing-glyph warnings |
+| popup-glyphs-green.xml | 2 PASS / 0 FAIL | 六次交替点击两个速度按钮，完整中文与 `×6` 可用；缺字 warning 为 0，手机对比度 / 遮挡 / overflow 检查通过 |
+| popup-regression.xml | 36 PASS / 0 FAIL / 2 SKIP | 时间控制、compact chrome、readiness / safe area、P11 原中文阻塞提示与 P12 默认第五位入店；82.42 秒 |
+| popup-main-decor-regression.xml | 22 PASS / 0 FAIL / 0 SKIP | 首轮过滤器未匹配的 MainCafe / Decor 两个 fixtures 补跑 |
+
+两份相关 regression 合计 **58 PASS / 0 FAIL / 2 SKIP**（60 项，无重复；两个新 tests 已包含），两项 SKIP 仍是原有可选证据。GREEN 与两份 regression logs 中 missing-glyph warnings 均为 0；不宣称 Unity 系统日志所有类型 warning 为零。没有修改或重新保存 MainCafe / P12 validation scene，本轮不是全项目测试或 Owner 视觉验收。未 commit / push，未启动云端 CI。
+
 ## 早期实现证据
 
 相对路径均在 worktree 的 `outputs/phase12/`。

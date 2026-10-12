@@ -1,5 +1,11 @@
 # Phase 12 Beginner Guide
 
+## MainCafe 后续 UI 修订（2026-10-10）
+
+这两个按钮修订只接入 `Assets/Scenes/MainCafe.unity`，独立P12 validation继续沿用原有行为。在本P12 worktree中打开MainCafe并Play：setup未完成时保持暂停，▶️和2×灰显；点击任一按钮只显示“请先完成店铺设置，再开始营业。”，约2.5真实秒后消失。进入Decor，完成有效Cash Register / Coffee Machine / Pick-up的confirmed布局并Done后，按钮可用；点击▶️开始1×，运行时左按钮显示⏸️，1×/2×下点击均暂停。
+
+UI源文件为 `TimeControlPanel.cs`，接线由原 `Phase12CustomerQueueSceneSetup.WireMainCafe` 保存到MainCafe；未增加validation场景setup gate。仍需保留有效顾客路线，设置完成不代表所有任意布局都有通路。CI的首次license配置、完整测试报告下载与required check设置见 [Unity CI Guide](Unity_CI_Guide.md)。
+
 状态（2026-10-09）：**20fps前移失败已修复，受影响直接Play112 PASS/0 FAIL/0 SKIP，P11/P12 Edit126 PASS/0 FAIL/0 SKIP。** 完整30游戏分钟持续进出与真实场景20fps通过。修复仅在完整路径被拒后校验当前位置、原地重新绑定Agent并重试一次；不瞬移、不放宽身体/家具保护。此前109 PASS/1 FAIL为修改前记录，桌角及M1～M8的8/8 Owner PASS保留为历史快照。当前只保留一个到期顾客，成功入场后再抽下一轮1～5秒；Decor reset、容量与FIFO保持，见[Validation Report](Phase12_Validation_Report.md)。工作区：`E:\Unity\Project\AnimalCafe\.worktrees\phase-12-customer-queue`；P13员工任务未实现。
 
 本次不重做M1～M8：重新Play默认布局、不操作，观察六到八位连续进客。前客未到站不再单独挡住下一位；仍有安全门禁，暂时不能进店时到期显示0秒并等待，人数没增加不应反复刷新到新的随机倒计时。通道安全后进入，成功入场才开始下一轮1～5秒。满员、装修或停用会清掉等待机会；暂停时不生成。等队首到站后点“让队首离开”，重复两三次，观察后方连续前移、没有Blocked。观察无重叠、插队、穿家具；不保证任何随机一轮都产生并行，也不保证任意布局八个安全站位。桌角修复无需再单独测一遍。
