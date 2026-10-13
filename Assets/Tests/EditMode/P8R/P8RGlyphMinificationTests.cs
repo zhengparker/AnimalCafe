@@ -38,13 +38,15 @@ namespace AnimalCafe.Tests.EditMode.P8R
                     // 先核对导入的原始层，区分来源像素、mip 和 GPU 采样差异。
                     var basePixels = GpuAlpha(imported, legacy.width);
                     var sourcePixels = pixels.Select(p => p.a / 255.0).ToArray();
-                    if (key == "add_cocoa")
+                    if (key == "add_cocoa" && Error(basePixels, sourcePixels) > 1e-6)
                         WritePixelProbe(path, size, sourcePixels, basePixels,
                             GpuAlpha(legacy, legacy.width), actual, old, expected);
                     TestContext.WriteLine($"{key}: source={legacy.width}x{legacy.height}, imported={imported.width}x{imported.height}, "
                         + $"format={imported.graphicsFormat}, mips={imported.mipmapCount}, "
                         + $"baseError={Error(basePixels, sourcePixels):F6}, mipError={Error(actual, expected):F6}, "
                         + $"legacyError={Error(old, expected):F6}, limit={QualitySettings.globalTextureMipmapLimit}");
+                    Assert.That(Error(basePixels, sourcePixels), Is.LessThan(1e-6),
+                        key + ": a pixel-sized GPU copy must preserve source alpha before testing minification.");
                     currentError += Error(actual, expected);
                     legacyError += Error(old, expected);
                     Assert.That(actual.Sum() / expected.Sum(), Is.InRange(.97, 1.03),
@@ -103,8 +105,13 @@ namespace AnimalCafe.Tests.EditMode.P8R
             var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Tests/EditMode/P8R/GlyphMipReadback.shader");
             Assert.That(shader, Is.Not.Null);
             var sampling = new Material(shader);
+            var originalAnisotropy = texture.anisoLevel;
             try
             {
+                // Flat, pixel-aligned mip coverage must not include an extra anisotropic filter.
+                // PC ForceEnable promotes nonzero levels to >=9; control this unrelated sampler state.
+                // 只控制本次正交 GPU 采样；纹理与项目原始画质在 finally 中保留。
+                texture.anisoLevel = 0;
                 // Both paths still render on the GPU; only imported glyphs have filtered mip levels.
                 // 两条路径都经过真实 GPU；仅导入图标具备预过滤 mip，旧位图仍采样 level 0。
                 var mip = Mathf.Min(((Texture2D)texture).mipmapCount - 1,
@@ -118,6 +125,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
             }
             finally
             {
+                texture.anisoLevel = originalAnisotropy;
                 RenderTexture.active = before;
                 Object.DestroyImmediate(readback);
                 Object.DestroyImmediate(sampling);
