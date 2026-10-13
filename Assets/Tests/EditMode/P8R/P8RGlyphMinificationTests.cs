@@ -11,6 +11,38 @@ namespace AnimalCafe.Tests.EditMode.P8R
 {
     public sealed class P8RGlyphMinificationTests
     {
+        [TestCase(false)]
+        [TestCase(true)]
+        public void GpuReadback_PreservesImportedTextureAndExistingDirtyState(bool initiallyDirty)
+        {
+            var path = P8RRefinedBGlyphs.PathFor("confirm_cocoa");
+            var imported = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            Assert.That(imported, Is.Not.Null);
+            var wasDirty = EditorUtility.IsDirty(imported);
+            Assert.That(wasDirty, Is.False, "Fixture requires a clean imported glyph.");
+            var serialized = EditorJsonUtility.ToJson(imported);
+            var bytes = File.ReadAllBytes(path);
+            var anisotropy = imported.anisoLevel;
+            try
+            {
+                // A pre-existing unsaved edit must stay dirty; readback must not hide it.
+                // 已有未保存标记必须保留；只读采样也不能把干净资源变成 dirty。
+                if (initiallyDirty) EditorUtility.SetDirty(imported);
+                Assert.That(GpuAlpha(imported, 32).Length, Is.EqualTo(32 * 32));
+                Assert.That(imported.anisoLevel, Is.EqualTo(anisotropy));
+                Assert.That(EditorJsonUtility.ToJson(imported), Is.EqualTo(serialized));
+                Assert.That(File.ReadAllBytes(path), Is.EqualTo(bytes));
+                Assert.That(EditorUtility.IsDirty(imported), Is.EqualTo(initiallyDirty), path);
+            }
+            finally
+            {
+                // Remove only this fixture's marker, after verifying the asset is unchanged.
+                // 仅清理本测试拥有的标记；不能清除真实未保存的资源修改。
+                if (!wasDirty && EditorJsonUtility.ToJson(imported) == serialized)
+                    EditorUtility.ClearDirty(imported);
+            }
+        }
+
         // Regression: importing only the full-size bitmap produces missed/uneven strokes
         // when the GPU shrinks it. Compare real imported pixels with area coverage.
         // 检查实际 GPU 缩图，而不是只检查源 PNG 有没有半透明像素。
@@ -85,19 +117,29 @@ namespace AnimalCafe.Tests.EditMode.P8R
             var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Tests/EditMode/P8R/GlyphMipReadback.shader");
             Assert.That(shader, Is.Not.Null);
             var sampling = new Material(shader);
-            var originalAnisotropy = texture.anisoLevel;
+            var source = (Texture2D)texture;
+            var samplingTexture = new Texture2D(source.width, source.height, source.format, source.mipmapCount,
+                !UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsSRGBFormat(source.graphicsFormat));
             try
             {
+                // GPU copy preserves every imported mip without requiring a readable source.
+                // 逐层原样复制 GPU 像素；不重新生成 mip，也不改原资源的 Read/Write 设置。
+                Graphics.CopyTexture(source, samplingTexture);
+                samplingTexture.filterMode = source.filterMode;
+                samplingTexture.wrapMode = source.wrapMode;
+                Assert.That(samplingTexture.graphicsFormat, Is.EqualTo(source.graphicsFormat));
+                Assert.That(samplingTexture.mipmapCount, Is.EqualTo(source.mipmapCount));
                 // Flat, pixel-aligned mip coverage must not include an extra anisotropic filter.
                 // PC ForceEnable promotes nonzero levels to >=9; control this unrelated sampler state.
-                // 只控制本次正交 GPU 采样；finally 恢复纹理等级，保留项目画质。
-                texture.anisoLevel = 0;
+                // Restoring a persistent texture's value still leaves its Editor dirty flag set.
+                // 在临时副本控制采样；直接改导入纹理，即使恢复数值也会留下 dirty 标记。
+                samplingTexture.anisoLevel = 0;
                 // Both paths still render on the GPU; only imported glyphs have filtered mip levels.
                 // 两条路径都经过真实 GPU；仅导入图标具备预过滤 mip，旧位图仍采样 level 0。
-                var mip = Mathf.Min(((Texture2D)texture).mipmapCount - 1,
-                    Mathf.Log(texture.width / (float)size, 2));
+                var mip = Mathf.Min(((Texture2D)samplingTexture).mipmapCount - 1,
+                    Mathf.Log(samplingTexture.width / (float)size, 2));
                 sampling.SetFloat("_MipLevel", mip);
-                Graphics.Blit(texture, target, sampling);
+                Graphics.Blit(samplingTexture, target, sampling);
                 RenderTexture.active = target;
                 readback.ReadPixels(new Rect(0, 0, size, size), 0, 0);
                 readback.Apply(false, false);
@@ -105,7 +147,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
             }
             finally
             {
-                texture.anisoLevel = originalAnisotropy;
+                Object.DestroyImmediate(samplingTexture);
                 RenderTexture.active = before;
                 Object.DestroyImmediate(readback);
                 Object.DestroyImmediate(sampling);
