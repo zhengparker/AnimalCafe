@@ -136,7 +136,9 @@ namespace AnimalCafe.EditorTools.AssetPipeline
             var expectedFileName = $"PF_Benchmark_{kind}_01.prefab";
             var fileName = string.IsNullOrEmpty(assetPath)
                 ? string.Empty
-                : Path.GetFileName(assetPath);
+                // Parse Unity asset filenames consistently on Windows and Linux.
+                // 只规范文件名解析；原路径仍须通过严格的 slash-separated 校验。
+                : Path.GetFileName(assetPath.Replace('\\', '/'));
 
             if (!string.Equals(assetPath, expectedPath, StringComparison.Ordinal))
             {

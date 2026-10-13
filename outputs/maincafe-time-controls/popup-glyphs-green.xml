@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Passed" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-12 03:17:53Z" end-time="2026-10-12 03:17:54Z" duration="1.5002692">
+  <test-suite type="TestSuite" id="2382" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1224" result="Passed" start-time="2026-10-12 03:17:53Z" end-time="2026-10-12 03:17:54Z" duration="1.500269" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1482" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-12-customer-queue/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="437" result="Passed" start-time="2026-10-12 03:17:53Z" end-time="2026-10-12 03:17:54Z" duration="1.482592" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="169864" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1483" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="437" result="Passed" start-time="2026-10-12 03:17:53Z" end-time="2026-10-12 03:17:54Z" duration="1.478256" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1484" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="437" result="Passed" start-time="2026-10-12 03:17:53Z" end-time="2026-10-12 03:17:54Z" duration="1.474182" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1485" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="437" result="Passed" start-time="2026-10-12 03:17:53Z" end-time="2026-10-12 03:17:54Z" duration="1.470017" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1490" name="EditorSceneLoading" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading" runstate="Runnable" testcasecount="231" result="Passed" start-time="2026-10-12 03:17:53Z" end-time="2026-10-12 03:17:54Z" duration="1.465282" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1378" name="P8RTwoButtonTimeControlTests" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" runstate="Runnable" testcasecount="10" result="Passed" start-time="2026-10-12 03:17:53Z" end-time="2026-10-12 03:17:54Z" duration="1.461411" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1386" name="SetupFeedback_HasReadableContrastAndDoesNotCoverReadiness" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests.SetupFeedback_HasReadableContrastAndDoesNotCoverReadiness" methodname="SetupFeedback_HasReadableContrastAndDoesNotCoverReadiness" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" runstate="Runnable" seed="1504914136" result="Passed" start-time="2026-10-12 03:17:53Z" end-time="2026-10-12 03:17:54Z" duration="1.166043" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1385" name="SetupFeedback_RendersChineseAndMergedCountWithoutMissingGlyphWarnings" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests.SetupFeedback_RendersChineseAndMergedCountWithoutMissingGlyphWarnings" methodname="SetupFeedback_RendersChineseAndMergedCountWithoutMissingGlyphWarnings" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" runstate="Runnable" seed="1442734802" result="Passed" start-time="2026-10-12 03:17:54Z" end-time="2026-10-12 03:17:54Z" duration="0.280963" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

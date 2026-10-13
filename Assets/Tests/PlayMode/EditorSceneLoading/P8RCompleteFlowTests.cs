@@ -467,6 +467,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         public IEnumerator HudAndExit_KeepExactPriorSpeedAndOnlyDiscardCurrentPreview()
         {
             yield return Load();
+            P8RTwoButtonTimeControlTests.PrepareBusinessLayout(SceneManager.GetActiveScene());
+            yield return null;
             var controller = Find<DecorationModeController>();
             var service = Find<GameTimeService>();
             var hud = Find<TimeControlPanel>();
@@ -481,7 +483,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             fast.onClick.Invoke();
             Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
             Assert.That(normal.interactable && fast.interactable, Is.True);
-            Assert.That(normal.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("pause_cocoa"));
+            Assert.That(normal.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("resume_cocoa"));
             yield return Capture("03-hud-paused.png");
             normal.onClick.Invoke();
             Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Passed" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-10 02:15:05Z" end-time="2026-10-10 02:15:05Z" duration="0.0943661">
+  <test-suite type="TestSuite" id="2378" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1220" result="Passed" start-time="2026-10-10 02:15:05Z" end-time="2026-10-10 02:15:05Z" duration="0.094366" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1478" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-12-customer-queue/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="433" result="Passed" start-time="2026-10-10 02:15:05Z" end-time="2026-10-10 02:15:05Z" duration="0.070275" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="176536" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1479" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="433" result="Passed" start-time="2026-10-10 02:15:05Z" end-time="2026-10-10 02:15:05Z" duration="0.063579" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1480" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="433" result="Passed" start-time="2026-10-10 02:15:05Z" end-time="2026-10-10 02:15:05Z" duration="0.057375" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1481" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="433" result="Passed" start-time="2026-10-10 02:15:05Z" end-time="2026-10-10 02:15:05Z" duration="0.051267" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1484" name="Phase12" fullname="AnimalCafe.Tests.PlayMode.Phase12" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-10 02:15:05Z" end-time="2026-10-10 02:15:05Z" duration="0.045412" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1180" name="NavigationRuntimeIdentityTests" fullname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests" classname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-10 02:15:05Z" end-time="2026-10-10 02:15:05Z" duration="0.044595" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-suite type="ParameterizedMethod" id="1183" name="SamePrefabInstancesHaveIndependentImmutableVisitIds" fullname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests.SamePrefabInstancesHaveIndependentImmutableVisitIds" classname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-10 02:15:05Z" end-time="2026-10-10 02:15:05Z" duration="0.041656" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1181" name="SamePrefabInstancesHaveIndependentImmutableVisitIds(&quot;Shiba&quot;)" fullname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests.SamePrefabInstancesHaveIndependentImmutableVisitIds(&quot;Shiba&quot;)" methodname="SamePrefabInstancesHaveIndependentImmutableVisitIds" classname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests" runstate="Runnable" seed="252091432" result="Passed" start-time="2026-10-10 02:15:05Z" end-time="2026-10-10 02:15:05Z" duration="0.024911" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1182" name="SamePrefabInstancesHaveIndependentImmutableVisitIds(&quot;Westie&quot;)" fullname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests.SamePrefabInstancesHaveIndependentImmutableVisitIds(&quot;Westie&quot;)" methodname="SamePrefabInstancesHaveIndependentImmutableVisitIds" classname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests" runstate="Runnable" seed="47248815" result="Passed" start-time="2026-10-10 02:15:05Z" end-time="2026-10-10 02:15:05Z" duration="0.005135" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

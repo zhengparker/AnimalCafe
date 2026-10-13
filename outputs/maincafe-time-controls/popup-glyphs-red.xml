@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Failed(Child)" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-12 03:16:18Z" end-time="2026-10-12 03:16:20Z" duration="1.7966449">
+  <test-suite type="TestSuite" id="2382" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1224" result="Failed" site="Child" start-time="2026-10-12 03:16:18Z" end-time="2026-10-12 03:16:20Z" duration="1.796645" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1482" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-12-customer-queue/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="437" result="Failed" site="Child" start-time="2026-10-12 03:16:18Z" end-time="2026-10-12 03:16:20Z" duration="1.778361" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="174188" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1483" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="437" result="Failed" site="Child" start-time="2026-10-12 03:16:18Z" end-time="2026-10-12 03:16:20Z" duration="1.773980" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1484" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="437" result="Failed" site="Child" start-time="2026-10-12 03:16:18Z" end-time="2026-10-12 03:16:20Z" duration="1.769963" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="1485" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="437" result="Failed" site="Child" start-time="2026-10-12 03:16:18Z" end-time="2026-10-12 03:16:20Z" duration="1.765893" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="1490" name="EditorSceneLoading" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading" runstate="Runnable" testcasecount="231" result="Failed" site="Child" start-time="2026-10-12 03:16:18Z" end-time="2026-10-12 03:16:20Z" duration="1.760811" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="1378" name="P8RTwoButtonTimeControlTests" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" runstate="Runnable" testcasecount="10" result="Failed" site="Child" start-time="2026-10-12 03:16:18Z" end-time="2026-10-12 03:16:20Z" duration="1.756834" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="1386" name="SetupFeedback_HasReadableContrastAndDoesNotCoverReadiness" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests.SetupFeedback_HasReadableContrastAndDoesNotCoverReadiness" methodname="SetupFeedback_HasReadableContrastAndDoesNotCoverReadiness" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" runstate="Runnable" seed="1948733780" result="Failed" start-time="2026-10-12 03:16:18Z" end-time="2026-10-12 03:16:19Z" duration="1.450938" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Setup popup must appear below the persistent readiness reminder
+  Expected: less than 1627.0f
+  But was:  1716.0f
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests+<SetupFeedback_HasReadableContrastAndDoesNotCoverReadiness>d__24.MoveNext () [0x0015b] in E:\Unity\Project\AnimalCafe\.worktrees\phase-12-customer-queue\Assets\Tests\PlayMode\EditorSceneLoading\P8RTwoButtonTimeControlTests.cs:249
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[The character with Unicode value \u8BF7 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5148 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5B8C was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u6210 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5E97 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u94FA was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u518D was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5F00 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u59CB was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8425 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u4E1A was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8BF7 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5148 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5B8C was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u6210 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5E97 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u94FA was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u518D was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5F00 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u59CB was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8425 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u4E1A was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+]]></output>
+                </test-case>
+                <test-case id="1385" name="SetupFeedback_RendersChineseAndMergedCountWithoutMissingGlyphWarnings" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests.SetupFeedback_RendersChineseAndMergedCountWithoutMissingGlyphWarnings" methodname="SetupFeedback_RendersChineseAndMergedCountWithoutMissingGlyphWarnings" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests" runstate="Runnable" seed="139478599" result="Failed" start-time="2026-10-12 03:16:19Z" end-time="2026-10-12 03:16:20Z" duration="0.287905" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  The actual popup font must cover every Chinese glyph and the merged click count
+  Expected: True
+  But was:  False
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.EditorSceneLoading.P8RTwoButtonTimeControlTests+<SetupFeedback_RendersChineseAndMergedCountWithoutMissingGlyphWarnings>d__23.MoveNext () [0x0012b] in E:\Unity\Project\AnimalCafe\.worktrees\phase-12-customer-queue\Assets\Tests\PlayMode\EditorSceneLoading\P8RTwoButtonTimeControlTests.cs:227
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[The character with Unicode value \u8BF7 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5148 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5B8C was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u6210 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5E97 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u94FA was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u518D was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5F00 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u59CB was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8425 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u4E1A was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8BF7 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5148 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5B8C was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u6210 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5E97 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u94FA was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u518D was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5F00 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u59CB was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8425 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u4E1A was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8BF7 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5148 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5B8C was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u6210 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5E97 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u94FA was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u518D was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5F00 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u59CB was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8425 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u4E1A was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8BF7 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5148 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5B8C was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u6210 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5E97 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u94FA was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u518D was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5F00 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u59CB was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8425 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u4E1A was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8BF7 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5148 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5B8C was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u6210 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5E97 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u94FA was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u518D was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5F00 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u59CB was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8425 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u4E1A was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8BF7 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5148 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5B8C was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u6210 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5E97 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u94FA was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u518D was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u5F00 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u59CB was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u8425 was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+The character with Unicode value \u4E1A was not found in the [NotoSansSC-Regular SDF] font asset or any potential fallbacks. It was replaced by Unicode character \u0020 in text object [Label].
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -4,6 +4,7 @@ using System.Reflection;
 using AnimalCafe.Decoration;
 using AnimalCafe.Core.Time;
 using AnimalCafe.Layout;
+using AnimalCafe.Content;
 using AnimalCafe.UI;
 using AnimalCafe.UI.Feedback;
 using AnimalCafe.UI.Decoration;
@@ -255,12 +256,14 @@ namespace AnimalCafe.Tests.EditMode.P8R
         [Test]
         public void HudSpeedAndDecorationLock_RefreshPngStatesFromEvents()
         {
+            var originalTimeScale = Time.timeScale;
             var scene = EditorSceneManager.OpenScene("Assets/Scenes/MainCafe.unity", OpenSceneMode.Additive);
             try
             {
                 var panel = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<TimeControlPanel>(true)).Single();
                 var service = Field<GameTimeService>(panel, "gameTimeService");
                 typeof(GameTimeService).GetMethod("Awake", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(service, null);
+                PrepareBusinessLayout(scene);
                 panel.Configure(service, Field<Button>(panel, "pauseButton"), Field<Button>(panel, "normalButton"), Field<Button>(panel, "fastButton"));
                 service.SetFast();
                 Assert.That(Field<Button>(panel, "pauseButton").gameObject.activeSelf, Is.False);
@@ -273,7 +276,29 @@ namespace AnimalCafe.Tests.EditMode.P8R
                 Assert.That(Field<Button>(panel, "normalButton").image.sprite.name, Is.EqualTo("tab_selected"));
                 Assert.That(Field<Button>(panel, "normalButton").interactable, Is.True);
             }
-            finally { EditorSceneManager.CloseScene(scene, true); }
+            finally { EditorSceneManager.CloseScene(scene, true); Time.timeScale = originalTimeScale; }
+        }
+
+        private static void PrepareBusinessLayout(Scene scene)
+        {
+            var runtime = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CafeLayoutRuntime>(true)).Single();
+            runtime.Initialize();
+            var catalog = Field<FurnitureContentCatalog>(runtime, "contentCatalog");
+            var support = runtime.Layout.FurnitureInstances.Single();
+            var slot = catalog.BuildSurfaceSlotCatalog(runtime.Layout.GridSettings)
+                .GetForSupport(support.DefinitionId).First().SlotId;
+            Assert.That(runtime.Layout.PlaceFurniture(FurnitureInstance.Restore("13000000000000000000000000000002",
+                support.DefinitionId, new GridPosition(4, 3), FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            Assert.That(runtime.Layout.PlaceFurniture(FurnitureInstance.Restore("13000000000000000000000000000003",
+                support.DefinitionId, new GridPosition(6, 3), FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            Assert.That(runtime.FunctionalSurfaceLayout.PlaceMounted(new SurfaceMountedInstance("13000000000000000000000000000004",
+                "equipment.cash-register.01", new SurfaceSlotAddress(support.InstanceId, slot), FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            Assert.That(runtime.FunctionalSurfaceLayout.PlaceMounted(new SurfaceMountedInstance("13000000000000000000000000000005",
+                "equipment.coffee-machine.01", new SurfaceSlotAddress("13000000000000000000000000000002", slot), FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            Assert.That(runtime.FunctionalSurfaceLayout.PlacePickUp(new PickUpPointInstance("13000000000000000000000000000006",
+                new SurfaceSlotAddress("13000000000000000000000000000003", slot))).Succeeded, Is.True);
+            runtime.RecalculateReadiness();
+            Assert.That(runtime.CurrentReadiness.CanOpenForBusiness, Is.True, "HUD speed events require completed business setup.");
         }
 
         [Test]

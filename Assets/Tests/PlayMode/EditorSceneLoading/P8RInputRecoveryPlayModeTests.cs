@@ -123,6 +123,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                          FindObjectsInactive.Include, FindObjectsSortMode.None)) adapter.enabled = false;
             foreach (var source in Object.FindObjectsByType<InputSystemDecorationTouchSource>(
                          FindObjectsInactive.Include, FindObjectsSortMode.None)) source.enabled = false;
+            yield return Phase8SceneInputTestCleanup.ReleaseActiveSceneBeforeInputReset();
             input.Setup();
             // InputSystemObject keeps the Editor's native play-mode transition timestamps, while
             // InputTestFixture starts a new mock clock. Keep synthetic events beyond that old window.

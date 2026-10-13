@@ -51,6 +51,8 @@ namespace AnimalCafe.Tests.PlayMode
                 yield return Click(mouse, Find<Button>(scene, "FastButton"));
                 Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
                 yield return Click(mouse, Find<Button>(scene, "NormalButton"));
+                Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused), "The running 2x session shows a Pause action.");
+                yield return Click(mouse, Find<Button>(scene, "NormalButton"));
                 Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
             }
             finally
@@ -132,6 +134,10 @@ namespace AnimalCafe.Tests.PlayMode
             module.AssignDefaultActions();
             yield return null;
             yield return null;
+            EditorSceneLoading.P8RTwoButtonTimeControlTests.PrepareBusinessLayout(SceneManager.GetActiveScene());
+            yield return null;
+            Assert.That(Find<GameTimeService>(SceneManager.GetActiveScene(), "Phase0_Runtime")
+                .TrySetSpeed(GameSpeed.Normal), Is.True, "Begin real UI speed clicks after completing setup.");
         }
 
         private static IEnumerator Click(Mouse mouse, Button button)
@@ -173,8 +179,10 @@ namespace AnimalCafe.Tests.PlayMode
             SceneManager.SetActiveScene(cleanup);
             foreach (var scene in loaded)
             {
+                var assets = EditorSceneLoading.Phase8SceneInputTestCleanup.CaptureAssets(scene);
                 var unload = SceneManager.UnloadSceneAsync(scene);
                 while (unload != null && !unload.isDone) yield return null;
+                EditorSceneLoading.Phase8SceneInputTestCleanup.DisposeReleasedAssets(assets);
             }
         }
 

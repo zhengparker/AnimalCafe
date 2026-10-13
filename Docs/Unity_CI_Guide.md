@@ -1,6 +1,6 @@
 # Unity CI：配置与使用 / Setup and usage
 
-2026-10-12修订：GitHub Actions **仅手动触发**，且需勾选本次允许Unity登录/测试。使用 **Unity 6000.5.5f1**，一次激活后顺序执行完整 EditMode、PlayMode suites。GitHub上的workflow仍保持disabled，更新Secrets不等于允许启用或运行。没有 testFilter，也不会将 Linux CI 当作 Windows Editor、Player 或移动设备验收。
+2026-10-13修订：GitHub Actions **仅手动触发**，且需勾选本次允许Unity登录/测试。使用 **Unity 6000.5.5f1**，一次激活后顺序执行 EditMode、PlayMode。`test_scope` 默认 `full`，执行完整回归；`remaining-ci-failures` 只诊断两个 glyph 缩图用例和一个 UI transition 用例，使用固定 testFilter。诊断运行不会通过完整 `Unity CI` 汇总 check。更新 Secrets 不等于允许运行；Linux CI 也不替代 Windows Editor、Player 或移动设备验收。
 
 ## 文件与执行方式
 
@@ -13,11 +13,14 @@
 
 1. 打开仓库 **Settings → Secrets and variables → Actions → New repository secret**。
 2. Unity Personal：按 [GameCI Activation](https://game.ci/docs/github/activation/) 配置 `UNITY_LICENSE`、`UNITY_EMAIL`、`UNITY_PASSWORD`。Unity Pro：配置 `UNITY_SERIAL`、`UNITY_EMAIL`、`UNITY_PASSWORD`。只在 GitHub Secrets 页面输入敏感内容，不写入 repo、log 或聊天。
-3. 当前不要enable或Run workflow。完成账号恢复、配置修订并获得Owner明确允许登录/测试后，才在Actions启用workflow并选择相应branch手动运行。
+3. 获得 Owner 明确允许登录/测试后，在 Actions 启用 workflow，选择对应 branch，勾选本次登录授权。正常验收保留 `test_scope=full`；只有定位已知剩余失败时选择 `remaining-ci-failures`。
 4. 两套测试均成功后，在 main 的 branch protection / Ruleset 中启用 **Require status checks to pass before merging**，选择 **Unity CI**。仅添加 workflow 不会自动阻止 merge；branch rules 需要仓库 owner 单独设置。
 5. Unity 升级时同步修改 ProjectVersion 与 workflow 版本，并先确认对应 GameCI image 可用。
 
 ## 当前证据与限制 / Evidence and limits
+
+- 2026-10-13 Owner 已授权并运行两轮完整 Linux CI。[38392233116](https://github.com/zhengparker/AnimalCafe/actions/runs/38392233116) 的 EditMode 为 2487 PASS / 2 FAIL，PlayMode 为 1220 PASS / 1 FAIL / 5 SKIP；P12 专项 83 PASS。剩余两个 glyph 缩图误差和一个动画等待时钟问题，不能宣称完整 CI 通过。
+- 本轮剩余 3 项已在 [Linux 定向验证 38410016002](https://github.com/zhengparker/AnimalCafe/actions/runs/38410016002) 全部通过。动画等待共用受控帧预算；glyph readback 控制并恢复纹理 anisotropy，排除额外过滤，并新增原像素一致性断言。完整回归仍需独立结果，见 `Unity_CI_Remaining_Repair_2026-10-13.md`。默认完整回归与单次激活保护保持原样。
 
 - 2026-10-10 已通过 Docker Hub 只读查询确认 `unityci/editor:ubuntu-6000.5.5f1-base-3` 存在。
 - 已通过 GitHub API 确认 checkout/cache/upload-artifact/GameCI 的固定 v4 commit 存在。

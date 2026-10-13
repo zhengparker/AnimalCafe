@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Passed" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-10 02:05:23Z" end-time="2026-10-10 02:05:54Z" duration="30.9561619">
+  <test-suite type="TestSuite" id="2377" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1219" result="Passed" start-time="2026-10-10 02:05:23Z" end-time="2026-10-10 02:05:54Z" duration="30.956162" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1477" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-12-customer-queue/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="432" result="Passed" start-time="2026-10-10 02:05:23Z" end-time="2026-10-10 02:05:54Z" duration="30.918356" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="175532" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1478" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="432" result="Passed" start-time="2026-10-10 02:05:23Z" end-time="2026-10-10 02:05:54Z" duration="30.910798" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1479" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="432" result="Passed" start-time="2026-10-10 02:05:23Z" end-time="2026-10-10 02:05:54Z" duration="30.903640" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1480" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="432" result="Passed" start-time="2026-10-10 02:05:23Z" end-time="2026-10-10 02:05:54Z" duration="30.896426" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1481" name="Phase12Integration" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration" runstate="Runnable" testcasecount="80" result="Passed" start-time="2026-10-10 02:05:23Z" end-time="2026-10-10 02:05:54Z" duration="30.885681" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1058" name="CustomerQueueFlowTests" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" testcasecount="36" result="Passed" start-time="2026-10-10 02:05:23Z" end-time="2026-10-10 02:05:54Z" duration="30.882869" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1082" name="QueueDrainsAtTwentyFpsWithoutAnyConcurrentAdmission" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests.QueueDrainsAtTwentyFpsWithoutAnyConcurrentAdmission" methodname="QueueDrainsAtTwentyFpsWithoutAnyConcurrentAdmission" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" seed="1287224437" result="Passed" start-time="2026-10-10 02:05:23Z" end-time="2026-10-10 02:05:23Z" duration="0.656479" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1081" name="ThirtyGameMinuteControlledLifecycleSoakKeepsCapacityBounded" fullname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests.ThirtyGameMinuteControlledLifecycleSoakKeepsCapacityBounded" methodname="ThirtyGameMinuteControlledLifecycleSoakKeepsCapacityBounded" classname="AnimalCafe.Tests.PlayMode.Phase12Integration.CustomerQueueFlowTests" runstate="Runnable" seed="17741330" result="Passed" start-time="2026-10-10 02:05:23Z" end-time="2026-10-10 02:05:54Z" duration="30.205689" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[P12_SOAK released ledger records=720
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

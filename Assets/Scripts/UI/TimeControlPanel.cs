@@ -1,5 +1,7 @@
 using AnimalCafe.Core.Events;
 using AnimalCafe.Core.Time;
+using AnimalCafe.Decoration;
+using AnimalCafe.UI.Feedback;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -46,6 +48,15 @@ namespace AnimalCafe.UI
         private GameSpeed decorationEntrySpeed;
         private bool refreshingP8RLayout;
         private TMP_Text resumeBlockReasonLabel;
+        [SerializeField] private bool mainCafeBusinessControls;
+        [SerializeField] private CafeLayoutRuntime businessLayoutRuntime;
+        [SerializeField] private ValidationMessageView setupReadinessView;
+        private System.IDisposable setupResumeBlock;
+        private bool started;
+        private bool SetupIncomplete => mainCafeBusinessControls &&
+            (businessLayoutRuntime == null || businessLayoutRuntime.CurrentReadiness == null ||
+             !businessLayoutRuntime.CurrentReadiness.CanOpenForBusiness);
+        private const string SetupMessage = "请先完成店铺设置，再开始营业。";
 
         private void Start()
         {
@@ -60,7 +71,53 @@ namespace AnimalCafe.UI
 
             RegisterListeners();
             RegisterSpeedListener();
+            started = true;
+            RefreshBusinessSetupGate();
             RefreshSelectedVisuals();
+        }
+
+        // Only MainCafe opts in. Validation scenes retain their original time controls.
+        // 仅 MainCafe 接入营业设置限制；验证场景继续使用原有时间控制。
+        public void ConfigureMainCafeControls(CafeLayoutRuntime runtime, ValidationMessageView readinessView)
+        {
+            var previousBlock = setupResumeBlock;
+            setupResumeBlock = null;
+            previousBlock?.Dispose();
+            businessLayoutRuntime = runtime;
+            setupReadinessView = readinessView;
+            mainCafeBusinessControls = runtime != null;
+            if (Application.isPlaying && started)
+            {
+                RefreshBusinessSetupGate();
+                RefreshSelectedVisuals();
+            }
+        }
+
+        private void Update() => RefreshBusinessSetupGate();
+
+        private void RefreshBusinessSetupGate()
+        {
+            if (!started || gameTimeService == null) return;
+            if (SetupIncomplete && setupResumeBlock == null)
+            {
+                setupResumeBlock = gameTimeService.AcquireResumeBlock(this, SetupMessage);
+                RefreshSelectedVisuals();
+            }
+            else if (!SetupIncomplete && setupResumeBlock != null)
+            {
+                var block = setupResumeBlock;
+                setupResumeBlock = null;
+                block.Dispose();
+                RefreshSelectedVisuals();
+            }
+        }
+
+        private bool ExplainIncompleteSetup()
+        {
+            RefreshBusinessSetupGate();
+            if (!SetupIncomplete) return false;
+            setupReadinessView?.PlaySetupAttention();
+            return true;
         }
 
         private void OnEnable()
@@ -146,13 +203,22 @@ namespace AnimalCafe.UI
 
         private void HandlePauseClicked()
         {
-            if (!decorationPauseLocked) gameTimeService.TogglePaused();
+            if (!decorationPauseLocked && !ExplainIncompleteSetup()) gameTimeService.TogglePaused();
         }
 
         private void HandleNormalClicked()
         {
             if (decorationPauseLocked) return;
+            if (ExplainIncompleteSetup()) return;
             if (appearance == null) { gameTimeService.SetNormal(); return; }
+            if (mainCafeBusinessControls)
+            {
+                // The first MainCafe control is Play/Pause at either running speed.
+                // MainCafe 第一按钮在 1x、2x 运行时都暂停；开始时回到 1x。
+                if (gameTimeService.CurrentSpeed == GameSpeed.Paused) gameTimeService.SetNormal();
+                else gameTimeService.SetPaused();
+                return;
+            }
             // The selected speed doubles as Pause; the first button always returns to Normal.
             // 点击当前速度暂停；暂停后的第一按钮固定回到1倍速。
             if (gameTimeService.CurrentSpeed == GameSpeed.Paused) gameTimeService.SetNormal();
@@ -163,6 +229,7 @@ namespace AnimalCafe.UI
         private void HandleFastClicked()
         {
             if (decorationPauseLocked) return;
+            if (ExplainIncompleteSetup()) return;
             if (appearance != null && gameTimeService.CurrentSpeed == GameSpeed.Fast) gameTimeService.SetPaused();
             else gameTimeService.SetFast();
         }
@@ -221,7 +288,7 @@ namespace AnimalCafe.UI
         {
             ResolvePauseLabel();
             var blocked=gameTimeService != null && gameTimeService.IsResumeBlocked;
-            RefreshBlockReason(blocked);
+            RefreshBlockReason(blocked && !SetupIncomplete);
             if(normalButton != null) normalButton.interactable=!decorationPauseLocked && !blocked;
             if(fastButton != null) fastButton.interactable=!decorationPauseLocked && !blocked;
             if(pauseButton != null) pauseButton.interactable=!decorationPauseLocked && !blocked;
@@ -230,15 +297,25 @@ namespace AnimalCafe.UI
                 pauseButton.gameObject.SetActive(false);
                 normalButton.gameObject.SetActive(true);
                 fastButton.gameObject.SetActive(true);
-                normalButton.interactable = fastButton.interactable = !decorationPauseLocked && !blocked;
+                // A disabled Unity Button cannot explain why it is blocked. Style it muted,
+                // but keep its click solely for setup feedback; the time service also guards resume.
+                // 灰显但保留点击提示；GameTimeService 同样阻止任何恢复入口。
+                normalButton.interactable = fastButton.interactable = !decorationPauseLocked && (!blocked || SetupIncomplete);
                 var lockFast = decorationPauseLocked && decorationEntrySpeed == GameSpeed.Fast;
                 var lockNormal = decorationPauseLocked && !lockFast;
                 appearance.Tab(normalButton, "clock", !decorationPauseLocked && speed != GameSpeed.Fast,
                     decorationPauseLocked, iconOnly: true,
-                    iconAction: lockNormal ? "lock" : !decorationPauseLocked && speed == GameSpeed.Paused ? "pause" : "resume");
+                    iconAction: lockNormal ? "lock" : mainCafeBusinessControls
+                        ? speed == GameSpeed.Paused ? "resume" : "pause"
+                        : !decorationPauseLocked && speed == GameSpeed.Paused ? "pause" : "resume");
                 appearance.Tab(fastButton, "fast_forward", !decorationPauseLocked && speed == GameSpeed.Fast,
                     decorationPauseLocked, iconOnly: true, iconAction: lockFast ? "lock" : "resume");
                 RefreshP8RLayout();
+                if (SetupIncomplete && !decorationPauseLocked)
+                {
+                    PaintSetupBlockedButton(normalButton, speed == GameSpeed.Paused ? "resume" : "pause");
+                    PaintSetupBlockedButton(fastButton, "resume");
+                }
                 SetSelected(pauseSelectedVisual, false);
                 SetSelected(normalSelectedVisual, false);
                 SetSelected(fastSelectedVisual, false);
@@ -265,6 +342,17 @@ namespace AnimalCafe.UI
             normalSelectedVisual ??= FindSelectedVisual(normalButton);
             fastSelectedVisual ??= FindSelectedVisual(fastButton);
             ResolvePauseLabel();
+        }
+
+        private void PaintSetupBlockedButton(Button button, string icon)
+        {
+            appearance.Paint(button.image, "tab_unavailable");
+            var disabled = appearance.Sprite("tab_unavailable");
+            button.spriteState = new SpriteState { highlightedSprite = disabled,
+                selectedSprite = disabled, pressedSprite = disabled, disabledSprite = disabled };
+            foreach (var image in button.GetComponentsInChildren<Image>(true))
+                if (image.name == "Icon" || image.name == "SecondTriangle")
+                    appearance.Paint(image, icon + "_muted", false);
         }
 
         private const float ModeHeight = 48f;
@@ -396,6 +484,27 @@ namespace AnimalCafe.UI
                 : null;
         }
 
+        private TMP_FontAsset EnsureResumeBlockFont(string text)
+        {
+            if (resumeBlockSourceFont == null)
+            {
+                Debug.LogError("Time controls feedback requires its configured Chinese source font", this);
+                return null;
+            }
+            if (ownedResumeBlockFont == null)
+            {
+                ownedResumeBlockFont = TMP_FontAsset.CreateFontAsset(resumeBlockSourceFont, 64, 8,
+                    UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA, 512, 512, AtlasPopulationMode.Dynamic, false);
+                ownedResumeBlockFont.name = "Navigation resume reason runtime font";
+                ownedResumeBlockFont.material.name = "Navigation resume reason runtime material";
+                foreach (var atlas in ownedResumeBlockFont.atlasTextures)
+                    atlas.name = "Navigation resume reason runtime atlas";
+            }
+            if (!ownedResumeBlockFont.TryAddCharacters(text, out var missing))
+                Debug.LogError("Time controls feedback font missing glyphs: " + missing, this);
+            return ownedResumeBlockFont;
+        }
+
         private void RefreshBlockReason(bool blocked)
         {
             if(blocked && resumeBlockReasonLabel==null && transform is RectTransform)
@@ -405,14 +514,7 @@ namespace AnimalCafe.UI
                 resumeBlockReasonLabel=message.GetComponent<TextMeshProUGUI>();
                 if(resumeBlockSourceFont!=null)
                 {
-                    ownedResumeBlockFont=TMP_FontAsset.CreateFontAsset(resumeBlockSourceFont,64,8,
-                        UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA,512,512,AtlasPopulationMode.Dynamic,false);
-                    ownedResumeBlockFont.name="Navigation resume reason runtime font";
-                    ownedResumeBlockFont.material.name="Navigation resume reason runtime material";
-                    foreach(var atlas in ownedResumeBlockFont.atlasTextures) atlas.name="Navigation resume reason runtime atlas";
-                    if(!ownedResumeBlockFont.TryAddCharacters(gameTimeService.ResumeBlockReason,out var missing))
-                        Debug.LogError("Navigation resume reason font missing glyphs: "+missing,this);
-                    resumeBlockReasonLabel.font=ownedResumeBlockFont;
+                    resumeBlockReasonLabel.font=EnsureResumeBlockFont(gameTimeService.ResumeBlockReason);
                 }
                 else
                 {
@@ -432,6 +534,8 @@ namespace AnimalCafe.UI
 
         private void OnDestroy()
         {
+            setupResumeBlock?.Dispose();
+            setupResumeBlock = null;
             // Only the private generated font/material/atlas belong to this panel.
             if(ownedResumeBlockFont==null) return;
             var material=ownedResumeBlockFont.material;

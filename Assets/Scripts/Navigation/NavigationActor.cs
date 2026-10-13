@@ -20,6 +20,24 @@ namespace AnimalCafe.Navigation
         public Animator ModelAnimator => modelAnimator;
         public Transform ModelRoot => modelRoot;
         internal NavigationWorld World { get; set; }
+        // P12运行时选择；不写入prefab/Save，注册后不能切换 / runtime opt-in only.
+        public bool SteadyPathMotion { get; private set; }
+        public bool TryEnableSteadyPathMotion()
+        {
+            if (World != null || SteadyPathMotion) return false;
+            SteadyPathMotion = true;
+            return true;
+        }
+        private bool runtimeIdentityInitialized;
+        // 一次性 visit 身份；注册后不可改变 / identity is immutable for a visit.
+        public bool TryInitializeRuntimeId(string id)
+        {
+            if (runtimeIdentityInitialized || World != null || string.IsNullOrWhiteSpace(id) || id != id.Trim())
+                return false;
+            actorId = id;
+            runtimeIdentityInitialized = true;
+            return true;
+        }
         private NavigationWalkPresenter presenter;
         internal void SetMotion(float speed)
         {

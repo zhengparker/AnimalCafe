@@ -113,6 +113,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         [UnityTest] public IEnumerator RapidPauseAndSpeedChanges_UpdateStateImmediatelyWithoutDelayedReversion()
         {
             yield return Load();
+            P8RTwoButtonTimeControlTests.PrepareBusinessLayout(scene);
+            yield return null;
             var hud = Find<TimeControlPanel>();
             var buttons = Buttons(hud);
             var time = Find<GameTimeService>();
@@ -124,13 +126,15 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
             Assert.That(Time.timeScale, Is.Zero);
             Assert.That(buttons.All(button => button.interactable), Is.True);
-            Assert.That(NormalIcon(hud), Is.EqualTo("pause_cocoa"));
+            Assert.That(NormalIcon(hud), Is.EqualTo("resume_cocoa"));
             buttons[0].onClick.Invoke();
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal), "Paused Normal always selects 1x.");
             buttons[0].onClick.Invoke();
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
             buttons[1].onClick.Invoke();
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Fast), "Fast resumes directly at 2x.");
+            buttons[0].onClick.Invoke();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
             buttons[0].onClick.Invoke();
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
             yield return new WaitForSecondsRealtime(.25f);
@@ -144,6 +148,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             screen.Resize(new Vector2(1080, 1920));
             P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(360, 640);
             yield return Load();
+            P8RTwoButtonTimeControlTests.PrepareBusinessLayout(scene);
+            yield return null;
             var hud = Find<TimeControlPanel>();
             var buttons = Buttons(hud);
             var faces = buttons.Select(button => button.image).ToArray();
@@ -153,18 +159,18 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(buttons.All(button => !button.interactable), Is.True);
             Assert.That(buttons.All(button => button.image.sprite.name == "tab_unavailable"), Is.True);
             hud.SetDecorationPauseLock(false);
-            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "pause_cocoa" : "resume_cocoa"));
+            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "resume_cocoa" : "pause_cocoa"));
             time.SetNormal();
             hud.enabled = false;
             time.SetFast(); time.SetPaused();
             hud.enabled = true;
             Assert.That(buttons[1].interactable, Is.True);
-            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "pause_cocoa" : "resume_cocoa"));
+            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "resume_cocoa" : "pause_cocoa"));
             screen.Resize(new Vector2(1600, 720));
             P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(800, 360);
             yield return new WaitForSecondsRealtime(.25f);
             Canvas.ForceUpdateCanvases();
-            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "pause_cocoa" : "resume_cocoa"));
+            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "resume_cocoa" : "pause_cocoa"));
             Assert.That(buttons.Select(button => button.image), Is.EqualTo(faces));
             Assert.That(hud.GetComponentsInChildren<RectTransform>(true)
                 .Count(rect => rect.name == "P8RTimeStrip"), Is.EqualTo(1));
@@ -172,7 +178,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 Assert.That(button.GetComponentsInChildren<Image>(true).Count(image => image.name == "P8RFace"), Is.EqualTo(1));
             buttons[0].onClick.Invoke();
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
-            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "pause_cocoa" : "resume_cocoa"));
+            Assert.That(NormalIcon(hud), Is.EqualTo(time.CurrentSpeed == GameSpeed.Paused ? "resume_cocoa" : "pause_cocoa"));
         }
     }
 }

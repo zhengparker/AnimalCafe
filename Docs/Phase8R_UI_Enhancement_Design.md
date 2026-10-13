@@ -4,13 +4,18 @@
 
 ## 已批准的当前方案
 
-1. 保留两个时间按钮，不显示速度文字。单/双三角按相同可见高度等比显示。现有桃色tab_selected表示当前状态，奶油tab_idle表示非当前，灰米tab_unavailable表示Decor锁定。
-2. 1×点击左按钮暂停，右按钮2×；2×点击左按钮1×，再次点击右按钮暂停；暂停时左按钮显示pause并固定返回1×，右按钮直接2×。Decor前Normal/Paused锁左，Fast锁右；退出由原有pause lease恢复进入前状态。
+1. 保留两个时间按钮，不显示速度文字。图标按相同可见高度等比显示。现有桃色tab_selected表示当前状态，奶油tab_idle表示非当前，灰米tab_unavailable表示Decor锁定或MainCafe尚未完成setup。
+2. **2026-10-10用户批准的MainCafe规则覆盖旧时间按钮规则**：暂停时左按钮显示▶️，点击以1×开始；1×或2×运行时显示⏸️，点击暂停。右按钮仍直接2×，再次点击当前2×暂停。setup incomplete时GameTimeService持有resume block，左/右按钮灰显但可点击；2026-10-11批准移除临时Toast，改为既有“Setup incomplete · Enter Decor to finish”状态条左右轻抖0.3秒（最多±3 logical px）并闪半透明红色（最高alpha 0.18，0.4秒淡出），不会恢复时间；完成有效confirmed setup后解除限制。Decor前Normal/Paused锁左，Fast锁右；退出由原pause lease恢复进入前状态，同时遵守setup/导航限制。独立P12 validation不接入此MainCafe-only规则。
 3. Checklist无底板、标题、折叠按钮，位于Normal/Decoration标识下方左侧，固定三类row。空心圆表示尚未放置，绿色勾表示有效，暖黄色感叹号表示已放置但需调整，无红色。使用用户确认的透明PNG原图切片；列表只读confirmed状态，不吃Mouse/Touch。保留无效原因、额外无效实例数量；三类有效但未连通时保留简短Connect提示。
 4. 桌面上仍有内容时，点击Store立即显示原有奶油modal：Clear the counter first；Move or store these items before storing this counter:；实际阻挡物品清单；单个Got it按钮。无需先确认再失败，不自动收纳附属物，关闭后保持桌子编辑状态。
 5. Furniture分类与原Pickup入口保持原方案；不恢复已撤回的Opening essentials说明区。
 
 ## 实施边界
+
+2026-10-10追加范围：在P12 worktree修改TimeControlPanel、MainCafe接线与生成脚本、既有时间控制tests及说明；复用现有Toast prefab和Noto字体，提示使用unscaled time，2.5秒后消失。场景生成脚本明确移除validation副本中的MainCafe接线。P12 validation场景文件保持原样；本轮未新增美术、Save或员工规则。下文原P8R交付边界和结果保留为历史记录。
+
+2026-10-11追加调整覆盖上述Toast反馈：移除MainCafe Setup Toast与其专用queue，TimeControlPanel调用ValidationMessageView现有状态条。抖动只改变文字、底色与边框子节点，根Rect、readiness文案和相机使用的布局边界不动；使用unscaled time，连点重新播放而不累加位移。结束、进入Decor、setup完成、Clear或组件禁用时恢复原位置并隐藏闪红层；叠层复用已有圆角素材且不接收raycast。不新增Tween dependency、字体或diagnostic脚本。P12 validation场景仍不接入MainCafe setup gate。
+
 
 在codex/p8r-existing-feature-enhancement worktree内修改。复用已确认的game-ui-design/game-ui-ux方案，不更改原有图片、字体、材质、Scene或Prefab，不进入Phase9。用户已授权将本轮改动 commit/push 到现有 P8R remote branch。
 

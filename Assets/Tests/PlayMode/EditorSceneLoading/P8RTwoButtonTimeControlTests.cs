@@ -3,7 +3,10 @@ using System.Collections;
 using System.Linq;
 using System.Reflection;
 using AnimalCafe.Core.Time;
+using AnimalCafe.Content;
+using AnimalCafe.Customers;
 using AnimalCafe.Decoration;
+using AnimalCafe.Layout;
 using AnimalCafe.UI;
 using AnimalCafe.UI.P8R;
 using NUnit.Framework;
@@ -75,14 +78,18 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var time = Find<GameTimeService>();
             var visible = Find<TimeControlPanel>().GetComponentsInChildren<Button>().Where(button => button != Mode).ToArray();
             Assert.That(visible, Is.EquivalentTo(new[] { Normal, Fast }));
-            Assert.That(Icon(Normal), Does.Contain("resume"));
+            PrepareBusinessLayout();
+            yield return null;
+            Click(Normal);
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+            Assert.That(Icon(Normal), Does.Contain("pause"));
             Assert.That(Icon(Fast), Does.Contain("resume"));
             Click(Fast);
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
             Assert.That(Fast.image.sprite.name, Does.Contain("selected"));
             Click(Fast);
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
-            Assert.That(Icon(Normal), Does.Contain("pause"));
+            Assert.That(Icon(Normal), Does.Contain("resume"));
             Click(Normal);
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
             Assert.That(Normal.image.sprite.name, Does.Contain("selected"));
@@ -127,6 +134,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         [UnityTest] public IEnumerator Decoration_LocksEnteringSpeedAndRestoresIt()
         {
             yield return Load();
+            PrepareBusinessLayout();
+            yield return null;
             var time = Find<GameTimeService>();
             foreach (var speed in new[] { GameSpeed.Normal, GameSpeed.Fast, GameSpeed.Paused })
             {
@@ -151,16 +160,204 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         [UnityTest] public IEnumerator ReenabledPausedHud_FirstButtonAlwaysSelectsNormal()
         {
             yield return Load();
+            PrepareBusinessLayout();
+            yield return null;
             var hud = Find<TimeControlPanel>();
             var time = Find<GameTimeService>();
             hud.enabled = false;
             time.SetFast(); time.SetPaused();
             hud.enabled = true;
             Assert.That(Field<TMP_Text>(hud, "modeBadgeLabel").text, Is.EqualTo("Pause"));
-            Assert.That(Icon(Normal), Does.Contain("pause"));
+            Assert.That(Icon(Normal), Does.Contain("resume"));
             Click(Normal);
             Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
             Assert.That(Field<TMP_Text>(hud, "modeBadgeLabel").text, Is.EqualTo("1x"));
+        }
+
+        [UnityTest] public IEnumerator IncompleteSetup_BlocksBothSpeedsAndShowsClickableFeedback()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            screen.Resize(new Vector2(1080, 1920));
+            P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(360, 640);
+            yield return Load();
+            var time = Find<GameTimeService>();
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+            Assert.That(time.IsResumeBlocked, Is.True);
+            Assert.That(Icon(Normal), Does.Contain("resume").And.Contain("muted"));
+            Assert.That(Normal.interactable && Fast.interactable, Is.True,
+                "Muted start controls must still receive clicks to explain incomplete setup");
+            Assert.That(time.TrySetSpeed(GameSpeed.Fast), Is.False);
+            foreach (var button in new[] { Normal, Fast })
+            {
+                Click(button); yield return null;
+                Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+                Assert.That(Find<AnimalCafe.UI.Feedback.ValidationMessageView>().CurrentMessage,
+                    Is.EqualTo("Setup incomplete · Enter Decor to finish"));
+            }
+            Assert.That(scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                .Any(node => node.name == "MainCafe Setup Toast"), Is.False, "Remove the obsolete setup popup");
+            Click(Mode); yield return null;
+            Assert.That(Find<DecorationModeController>().IsOpen, Is.True,
+                "Setup gate must allow entering Decor to repair the layout");
+        }
+
+        private Image SetupFlash(AnimalCafe.UI.Feedback.ValidationMessageView view)
+        {
+            var node = view.transform.Find("ChecklistPanelFill/SetupAttentionFlash");
+            Assert.That(node, Is.Not.Null, "Blocked start should flash the existing readiness card");
+            return node.GetComponent<Image>();
+        }
+
+        [UnityTest] public IEnumerator SetupFeedback_ShakesAndFlashesWhilePausedWithoutMovingLayout()
+        {
+            using var screen = new P8RReferenceLayoutTests.NativeScreenSize();
+            screen.Resize(new Vector2(1080, 1920));
+            P8RMobileMetrics.EditorLogicalViewportOverride = new Vector2(360, 640);
+            yield return Load();
+            var view = Find<AnimalCafe.UI.Feedback.ValidationMessageView>();
+            var root = (RectTransform)view.transform;
+            var summary = view.transform.Find("NormalReadinessSummary").GetComponent<TMP_Text>();
+            var originalRoot = root.anchoredPosition;
+            var originalSize = root.sizeDelta;
+            var originalText = summary.text;
+            var originalTextColor = summary.color;
+            var moved = false;
+            Click(Normal);
+            var flash = SetupFlash(view);
+            Assert.That(flash.raycastTarget, Is.False);
+            Assert.That(flash.color.r, Is.GreaterThan(flash.color.g));
+            Assert.That(flash.color.a, Is.GreaterThan(0).And.LessThanOrEqualTo(.181f));
+            var start = Time.unscaledTime;
+            while (Time.unscaledTime - start < .5f)
+            {
+                yield return null;
+                var offset = summary.rectTransform.anchoredPosition;
+                var logicalOffset = offset.x / P8RMobileMetrics.For(view).Units(1);
+                moved |= Mathf.Abs(logicalOffset) > .05f;
+                Assert.That(Mathf.Abs(logicalOffset), Is.LessThanOrEqualTo(3.01f));
+                Assert.That(offset.y, Is.EqualTo(0).Within(.001f));
+                Assert.That(root.anchoredPosition, Is.EqualTo(originalRoot));
+                Assert.That(root.sizeDelta, Is.EqualTo(originalSize));
+                Assert.That(Find<GameTimeService>().CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+            }
+            Assert.That(moved, Is.True, "The existing status card should visibly shake");
+            Assert.That(flash.enabled, Is.False);
+            Assert.That(summary.rectTransform.anchoredPosition, Is.EqualTo(Vector2.zero));
+            Assert.That(summary.text, Is.EqualTo(originalText));
+            Assert.That(summary.color, Is.EqualTo(originalTextColor));
+            Assert.That(summary.isTextOverflowing, Is.False);
+        }
+
+        [UnityTest] public IEnumerator SetupFeedback_RepeatedClicksRestorePositionAndNeverShowPopupOrGlyphWarnings()
+        {
+            yield return Load();
+            var view = Find<AnimalCafe.UI.Feedback.ValidationMessageView>();
+            var warnings = new System.Collections.Generic.List<string>();
+            Application.LogCallback capture = (message, trace, type) =>
+            {
+                if (type == LogType.Warning && message.Contains("Unicode value")) warnings.Add(message);
+            };
+            Application.logMessageReceived += capture;
+            try
+            {
+                for (var i = 0; i < 6; i++)
+                {
+                    Click(i % 2 == 0 ? Normal : Fast);
+                    yield return new WaitForSecondsRealtime(.04f);
+                }
+                Assert.That(SetupFlash(view).enabled, Is.True);
+                yield return new WaitForSecondsRealtime(.5f);
+                foreach (var name in new[] { "NormalReadinessSummary", "ChecklistPanelFill", "ChecklistPanelBorder" })
+                    Assert.That(((RectTransform)view.transform.Find(name)).anchoredPosition, Is.EqualTo(Vector2.zero), name);
+                Assert.That(SetupFlash(view).enabled, Is.False);
+                Assert.That(warnings, Is.Empty);
+                Assert.That(view.CurrentMessage, Is.EqualTo("Setup incomplete · Enter Decor to finish"));
+                Assert.That(scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                    .Any(node => node.name == "MainCafe Setup Toast"), Is.False);
+            }
+            finally { Application.logMessageReceived -= capture; }
+        }
+
+        [UnityTest] public IEnumerator SetupFeedback_EnteringDecorDisablingAndCompletingSetupCancelEffect()
+        {
+            yield return Load();
+            var view = Find<AnimalCafe.UI.Feedback.ValidationMessageView>();
+            Click(Normal);
+            yield return new WaitForSecondsRealtime(.05f);
+            var flash = SetupFlash(view);
+            Click(Mode); yield return null;
+            Assert.That(flash.enabled, Is.False, "Decor checklist must not keep flashing");
+            Assert.That(view.transform.Find("ChecklistRow0").gameObject.activeSelf, Is.True);
+            Click(Mode); yield return null;
+            Click(Fast); yield return new WaitForSecondsRealtime(.05f);
+            view.enabled = false;
+            Assert.That(flash.enabled, Is.False);
+            Assert.That(((RectTransform)view.transform.Find("NormalReadinessSummary")).anchoredPosition, Is.EqualTo(Vector2.zero));
+            view.enabled = true;
+            Click(Normal); yield return null;
+            PrepareBusinessLayout(); yield return null; yield return null;
+            Assert.That(flash.enabled, Is.False, "Completing setup cancels feedback immediately");
+            Assert.That(view.IsVisible, Is.False);
+            Assert.That(Find<GameTimeService>().CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+        }
+
+        [UnityTest] public IEnumerator ConfirmedSetup_UnlocksStartAndRemovingRequiredEquipmentPausesAgain()
+        {
+            yield return Load();
+            var time = Find<GameTimeService>();
+            var runtime = Find<CafeLayoutRuntime>();
+            PrepareBusinessLayout();
+            yield return null; yield return null;
+            Assert.That(runtime.CurrentReadiness.CanOpenForBusiness, Is.True);
+            Assert.That(time.IsResumeBlocked, Is.False);
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+            Click(Normal);
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+            Assert.That(Icon(Normal), Does.Contain("pause").And.Not.Contain("muted"));
+            Click(Normal);
+            Assert.That(Icon(Normal), Does.Contain("resume"));
+            Click(Fast);
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Fast));
+            Assert.That(Icon(Normal), Does.Contain("pause"));
+            Click(Normal);
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused),
+                "The pause icon must pause even when running at 2x");
+            Click(Normal);
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
+            Assert.That(runtime.FunctionalSurfaceLayout.RemoveMounted("13000000000000000000000000000005").Succeeded, Is.True);
+            runtime.RecalculateReadiness();
+            yield return null;
+            Assert.That(time.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
+            Assert.That(time.TrySetSpeed(GameSpeed.Normal), Is.False);
+        }
+
+        private void PrepareBusinessLayout() => PrepareBusinessLayout(scene);
+
+        internal static void PrepareBusinessLayout(Scene scene)
+        {
+            // These fixtures isolate time/input; P12 flow has its own real-scene tests.
+            // 补齐设置前停止随机顾客流程，避免它改变本用例的导航/暂停所有权。
+            foreach (var flow in scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CustomerFlowController>(true)))
+                flow.enabled = false;
+            var runtime = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CafeLayoutRuntime>(true)).Single();
+            var decor = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<DecorationModeController>(true)).Single();
+            var catalog = Field<FurnitureContentCatalog>(decor, "contentCatalog");
+            var support = runtime.Layout.FurnitureInstances.Single();
+            var slot = catalog.BuildSurfaceSlotCatalog(runtime.Layout.GridSettings)
+                .GetForSupport(support.DefinitionId).First().SlotId;
+            Assert.That(runtime.Layout.PlaceFurniture(FurnitureInstance.Restore("13000000000000000000000000000002",
+                support.DefinitionId, new GridPosition(4, 3), FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            Assert.That(runtime.Layout.PlaceFurniture(FurnitureInstance.Restore("13000000000000000000000000000003",
+                support.DefinitionId, new GridPosition(6, 3), FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            Assert.That(runtime.FunctionalSurfaceLayout.PlaceMounted(new SurfaceMountedInstance("13000000000000000000000000000004",
+                "equipment.cash-register.01", new SurfaceSlotAddress(support.InstanceId, slot), FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            Assert.That(runtime.FunctionalSurfaceLayout.PlaceMounted(new SurfaceMountedInstance("13000000000000000000000000000005",
+                "equipment.coffee-machine.01", new SurfaceSlotAddress("13000000000000000000000000000002", slot), FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            Assert.That(runtime.FunctionalSurfaceLayout.PlacePickUp(new PickUpPointInstance("13000000000000000000000000000006",
+                new SurfaceSlotAddress("13000000000000000000000000000003", slot))).Succeeded, Is.True);
+            decor.RefreshConfirmedNavigationPresentation();
+            Assert.That(runtime.CurrentReadiness.CanOpenForBusiness, Is.True,
+                "Speed-control fixtures require real completed business setup.");
         }
 
         [UnityTest] public IEnumerator ModeFaces_StayEqualHeightAndVisuallyAlignedAcrossMetrics()

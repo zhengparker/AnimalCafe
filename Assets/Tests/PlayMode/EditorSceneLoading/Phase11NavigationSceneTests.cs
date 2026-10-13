@@ -325,16 +325,21 @@ namespace AnimalCafe.Tests.PlayMode.Phase11Integration
             Assert.That(bridge.ResumeAfterRepair(),Is.True);
             Assert.That(time.CurrentSpeed,Is.EqualTo(GameSpeed.Paused));
         }
-        [UnityTest] public IEnumerator P022_MainCafePassiveAndZeroActorsKeepsLegacyFast()
+        [UnityTest] public IEnumerator P022_MainCafePassiveAndZeroActorsRespectSetupGate()
         {
             EditorSceneManager.LoadSceneInPlayMode("Assets/Scenes/MainCafe.unity",new LoadSceneParameters(LoadSceneMode.Single));
             yield return null; yield return null;
+            var main=SceneManager.GetActiveScene();
+            ownedInputAssets=EditorSceneLoading.Phase8SceneInputTestCleanup.CaptureAssets(main);
             var bridge=Object.FindFirstObjectByType<NavigationDecorationBridge>();
             Assert.That(bridge,Is.Not.Null); Assert.That(bridge.EnforceBusinessReadiness,Is.False);
             Assert.That(bridge.Adapter.EnforceBusinessReadiness,Is.False); Assert.That(bridge.Adapter.World.RegisteredActors.Count,Is.Zero);
             var time=Object.FindFirstObjectByType<GameTimeService>(); var decor=Object.FindFirstObjectByType<DecorationModeController>();
-            time.SetFast(); decor.EnterDecorationMode(); decor.ExitDecorationMode();
-            Assert.That(time.CurrentSpeed,Is.EqualTo(GameSpeed.Fast)); Assert.That(time.IsResumeBlocked,Is.False);
+            // Passive navigation does not bypass MainCafe's newer setup contract.
+            // 空店无导航角色，仍必须遵守 MainCafe 的设置完成限制。
+            Assert.That(time.TrySetSpeed(GameSpeed.Fast),Is.False);
+            decor.EnterDecorationMode(); decor.ExitDecorationMode();
+            Assert.That(time.CurrentSpeed,Is.EqualTo(GameSpeed.Paused)); Assert.That(time.IsResumeBlocked,Is.True);
         }
         [UnityTest] public IEnumerator I013_InvalidStartupRetainsSurvivingWorldGate()
         {

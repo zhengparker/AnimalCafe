@@ -2306,6 +2306,37 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 754475512}
   m_CullTransparentMesh: 1
+--- !u!1 &775416447
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 775416448}
+  m_Layer: 0
+  m_Name: Entrance Exit
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &775416448
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 775416447}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.5, y: 0, z: -3.35}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1345984191}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &776601847
 GameObject:
   m_ObjectHideFlags: 0
@@ -4069,6 +4100,65 @@ MonoBehaviour:
   rows: 2
   slotSize: 1
   gizmoDepthOffset: -0.055
+--- !u!1 &1345984189
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1345984191}
+  - component: {fileID: 1345984190}
+  m_Layer: 0
+  m_Name: Phase12 Customer Flow
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1345984190
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1345984189}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7e38a60ccf8f37e48b20b02b90870b15, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Customers.CustomerFlowController
+  world: {fileID: 1590706618}
+  adapter: {fileID: 1590706617}
+  time: {fileID: 1368244272}
+  prefabs:
+  - {fileID: 5045778350392011819, guid: 9add48371c2e122478112fa9cbcfdcfb, type: 3}
+  - {fileID: 8474801555108097642, guid: 3d6eaa0b6a1beed45bf6541a26bad7cb, type: 3}
+  spawn: {fileID: 1675317877}
+  exit: {fileID: 775416448}
+  validationHead: {fileID: 0}
+  gridRoot: {fileID: 2099846907}
+  runtime: {fileID: 1437096831}
+  decoration: {fileID: 1437096830}
+  autoSpawn: 1
+--- !u!4 &1345984191
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1345984189}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1675317877}
+  - {fileID: 775416448}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1368244271
 GameObject:
   m_ObjectHideFlags: 0
@@ -5563,6 +5653,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1675317876
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1675317877}
+  m_Layer: 0
+  m_Name: Entrance Spawn
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1675317877
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1675317876}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.5, y: 0, z: -3.35}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1345984191}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1679497553
 GameObject:
   m_ObjectHideFlags: 0
@@ -6735,6 +6856,9 @@ MonoBehaviour:
   normalSelectedVisual: {fileID: 874995112}
   fastSelectedVisual: {fileID: 936462196}
   pauseLabel: {fileID: 688567886}
+  mainCafeBusinessControls: 1
+  businessLayoutRuntime: {fileID: 1437096831}
+  setupReadinessView: {fileID: 1679497557}
 --- !u!224 &2113516755
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6774,3 +6898,4 @@ SceneRoots:
   - {fileID: 479589003}
   - {fileID: 495853947}
   - {fileID: 1590706619}
+  - {fileID: 1345984191}

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using AnimalCafe.Content;
+using AnimalCafe.Core.Time;
 using AnimalCafe.Decoration;
 using AnimalCafe.Decoration.Input;
 using AnimalCafe.Interaction;
@@ -210,6 +211,7 @@ namespace AnimalCafe.Tests.PlayMode
         public IEnumerator MainCafeRealTouch_HudEnterExitOwnsPauseGridCatalogueAndRestoresCleanly()
         {
             yield return LoadMainCafe();
+            yield return PrepareReadyMainCafeForResume();
             var context = CaptureMainCafe();
             var touch = AddTouchscreen();
             try
@@ -957,6 +959,7 @@ namespace AnimalCafe.Tests.PlayMode
         public IEnumerator MainCafeRealTouch_TwoPointerEndedCanceledOrdersAndControllerDisableLeaveNoStaleOwner()
         {
             yield return LoadMainCafe();
+            yield return PrepareReadyMainCafeForResume();
             var context = CaptureMainCafe();
             var touch = AddTouchscreen();
             try
@@ -1886,6 +1889,7 @@ namespace AnimalCafe.Tests.PlayMode
         private IEnumerator ExerciseMainCafeRoute(Touchscreen touch, int id)
         {
             yield return LoadMainCafe();
+            yield return PrepareReadyMainCafeForResume();
             var context = CaptureMainCafe();
             try
             {
@@ -1937,6 +1941,16 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(ReadPrivate<DecorationCameraDriver>(controller, "cameraDriver").IsEdgeAutoPanning, Is.False);
                 AssertPointerBoundaryClean(ReadPrivate<UiPointerBoundary>(controller, "pointerBoundary"));
             }
+        }
+
+        private IEnumerator PrepareReadyMainCafeForResume()
+        {
+            // Only resume-contract cases complete setup; placement cases keep the original seed.
+            // 仅恢复营业速度的用例补齐设置；放置用例仍保留原始单柜台布局。
+            var scene = SceneManager.GetActiveScene();
+            EditorSceneLoading.P8RTwoButtonTimeControlTests.PrepareBusinessLayout(scene);
+            yield return null;
+            Assert.That(FindAll<GameTimeService>(scene).Single().TrySetSpeed(GameSpeed.Normal), Is.True);
         }
 
         private IEnumerator LoadMainCafe()

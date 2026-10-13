@@ -168,6 +168,7 @@ namespace AnimalCafe.Decoration
         private bool phase7CatalogueBound;
         private bool hasPublishedReadinessFeedback;
         private bool functionalSurfaceStoreConfirmationPending;
+        private bool hasConfirmedLayoutChanges;
         private IReadOnlyList<DecorationCategoryModel> phase7CatalogueCategories;
         private RectTransform nonSurfaceActionHost;
         private CashRegisterSideIndicatorView cashRegisterSideIndicators;
@@ -182,6 +183,9 @@ namespace AnimalCafe.Decoration
         private DecorationCatalogueView subscribedCataloguePresentation;
 
         public bool IsOpen => isOpen;
+        // Only normal Done after committed edits advances this marker; shutdown keeps NPCs.
+        // 仅正常完成已确认修改递增；顾客与员工各自决定如何响应。
+        public long CompletedLayoutChangeVersion { get; private set; }
         public DecorationModeKind ActiveMode => activeMode;
         public SurfaceEditScope FloorRange => floorRange;
         public GridPosition? SelectedFloorTarget => selectedFloorTarget;
@@ -907,6 +911,7 @@ namespace AnimalCafe.Decoration
                             .Select(item => item.InstanceId).Single(id => !beforeIds.Contains(id));
                     }
                     SynchronizeWallMountedRepresentation(instanceId);
+                    MarkConfirmedLayoutChange();
                     if (navigationBridge != null) navigationBridge.ConfirmedLayoutChanged();
                 }
                 if (result.Succeeded) ClearEditingFeedbackIfPreviewEnded();
@@ -923,6 +928,7 @@ namespace AnimalCafe.Decoration
                 var result = surfaceSession.Confirm();
                 if (result.Succeeded && phase7RoomSurfaceLayout != null)
                 {
+                    MarkConfirmedLayoutChange();
                     wallOcclusionFadeView?.RestoreAllFades();
                     wallSurfaceRegistry?.RenderConfirmed(phase7RoomSurfaceLayout);
                     floorSurfaceGridView?.RenderConfirmed(phase7RoomSurfaceLayout);
@@ -1591,6 +1597,7 @@ namespace AnimalCafe.Decoration
                 gridView.ShowGrid(layoutRuntime.Layout.GridSettings);
 
                 isOpen = true;
+                hasConfirmedLayoutChanges = false;
                 RebuildConfirmedFunctionalSurfaceViews();
                 SyncHudLabel();
             }
@@ -2855,6 +2862,7 @@ namespace AnimalCafe.Decoration
                 wallMountedDisplayPosition = default;
                 wallOcclusionFadeView?.RestoreAllFades();
                 wallMountedSceneRegistry?.Remove(instanceId, destroyRepresentation: true);
+                MarkConfirmedLayoutChange();
                 if (navigationBridge != null) navigationBridge.ConfirmedLayoutChanged();
                 ClearEditingFeedbackIfPreviewEnded();
                 if (string.Equals(
@@ -4017,6 +4025,7 @@ namespace AnimalCafe.Decoration
         }
         private void PublishConfirmedLayoutMutation()
         {
+            MarkConfirmedLayoutChange();
             RebuildConfirmedFunctionalSurfaceViews();
             if (layoutRuntime?.CurrentReadiness != null
                 && layoutRuntime.FunctionalSurfaceLayout != null)
@@ -4027,6 +4036,9 @@ namespace AnimalCafe.Decoration
             }
             if (navigationBridge != null) navigationBridge.ConfirmedLayoutChanged();
         }
+
+        private void MarkConfirmedLayoutChange()
+        { if (isOpen) hasConfirmedLayoutChanges = true; }
 
         private void RefreshInteractionAnchorDebugView()
         {
@@ -4909,6 +4921,7 @@ namespace AnimalCafe.Decoration
             }
 
             isCleaningUp = true;
+            var completedEditedSession = validateNavigation && isOpen && hasConfirmedLayoutChanges;
             try
             {
                 isOpen = false;
@@ -4997,6 +5010,8 @@ namespace AnimalCafe.Decoration
                 touchSource = null;
                 mouseSource = null;
                 cleanupRequired = false;
+                if (completedEditedSession) CompletedLayoutChangeVersion++;
+                hasConfirmedLayoutChanges = false;
             }
             finally
             {

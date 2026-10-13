@@ -369,6 +369,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var profile = ChromeProfile.All[0];
             screen.Resize(profile.Pixels);
             yield return Load(profile);
+            P8RTwoButtonTimeControlTests.PrepareBusinessLayout(ownedScene);
+            yield return null;
             var hud = Component<TimeControlPanel>();
             var buttons = TimeButtons(hud);
             var pause = buttons[0]; var speed = buttons[1];
@@ -384,7 +386,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(speed.image.sprite.name, Is.EqualTo("tab_selected"));
             speed.onClick.Invoke();
             Assert.That(time.CurrentSpeed, Is.EqualTo(AnimalCafe.Core.Time.GameSpeed.Paused));
-            Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("pause_cocoa"));
+            Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("resume_cocoa"));
             Assert.That(speed.interactable, Is.True);
             Assert.That(buttons[1].transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("resume_cocoa"));
             hud.SetDecorationPauseLock(true);
@@ -408,6 +410,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var portrait = ChromeProfile.All[0]; var landscape = ChromeProfile.All[2];
             screen.Resize(portrait.Pixels);
             yield return Load(portrait);
+            P8RTwoButtonTimeControlTests.PrepareBusinessLayout(ownedScene);
+            yield return null;
             var hud = Component<TimeControlPanel>();
             var buttons = TimeButtons(hud);
             buttons[1].onClick.Invoke();
