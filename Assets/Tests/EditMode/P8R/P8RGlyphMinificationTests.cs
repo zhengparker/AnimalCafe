@@ -38,6 +38,9 @@ namespace AnimalCafe.Tests.EditMode.P8R
                     // 先核对导入的原始层，区分来源像素、mip 和 GPU 采样差异。
                     var basePixels = GpuAlpha(imported, legacy.width);
                     var sourcePixels = pixels.Select(p => p.a / 255.0).ToArray();
+                    if (key == "add_cocoa")
+                        WritePixelProbe(path, size, sourcePixels, basePixels,
+                            GpuAlpha(legacy, legacy.width), actual, old, expected);
                     TestContext.WriteLine($"{key}: source={legacy.width}x{legacy.height}, imported={imported.width}x{imported.height}, "
                         + $"format={imported.graphicsFormat}, mips={imported.mipmapCount}, "
                         + $"baseError={Error(basePixels, sourcePixels):F6}, mipError={Error(actual, expected):F6}, "
@@ -72,6 +75,23 @@ namespace AnimalCafe.Tests.EditMode.P8R
 
         private static double Error(double[] actual, double[] expected) =>
             actual.Select((a, i) => Math.Abs(a - expected[i])).Average();
+
+        private static void WritePixelProbe(string path, int size, double[] source, double[] importedBase,
+            double[] legacyBase, double[] importedSmall, double[] legacySmall, double[] expected)
+        {
+            // One glyph only: binary alpha planes distinguish decoding from GPU copy/resampling.
+            // 只保存一个图标的 alpha 数据，定位解码、GPU copy 与缩图的差异。
+            var root = $"artifacts/unity/glyph-probe-{size}";
+            Directory.CreateDirectory(root);
+            File.Copy(path, root + "/source.png", true);
+            foreach (var plane in new[] { ("source", source), ("imported-base", importedBase),
+                ("legacy-base", legacyBase), ("imported-small", importedSmall),
+                ("legacy-small", legacySmall), ("expected-small", expected) })
+            {
+                using var writer = new BinaryWriter(File.Create(root + "/" + plane.Item1 + ".f32"));
+                foreach (var alpha in plane.Item2) writer.Write((float)alpha);
+            }
+        }
 
         private static double[] GpuAlpha(Texture texture, int size)
         {
