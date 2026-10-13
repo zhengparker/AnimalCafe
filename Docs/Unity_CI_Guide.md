@@ -20,7 +20,7 @@
 ## 当前证据与限制 / Evidence and limits
 
 - 2026-10-13 Owner 已授权并运行两轮完整 Linux CI。[38392233116](https://github.com/zhengparker/AnimalCafe/actions/runs/38392233116) 的 EditMode 为 2487 PASS / 2 FAIL，PlayMode 为 1220 PASS / 1 FAIL / 5 SKIP；P12 专项 83 PASS。剩余两个 glyph 缩图误差和一个动画等待时钟问题，不能宣称完整 CI 通过。
-- 本轮动画等待按受控动画帧预算验证，连续 10 个慢帧已取得本地 RED/GREEN；图标增加来源尺寸、格式、base/mip 像素误差诊断，等待 Linux 证据。现有精度阈值与 UI owner 断言保持原样；默认完整回归与单次激活保护保持原样。
+- 本轮剩余 3 项已在 [Linux 定向验证 38410016002](https://github.com/zhengparker/AnimalCafe/actions/runs/38410016002) 全部通过。动画等待共用受控帧预算；glyph readback 控制并恢复纹理 anisotropy，排除额外过滤，并新增原像素一致性断言。完整回归仍需独立结果，见 `Unity_CI_Remaining_Repair_2026-10-13.md`。默认完整回归与单次激活保护保持原样。
 
 - 2026-10-10 已通过 Docker Hub 只读查询确认 `unityci/editor:ubuntu-6000.5.5f1-base-3` 存在。
 - 已通过 GitHub API 确认 checkout/cache/upload-artifact/GameCI 的固定 v4 commit 存在。
