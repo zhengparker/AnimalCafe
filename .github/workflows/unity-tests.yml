@@ -10,6 +10,14 @@ on:
         required: true
         type: boolean
         default: false
+      test_scope:
+        description: 'full = complete regression; remaining-ci-failures = focused diagnosis only'
+        required: true
+        type: choice
+        default: full
+        options:
+          - full
+          - remaining-ci-failures
 
 permissions:
   contents: read
@@ -83,6 +91,7 @@ jobs:
           projectPath: .
           unityVersion: 6000.5.5f1
           testMode: all
+          customParameters: ${{ inputs.test_scope == 'remaining-ci-failures' && '-testFilter P8RGlyphMinificationTests;GeneratedProductionViews_ReducedMotionPauseAndRapidReverseFinishOneStableRaycastOwner' || '' }}
           artifactsPath: artifacts/unity
           githubToken: ''
 
@@ -137,7 +146,12 @@ jobs:
       - name: Require both suites to pass
         env:
           TEST_RESULT: ${{ needs.tests.result }}
+          TEST_SCOPE: ${{ inputs.test_scope }}
         run: |
+          if [[ "$TEST_SCOPE" == 'remaining-ci-failures' ]]; then
+            echo '::error::Focused diagnosis does not satisfy the complete Unity CI requirement.'
+            exit 1
+          fi
           if [[ "$TEST_RESULT" != 'success' ]]; then
             echo '::error::Both EditMode and PlayMode must pass; failed, skipped, or cancelled runs do not pass this check.'
             exit 1

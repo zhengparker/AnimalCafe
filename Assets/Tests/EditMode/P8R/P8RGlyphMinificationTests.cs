@@ -34,6 +34,14 @@ namespace AnimalCafe.Tests.EditMode.P8R
                     var expected = AreaCoverage(pixels, legacy.width, size);
                     var actual = GpuAlpha(imported, size);
                     var old = GpuAlpha(legacy, size);
+                    // Compare the imported base level before blaming mip generation or GPU sampling.
+                    // 先核对导入的原始层，区分来源像素、mip 和 GPU 采样差异。
+                    var basePixels = GpuAlpha(imported, legacy.width);
+                    var sourcePixels = pixels.Select(p => p.a / 255.0).ToArray();
+                    TestContext.WriteLine($"{key}: source={legacy.width}x{legacy.height}, imported={imported.width}x{imported.height}, "
+                        + $"format={imported.graphicsFormat}, mips={imported.mipmapCount}, "
+                        + $"baseError={Error(basePixels, sourcePixels):F6}, mipError={Error(actual, expected):F6}, "
+                        + $"legacyError={Error(old, expected):F6}, limit={QualitySettings.globalTextureMipmapLimit}");
                     currentError += Error(actual, expected);
                     legacyError += Error(old, expected);
                     Assert.That(actual.Sum() / expected.Sum(), Is.InRange(.97, 1.03),

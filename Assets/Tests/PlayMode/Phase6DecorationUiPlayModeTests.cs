@@ -25,6 +25,8 @@ namespace AnimalCafe.Tests.PlayMode
 {
     public sealed class Phase6DecorationUiPlayModeTests
     {
+        private const float TransitionFrameStep = 1f / 60f;
+        private const int MaximumTransitionWaitFrames = 120;
         [UnityTest]
         public IEnumerator GameTimeStatusIndicator_PauseStopsAndFastRotatesFasterThanNormal()
         {
@@ -1632,7 +1634,14 @@ namespace AnimalCafe.Tests.PlayMode
                 harness.Begin();
                 // Real views use deterministic UI time, including a deliberately stalled frame.
                 // 真实 views 使用确定性 UI 时间，并保留故意注入的一帧停顿。
-                harness.Configure(new UiTransitionRunner(() => false, () => 1f / 60f));
+                var slowFramesRemaining = 10;
+                harness.Configure(new UiTransitionRunner(() => false, () =>
+                {
+                    // Reproduce the CI mismatch: animation time advances, rendering time stalls.
+                    // 重现 CI：动画只推进一帧，真实渲染时间却停顿。
+                    if (slowFramesRemaining-- > 0) System.Threading.Thread.Sleep(250);
+                    return TransitionFrameStep;
+                }));
                 var selections = 0;
                 var cancels = 0;
                 var dismisses = 0;
@@ -2535,9 +2544,10 @@ namespace AnimalCafe.Tests.PlayMode
             float maximumExclusive,
             string label)
         {
-            var deadline = Time.realtimeSinceStartup + 2f;
-            while (Time.realtimeSinceStartup < deadline
-                && !(group.alpha > minimumExclusive && group.alpha < maximumExclusive))
+            // Use the animation's clock budget, not the renderer's wall-clock speed.
+            // 与动画共用帧预算；保留两秒模拟时间的超时和原始断言。
+            for (var frame = 0; frame < MaximumTransitionWaitFrames
+                && !(group.alpha > minimumExclusive && group.alpha < maximumExclusive); frame++)
             {
                 yield return null;
             }
@@ -2546,9 +2556,8 @@ namespace AnimalCafe.Tests.PlayMode
 
         private static IEnumerator WaitForAlpha(CanvasGroup group, float expected, string label)
         {
-            var deadline = Time.realtimeSinceStartup + 2f;
-            while (Time.realtimeSinceStartup < deadline
-                && Mathf.Abs(group.alpha - expected) > 0.001f)
+            for (var frame = 0; frame < MaximumTransitionWaitFrames
+                && Mathf.Abs(group.alpha - expected) > 0.001f; frame++)
             {
                 yield return null;
             }
@@ -2558,11 +2567,11 @@ namespace AnimalCafe.Tests.PlayMode
         private static IEnumerator AssertAlphaRemainsStable(
             CanvasGroup group,
             float expected,
-            float realtimeDuration,
+            float transitionDuration,
             string label)
         {
-            var deadline = Time.realtimeSinceStartup + realtimeDuration;
-            while (Time.realtimeSinceStartup < deadline)
+            var frames = Mathf.CeilToInt(transitionDuration / TransitionFrameStep);
+            for (var frame = 0; frame < frames; frame++)
             {
                 Assert.That(group.alpha, Is.EqualTo(expected).Within(0.001f), label);
                 yield return null;
