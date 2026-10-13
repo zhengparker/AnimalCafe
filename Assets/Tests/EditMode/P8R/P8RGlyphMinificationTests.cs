@@ -72,9 +72,17 @@ namespace AnimalCafe.Tests.EditMode.P8R
             var target = RenderTexture.GetTemporary(size, size, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
             var before = RenderTexture.active;
             var readback = new Texture2D(size, size, TextureFormat.RGBA32, false, true);
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>("Assets/Tests/EditMode/P8R/GlyphMipReadback.shader");
+            Assert.That(shader, Is.Not.Null);
+            var sampling = new Material(shader);
             try
             {
-                Graphics.Blit(texture, target);
+                // Both paths still render on the GPU; only imported glyphs have filtered mip levels.
+                // 两条路径都经过真实 GPU；仅导入图标具备预过滤 mip，旧位图仍采样 level 0。
+                var mip = Mathf.Min(((Texture2D)texture).mipmapCount - 1,
+                    Mathf.Log(texture.width / (float)size, 2));
+                sampling.SetFloat("_MipLevel", mip);
+                Graphics.Blit(texture, target, sampling);
                 RenderTexture.active = target;
                 readback.ReadPixels(new Rect(0, 0, size, size), 0, 0);
                 readback.Apply(false, false);
@@ -84,6 +92,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
             {
                 RenderTexture.active = before;
                 Object.DestroyImmediate(readback);
+                Object.DestroyImmediate(sampling);
                 RenderTexture.ReleaseTemporary(target);
             }
         }

@@ -1630,7 +1630,9 @@ namespace AnimalCafe.Tests.PlayMode
             {
                 Time.timeScale = 0f;
                 harness.Begin();
-                harness.Configure(new UiTransitionRunner(() => false));
+                // Real views use deterministic UI time, including a deliberately stalled frame.
+                // 真实 views 使用确定性 UI 时间，并保留故意注入的一帧停顿。
+                harness.Configure(new UiTransitionRunner(() => false, () => 1f / 60f));
                 var selections = 0;
                 var cancels = 0;
                 var dismisses = 0;
@@ -1662,6 +1664,10 @@ namespace AnimalCafe.Tests.PlayMode
                 Assert.That(modalGroup.alpha, Is.Zero);
                 AssertUsableViewOwner(viewGroups, null, "initial hidden views");
 
+                // Reproduce a slow CI render frame before starting the short transition.
+                // 重现软件渲染的一帧停顿；动画中间状态必须按受控帧步长验证。
+                System.Threading.Thread.Sleep(250);
+                yield return null;
                 harness.Catalogue.ShowCatalogue();
                 yield return WaitForAlphaBetween(catalogueGroup, 0.25f, 0.75f,
                     "Catalogue must be interrupted inside its 0.16s transition window.");

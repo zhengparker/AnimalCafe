@@ -10,6 +10,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 using AnimalCafe.UI.Decoration;
 using AnimalCafe.Camera;
 using AnimalCafe.Core.Time;
@@ -24,6 +25,71 @@ namespace AnimalCafe.Tests.PlayMode
 {
     public sealed class Phase7WallMountedTouchPlayModeTests
     {
+        private StandaloneUiRaycastScope callerUi;
+        [SetUp] public void IsolateCallerUi() => callerUi = new StandaloneUiRaycastScope();
+        [TearDown] public void RestoreCallerUi() => callerUi?.Dispose();
+
+        [UnityTest]
+        public System.Collections.IEnumerator CallerUi_IsIsolatedButNewFixtureUiStillOwnsPointer()
+        {
+            var root = new GameObject("IsolatedClassifier");
+            var cameraRoot = new GameObject("IsolatedClassifierCamera");
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var events = EventSystem.current == null ? new GameObject("IsolatedClassifierEvents", typeof(EventSystem)) : null;
+            var callerUi = CreateOverlay("CallerUi");
+            GameObject fixtureUi = null;
+            try
+            {
+                var controller = root.AddComponent<DecorationModeController>();
+                controller.enabled = false;
+                var camera = cameraRoot.AddComponent<UnityEngine.Camera>();
+                camera.transform.SetPositionAndRotation(new Vector3(.5f, 10f, .5f), Quaternion.Euler(90f, 0f, 0f));
+                floor.transform.position = new Vector3(.5f, 0f, .5f);
+                floor.transform.localScale = new Vector3(8f, .1f, 8f);
+                Set(controller, "targetCamera", camera);
+                Set(controller, "floorCollider", floor.GetComponent<Collider>());
+                Set(controller, "gridRoot", root.transform);
+                Set(controller, "gridSpace", new DecorationGridSpace(new GridSettings(1f),
+                    new LayoutBounds(new GridPosition(0, 0), new GridSize(8, 8))));
+                Assert.That(controller.TryChangeMode(DecorationModeKind.Floor), Is.True);
+                Physics.SyncTransforms();
+                yield return null;
+                Canvas.ForceUpdateCanvases();
+                var point = camera.WorldToScreenPoint(new Vector3(2.5f, 0f, 3.5f));
+                var classifier = (IDecorationTouchHitClassifier)controller;
+                Assert.That(classifier.ClassifyBegan(1, point).Kind, Is.EqualTo(DecorationTouchHitKind.Ui));
+                using (new StandaloneUiRaycastScope())
+                {
+                    Assert.That(classifier.ClassifyBegan(2, point).Kind, Is.EqualTo(DecorationTouchHitKind.FloorGrid),
+                        "An unrelated caller Canvas must not own this fixture's world.");
+                    fixtureUi = CreateOverlay("FixtureUi");
+                    yield return null;
+                    Canvas.ForceUpdateCanvases();
+                    Assert.That(classifier.ClassifyBegan(3, point).Kind, Is.EqualTo(DecorationTouchHitKind.Ui),
+                        "UI created inside the fixture must retain production pointer priority.");
+                }
+                Assert.That(callerUi.GetComponent<GraphicRaycaster>().enabled, Is.True,
+                    "Restore the caller's original raycast state.");
+            }
+            finally
+            {
+                foreach (var item in new[] { fixtureUi, callerUi, events, root, cameraRoot, floor })
+                    if (item != null) UnityEngine.Object.DestroyImmediate(item);
+            }
+        }
+
+        private static GameObject CreateOverlay(string name)
+        {
+            var canvas = new GameObject(name, typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster));
+            canvas.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var image = new GameObject("FullScreenBlocker", typeof(RectTransform), typeof(Image), typeof(Button));
+            image.transform.SetParent(canvas.transform, false);
+            var rect = image.GetComponent<RectTransform>();
+            rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+            rect.offsetMin = rect.offsetMax = Vector2.zero;
+            return canvas;
+        }
+
         [TestCase(DecorationModeKind.Furniture, DecorationTouchHitKind.Furniture, true)]
         [TestCase(DecorationModeKind.Furniture, DecorationTouchHitKind.Scene, true)]
         [TestCase(DecorationModeKind.Furniture, DecorationTouchHitKind.FloorGrid, false)]

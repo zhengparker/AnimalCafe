@@ -163,6 +163,10 @@ namespace AnimalCafe.Tests.PlayMode
             module.AssignDefaultActions();
             yield return null;
             yield return null;
+            EditorSceneLoading.P8RTwoButtonTimeControlTests.PrepareBusinessLayout(SceneManager.GetActiveScene());
+            yield return null;
+            Assert.That(Find<GameTimeService>(SceneManager.GetActiveScene(), "Phase0_Runtime")
+                .TrySetSpeed(GameSpeed.Normal), Is.True, "Begin real UI speed clicks after completing setup.");
         }
 
         private static IEnumerator TapWorld(Mouse mouse, Vector2 position)
@@ -260,8 +264,10 @@ namespace AnimalCafe.Tests.PlayMode
             SceneManager.SetActiveScene(cleanup);
             foreach (var scene in loaded)
             {
+                var assets = EditorSceneLoading.Phase8SceneInputTestCleanup.CaptureAssets(scene);
                 var unload = SceneManager.UnloadSceneAsync(scene);
                 while (unload != null && !unload.isDone) yield return null;
+                EditorSceneLoading.Phase8SceneInputTestCleanup.DisposeReleasedAssets(assets);
             }
         }
 

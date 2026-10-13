@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using AnimalCafe.Core.Time;
 using AnimalCafe.Content;
+using AnimalCafe.Customers;
 using AnimalCafe.Decoration;
 using AnimalCafe.Layout;
 using AnimalCafe.UI;
@@ -334,6 +335,10 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
 
         internal static void PrepareBusinessLayout(Scene scene)
         {
+            // These fixtures isolate time/input; P12 flow has its own real-scene tests.
+            // 补齐设置前停止随机顾客流程，避免它改变本用例的导航/暂停所有权。
+            foreach (var flow in scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CustomerFlowController>(true)))
+                flow.enabled = false;
             var runtime = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CafeLayoutRuntime>(true)).Single();
             var decor = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<DecorationModeController>(true)).Single();
             var catalog = Field<FurnitureContentCatalog>(decor, "contentCatalog");
@@ -351,6 +356,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             Assert.That(runtime.FunctionalSurfaceLayout.PlacePickUp(new PickUpPointInstance("13000000000000000000000000000006",
                 new SurfaceSlotAddress("13000000000000000000000000000003", slot))).Succeeded, Is.True);
             decor.RefreshConfirmedNavigationPresentation();
+            Assert.That(runtime.CurrentReadiness.CanOpenForBusiness, Is.True,
+                "Speed-control fixtures require real completed business setup.");
         }
 
         [UnityTest] public IEnumerator ModeFaces_StayEqualHeightAndVisuallyAlignedAcrossMetrics()

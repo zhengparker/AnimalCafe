@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections;
 using System.Linq;
 using NUnit.Framework;
 using UnityEngine;
@@ -10,6 +11,19 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
 {
     internal static class Phase8SceneInputTestCleanup
     {
+        internal static IEnumerator ReleaseActiveSceneBeforeInputReset()
+        {
+            // Single loading will replace this scene; release its action caches before swapping registries.
+            // Single load 原本就会替换当前 scene；先释放 UI controls，再 reset InputSystem。
+            var scene = SceneManager.GetActiveScene();
+            if (!scene.IsValid() || !scene.isLoaded) yield break;
+            var assets = CaptureAssets(scene);
+            SceneManager.SetActiveScene(SceneManager.CreateScene("BeforeInputResetCleanup"));
+            var unload = SceneManager.UnloadSceneAsync(scene);
+            while (unload != null && !unload.isDone) yield return null;
+            DisposeReleasedAssets(assets);
+        }
+
         internal static InputActionAsset[] CaptureAssets(Scene scene) => scene.GetRootGameObjects()
             .SelectMany(root => root.GetComponentsInChildren<InputSystemUIInputModule>(true))
             .Select(module => module.actionsAsset).Where(asset => asset != null).Distinct().ToArray();

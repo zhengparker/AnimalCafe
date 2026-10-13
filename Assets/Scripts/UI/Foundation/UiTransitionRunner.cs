@@ -11,12 +11,18 @@ namespace AnimalCafe.UI.Foundation
     public sealed class UiTransitionRunner
     {
         private readonly Func<bool> isReducedMotionEnabled;
+        private readonly Func<float> unscaledFrameDelta;
 
-        public UiTransitionRunner(Func<bool> reducedMotionHook)
+        public UiTransitionRunner(Func<bool> reducedMotionHook, Func<float> unscaledFrameDelta = null)
         {
             isReducedMotionEnabled = reducedMotionHook
                 ?? throw new ArgumentNullException(nameof(reducedMotionHook));
+            this.unscaledFrameDelta = unscaledFrameDelta ?? (() => Time.unscaledDeltaTime);
         }
+
+        // The default clock remains real unscaled time; callers may supply a deterministic clock.
+        // 默认保持真实 unscaled 时间；确定性运行可传入自己的帧步长。
+        public float FrameDelta => unscaledFrameDelta();
 
         public float ResolveDuration(float requestedDuration, bool isEssential)
         {
@@ -49,7 +55,7 @@ namespace AnimalCafe.UI.Foundation
             var elapsed = 0f;
             while (elapsed < duration)
             {
-                elapsed += Time.unscaledDeltaTime;
+                elapsed += FrameDelta;
                 group.alpha = Mathf.Lerp(startAlpha, targetAlpha, Mathf.Clamp01(elapsed / duration));
                 yield return null;
             }

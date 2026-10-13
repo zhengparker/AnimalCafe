@@ -25,6 +25,10 @@ namespace AnimalCafe.Tests.PlayMode
 {
     public sealed class Phase8FunctionalSurfaceInteractionPlayModeTests
     {
+        private StandaloneUiRaycastScope callerUi;
+        [SetUp] public void IsolateCallerUi() => callerUi = new StandaloneUiRaycastScope();
+        [TearDown] public void RestoreCallerUi() => callerUi?.Dispose();
+
         private const string SupportDefinitionId = "furniture.counter.long";
         private const string RegisterDefinitionId = "equipment.cash-register";
         private const string CoffeeMachineDefinitionId = "equipment.coffee-machine";

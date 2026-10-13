@@ -1360,6 +1360,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         public IEnumerator Polish_HudControlsStayReadableAcrossSpeedAndDecorationChanges()
         {
             yield return Load();
+            P8RTwoButtonTimeControlTests.PrepareBusinessLayout(ownedScene);
+            yield return null;
             var hud = Find<TimeControlPanel>(); var controller = Find<DecorationModeController>();
             var service = Find<GameTimeService>();
             var pause = Field<Button>(hud, "normalButton"); var speedButton = Field<Button>(hud, "fastButton");
@@ -1369,7 +1371,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 if (speed == GameSpeed.Fast) service.SetFast(); else service.SetNormal();
                 (speed == GameSpeed.Fast ? speedButton : pause).onClick.Invoke(); yield return null;
                 Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Paused));
-                Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("pause_cocoa"));
+                Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name, Is.EqualTo("resume_cocoa"));
                 Assert.That(speedButton.interactable, Is.True);
                 pause.onClick.Invoke(); yield return null;
                 Assert.That(service.CurrentSpeed, Is.EqualTo(GameSpeed.Normal));
@@ -1383,7 +1385,7 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                     Assert.That(speedButton.transform.Find("Icon").GetComponent<Image>().sprite.name,
                         Is.EqualTo(decorating ? "resume_muted" : "resume_cocoa"));
                     Assert.That(pause.transform.Find("Icon").GetComponent<Image>().sprite.name,
-                        Is.EqualTo(decorating ? "lock_muted" : "resume_cocoa"));
+                        Is.EqualTo(decorating ? "lock_muted" : "pause_cocoa"));
                     Assert.That(mode.transform.Find("Label").GetComponent<TMP_Text>().text,
                         Is.EqualTo(decorating ? "Done" : "Decor"));
                     var density = P8RMobileMetrics.For(mode).PixelsPerLogicalUnit;
@@ -1426,6 +1428,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         public IEnumerator TimeOptical_TwoIconsStayReadableAfterEveryStateRefresh()
         {
             yield return Load();
+            P8RTwoButtonTimeControlTests.PrepareBusinessLayout(ownedScene);
+            yield return null;
             var hud = Find<TimeControlPanel>(); var controller = Find<DecorationModeController>();
             var time = Find<GameTimeService>();
             var pause = Field<Button>(hud, "normalButton"); var speedButton = Field<Button>(hud, "fastButton");
@@ -1497,6 +1501,8 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
         public IEnumerator Hud_TwoTimeControlsShareTopLeftRow_AndRestoreExactPreviousSpeed()
         {
             yield return Load(); var hud = Find<TimeControlPanel>();
+            P8RTwoButtonTimeControlTests.PrepareBusinessLayout(ownedScene);
+            yield return null;
             var buttons = new[] { "normalButton", "fastButton" }.Select(n => Field<Button>(hud, n)).ToArray();
             var boxes = buttons.Select(Box).ToArray();
             Assert.That(boxes[0].center.y, Is.EqualTo(boxes[1].center.y).Within(.5f), "Pause and 1x must share a row.");
