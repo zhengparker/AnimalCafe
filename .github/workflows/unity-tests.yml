@@ -1,56 +1,144 @@
 name: Unity tests
 
+# Manual only: account authentication needs explicit owner authorization.
+# 仅手动触发；填写密码不自动授权登录或测试。
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      allow_unity_login:
+        description: 'I authorize Unity login and both test suites for this run / 本次允许 Unity 登录和测试'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
+# One account-authenticating workflow at a time, across all branches.
+# 所有分支共用同一组，避免多个运行同时登录。
 concurrency:
-  group: unity-tests-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: unity-account-authentication
+  cancel-in-progress: false
 
 jobs:
-  test:
-    name: ${{ matrix.test-mode }} tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        test-mode: [editmode, playmode]
+  tests:
+    name: Unity EditMode and PlayMode
+    if: ${{ inputs.allow_unity_login }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out project
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           lfs: true
+          persist-credentials: false
 
-      - name: Cache Unity Library
-        uses: actions/cache@v4
-        with:
-          path: Library
-          key: unity-library-${{ runner.os }}-${{ matrix.test-mode }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-          restore-keys: |
-            unity-library-${{ runner.os }}-${{ matrix.test-mode }}-
-
-      - name: Run Unity tests
-        id: unity-tests
-        uses: game-ci/unity-test-runner@v4
+      - name: Verify Unity version and CI license configuration
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-        with:
-          unityVersion: 6000.5.5f1
-          testMode: ${{ matrix.test-mode }}
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-          checkName: Unity ${{ matrix.test-mode }} tests
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        shell: bash
+        run: |
+          grep -Fxq 'm_EditorVersion: 6000.5.5f1' ProjectSettings/ProjectVersion.txt || {
+            echo '::error::Update the workflow Unity version when changing ProjectVersion.txt.'
+            exit 1
+          }
+          if [[ -z "$UNITY_EMAIL" || -z "$UNITY_PASSWORD" || ( -z "$UNITY_LICENSE" && -z "$UNITY_SERIAL" ) ]]; then
+            echo '::error::Configure UNITY_EMAIL, UNITY_PASSWORD, and UNITY_LICENSE (Personal) or UNITY_SERIAL (Pro) in repository Actions secrets.'
+            exit 1
+          fi
 
-      - name: Upload test results
-        if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+      - name: Cache imported assets
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          name: unity-${{ matrix.test-mode }}-results
-          path: ${{ steps.unity-tests.outputs.artifactsPath }}
+          path: Library
+          key: Unity-Linux-6000.5.5f1-all-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Unity-Linux-6000.5.5f1-all-
+
+      - name: Check out pinned GameCI runner
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: game-ci/unity-test-runner
+          ref: fa6ced25861c16ef56187828c43f76d00df43a23 # v4.3.2
+          path: .ci/gameci-test-runner
+          persist-credentials: false
+
+      - name: Remove automatic activation retries before credentials are used
+        run: python3 .github/scripts/disable-gameci-activation-retries.py .ci/gameci-test-runner
+
+      - name: Run complete Unity test suites after one activation
+        id: tests
+        # Same pinned runner, with its activation loop removed before invocation.
+        # 同一固定版本；all 模式只激活一次，再顺序执行 EditMode / PlayMode。
+        uses: ./.ci/gameci-test-runner
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          projectPath: .
+          unityVersion: 6000.5.5f1
+          testMode: all
+          artifactsPath: artifacts/unity
+          githubToken: ''
+
+      - name: Verify and summarize NUnit results
+        if: always() && steps.tests.outcome == 'success'
+        env:
+          RESULTS_PATH: artifacts/unity
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          reports = []
+          for path in Path(os.environ['RESULTS_PATH']).rglob('*.xml'):
+              root = ET.parse(path).getroot()
+              if root.tag == 'test-run':
+                  reports.append((path, root))
+          required_reports = {'editmode-results.xml', 'playmode-results.xml'}
+          if {path.name for path, _ in reports} != required_reports:
+              raise SystemExit('Both EditMode and PlayMode NUnit XML reports are required.')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              for path, root in reports:
+                  passed = int(root.get('passed', '0'))
+                  failed = int(root.get('failed', '0'))
+                  skipped = int(root.get('skipped', '0'))
+                  inconclusive = int(root.get('inconclusive', '0'))
+                  summary.write(f'{path.name}: **{passed} PASS / {failed} FAIL / {skipped} SKIP**\n\n')
+                  # Unity 1.7 may mark a green run with optional skips as Skipped:Ignored.
+                  # 有实际 PASS 且零失败时允许已报告的可选 SKIP；全部 SKIP 仍失败。
+                  accepted_status = root.get('result') in ('Passed', 'Skipped', 'Skipped:Ignored')
+                  if passed == 0 or failed != 0 or inconclusive != 0 or not accepted_status:
+                      raise SystemExit(f'Incomplete or failed Unity test run: {path.name}')
+          PY
+
+      - name: Preserve test results and logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: unity-all-${{ github.run_attempt }}
+          path: artifacts/unity
           if-no-files-found: warn
           retention-days: 14
+
+  required:
+    name: Unity CI
+    if: always()
+    needs: tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Require both suites to pass
+        env:
+          TEST_RESULT: ${{ needs.tests.result }}
+        run: |
+          if [[ "$TEST_RESULT" != 'success' ]]; then
+            echo '::error::Both EditMode and PlayMode must pass; failed, skipped, or cancelled runs do not pass this check.'
+            exit 1
+          fi
