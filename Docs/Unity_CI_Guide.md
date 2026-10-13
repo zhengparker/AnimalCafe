@@ -1,19 +1,19 @@
 # Unity CI：配置与使用 / Setup and usage
 
-GitHub Actions 对每个 PR、main push 和手动运行，使用 **Unity 6000.5.5f1** 分别执行现有完整 EditMode、PlayMode suites。没有 testFilter，也不会将 Linux CI 当作 Windows Editor、Player 或移动设备验收。
+2026-10-12修订：GitHub Actions **仅手动触发**，且需勾选本次允许Unity登录/测试。使用 **Unity 6000.5.5f1**，一次激活后顺序执行完整 EditMode、PlayMode suites。GitHub上的workflow仍保持disabled，更新Secrets不等于允许启用或运行。没有 testFilter，也不会将 Linux CI 当作 Windows Editor、Player 或移动设备验收。
 
 ## 文件与执行方式
 
-- `.github/workflows/unity-tests.yml`：两项独立测试 jobs；任一失败不会取消另一项。固定 Actions commit，Library cache 按版本、平台、测试模式隔离；重复更新同一 PR 时取消旧运行。
+- `.github/workflows/unity-tests.yml`：单一测试job，取消双job重复登录。固定Actions commit和GameCI源代码commit；运行前核对激活脚本SHA256并去掉其五轮重试，失败即退出；全分支共用concurrency group，不同时启动认证。Library cache按版本、平台和源文件隔离。
 - artifacts 保存 NUnit XML 和 GameCI 生成的 logs，保留 14 天；即使测试失败也执行上传。若启动前缺少 license 或运行未产生文件，查看对应 job log。
 - `Unity CI` 汇总 check：只有两套 tests 均成功，且均产生至少一项 PASS、零 FAIL 的 NUnit test-run XML，才通过。缺少配置、编译失败、取消或跳过 job 都不能得到汇总 PASS。已有 opt-in evidence SKIP 原样报告。
-- PR checkout 使用 `pull_request`，不使用 `pull_request_target`。fork PR 默认拿不到 Secrets，会因缺少 license 明确失败；不能通过自动暴露 Secrets 来解决。
+- 取消PR/main push自动触发，保留`workflow_dispatch`，登录授权checkbox默认false。未来获得Owner单独授权后才enable并手动选择对应branch运行；不自动暴露Secrets给fork PR。
 
 ## 一次性配置 / One-time configuration
 
 1. 打开仓库 **Settings → Secrets and variables → Actions → New repository secret**。
 2. Unity Personal：按 [GameCI Activation](https://game.ci/docs/github/activation/) 配置 `UNITY_LICENSE`、`UNITY_EMAIL`、`UNITY_PASSWORD`。Unity Pro：配置 `UNITY_SERIAL`、`UNITY_EMAIL`、`UNITY_PASSWORD`。只在 GitHub Secrets 页面输入敏感内容，不写入 repo、log 或聊天。
-3. workflow push 到现有 PR branch 后，查看该 PR 的 Checks；本 workflow 首次进入默认 branch 后，也可在 **Actions → Unity tests → Run workflow** 手动运行。
+3. 当前不要enable或Run workflow。完成账号恢复、配置修订并获得Owner明确允许登录/测试后，才在Actions启用workflow并选择相应branch手动运行。
 4. 两套测试均成功后，在 main 的 branch protection / Ruleset 中启用 **Require status checks to pass before merging**，选择 **Unity CI**。仅添加 workflow 不会自动阻止 merge；branch rules 需要仓库 owner 单独设置。
 5. Unity 升级时同步修改 ProjectVersion 与 workflow 版本，并先确认对应 GameCI image 可用。
 
@@ -29,3 +29,14 @@ GitHub Actions 对每个 PR、main push 和手动运行，使用 **Unity 6000.5.
 - GitHub-hosted Linux 全套测试如出现平台差异，应保留失败结果、定位原因；不能删掉失败测试或将其算作 PASS。
 
 参考：[GameCI Test runner](https://game.ci/docs/github/test-runner/)。
+
+
+## 认证重试保护（2026-10-12）
+
+旧两次CI各有两个job；每个job日志记录15条Unity登录失败及五轮激活调用，收到HTTP401后继续重试。Owner的邮件明确连续10次登录失败会锁定60分钟。密码已由Owner更新；未读取Secret值，也未验证新密码。
+
+新增`.github/scripts/disable-gameci-activation-retries.py`只改写固定GameCI副本的`activate.sh`：先检查完整SHA256，再保留原激活参数去掉while/sleep/retry。上游源码变化会在使用凭据前停止。workflow由pinned checkout下载同一v4.3.2 runner，再用local action调用修改后的副本，保持原测试实现与license处理方式。
+
+**边界：一次Editor激活调用不等于一次HTTP登录请求。** Unity自身内部仍可能重连；本轮消除的是已确认导致重复放大的GameCI五轮调用和两个并行认证job。未改Unity二进制或拦截登录协议，不承诺所有来源都不可能触发账号锁定。仍需人工确认账号已解锁、邮箱/密码可用，且获得Owner单独授权才可恢复。
+
+report guard明确要求`editmode-results.xml`与`playmode-results.xml`都存在、有实际PASS且零FAIL；不能用一套结果替代完整验收。此轮YAML解析、Python AST语法、公开固定源脚本hash匹配/改写、生成Bash及workflow命令的`bash -n`静态语法检查和`git diff --check`均通过；没有执行生成的激活或workflow命令。此轮仅进行配置/源码静态检查，**Unity登录、Unity tests、云端CI、密码有效性验证均NOT_RUN**。配置发布到P12 branch后，workflow仍保持GitHub disabled；发布不包含enable/dispatch，恢复登录或测试需另行授权。

@@ -1,29 +1,31 @@
 name: Unity tests
 
-# 每个 PR 运行现有完整测试；也支持 main push 和手动运行。
-# Run the existing full suites for every PR, main push, and manual dispatch.
+# Manual only: account authentication needs explicit owner authorization.
+# 仅手动触发；填写密码不自动授权登录或测试。
 on:
-  pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      allow_unity_login:
+        description: 'I authorize Unity login and both test suites for this run / 本次允许 Unity 登录和测试'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
+# One account-authenticating workflow at a time, across all branches.
+# 所有分支共用同一组，避免多个运行同时登录。
 concurrency:
-  group: unity-tests-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: unity-account-authentication
+  cancel-in-progress: false
 
 jobs:
   tests:
-    name: Unity ${{ matrix.testMode }}
+    name: Unity EditMode and PlayMode
+    if: ${{ inputs.allow_unity_login }}
     runs-on: ubuntu-22.04
     timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix:
-        testMode: [editmode, playmode]
     steps:
       - name: Check out project
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -52,15 +54,26 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: Library
-          key: Unity-Linux-6000.5.5f1-${{ matrix.testMode }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          key: Unity-Linux-6000.5.5f1-all-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
           restore-keys: |
-            Unity-Linux-6000.5.5f1-${{ matrix.testMode }}-
+            Unity-Linux-6000.5.5f1-all-
 
-      - name: Run complete Unity test suite
+      - name: Check out pinned GameCI runner
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: game-ci/unity-test-runner
+          ref: fa6ced25861c16ef56187828c43f76d00df43a23 # v4.3.2
+          path: .ci/gameci-test-runner
+          persist-credentials: false
+
+      - name: Remove automatic activation retries before credentials are used
+        run: python3 .github/scripts/disable-gameci-activation-retries.py .ci/gameci-test-runner
+
+      - name: Run complete Unity test suites after one activation
         id: tests
-        # v4.4's floating CLI rejects its own --no-coverageEnabled argument.
-        # 固定 v4.3.2，避免 wrapper 与浮动 CLI 的参数不兼容。
-        uses: game-ci/unity-test-runner@fa6ced25861c16ef56187828c43f76d00df43a23 # v4.3.2
+        # Same pinned runner, with its activation loop removed before invocation.
+        # 同一固定版本；all 模式只激活一次，再顺序执行 EditMode / PlayMode。
+        uses: ./.ci/gameci-test-runner
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
@@ -69,14 +82,14 @@ jobs:
         with:
           projectPath: .
           unityVersion: 6000.5.5f1
-          testMode: ${{ matrix.testMode }}
-          artifactsPath: artifacts/${{ matrix.testMode }}
+          testMode: all
+          artifactsPath: artifacts/unity
           githubToken: ''
 
       - name: Verify and summarize NUnit results
         if: always() && steps.tests.outcome == 'success'
         env:
-          RESULTS_PATH: artifacts/${{ matrix.testMode }}
+          RESULTS_PATH: artifacts/unity
         shell: bash
         run: |
           python3 - <<'PY'
@@ -89,8 +102,9 @@ jobs:
               root = ET.parse(path).getroot()
               if root.tag == 'test-run':
                   reports.append((path, root))
-          if not reports:
-              raise SystemExit('No NUnit test-run XML produced; this run cannot pass.')
+          required_reports = {'editmode-results.xml', 'playmode-results.xml'}
+          if {path.name for path, _ in reports} != required_reports:
+              raise SystemExit('Both EditMode and PlayMode NUnit XML reports are required.')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
               for path, root in reports:
                   passed = int(root.get('passed', '0'))
@@ -109,8 +123,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: unity-${{ matrix.testMode }}-${{ github.run_attempt }}
-          path: artifacts/${{ matrix.testMode }}
+          name: unity-all-${{ github.run_attempt }}
+          path: artifacts/unity
           if-no-files-found: warn
           retention-days: 14
 
