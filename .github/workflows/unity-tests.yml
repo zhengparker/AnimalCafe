@@ -1,8 +1,11 @@
 name: Unity tests
 
-# Manual only: account authentication needs explicit owner authorization.
-# 仅手动触发；填写密码不自动授权登录或测试。
+# Owner-approved automatic regression for same-repository PRs targeting main.
+# 同仓库 PR 自动测试；merge 始终由 Owner 确认，保留手动恢复入口。
 on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
       allow_unity_login:
@@ -21,17 +24,23 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 # One account-authenticating workflow at a time, across all branches.
 # 所有分支共用同一组，避免多个运行同时登录。
 concurrency:
   group: unity-account-authentication
   cancel-in-progress: false
+  queue: max
 
 jobs:
   tests:
     name: Unity EditMode and PlayMode
-    if: ${{ inputs.allow_unity_login }}
+    if: >-
+      ${{ (github.event_name == 'pull_request' &&
+           github.event.pull_request.head.repo.full_name == github.repository &&
+           !github.event.pull_request.draft) ||
+          (github.event_name == 'workflow_dispatch' && inputs.allow_unity_login) }}
     runs-on: ubuntu-22.04
     timeout-minutes: 90
     steps:
@@ -40,6 +49,12 @@ jobs:
         with:
           lfs: true
           persist-credentials: false
+
+      - name: Stop automatic login after an incomplete Unity startup
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/unity-authentication-guard.py check
 
       - name: Verify Unity version and CI license configuration
         env:
@@ -94,6 +109,23 @@ jobs:
           customParameters: ${{ inputs.test_scope == 'remaining-ci-failures' && '-testFilter P8RGlyphMinificationTests;GeneratedProductionViews_ReducedMotionPauseAndRapidReverseFinishOneStableRaycastOwner' || '' }}
           artifactsPath: artifacts/unity
           githubToken: ''
+
+      - name: Record authentication checkpoint after an actual Unity attempt
+        id: authentication
+        if: >-
+          ${{ always() && (steps.tests.outcome == 'success' || steps.tests.outcome == 'failure') }}
+        env:
+          TEST_SCOPE: ${{ inputs.test_scope || 'full' }}
+        run: python3 .github/scripts/unity-authentication-guard.py record artifacts/unity artifacts/authentication
+
+      - name: Preserve authentication checkpoint for subsequent PRs
+        if: ${{ always() && steps.authentication.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ steps.authentication.outputs.marker }}-attempt-${{ github.run_attempt }}
+          path: artifacts/authentication
+          retention-days: 90
+          if-no-files-found: error
 
       - name: Verify and summarize NUnit results
         if: always() && steps.tests.outcome == 'success'
