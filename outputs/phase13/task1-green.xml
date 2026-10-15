@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="24" result="Passed" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.2367702">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2515" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.236770" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="3868" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2515" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.204145" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="15352" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="3869" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2515" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.178541" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3870" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2515" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.153363" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="3876" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1633" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.123999" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="3882" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="24" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.105001" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="3016" name="EmployeeBindingTests" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="24" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.103989" total="24" passed="24" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-suite type="ParameterizedMethod" id="3025" name="BaristaChoosesFirstReachablePair" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BaristaChoosesFirstReachablePair" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.067926" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3023" name="BaristaChoosesFirstReachablePair(False)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BaristaChoosesFirstReachablePair(False)" methodname="BaristaChoosesFirstReachablePair" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="741830305" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.059109" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3024" name="BaristaChoosesFirstReachablePair(True)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BaristaChoosesFirstReachablePair(True)" methodname="BaristaChoosesFirstReachablePair" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1005871750" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.001458" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="3026" name="BaristaSkipsCoffeeMachineWhenNoPickupHasCompleteRoundTrip" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BaristaSkipsCoffeeMachineWhenNoPickupHasCompleteRoundTrip" methodname="BaristaSkipsCoffeeMachineWhenNoPickupHasCompleteRoundTrip" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1714986635" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.001226" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3045" name="BindingRejectsIncompleteRoleContract" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.004541" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3039" name="BindingRejectsIncompleteRoleContract(0)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(0)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="243340872" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.002637" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3040" name="BindingRejectsIncompleteRoleContract(1)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(1)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="208249645" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000201" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3041" name="BindingRejectsIncompleteRoleContract(2)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(2)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="446115197" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000144" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3042" name="BindingRejectsIncompleteRoleContract(3)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(3)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1889398432" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000076" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3043" name="BindingRejectsIncompleteRoleContract(4)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(4)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="880777944" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000075" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3044" name="BindingRejectsIncompleteRoleContract(5)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(5)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="845218521" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000072" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="3046" name="CashierBindingRejectsPickupFields" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.CashierBindingRejectsPickupFields" methodname="CashierBindingRejectsPickupFields" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1782679097" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000330" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3028" name="DeletedPickupRepresentationCannotKeepBindingAlive" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.DeletedPickupRepresentationCannotKeepBindingAlive" methodname="DeletedPickupRepresentationCannotKeepBindingAlive" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="847671862" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.005397" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3022" name="EmptySelectedRegisterUsesP12OrdinalChoice" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.EmptySelectedRegisterUsesP12OrdinalChoice" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.003373" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3020" name="EmptySelectedRegisterUsesP12OrdinalChoice(False)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.EmptySelectedRegisterUsesP12OrdinalChoice(False)" methodname="EmptySelectedRegisterUsesP12OrdinalChoice" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="2048951740" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.001819" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3021" name="EmptySelectedRegisterUsesP12OrdinalChoice(True)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.EmptySelectedRegisterUsesP12OrdinalChoice(True)" methodname="EmptySelectedRegisterUsesP12OrdinalChoice" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="681636184" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000825" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="3038" name="InvalidResolverInputReturnsExplicitFailure" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.004590" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3033" name="InvalidResolverInputReturnsExplicitFailure(0)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure(0)" methodname="InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="334450530" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.001113" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3034" name="InvalidResolverInputReturnsExplicitFailure(1)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure(1)" methodname="InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="887603595" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000120" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3035" name="InvalidResolverInputReturnsExplicitFailure(2)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure(2)" methodname="InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1749115978" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000812" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3036" name="InvalidResolverInputReturnsExplicitFailure(3)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure(3)" methodname="InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="332248720" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000769" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3037" name="InvalidResolverInputReturnsExplicitFailure(4)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure(4)" methodname="InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="695668426" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000772" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="3032" name="InvalidStationIsSkippedEvenWhenPathQueryAcceptsItsPosition" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidStationIsSkippedEvenWhenPathQueryAcceptsItsPosition" methodname="InvalidStationIsSkippedEvenWhenPathQueryAcceptsItsPosition" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1568064285" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.001674" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3031" name="MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.002246" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3029" name="MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister(False)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister(False)" methodname="MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="272757345" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000993" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3030" name="MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister(True)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister(True)" methodname="MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="452364217" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000765" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="3027" name="ReturnPathMustAlsoBeComplete" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.ReturnPathMustAlsoBeComplete" methodname="ReturnPathMustAlsoBeComplete" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1849258289" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000933" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3019" name="SelectedRegisterWinsRegardlessOfEnumerationOrder" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.SelectedRegisterWinsRegardlessOfEnumerationOrder" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.003154" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3017" name="SelectedRegisterWinsRegardlessOfEnumerationOrder(False)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.SelectedRegisterWinsRegardlessOfEnumerationOrder(False)" methodname="SelectedRegisterWinsRegardlessOfEnumerationOrder" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="414939870" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.001981" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3018" name="SelectedRegisterWinsRegardlessOfEnumerationOrder(True)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.SelectedRegisterWinsRegardlessOfEnumerationOrder(True)" methodname="SelectedRegisterWinsRegardlessOfEnumerationOrder" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="589239456" result="Passed" start-time="2026-10-14 14:25:16Z" end-time="2026-10-14 14:25:16Z" duration="0.000785" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="3" result="Failed(Child)" total="3" passed="2" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 16:06:25Z" end-time="2026-10-14 16:06:29Z" duration="4.7116479">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2585" result="Failed" site="Child" start-time="2026-10-14 16:06:25Z" end-time="2026-10-14 16:06:29Z" duration="4.711648" total="3" passed="2" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3957" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2585" result="Failed" site="Child" start-time="2026-10-14 16:06:25Z" end-time="2026-10-14 16:06:29Z" duration="4.570895" total="3" passed="2" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="13748" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3958" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2585" result="Failed" site="Child" start-time="2026-10-14 16:06:25Z" end-time="2026-10-14 16:06:29Z" duration="4.518935" total="3" passed="2" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3959" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2585" result="Failed" site="Child" start-time="2026-10-14 16:06:25Z" end-time="2026-10-14 16:06:29Z" duration="4.508279" total="3" passed="2" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="3965" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1703" result="Failed" site="Child" start-time="2026-10-14 16:06:25Z" end-time="2026-10-14 16:06:29Z" duration="4.478493" total="3" passed="2" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="3971" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="94" result="Failed" site="Child" start-time="2026-10-14 16:06:25Z" end-time="2026-10-14 16:06:29Z" duration="4.436661" total="3" passed="2" failed="1" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="3061" name="EmployeePlaySessionTests" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-14 16:06:25Z" end-time="2026-10-14 16:06:27Z" duration="2.398916" total="2" passed="1" failed="1" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="3062" name="RepeatedPlayStartsOneFreshSessionWithDomainReload" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests.RepeatedPlayStartsOneFreshSessionWithDomainReload" methodname="RepeatedPlayStartsOneFreshSessionWithDomainReload" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" runstate="Runnable" seed="1205602901" result="Failed" label="Error" start-time="2026-10-14 16:06:19Z" end-time="2026-10-14 16:06:25Z" duration="5.959649" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[System.NullReferenceException : Object reference not set to an instance of an object]]></message>
+                    <stack-trace><![CDATA[  at AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests+<Sessions>d__2.<>m__Finally1 () [0x00028] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeePlaySessionTests.cs:70 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests+<Sessions>d__2.System.IDisposable.Dispose () [0x00015] in <d16a0dfac7a7443384277e57a7da8468>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests+<Sessions>d__2.MoveNext () [0x00530] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeePlaySessionTests.cs:74 
+  at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44 ]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3063" name="RepeatedPlayStartsOneFreshSessionWithoutDomainReload" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests.RepeatedPlayStartsOneFreshSessionWithoutDomainReload" methodname="RepeatedPlayStartsOneFreshSessionWithoutDomainReload" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" runstate="Runnable" seed="217617740" result="Passed" start-time="2026-10-14 16:06:25Z" end-time="2026-10-14 16:06:27Z" duration="2.016466" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[REAL_PLAY_SESSION domainReload=False run=1 actor=employee-a2c763f85cfe42a486060c78e421f78e-Cashier
+REAL_PLAY_SESSION domainReload=False run=2 actor=employee-f7779ee2a044495ab5be6943cda1108d-Cashier
+]]></output>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="3111" name="Phase13SceneBuilderTests" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-14 16:06:27Z" end-time="2026-10-14 16:06:29Z" duration="2.028181" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="3112" name="BuildIsIdempotentAndProtectsOtherScenes" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests.BuildIsIdempotentAndProtectsOtherScenes" methodname="BuildIsIdempotentAndProtectsOtherScenes" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" runstate="Runnable" seed="319219996" result="Passed" start-time="2026-10-14 16:06:27Z" end-time="2026-10-14 16:06:29Z" duration="2.026903" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[AC_P13_SCENE_READY Assets/Scenes/Validation/Phase13EmployeeTasks.unity
+AC_P13_SCENE_READY Assets/Scenes/Validation/Phase13EmployeeTasks.unity
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

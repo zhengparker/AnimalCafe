@@ -2322,7 +2322,7 @@ Owner 已批准暖红色圆圈＋斜线的样式，并明确要求箭头紧邻 C
 
 Owner 已确认：以未拖动的常驻 Pick Up Point 为高度参考，只提高两个角色 icon 与其 invalid 圈；地面箭头、大小、轻微浮动和摆放规则保持不变。
 
-- `CashRegisterSideIndicatorView.cs`：自然目标高度由 `0.62` 调为 `1.4 × cellSize`，保留共享相对高度、完整红圈／bob 包围区域及 safe-area／按钮避让。此值按当前 Counter Slot `0.72`、Pickup lift `0.112`、billboard 牌面中心 `camera.up × 0.46` 和 MainCafe 相机投影近似对齐；不包含 Pickup preview 的额外拖动抬高。以后若更换相机倾角或柜台高度，需要重新校准。前后两个标志仍随各自地面站位投影，不强行对齐绝对屏幕 Y。
+- `CashRegisterSideIndicatorView.cs`：自然目标高度最初由 `0.62` 调为 `1.4 × cellSize`；Counter 从 `0.72` 降为 `0.42` 后，同步重校准为 `1.1 × cellSize`，保留共享相对高度、完整红圈／bob 包围区域及 safe-area／按钮避让。当前值按 Counter Slot `0.42`、Pickup lift `0.112`、billboard 牌面中心 `camera.up × 0.46` 和 MainCafe 相机投影近似对齐；不包含 Pickup preview 的额外拖动抬高。以后若更换相机倾角或柜台高度，需要重新校准，并用真实 confirmed Pickup renderer 的视觉高度回归测试验证。前后两个标志仍随各自地面站位投影，不强行对齐绝对屏幕 Y。
 - `P8RCashRegisterSideIndicatorTests.cs`：新增真实 confirmed Pickup renderer 对比，在 zoom `4 / 6 / 12` 检查相对各自地面的视觉高度；通用按钮／safe-area 检查改为量完整 `InvalidOverlay` 外沿，而非较小的 icon Rect。
 - 本节记录范围和证据；没有改 Scene、Prefab、Save、PNG、共享 Material，也没有 commit／push。
 

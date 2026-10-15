@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AnimalCafe.Content;
 using AnimalCafe.Decoration;
+using AnimalCafe.Employees;
 using AnimalCafe.Layout;
 using AnimalCafe.UI.Decoration;
 using AnimalCafe.UI.Feedback;
@@ -166,6 +167,21 @@ namespace AnimalCafe.EditorTools.Phase8
             }
         }
 
+        private static Canvas OwnedEmployeeHud(Scene scene)
+        {
+            // Only the explicitly owned P13 overlay is outside P8's strict three-Canvas contract.
+            var owners = FindAll<EmployeeTaskValidationController>(scene);
+            if (owners.Length != 1 || FindAll<EmployeeFlowController>(scene).Length != 1) return null;
+            var owner = owners[0]; var root = owner.transform;
+            var flow = owner.GetComponent<EmployeeFlowController>();
+            var serialized = new SerializedObject(owner);
+            var hud = serialized.FindProperty("hud")?.objectReferenceValue as GameObject;
+            if (root.parent != null || root.name != "P13 Employees" || flow == null ||
+                serialized.FindProperty("employees")?.objectReferenceValue != flow ||
+                hud == null || hud.scene != scene || hud.transform.parent != root || hud.name != "P13 Task HUD") return null;
+            return hud.GetComponent<Canvas>();
+        }
+
         private static void ValidateScene(
             Scene scene,
             ICollection<Phase8ValidationIssue> issues)
@@ -190,7 +206,8 @@ namespace AnimalCafe.EditorTools.Phase8
                 ValidateCount<ValidationMessageView>(scene, 1, "P8-SCENE-VALIDATION-VIEW", issues);
                 ValidateCount<DecorationModeTabsView>(scene, 1, "P8-SCENE-PHASE7-UI", issues);
                 ValidateCount<DecorationFloorRangeView>(scene, 1, "P8-SCENE-PHASE7-UI", issues);
-                var canvasNames = FindAll<Canvas>(scene).Select(canvas => canvas.name).ToArray();
+                var employeeHud = OwnedEmployeeHud(scene);
+                var canvasNames = FindAll<Canvas>(scene).Where(canvas => canvas != employeeHud).Select(canvas => canvas.name).ToArray();
                 if (canvasNames.Length != 3
                     || !canvasNames.OrderBy(name => name, StringComparer.Ordinal).SequenceEqual(
                         new[] { "HUD Canvas", "Screen Canvas", "Toast Canvas" }))

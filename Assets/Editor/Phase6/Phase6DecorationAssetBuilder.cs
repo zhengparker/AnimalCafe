@@ -63,21 +63,7 @@ namespace AnimalCafe.EditorTools.Phase6
             EnsureFolder(Phase6DecorationAssetPaths.CatalogueFolderPath);
             EnsureFolder(Phase6DecorationAssetPaths.ThumbnailFolderPath);
 
-            BuildCounterPreset(
-                Phase6DecorationAssetPaths.Counter1x2PrefabPath,
-                "PF_CounterPreset_1x2",
-                1,
-                2);
-            BuildCounterPreset(
-                Phase6DecorationAssetPaths.Counter1x3PrefabPath,
-                "PF_CounterPreset_1x3",
-                1,
-                3);
-            BuildCounterPreset(
-                Phase6DecorationAssetPaths.Counter2x3PrefabPath,
-                "PF_CounterPreset_2x3",
-                2,
-                3);
+            BuildCounterPresetPrefabs();
 
             var oneByOne = RequireAsset<FurnitureDefinitionAsset>(
                 Phase6DecorationAssetPaths.Counter1x1DefinitionPath,
@@ -145,6 +131,33 @@ namespace AnimalCafe.EditorTools.Phase6
             SaveGeneratedAssets(productionCatalogue, decorationCatalogue);
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             BuildDecorationUiAssets();
+        }
+
+        /// <summary>Counter-only rebuild / 只重建柜台与缩略图，保留设备和 UI。</summary>
+        public static void RebuildCounterPresets()
+        {
+            EnsureFolder(Phase6DecorationAssetPaths.PrefabFolderPath);
+            EnsureFolder(Phase6DecorationAssetPaths.ThumbnailFolderPath);
+            BuildCounterPresetPrefabs();
+            var paths = new[] { Phase6DecorationAssetPaths.Counter1x1PrefabPath,
+                Phase6DecorationAssetPaths.Counter1x2PrefabPath,
+                Phase6DecorationAssetPaths.Counter1x3PrefabPath,
+                Phase6DecorationAssetPaths.Counter2x3PrefabPath };
+            using (var renderer = new ThumbnailRenderer())
+                for (var i = 0; i < paths.Length; i++)
+                    renderer.Build(RequireAsset<GameObject>(paths[i], "Counter Prefab"),
+                        Phase6DecorationAssetPaths.ThumbnailPaths[i]);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void BuildCounterPresetPrefabs()
+        {
+            BuildCounterPreset(Phase6DecorationAssetPaths.Counter1x2PrefabPath,
+                "PF_CounterPreset_1x2", 1, 2);
+            BuildCounterPreset(Phase6DecorationAssetPaths.Counter1x3PrefabPath,
+                "PF_CounterPreset_1x3", 1, 3);
+            BuildCounterPreset(Phase6DecorationAssetPaths.Counter2x3PrefabPath,
+                "PF_CounterPreset_2x3", 2, 3);
         }
 
         public static void ValidateUniqueDefinitionIds(
@@ -259,7 +272,7 @@ namespace AnimalCafe.EditorTools.Phase6
             }
 
             const float tolerance = 0.0001f;
-            const float surfaceY = 0.72f;
+            var surfaceY = Phase4ProductionAssetBuilder.CounterTargetBounds.y;
             for (var index = 0; index < expectedCount; index++)
             {
                 var expectedId = $"slot.{index}";

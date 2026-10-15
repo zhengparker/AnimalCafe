@@ -1081,6 +1081,10 @@ Queue order 由一个 queue authority 管理；Customer 不自行决定 slot。S
 
 ## Phase 13 — Employee Task Flow
 
+**状态（2026-10-14）：本地开发及16项manual验收完成。Owner手测M-001～004、M-006、M-009、M-016 PASS；10项委托场景代测PASS（M-006重叠）。42cm台面已实施：最终完整PlayMode1267 PASS / 0 FAIL / 5原有opt-in SKIP；完整EditMode2599 PASS（微小位移修复前），最终P11 Edit增量77 PASS。最终独立Engineering及QA/技术美术review通过，无开放Critical/Important；证据边界见Validation Report。**
+
+开发位于 `E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow`，branch `codex/phase-13-employee-task-flow`，基线为本地已确认的 P12 merge commit `302f3e9`。本阶段 focused 验证、完整 suite、独立审查与人工验收分别记录在 [P13 Validation Report](Phase13_Validation_Report.md)；入口和16项 manual 见 [P13 Beginner Guide](Phase13_Beginner_Guide.md)。本地交付不代表已合入main；版本管理收尾与P14启动仍由Owner另行决定。
+
 ### Goal
 
 让固定 Cashier 和 Barista 可靠执行抽象工作任务。
@@ -2744,9 +2748,11 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 
 ## 7. Current Next Step
 
-**Current Next Step（P12，2026-10-09）：20fps修复与受影响回归已通过，补连续来客/前移视觉观察。** 直接Play112 PASS、P11/P12 Edit126 PASS，原失败的排空与30游戏分钟循环通过。真实场景覆盖20fps，原到期计时与安全同向并发回归保持。仅补默认Play等待六到八位、让队首离开两三次的人工观察；M1～M8与桌角既有Owner PASS保留为历史快照。全项目完整suite/Player/真机本轮NOT_RUN，无commit/push/PR/merge。Owner已重新授权提交、push当前branch并创建合并到main的PR；merge与branch/worktree清理未授权，不进入P13。以下P9–P11描述为历史交接。
+**Current Next Step（P13，2026-10-14）：开发、追加回归及16项manual验收已完成；最终review通过，下一步由Owner决定版本管理收尾。** M-009/M-016已按Owner明确指示记录手测PASS，computer-use未完成尝试单独保留。工作位于E盘项目内P13 worktree；证据见 [P13 Validation Report](Phase13_Validation_Report.md)，操作入口见 [Beginner Guide](Phase13_Beginner_Guide.md)。本轮未commit / push / PR / merge，未进入P14。以下条目保留历史状态。
 
-**Current Next Step（2026-10-04）：按 Owner 授权完成 review、push、PR #9 merge、本地 main fast-forward 和分支清理。** 本次交付包含 P9–P11、已接受的角色材质调整和当前分类重新展开目录的修复；review、RED/GREEN、完整回归与人工验证边界见 [P9–P11 Merge Review](Phase9_Phase11_Merge_Review.md)，远端合并结果见 [PR #9](https://github.com/zhengparker/AnimalCafe/pull/9)。P9/P10 已有验收记录，P11 M-001～M-011 全部 Owner PASS；本次 Decor 补充人工回归尚未记录。MainCafe 仍为 passive 接线、零营业 NPC。合并后的后续阶段由 Owner 决定，P12 未开始。
+**历史 Next Step（P12，2026-10-09）：20fps修复与受影响回归已通过，补连续来客/前移视觉观察。** 直接Play112 PASS、P11/P12 Edit126 PASS，原失败的排空与30游戏分钟循环通过。真实场景覆盖20fps，原到期计时与安全同向并发回归保持。仅补默认Play等待六到八位、让队首离开两三次的人工观察；M1～M8与桌角既有Owner PASS保留为历史快照。全项目完整suite/Player/真机本轮NOT_RUN，无commit/push/PR/merge。Owner已重新授权提交、push当前branch并创建合并到main的PR；merge与branch/worktree清理未授权，不进入P13。以下P9–P11描述为历史交接。
+
+**历史 Next Step（2026-10-04）：按 Owner 授权完成 review、push、PR #9 merge、本地 main fast-forward 和分支清理。** 本次交付包含 P9–P11、已接受的角色材质调整和当前分类重新展开目录的修复；review、RED/GREEN、完整回归与人工验证边界见 [P9–P11 Merge Review](Phase9_Phase11_Merge_Review.md)，远端合并结果见 [PR #9](https://github.com/zhengparker/AnimalCafe/pull/9)。P9/P10 已有验收记录，P11 M-001～M-011 全部 Owner PASS；本次 Decor 补充人工回归尚未记录。MainCafe 仍为 passive 接线、零营业 NPC。合并后的后续阶段由 Owner 决定，P12 未开始。
 
 **历史 Next Step（2026-09-29，P10 交付时）：将已通过最终review与验收的P10交付到同一P9分支，之后等待Owner决定main merge或后续阶段。** P10自动回归、M-001…010及Engineering/QA整体review均PASS；Owner当时已授权commit/push至 `codex/phase-9-order-domain`。P10提交基于P9 `94cc48d7d8c6b43261b96e73bf2d2b6541fafbf4`，不另开分支。P9/P10的main merge、正式closeout、Roadmap Completed未在这份历史记录中完成；不将旧main视为包含这些工作。下方2026-09-28及更早的“下一步”描述保留为历史记录。
 

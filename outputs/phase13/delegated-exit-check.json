@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-14T17:42:32.4590336-04:00",
+  "editorProcessCount": 0,
+  "editorProcessIds": [],
+  "cliBrokerProcessCount": 1,
+  "cliBrokerProcessIds": [
+    1440
+  ],
+  "projectSettingsTrackedChanges": [],
+  "mainSceneSha256": "A729E795984140C1B3712110E7F7BB485099ECF4383CA6462423CCE4DB669A3B",
+  "p13SceneSha256": "377FDF668B51A531AF6EF2ECB002A75913735BA61F770D8BC28AFBF3C03E11A2",
+  "frozenManifestFiles": 81,
+  "frozenManifestDifferences": 0,
+  "knownPhase7MaterialTrackedChanges": []
+}

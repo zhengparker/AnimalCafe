@@ -458,7 +458,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
                     if(path==null) continue;
                     foreach(var point in path)
                     {
-                        var body=point+Vector3.up*.65f;
+                        // Match the lower axis endpoint of the actual navigation capsule.
+                        // 低桌面低于腰部；不能用腰部到桌面的斜距代替碰撞胶囊间距。
+                        var body=point+Vector3.up*actor.Settings.AgentRadius;
                         var clearance=solids.Min(s=>Vector3.Distance(body,s.ClosestPoint(body)));
                         corners.Add(point.ToString("F3")+" clearance="+clearance.ToString("F5"));
                         if(clearance>=actor.Settings.AgentRadius && clearance<actor.Settings.AgentRadius+actor.Settings.CollisionSkin)

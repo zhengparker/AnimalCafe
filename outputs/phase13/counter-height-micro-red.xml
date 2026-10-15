@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="2" result="Failed(Child)" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-15 01:39:08Z" end-time="2026-10-15 01:39:08Z" duration="0.1420219">
+  <test-suite type="TestSuite" id="2436" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1272" result="Failed" site="Child" start-time="2026-10-15 01:39:08Z" end-time="2026-10-15 01:39:08Z" duration="0.142022" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1534" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="484" result="Failed" site="Child" start-time="2026-10-15 01:39:08Z" end-time="2026-10-15 01:39:08Z" duration="0.122117" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="68372" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1535" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="484" result="Failed" site="Child" start-time="2026-10-15 01:39:08Z" end-time="2026-10-15 01:39:08Z" duration="0.116508" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1536" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="484" result="Failed" site="Child" start-time="2026-10-15 01:39:08Z" end-time="2026-10-15 01:39:08Z" duration="0.111071" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="1537" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="484" result="Failed" site="Child" start-time="2026-10-15 01:39:08Z" end-time="2026-10-15 01:39:08Z" duration="0.105541" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="1542" name="Phase11" fullname="AnimalCafe.Tests.PlayMode.Phase11" runstate="Runnable" testcasecount="37" result="Failed" site="Child" start-time="2026-10-15 01:39:08Z" end-time="2026-10-15 01:39:08Z" duration="0.100937" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="1238" name="NavigationMovementTests" fullname="AnimalCafe.Tests.PlayMode.Phase11.NavigationMovementTests" classname="AnimalCafe.Tests.PlayMode.Phase11.NavigationMovementTests" runstate="Runnable" testcasecount="33" result="Failed" site="Child" start-time="2026-10-15 01:39:08Z" end-time="2026-10-15 01:39:08Z" duration="0.099261" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="1261" name="MicroCornerBelowNormalizeCutoffStillMoves" fullname="AnimalCafe.Tests.PlayMode.Phase11.NavigationMovementTests.MicroCornerBelowNormalizeCutoffStillMoves" methodname="MicroCornerBelowNormalizeCutoffStillMoves" classname="AnimalCafe.Tests.PlayMode.Phase11.NavigationMovementTests" runstate="Runnable" seed="228996052" result="Failed" start-time="2026-10-15 01:39:08Z" end-time="2026-10-15 01:39:08Z" duration="0.069753" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Nonzero intermediate approach must retain movement
+  Expected: greater than 0
+  But was:  0.0f
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase11.NavigationMovementTests+<CheckMicroCorner>d__35.MoveNext () [0x002d6] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase11\NavigationMovementTests.cs:385
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[MICRO gap=5E-06 velocity=(0.000000000, 0.000000000, 0.000000000)
+]]></output>
+                </test-case>
+                <test-case id="1262" name="MicroCornerBelowProjectionCutoffStillMoves" fullname="AnimalCafe.Tests.PlayMode.Phase11.NavigationMovementTests.MicroCornerBelowProjectionCutoffStillMoves" methodname="MicroCornerBelowProjectionCutoffStillMoves" classname="AnimalCafe.Tests.PlayMode.Phase11.NavigationMovementTests" runstate="Runnable" seed="180458306" result="Failed" start-time="2026-10-15 01:39:08Z" end-time="2026-10-15 01:39:08Z" duration="0.010194" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Nonzero intermediate approach must retain movement
+  Expected: greater than 0
+  But was:  0.0f
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase11.NavigationMovementTests+<CheckMicroCorner>d__35.MoveNext () [0x002d6] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase11\NavigationMovementTests.cs:385
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[MICRO gap=5E-07 velocity=(0.000000000, 0.000000000, 0.000000000)
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

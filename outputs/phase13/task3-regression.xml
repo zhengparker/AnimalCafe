@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="30" result="Passed" total="30" passed="30" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 14:54:22Z" end-time="2026-10-14 14:54:23Z" duration="0.3033004">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2572" result="Passed" start-time="2026-10-14 14:54:22Z" end-time="2026-10-14 14:54:23Z" duration="0.303300" total="30" passed="30" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="3938" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2572" result="Passed" start-time="2026-10-14 14:54:22Z" end-time="2026-10-14 14:54:23Z" duration="0.253720" total="30" passed="30" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="28852" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="3939" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2572" result="Passed" start-time="2026-10-14 14:54:22Z" end-time="2026-10-14 14:54:23Z" duration="0.191376" total="30" passed="30" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3940" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2572" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.160129" total="30" passed="30" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="3946" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1690" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.115065" total="30" passed="30" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="3948" name="Phase8" fullname="AnimalCafe.Tests.EditMode.Phase8" runstate="Runnable" testcasecount="231" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.080910" total="30" passed="30" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="2186" name="FunctionalSurfaceLayoutTests" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" testcasecount="19" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.061507" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2197" name="FailedMoveOrRotationLeavesTheConfirmedAddressRotationAndOccupancyExact" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.FailedMoveOrRotationLeavesTheConfirmedAddressRotationAndOccupancyExact" methodname="FailedMoveOrRotationLeavesTheConfirmedAddressRotationAndOccupancyExact" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="1761553401" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.031594" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2198" name="MoveMounted_InvalidAddressReturnsFailureWithoutChangingConfirmedOccupancy" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.MoveMounted_InvalidAddressReturnsFailureWithoutChangingConfirmedOccupancy" methodname="MoveMounted_InvalidAddressReturnsFailureWithoutChangingConfirmedOccupancy" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="1431920300" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000445" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2206" name="MovePickUp_DefaultAddressReturnsFailureWithoutChangingTheConfirmedPoint" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.MovePickUp_DefaultAddressReturnsFailureWithoutChangingTheConfirmedPoint" methodname="MovePickUp_DefaultAddressReturnsFailureWithoutChangingTheConfirmedPoint" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="902969701" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.003518" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2205" name="MovePickUp_MissingSlotFailsWithoutChangingTheConfirmedPoint" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.MovePickUp_MissingSlotFailsWithoutChangingTheConfirmedPoint" methodname="MovePickUp_MissingSlotFailsWithoutChangingTheConfirmedPoint" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="1232650392" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000306" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2204" name="MovePickUp_MissingSupportFailsWithoutChangingTheConfirmedPoint" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.MovePickUp_MissingSupportFailsWithoutChangingTheConfirmedPoint" methodname="MovePickUp_MissingSupportFailsWithoutChangingTheConfirmedPoint" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="1971569367" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000292" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2203" name="MovePickUp_NoWalkableAdjacentAnchorPreservesOriginalBindingAndOccupancy" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.MovePickUp_NoWalkableAdjacentAnchorPreservesOriginalBindingAndOccupancy" methodname="MovePickUp_NoWalkableAdjacentAnchorPreservesOriginalBindingAndOccupancy" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="714179002" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.001525" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2202" name="MovePickUp_OccupiedSlotFailsWithoutChangingEitherOccupantOrCount" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.MovePickUp_OccupiedSlotFailsWithoutChangingEitherOccupantOrCount" methodname="MovePickUp_OccupiedSlotFailsWithoutChangingEitherOccupantOrCount" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="962229721" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000332" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2192" name="PlaceMounted_AllowsMultipleIndependentFunctionalInstanceIds" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlaceMounted_AllowsMultipleIndependentFunctionalInstanceIds" methodname="PlaceMounted_AllowsMultipleIndependentFunctionalInstanceIds" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="1863152506" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.001657" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2187" name="PlaceMounted_CompatibleCashRegisterOccupiesItsSurfaceSlot" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlaceMounted_CompatibleCashRegisterOccupiesItsSurfaceSlot" methodname="PlaceMounted_CompatibleCashRegisterOccupiesItsSurfaceSlot" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="948909721" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000285" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2188" name="PlaceMounted_CompatibleCoffeeMachineDoesNotAlterFloorFurnitureOccupancy" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlaceMounted_CompatibleCoffeeMachineDoesNotAlterFloorFurnitureOccupancy" methodname="PlaceMounted_CompatibleCoffeeMachineDoesNotAlterFloorFurnitureOccupancy" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="2021190507" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000341" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2196" name="PlaceMounted_MissingSupportOrSlotReturnsSpecificFailureWithoutMutation" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlaceMounted_MissingSupportOrSlotReturnsSpecificFailureWithoutMutation" methodname="PlaceMounted_MissingSupportOrSlotReturnsSpecificFailureWithoutMutation" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="25116443" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000852" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2189" name="PlaceMounted_MoveRotateAndRemovePreserveTheConfirmedInstanceIdentity" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlaceMounted_MoveRotateAndRemovePreserveTheConfirmedInstanceIdentity" methodname="PlaceMounted_MoveRotateAndRemovePreserveTheConfirmedInstanceIdentity" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="579918008" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.001142" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2193" name="PlaceMounted_OccupiedSlotFailsWithoutChangingOriginalOccupantOrCounts" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlaceMounted_OccupiedSlotFailsWithoutChangingOriginalOccupantOrCounts" methodname="PlaceMounted_OccupiedSlotFailsWithoutChangingOriginalOccupantOrCounts" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="604551138" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000337" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2195" name="PlaceMounted_UnsupportedSurfaceDefinitionFailsWithoutMutatingSurfaceOccupancy" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlaceMounted_UnsupportedSurfaceDefinitionFailsWithoutMutatingSurfaceOccupancy" methodname="PlaceMounted_UnsupportedSurfaceDefinitionFailsWithoutMutatingSurfaceOccupancy" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="1903111966" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000260" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2190" name="PlacePickUp_MoveAndRemoveUseTheSameSharedSurfaceSlotOccupancy" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlacePickUp_MoveAndRemoveUseTheSameSharedSurfaceSlotOccupancy" methodname="PlacePickUp_MoveAndRemoveUseTheSameSharedSurfaceSlotOccupancy" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="948871543" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000859" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2191" name="PlacePickUp_NoWalkableAdjacentAnchorFailsWithoutOccupyingSlot" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlacePickUp_NoWalkableAdjacentAnchorFailsWithoutOccupyingSlot" methodname="PlacePickUp_NoWalkableAdjacentAnchorFailsWithoutOccupyingSlot" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="1444730158" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000334" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2194" name="PlacePickUp_SecondPointOnOccupiedSlotFailsWithoutChangingOriginalPoint" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlacePickUp_SecondPointOnOccupiedSlotFailsWithoutChangingOriginalPoint" methodname="PlacePickUp_SecondPointOnOccupiedSlotFailsWithoutChangingOriginalPoint" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="1699799846" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000354" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="2201" name="PlaceSurfaceContent_SameInstanceIdAcrossKindsFailsWithoutChangingTheOriginalContent" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlaceSurfaceContent_SameInstanceIdAcrossKindsFailsWithoutChangingTheOriginalContent" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.002635" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2199" name="PlaceSurfaceContent_SameInstanceIdAcrossKindsFailsWithoutChangingTheOriginalContent(True)" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlaceSurfaceContent_SameInstanceIdAcrossKindsFailsWithoutChangingTheOriginalContent(True)" methodname="PlaceSurfaceContent_SameInstanceIdAcrossKindsFailsWithoutChangingTheOriginalContent" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="11663283" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000545" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2200" name="PlaceSurfaceContent_SameInstanceIdAcrossKindsFailsWithoutChangingTheOriginalContent(False)" fullname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests.PlaceSurfaceContent_SameInstanceIdAcrossKindsFailsWithoutChangingTheOriginalContent(False)" methodname="PlaceSurfaceContent_SameInstanceIdAcrossKindsFailsWithoutChangingTheOriginalContent" classname="AnimalCafe.Tests.EditMode.Phase8.FunctionalSurfaceLayoutTests" runstate="Runnable" seed="1969071726" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000219" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+              <test-suite type="TestFixture" id="2429" name="SurfaceSlotDomainTests" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.011609" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2440" name="PickUpPointInstance_RejectsDefaultSurfaceSlotAddress" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.PickUpPointInstance_RejectsDefaultSurfaceSlotAddress" methodname="PickUpPointInstance_RejectsDefaultSurfaceSlotAddress" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" seed="1991803504" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.002269" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2437" name="StableId_SurfaceMountedAndPickUpFactoriesProduceDistinctValidIds" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.StableId_SurfaceMountedAndPickUpFactoriesProduceDistinctValidIds" methodname="StableId_SurfaceMountedAndPickUpFactoriesProduceDistinctValidIds" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" seed="1732913826" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.003409" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2438" name="SurfaceMountedAndPickUpInstances_PreserveOnlyStableDomainSnapshotData" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.SurfaceMountedAndPickUpInstances_PreserveOnlyStableDomainSnapshotData" methodname="SurfaceMountedAndPickUpInstances_PreserveOnlyStableDomainSnapshotData" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" seed="1785980013" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000338" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2439" name="SurfaceMountedInstance_RejectsDefaultSurfaceSlotAddress" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.SurfaceMountedInstance_RejectsDefaultSurfaceSlotAddress" methodname="SurfaceMountedInstance_RejectsDefaultSurfaceSlotAddress" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" seed="1541014546" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000186" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="2434" name="SurfaceSlotAddress_RejectsInvalidSlotId" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.SurfaceSlotAddress_RejectsInvalidSlotId" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.001112" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2431" name="SurfaceSlotAddress_RejectsInvalidSlotId(&quot;&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.SurfaceSlotAddress_RejectsInvalidSlotId(&quot;&quot;)" methodname="SurfaceSlotAddress_RejectsInvalidSlotId" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" seed="1923047054" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000247" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2432" name="SurfaceSlotAddress_RejectsInvalidSlotId(&quot;   &quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.SurfaceSlotAddress_RejectsInvalidSlotId(&quot;   &quot;)" methodname="SurfaceSlotAddress_RejectsInvalidSlotId" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" seed="347939856" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000062" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2433" name="SurfaceSlotAddress_RejectsInvalidSlotId(&quot;Slot.0&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.SurfaceSlotAddress_RejectsInvalidSlotId(&quot;Slot.0&quot;)" methodname="SurfaceSlotAddress_RejectsInvalidSlotId" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" seed="1986545222" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000061" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="2436" name="SurfaceSlotAddress_RejectsInvalidSupportInstanceId" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.SurfaceSlotAddress_RejectsInvalidSupportInstanceId" methodname="SurfaceSlotAddress_RejectsInvalidSupportInstanceId" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" seed="1041422092" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000244" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2435" name="SurfaceSlotAddress_RejectsNullSlotId" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.SurfaceSlotAddress_RejectsNullSlotId" methodname="SurfaceSlotAddress_RejectsNullSlotId" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" seed="753891074" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000215" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2430" name="SurfaceSlotAddress_SameStablePartsHaveValueEqualityAndHashCode" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.SurfaceSlotAddress_SameStablePartsHaveValueEqualityAndHashCode" methodname="SurfaceSlotAddress_SameStablePartsHaveValueEqualityAndHashCode" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" seed="2023742352" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.000582" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2441" name="SurfaceSlotCatalog_SortsDefinitionsAndSlotsAndRejectsDuplicateKeys" fullname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests.SurfaceSlotCatalog_SortsDefinitionsAndSlotsAndRejectsDuplicateKeys" methodname="SurfaceSlotCatalog_SortsDefinitionsAndSlotsAndRejectsDuplicateKeys" classname="AnimalCafe.Tests.EditMode.Phase8.SurfaceSlotDomainTests" runstate="Runnable" seed="610570293" result="Passed" start-time="2026-10-14 14:54:23Z" end-time="2026-10-14 14:54:23Z" duration="0.001056" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

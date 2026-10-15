@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="9" result="Passed" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 16:18:17Z" end-time="2026-10-14 16:18:27Z" duration="10.0062011">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2587" result="Passed" start-time="2026-10-14 16:18:17Z" end-time="2026-10-14 16:18:27Z" duration="10.006201" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="3959" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2587" result="Passed" start-time="2026-10-14 16:18:17Z" end-time="2026-10-14 16:18:27Z" duration="9.869851" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="13712" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="3960" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2587" result="Passed" start-time="2026-10-14 16:18:17Z" end-time="2026-10-14 16:18:27Z" duration="9.829664" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3961" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2587" result="Passed" start-time="2026-10-14 16:18:17Z" end-time="2026-10-14 16:18:27Z" duration="9.819658" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="3967" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1705" result="Passed" start-time="2026-10-14 16:18:18Z" end-time="2026-10-14 16:18:27Z" duration="9.759180" total="9" passed="9" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="3973" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="96" result="Passed" start-time="2026-10-14 16:18:18Z" end-time="2026-10-14 16:18:23Z" duration="5.761176" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="3061" name="EmployeePlaySessionTests" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 16:18:18Z" end-time="2026-10-14 16:18:20Z" duration="2.375451" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="3062" name="RepeatedPlayStartsOneFreshSessionWithDomainReload" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests.RepeatedPlayStartsOneFreshSessionWithDomainReload" methodname="RepeatedPlayStartsOneFreshSessionWithDomainReload" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" runstate="Runnable" seed="1050824425" result="Passed" start-time="2026-10-14 16:18:07Z" end-time="2026-10-14 16:18:18Z" duration="10.694445" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[REAL_PLAY_SESSION domainReload=True run=1 actor=employee-f9daf565cb36427b874a66782f1693e3-Cashier
+REAL_PLAY_SESSION domainReload=True run=2 actor=employee-e83055132b7940569f49bd2b85fab8f1-Cashier
+EDITOR_RESTORED trueReload settings=False/None scenes=
+]]></output>
+                </test-case>
+                <test-case id="3063" name="RepeatedPlayStartsOneFreshSessionWithoutDomainReload" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests.RepeatedPlayStartsOneFreshSessionWithoutDomainReload" methodname="RepeatedPlayStartsOneFreshSessionWithoutDomainReload" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" runstate="Runnable" seed="641132026" result="Passed" start-time="2026-10-14 16:18:18Z" end-time="2026-10-14 16:18:20Z" duration="1.869496" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[REAL_PLAY_SESSION domainReload=False run=1 actor=employee-c90607ff7fed4eee9988aa9ab53b5ef8-Cashier
+REAL_PLAY_SESSION domainReload=False run=2 actor=employee-4b2fc53680a0495fb00fdbcfb5e5e212-Cashier
+EDITOR_RESTORED noReload settings=False/None scenes=
+]]></output>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="3111" name="Phase13SceneBuilderTests" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-14 16:18:20Z" end-time="2026-10-14 16:18:23Z" duration="3.376195" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="3114" name="BuildIsIdempotentAndProtectsOtherScenes" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests.BuildIsIdempotentAndProtectsOtherScenes" methodname="BuildIsIdempotentAndProtectsOtherScenes" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" runstate="Runnable" seed="471257839" result="Passed" start-time="2026-10-14 16:18:20Z" end-time="2026-10-14 16:18:22Z" duration="1.699657" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[AC_P13_SCENE_READY Assets/Scenes/Validation/Phase13EmployeeTasks.unity
+AC_P13_SCENE_READY Assets/Scenes/Validation/Phase13EmployeeTasks.unity
+]]></output>
+                </test-case>
+                <test-case id="3112" name="FirstBuildNeverRepurposesAnAlreadyOpenP12Scene" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests.FirstBuildNeverRepurposesAnAlreadyOpenP12Scene" methodname="FirstBuildNeverRepurposesAnAlreadyOpenP12Scene" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" runstate="Runnable" seed="1735659072" result="Passed" start-time="2026-10-14 16:18:22Z" end-time="2026-10-14 16:18:23Z" duration="1.053632" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[AC_P13_SCENE_READY Assets/Scenes/Validation/Phase13EmployeeTasks.unity
+]]></output>
+                </test-case>
+                <test-case id="3113" name="MainCafeInstallPreservesExistingWiringAndAutoSpawn" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests.MainCafeInstallPreservesExistingWiringAndAutoSpawn" methodname="MainCafeInstallPreservesExistingWiringAndAutoSpawn" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" runstate="Runnable" seed="1391663753" result="Passed" start-time="2026-10-14 16:18:23Z" end-time="2026-10-14 16:18:23Z" duration="0.621300" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[AC_P13_SCENE_READY Assets/Scenes/MainCafe.unity
+AC_P13_SCENE_READY Assets/Scenes/MainCafe.unity
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+            <test-suite type="TestSuite" id="3969" name="Phase8" fullname="AnimalCafe.Tests.EditMode.Phase8" runstate="Runnable" testcasecount="231" result="Passed" start-time="2026-10-14 16:18:23Z" end-time="2026-10-14 16:18:27Z" duration="3.846867" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="2380" name="Phase8SceneSetupSafetyTests" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests" runstate="Runnable" testcasecount="12" result="Passed" start-time="2026-10-14 16:18:23Z" end-time="2026-10-14 16:18:27Z" duration="3.819350" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2391" name="ConfigureDirtyLoadedTarget_RefusesWithoutSavingOrChangingCallerWork" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests.ConfigureDirtyLoadedTarget_RefusesWithoutSavingOrChangingCallerWork" methodname="ConfigureDirtyLoadedTarget_RefusesWithoutSavingOrChangingCallerWork" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests" runstate="Runnable" seed="1487434900" result="Passed" start-time="2026-10-14 16:18:23Z" end-time="2026-10-14 16:18:25Z" duration="1.740750" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Phase 8 validation passed for 'Assets/__LegacyMainCafeSeed_3cf54379a34449a7ba72e83bd99afe08/Seed.unity'.
+]]></output>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="2383" name="ConfigureLoadedScene_PreservesOpenOrderAndOriginalActiveScene" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests.ConfigureLoadedScene_PreservesOpenOrderAndOriginalActiveScene" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 16:18:25Z" end-time="2026-10-14 16:18:27Z" duration="1.375043" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2381" name="ConfigureLoadedScene_PreservesOpenOrderAndOriginalActiveScene(False)" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests.ConfigureLoadedScene_PreservesOpenOrderAndOriginalActiveScene(False)" methodname="ConfigureLoadedScene_PreservesOpenOrderAndOriginalActiveScene" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests" runstate="Runnable" seed="2124771551" result="Passed" start-time="2026-10-14 16:18:25Z" end-time="2026-10-14 16:18:26Z" duration="0.702307" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation passed for 'Assets/__Phase8SceneSafety_9390085b1a35471191dc23222decae94/Candidate.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="2382" name="ConfigureLoadedScene_PreservesOpenOrderAndOriginalActiveScene(True)" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests.ConfigureLoadedScene_PreservesOpenOrderAndOriginalActiveScene(True)" methodname="ConfigureLoadedScene_PreservesOpenOrderAndOriginalActiveScene" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests" runstate="Runnable" seed="1715054378" result="Passed" start-time="2026-10-14 16:18:26Z" end-time="2026-10-14 16:18:27Z" duration="0.670765" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation passed for 'Assets/__Phase8SceneSafety_9985bfddd69b41dab54ed8f88f8c17a1/Candidate.unity'.
+]]></output>
+                  </test-case>
+                </test-suite>
+                <test-case id="2385" name="ConfigureUnloadedScene_PreservesUnrelatedDirtySceneAndActiveScene" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests.ConfigureUnloadedScene_PreservesUnrelatedDirtySceneAndActiveScene" methodname="ConfigureUnloadedScene_PreservesUnrelatedDirtySceneAndActiveScene" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8SceneSetupSafetyTests" runstate="Runnable" seed="508203244" result="Passed" start-time="2026-10-14 16:18:27Z" end-time="2026-10-14 16:18:27Z" duration="0.698940" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Phase 8 validation passed for 'Assets/__Phase8SceneSafety_35126cfca59948f3baeedf4f0f695499/Candidate.unity'.
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

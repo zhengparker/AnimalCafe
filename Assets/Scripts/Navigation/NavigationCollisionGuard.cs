@@ -40,17 +40,21 @@ namespace AnimalCafe.Navigation
         {
             if (actor == null || !Finite(proposed) || !StaticClear(actor, actor.transform.position, solids)) return Vector3.zero;
             proposed.y = 0;
-            if (proposed.sqrMagnitude < 1e-12f) return Vector3.zero;
+            var length = proposed.magnitude;
+            if (length == 0) return Vector3.zero;
+            // Preserve a finite nonzero final approach; all sweeps and endpoint guards still run.
+            // 不用隐藏的近零归一化阈值清空位移；完整碰撞检查仍保留。
+            var direction = proposed / length;
             Capsule(actor, actor.transform.position, out var bottom, out var top);
             var count = Physics.CapsuleCastNonAlloc(bottom, top, actor.Settings.AgentRadius + actor.Settings.CollisionSkin,
-                proposed.normalized, hits, proposed.magnitude, ~0, QueryTriggerInteraction.Ignore);
+                direction, hits, length, ~0, QueryTriggerInteraction.Ignore);
             if (count == hits.Length) return Vector3.zero;
             var nearest = float.PositiveInfinity; var normal = Vector3.zero;
             for (var i = 0; i < count; i++)
                 if (RegisteredSolid(actor, hits[i].collider, solids) && hits[i].distance < nearest)
                 {
                     nearest = hits[i].distance; normal = hits[i].normal;
-                    if (InitialOverlapSentinel(hits[i], proposed.normalized) &&
+                    if (InitialOverlapSentinel(hits[i], direction) &&
                         BoxSweepClear(actor, actor.transform.position, Vector3.zero, hits[i].collider))
                     {
                         // A sweep-start sentinel reports -direction, not the actual surface normal.

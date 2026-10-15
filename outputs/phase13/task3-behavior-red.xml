@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="6" result="Failed(Child)" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 14:55:48Z" end-time="2026-10-14 14:55:49Z" duration="0.2878818">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2572" result="Failed" site="Child" start-time="2026-10-14 14:55:48Z" end-time="2026-10-14 14:55:49Z" duration="0.287882" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3938" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2572" result="Failed" site="Child" start-time="2026-10-14 14:55:48Z" end-time="2026-10-14 14:55:49Z" duration="0.255590" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="21840" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3939" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2572" result="Failed" site="Child" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.229144" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3940" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2572" result="Failed" site="Child" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.203478" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="3946" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1690" result="Failed" site="Child" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.141542" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="3952" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="81" result="Failed" site="Child" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.063255" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="3094" name="PickupCupDisplayTests" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" testcasecount="19" result="Failed" site="Child" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.055305" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-suite type="ParameterizedMethod" id="3104" name="InvalidVisualRollsBackTemporaryClone" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.InvalidVisualRollsBackTemporaryClone" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" testcasecount="3" result="Failed" site="Child" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.032864" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3101" name="InvalidVisualRollsBackTemporaryClone(0)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.InvalidVisualRollsBackTemporaryClone(0)" methodname="InvalidVisualRollsBackTemporaryClone" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="681446114" result="Failed" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.023396" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: False
+  But was:  True
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.InvalidVisualRollsBackTemporaryClone (System.Int32 previousCups) [0x0005f] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:98
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3102" name="InvalidVisualRollsBackTemporaryClone(1)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.InvalidVisualRollsBackTemporaryClone(1)" methodname="InvalidVisualRollsBackTemporaryClone" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1865020626" result="Failed" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.000748" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: False
+  But was:  True
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.InvalidVisualRollsBackTemporaryClone (System.Int32 previousCups) [0x0005f] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:98
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3103" name="InvalidVisualRollsBackTemporaryClone(2)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.InvalidVisualRollsBackTemporaryClone(2)" methodname="InvalidVisualRollsBackTemporaryClone" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1549505338" result="Failed" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.000467" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: False
+  But was:  True
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.InvalidVisualRollsBackTemporaryClone (System.Int32 previousCups) [0x0005f] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:98
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                </test-suite>
+                <test-case id="3112" name="SaturatedDisplayStillValidatesConfirmedSlot" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SaturatedDisplayStillValidatesConfirmedSlot" methodname="SaturatedDisplayStillValidatesConfirmedSlot" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1516874077" result="Failed" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.001259" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: False
+  But was:  True
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SaturatedDisplayStillValidatesConfirmedSlot () [0x00049] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:191
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3095" name="TenDeliveriesShowOnlyThreeCups" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.TenDeliveriesShowOnlyThreeCups" methodname="TenDeliveriesShowOnlyThreeCups" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1278441847" result="Failed" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.004213" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: 1
+  But was:  0
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.TenDeliveriesShowOnlyThreeCups () [0x0001a] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:52
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3096" name="ThreeOffsetsAreTriangular" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.ThreeOffsetsAreTriangular" methodname="ThreeOffsetsAreTriangular" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1585422313" result="Failed" start-time="2026-10-14 14:55:49Z" end-time="2026-10-14 14:55:49Z" duration="0.002014" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Three real visible cups must exist.
+  Expected: 3
+  But was:  0
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.ThreeOffsetsAreTriangular () [0x00057] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:62
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

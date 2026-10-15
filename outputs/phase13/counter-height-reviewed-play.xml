@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="3" result="Passed" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-15 00:31:07Z" end-time="2026-10-15 00:31:27Z" duration="20.4910389">
+  <test-suite type="TestSuite" id="2434" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1270" result="Passed" start-time="2026-10-15 00:31:07Z" end-time="2026-10-15 00:31:27Z" duration="20.491039" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1532" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="482" result="Passed" start-time="2026-10-15 00:31:07Z" end-time="2026-10-15 00:31:27Z" duration="20.464888" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="56236" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1533" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="482" result="Passed" start-time="2026-10-15 00:31:07Z" end-time="2026-10-15 00:31:27Z" duration="20.452668" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1534" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="482" result="Passed" start-time="2026-10-15 00:31:07Z" end-time="2026-10-15 00:31:27Z" duration="20.441194" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1535" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="482" result="Passed" start-time="2026-10-15 00:31:07Z" end-time="2026-10-15 00:31:27Z" duration="20.429503" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1536" name="Phase13" fullname="AnimalCafe.Tests.PlayMode.Phase13" runstate="Runnable" testcasecount="44" result="Passed" start-time="2026-10-15 00:31:07Z" end-time="2026-10-15 00:31:27Z" duration="20.419746" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1064" name="EmployeeMainCafeTests" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-10-15 00:31:07Z" end-time="2026-10-15 00:31:27Z" duration="20.412686" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1066" name="LoweredCounterDeliversThreeGroundedCupsAndKeepsVisualCap" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests.LoweredCounterDeliversThreeGroundedCupsAndKeepsVisualCap" methodname="LoweredCounterDeliversThreeGroundedCupsAndKeepsVisualCap" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" seed="2104749592" result="Passed" start-time="2026-10-15 00:31:07Z" end-time="2026-10-15 00:31:23Z" duration="15.668081" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[COUNTER_HEIGHT_SCREEN E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\outputs\phase13\counter-height-reviewed\validation-three-cups.png 1080x1920
+COUNTER_HEIGHT_SCREEN E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\outputs\phase13\counter-height-reviewed\validation-three-cups-close.png 1080x1920
+]]></output>
+                </test-case>
+                <test-case id="1065" name="LoweredCounterKeepsCmCrGroundedAndUnscaledAtEveryRotation" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests.LoweredCounterKeepsCmCrGroundedAndUnscaledAtEveryRotation" methodname="LoweredCounterKeepsCmCrGroundedAndUnscaledAtEveryRotation" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" seed="1488562937" result="Passed" start-time="2026-10-15 00:31:23Z" end-time="2026-10-15 00:31:23Z" duration="0.877303" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[COUNTER_HEIGHT_SCREEN E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\outputs\phase13\counter-height-reviewed\validation-working.png 1080x1920
+COUNTER_HEIGHT_SCREEN E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\outputs\phase13\counter-height-reviewed\validation-working-close.png 1080x1920
+]]></output>
+                </test-case>
+                <test-case id="1067" name="MainCafeLoweredCounterMountsDevicesAndCompletesBothTasks" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests.MainCafeLoweredCounterMountsDevicesAndCompletesBothTasks" methodname="MainCafeLoweredCounterMountsDevicesAndCompletesBothTasks" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" seed="930010800" result="Passed" start-time="2026-10-15 00:31:23Z" end-time="2026-10-15 00:31:27Z" duration="3.847299" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[COUNTER_HEIGHT_SCREEN E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\outputs\phase13\counter-height-reviewed\main-cafe-working.png 1080x1920
+COUNTER_HEIGHT_SCREEN E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\outputs\phase13\counter-height-reviewed\main-cafe-working-close.png 1080x1920
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="17" result="Failed(Child)" total="17" passed="0" failed="17" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 14:50:48Z" end-time="2026-10-14 14:50:49Z" duration="0.181204">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2570" result="Failed" site="Child" start-time="2026-10-14 14:50:48Z" end-time="2026-10-14 14:50:49Z" duration="0.181204" total="17" passed="0" failed="17" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3935" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2570" result="Failed" site="Child" start-time="2026-10-14 14:50:48Z" end-time="2026-10-14 14:50:49Z" duration="0.148433" total="17" passed="0" failed="17" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="31144" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3936" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2570" result="Failed" site="Child" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.122370" total="17" passed="0" failed="17" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3937" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2570" result="Failed" site="Child" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.096210" total="17" passed="0" failed="17" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="3943" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1688" result="Failed" site="Child" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.065922" total="17" passed="0" failed="17" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="3949" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="79" result="Failed" site="Child" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.045684" total="17" passed="0" failed="17" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="3094" name="PickupCupDisplayTests" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" testcasecount="17" result="Failed" site="Child" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.043784" total="17" passed="0" failed="17" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="3113" name="ClearAndDestroyRemoveOwnedCupsWithoutRemovingSupport" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.ClearAndDestroyRemoveOwnedCupsWithoutRemovingSupport" methodname="ClearAndDestroyRemoveOwnedCupsWithoutRemovingSupport" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1157589550" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.017152" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3111" name="DestroyedSupportIsRemovedOnRefresh" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.DestroyedSupportIsRemovedOnRefresh" methodname="DestroyedSupportIsRemovedOnRefresh" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="450960953" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000733" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3102" name="DifferentModulesDoNotShareCups" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.DifferentModulesDoNotShareCups" methodname="DifferentModulesDoNotShareCups" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="225270870" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000519" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3100" name="FailedInstantiationDoesNotCommitCount" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.FailedInstantiationDoesNotCommitCount" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" testcasecount="3" result="Failed" site="Child" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.003748" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3097" name="FailedInstantiationDoesNotCommitCount(0)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.FailedInstantiationDoesNotCommitCount(0)" methodname="FailedInstantiationDoesNotCommitCount" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="763105017" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000553" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3098" name="FailedInstantiationDoesNotCommitCount(1)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.FailedInstantiationDoesNotCommitCount(1)" methodname="FailedInstantiationDoesNotCommitCount" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1072158481" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000541" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3099" name="FailedInstantiationDoesNotCommitCount(2)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.FailedInstantiationDoesNotCommitCount(2)" methodname="FailedInstantiationDoesNotCommitCount" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="356597214" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000494" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                </test-suite>
+                <test-case id="3101" name="InvalidVisualRollsBackTemporaryClone" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.InvalidVisualRollsBackTemporaryClone" methodname="InvalidVisualRollsBackTemporaryClone" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1543887978" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000543" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3112" name="MissingConfigurationAndDefaultAddressFailClearly" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.MissingConfigurationAndDefaultAddressFailClearly" methodname="MissingConfigurationAndDefaultAddressFailClearly" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1969089084" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000460" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3103" name="MovedSupportKeepsLocalPlacement" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.MovedSupportKeepsLocalPlacement" methodname="MovedSupportKeepsLocalPlacement" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="447069837" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000411" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3104" name="RealCupBottomMeetsSlotSurface" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.RealCupBottomMeetsSlotSurface" methodname="RealCupBottomMeetsSlotSurface" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="2086745874" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000477" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3110" name="RefreshReparentsToReplacementAndCleansOnlyInvalidModule" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.RefreshReparentsToReplacementAndCleansOnlyInvalidModule" methodname="RefreshReparentsToReplacementAndCleansOnlyInvalidModule" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="607540967" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000461" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3105" name="RuntimeVisualCannotRegisterBusinessOrBlockNavigation" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.RuntimeVisualCannotRegisterBusinessOrBlockNavigation" methodname="RuntimeVisualCannotRegisterBusinessOrBlockNavigation" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1495820134" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000465" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3109" name="SaturatedDisplayStillValidatesConfirmedSlot" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SaturatedDisplayStillValidatesConfirmedSlot" methodname="SaturatedDisplayStillValidatesConfirmedSlot" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1561493995" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000458" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3095" name="TenDeliveriesShowOnlyThreeCups" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.TenDeliveriesShowOnlyThreeCups" methodname="TenDeliveriesShowOnlyThreeCups" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1538522821" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000467" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3096" name="ThreeOffsetsAreTriangular" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.ThreeOffsetsAreTriangular" methodname="ThreeOffsetsAreTriangular" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1763631456" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000450" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3108" name="UnsupportedCupCannotActivateBusinessOrNavigationComponents" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.UnsupportedCupCannotActivateBusinessOrNavigationComponents" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.001383" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3106" name="UnsupportedCupCannotActivateBusinessOrNavigationComponents(True)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.UnsupportedCupCannotActivateBusinessOrNavigationComponents(True)" methodname="UnsupportedCupCannotActivateBusinessOrNavigationComponents" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="588945937" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000453" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3107" name="UnsupportedCupCannotActivateBusinessOrNavigationComponents(False)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.UnsupportedCupCannotActivateBusinessOrNavigationComponents(False)" methodname="UnsupportedCupCannotActivateBusinessOrNavigationComponents" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="976282936" result="Failed" start-time="2026-10-14 14:50:49Z" end-time="2026-10-14 14:50:49Z" duration="0.000435" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[SetUp :   PickupCupDisplay must own the module's visible cups.
+  Expected: not null
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SetUp () [0x00053] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\PickupCupDisplayTests.cs:34
+]]></stack-trace>
+                    </failure>
+                    <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

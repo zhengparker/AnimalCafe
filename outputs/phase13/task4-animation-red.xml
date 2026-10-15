@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="5" result="Failed(Child)" total="5" passed="1" failed="4" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.1352236">
+  <test-suite type="TestSuite" id="2391" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1231" result="Failed" site="Child" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.135224" total="5" passed="1" failed="4" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1489" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="443" result="Failed" site="Child" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.111542" total="5" passed="1" failed="4" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="11176" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1490" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="443" result="Failed" site="Child" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.104381" total="5" passed="1" failed="4" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1491" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="443" result="Failed" site="Child" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.097468" total="5" passed="1" failed="4" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="1492" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="443" result="Failed" site="Child" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.090565" total="5" passed="1" failed="4" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="1493" name="Phase13" fullname="AnimalCafe.Tests.PlayMode.Phase13" runstate="Runnable" testcasecount="5" result="Failed" site="Child" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.084899" total="5" passed="1" failed="4" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="1058" name="EmployeeAnimationTests" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" testcasecount="5" result="Failed" site="Child" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.083688" total="5" passed="1" failed="4" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="1061" name="BothSpeciesCarryKeepsUpperPoseAndRealWalkWithOwnedCup" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.BothSpeciesCarryKeepsUpperPoseAndRealWalkWithOwnedCup" methodname="BothSpeciesCarryKeepsUpperPoseAndRealWalkWithOwnedCup" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" seed="1825037831" result="Failed" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.022150" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Assets/Art/Phase13/Employees/Shiba/PF_Shiba_Employee.prefab
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.Load (System.String species, System.Boolean employee) [0x00063] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeAnimationTests.cs:19
+at AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests+<BothSpeciesCarryKeepsUpperPoseAndRealWalkWithOwnedCup>d__6.MoveNext () [0x00067] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeAnimationTests.cs:40
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="1059" name="DefaultNavigationPresenterStillSelectsWalkHold" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.DefaultNavigationPresenterStillSelectsWalkHold" methodname="DefaultNavigationPresenterStillSelectsWalkHold" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" seed="782626324" result="Passed" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.030464" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1063" name="PauseAndFastScaleWorkingExactlyOnce" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.PauseAndFastScaleWorkingExactlyOnce" methodname="PauseAndFastScaleWorkingExactlyOnce" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" seed="330762837" result="Failed" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.001146" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Assets/Art/Phase13/Employees/Shiba/PF_Shiba_Employee.prefab
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.Load (System.String species, System.Boolean employee) [0x00063] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeAnimationTests.cs:19
+at AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests+<PauseAndFastScaleWorkingExactlyOnce>d__8.MoveNext () [0x00031] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeAnimationTests.cs:67
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="1062" name="ReenableResyncsWithoutDuplicateMotionOwnershipOrInactivePlay" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.ReenableResyncsWithoutDuplicateMotionOwnershipOrInactivePlay" methodname="ReenableResyncsWithoutDuplicateMotionOwnershipOrInactivePlay" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" seed="1879154306" result="Failed" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.000855" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Assets/Art/Phase13/Employees/Westie/PF_Westie_Employee.prefab
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.Load (System.String species, System.Boolean employee) [0x00063] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeAnimationTests.cs:19
+at AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests+<ReenableResyncsWithoutDuplicateMotionOwnershipOrInactivePlay>d__7.MoveNext () [0x00031] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeAnimationTests.cs:61
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="1060" name="WorkingCannotBeOverwrittenByMotionZero" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.WorkingCannotBeOverwrittenByMotionZero" methodname="WorkingCannotBeOverwrittenByMotionZero" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" seed="658340224" result="Failed" start-time="2026-10-14 15:03:28Z" end-time="2026-10-14 15:03:28Z" duration="0.015121" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests+<WorkingCannotBeOverwrittenByMotionZero>d__5.MoveNext () [0x00142] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeAnimationTests.cs:35
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

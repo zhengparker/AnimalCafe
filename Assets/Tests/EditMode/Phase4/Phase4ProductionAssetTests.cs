@@ -45,7 +45,7 @@ namespace AnimalCafe.Tests.Phase4
         public void ProductionTargets_UseApprovedUnityAxisBounds()
         {
             Assert.That(Phase4ProductionAssetBuilder.CounterTargetBounds,
-                Is.EqualTo(new Vector3(1.00f, 0.72f, 1.00f)));
+                Is.EqualTo(new Vector3(1.00f, 0.42f, 1.00f)));
             Assert.That(Phase4ProductionAssetBuilder.CashRegisterTargetBounds,
                 Is.EqualTo(new Vector3(0.43f, 0.45f, 0.26f)));
             Assert.That(Phase4ProductionAssetBuilder.BoundsTolerance, Is.EqualTo(0.03f));
@@ -569,9 +569,9 @@ namespace AnimalCafe.Tests.Phase4
         {
             return new[]
             {
-                new Vector3(0f, 0.72f, -1f),
-                new Vector3(0f, 0.72f, 0f),
-                new Vector3(0f, 0.72f, 1f)
+                new Vector3(0f, 0.42f, -1f),
+                new Vector3(0f, 0.42f, 0f),
+                new Vector3(0f, 0.42f, 1f)
             };
         }
 

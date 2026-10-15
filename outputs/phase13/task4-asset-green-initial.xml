@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="5" result="Failed(Child)" total="5" passed="3" failed="2" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.2185718">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2577" result="Failed" site="Child" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.218572" total="5" passed="3" failed="2" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3946" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2577" result="Failed" site="Child" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.187668" total="5" passed="3" failed="2" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="33980" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3947" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2577" result="Failed" site="Child" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.162927" total="5" passed="3" failed="2" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3948" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2577" result="Failed" site="Child" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.138565" total="5" passed="3" failed="2" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="3954" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1695" result="Failed" site="Child" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.109893" total="5" passed="3" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="3960" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="86" result="Failed" site="Child" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.090614" total="5" passed="3" failed="2" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="3016" name="EmployeeAssetTests" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" testcasecount="5" result="Failed" site="Child" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.088710" total="5" passed="3" failed="2" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="3020" name="CarryMaskExcludesRootPelvisAndLegs" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.CarryMaskExcludesRootPelvisAndLegs" methodname="CarryMaskExcludesRootPelvisAndLegs" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" seed="412133793" result="Passed" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.019121" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3019" name="EmployeeAssetsContainWorkAndCarrySocket" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeeAssetsContainWorkAndCarrySocket" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.036509" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3017" name="EmployeeAssetsContainWorkAndCarrySocket(&quot;Shiba&quot;,30.0f)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeeAssetsContainWorkAndCarrySocket(&quot;Shiba&quot;,30.0f)" methodname="EmployeeAssetsContainWorkAndCarrySocket" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" seed="775864602" result="Passed" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.023349" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3018" name="EmployeeAssetsContainWorkAndCarrySocket(&quot;Westie&quot;,24.0f)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeeAssetsContainWorkAndCarrySocket(&quot;Westie&quot;,24.0f)" methodname="EmployeeAssetsContainWorkAndCarrySocket" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" seed="392623201" result="Passed" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.011043" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="3023" name="EmployeePreservesNavigationBodyAndAcceptedWalk" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeePreservesNavigationBodyAndAcceptedWalk" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.021010" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3021" name="EmployeePreservesNavigationBodyAndAcceptedWalk(&quot;Shiba&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeePreservesNavigationBodyAndAcceptedWalk(&quot;Shiba&quot;)" methodname="EmployeePreservesNavigationBodyAndAcceptedWalk" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" seed="990181094" result="Failed" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.013890" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Shiba preserved Walk upper_arm.L
+  Expected: less than 0.100000001f
+  But was:  0.387653321f
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeePreservesNavigationBodyAndAcceptedWalk (System.String species) [0x002e0] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:77
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3022" name="EmployeePreservesNavigationBodyAndAcceptedWalk(&quot;Westie&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeePreservesNavigationBodyAndAcceptedWalk(&quot;Westie&quot;)" methodname="EmployeePreservesNavigationBodyAndAcceptedWalk" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" seed="1236713578" result="Failed" start-time="2026-10-14 15:06:54Z" end-time="2026-10-14 15:06:54Z" duration="0.006203" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Westie preserved Walk upper_arm.L
+  Expected: less than 0.100000001f
+  But was:  0.385629028f
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeePreservesNavigationBodyAndAcceptedWalk (System.String species) [0x002e0] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:77
+]]></stack-trace>
+                    </failure>
+                    <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

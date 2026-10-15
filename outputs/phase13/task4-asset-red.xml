@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="5" result="Failed(Child)" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.1702088">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2577" result="Failed" site="Child" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.170209" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3946" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2577" result="Failed" site="Child" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.139029" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="21724" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3947" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2577" result="Failed" site="Child" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.114011" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3948" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2577" result="Failed" site="Child" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.089303" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="3954" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1695" result="Failed" site="Child" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.060449" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="3960" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="86" result="Failed" site="Child" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.037883" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="3016" name="EmployeeAssetTests" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" testcasecount="5" result="Failed" site="Child" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.035104" total="5" passed="0" failed="5" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="3020" name="CarryMaskExcludesRootPelvisAndLegs" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.CarryMaskExcludesRootPelvisAndLegs" methodname="CarryMaskExcludesRootPelvisAndLegs" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" seed="460229697" result="Failed" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.013959" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Missing employee asset: Assets/Art/Phase13/Employees/AM_Employee_CarryUpperBody.mask
+  Expected: not null
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.Require[T] (System.String path) [0x00006] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:81
+at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.CarryMaskExcludesRootPelvisAndLegs () [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:47
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3019" name="EmployeeAssetsContainWorkAndCarrySocket" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeeAssetsContainWorkAndCarrySocket" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.007043" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3017" name="EmployeeAssetsContainWorkAndCarrySocket(&quot;Shiba&quot;,30.0f)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeeAssetsContainWorkAndCarrySocket(&quot;Shiba&quot;,30.0f)" methodname="EmployeeAssetsContainWorkAndCarrySocket" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" seed="1106241317" result="Failed" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.001829" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Missing employee asset: Assets/Art/Phase13/Employees/Shiba/PF_Shiba_Employee.prefab
+  Expected: not null
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.Require[T] (System.String path) [0x00006] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:81
+at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeeAssetsContainWorkAndCarrySocket (System.String species, System.Single fps) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:18
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3018" name="EmployeeAssetsContainWorkAndCarrySocket(&quot;Westie&quot;,24.0f)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeeAssetsContainWorkAndCarrySocket(&quot;Westie&quot;,24.0f)" methodname="EmployeeAssetsContainWorkAndCarrySocket" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" seed="1131586057" result="Failed" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.000236" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Missing employee asset: Assets/Art/Phase13/Employees/Westie/PF_Westie_Employee.prefab
+  Expected: not null
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.Require[T] (System.String path) [0x00006] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:81
+at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeeAssetsContainWorkAndCarrySocket (System.String species, System.Single fps) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:18
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="3023" name="EmployeePreservesNavigationBodyAndAcceptedWalk" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeePreservesNavigationBodyAndAcceptedWalk" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.001884" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3021" name="EmployeePreservesNavigationBodyAndAcceptedWalk(&quot;Shiba&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeePreservesNavigationBodyAndAcceptedWalk(&quot;Shiba&quot;)" methodname="EmployeePreservesNavigationBodyAndAcceptedWalk" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" seed="580710237" result="Failed" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.001221" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Missing employee asset: Assets/Art/Phase13/Employees/Shiba/PF_Shiba_Employee.prefab
+  Expected: not null
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.Require[T] (System.String path) [0x00006] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:81
+at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeePreservesNavigationBodyAndAcceptedWalk (System.String species) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:61
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3022" name="EmployeePreservesNavigationBodyAndAcceptedWalk(&quot;Westie&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeePreservesNavigationBodyAndAcceptedWalk(&quot;Westie&quot;)" methodname="EmployeePreservesNavigationBodyAndAcceptedWalk" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests" runstate="Runnable" seed="488981606" result="Failed" start-time="2026-10-14 15:03:02Z" end-time="2026-10-14 15:03:02Z" duration="0.000172" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Missing employee asset: Assets/Art/Phase13/Employees/Westie/PF_Westie_Employee.prefab
+  Expected: not null
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.Require[T] (System.String path) [0x00006] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:81
+at AnimalCafe.Tests.EditMode.Phase13.EmployeeAssetTests.EmployeePreservesNavigationBodyAndAcceptedWalk (System.String species) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeAssetTests.cs:61
+]]></stack-trace>
+                    </failure>
+                    <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

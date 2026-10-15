@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 15:59:31Z" end-time="2026-10-14 15:59:33Z" duration="2.1177254">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2583" result="Passed" start-time="2026-10-14 15:59:31Z" end-time="2026-10-14 15:59:33Z" duration="2.117725" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="3954" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2583" result="Passed" start-time="2026-10-14 15:59:31Z" end-time="2026-10-14 15:59:33Z" duration="2.084864" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="18744" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="3955" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2583" result="Passed" start-time="2026-10-14 15:59:31Z" end-time="2026-10-14 15:59:33Z" duration="2.058653" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3956" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2583" result="Passed" start-time="2026-10-14 15:59:31Z" end-time="2026-10-14 15:59:33Z" duration="2.032252" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="3962" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1701" result="Passed" start-time="2026-10-14 15:59:31Z" end-time="2026-10-14 15:59:33Z" duration="2.001978" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="3968" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="92" result="Passed" start-time="2026-10-14 15:59:31Z" end-time="2026-10-14 15:59:33Z" duration="1.981386" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="3108" name="Phase13SceneBuilderTests" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-14 15:59:31Z" end-time="2026-10-14 15:59:33Z" duration="1.978902" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="3109" name="BuildIsIdempotentAndProtectsOtherScenes" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests.BuildIsIdempotentAndProtectsOtherScenes" methodname="BuildIsIdempotentAndProtectsOtherScenes" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" runstate="Runnable" seed="1169633473" result="Passed" start-time="2026-10-14 15:59:31Z" end-time="2026-10-14 15:59:33Z" duration="1.966193" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[AC_P13_SCENE_READY Assets/Scenes/Validation/Phase13EmployeeTasks.unity
+AC_P13_SCENE_READY Assets/Scenes/Validation/Phase13EmployeeTasks.unity
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
