@@ -1,0 +1,526 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="32" result="Failed(Child)" total="32" passed="0" failed="32" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.1866196">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2547" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.186620" total="32" passed="0" failed="32" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3906" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2547" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.154934" total="32" passed="0" failed="32" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="33456" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3907" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2547" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.129384" total="32" passed="0" failed="32" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3908" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2547" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.104020" total="32" passed="0" failed="32" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="3914" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1665" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.074534" total="32" passed="0" failed="32" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="3920" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="56" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.055417" total="32" passed="0" failed="32" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="3047" name="EmployeeTaskRunnerTests" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" testcasecount="32" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.053941" total="32" passed="0" failed="32" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="3055" name="AllSynchronousLegsCompleteOnlyOnce" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.AllSynchronousLegsCompleteOnlyOnce" methodname="AllSynchronousLegsCompleteOnlyOnce" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1587888356" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.019016" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: Idle
+  But was:  Initializing
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.AllSynchronousLegsCompleteOnlyOnce () [0x00045] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:102
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3049" name="BaristaRequiresPickupArrivedThenActualReturn" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.BaristaRequiresPickupArrivedThenActualReturn" methodname="BaristaRequiresPickupArrivedThenActualReturn" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="225511823" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.001579" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: CarryingToPickUp
+  But was:  Initializing
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.BaristaRequiresPickupArrivedThenActualReturn () [0x0003e] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:34
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3053" name="BindingDoesNotClaimEmployeeAlreadyAtWork" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.BindingDoesNotClaimEmployeeAlreadyAtWork" methodname="BindingDoesNotClaimEmployeeAlreadyAtWork" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1883056778" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000939" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.BindingDoesNotClaimEmployeeAlreadyAtWork () [0x0002c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:73
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3052" name="BusyEmployeeRejectsSecondHandle" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.BusyEmployeeRejectsSecondHandle" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.002657" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3050" name="BusyEmployeeRejectsSecondHandle(Cashier)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.BusyEmployeeRejectsSecondHandle(Cashier)" methodname="BusyEmployeeRejectsSecondHandle" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1259367927" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000462" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.BusyEmployeeRejectsSecondHandle (AnimalCafe.Employees.EmployeeRole role) [0x00011] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:59
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3051" name="BusyEmployeeRejectsSecondHandle(Barista)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.BusyEmployeeRejectsSecondHandle(Barista)" methodname="BusyEmployeeRejectsSecondHandle" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1913411466" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000168" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.BusyEmployeeRejectsSecondHandle (AnimalCafe.Employees.EmployeeRole role) [0x00011] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:59
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                </test-suite>
+                <test-case id="3048" name="CashierCompletesAfterExactlyTwoGameSeconds" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.CashierCompletesAfterExactlyTwoGameSeconds" methodname="CashierCompletesAfterExactlyTwoGameSeconds" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="520343916" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000480" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.CashierCompletesAfterExactlyTwoGameSeconds () [0x00011] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:14
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3084" name="ConfiguredDurationAndIndependentEmployeesConsumeScaledDeltaOnce" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.ConfiguredDurationAndIndependentEmployeesConsumeScaledDeltaOnce" methodname="ConfiguredDurationAndIndependentEmployeesConsumeScaledDeltaOnce" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1227269927" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.001193" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: 2
+  But was:  0.0f
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.ConfiguredDurationAndIndependentEmployeesConsumeScaledDeltaOnce () [0x00046] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:311
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3070" name="DisposeRetiresTaskAndRecoveryCannotRestart" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.DisposeRetiresTaskAndRecoveryCannotRestart" methodname="DisposeRetiresTaskAndRecoveryCannotRestart" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="764157955" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.001893" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                    <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.DisposeRetiresTaskAndRecoveryCannotRestart () [0x0002f] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:232 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3072" name="FailedHeldVisualCannotStartDelivery" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.FailedHeldVisualCannotStartDelivery" methodname="FailedHeldVisualCannotStartDelivery" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="274470670" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000480" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: Failed
+  But was:  None
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.FailedHeldVisualCannotStartDelivery () [0x0002a] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:257
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3071" name="FailedVisualCannotCommitSuccess" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.FailedVisualCannotCommitSuccess" methodname="FailedVisualCannotCommitSuccess" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="411541943" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000352" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                    <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.FailedVisualCannotCommitSuccess () [0x0002a] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:245 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3078" name="InvalidDeltaThrowsWithoutChangingState" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDeltaThrowsWithoutChangingState" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" testcasecount="3" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.002380" total="3" passed="0" failed="3" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3075" name="InvalidDeltaThrowsWithoutChangingState(-1.0f)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDeltaThrowsWithoutChangingState(-1.0f)" methodname="InvalidDeltaThrowsWithoutChangingState" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1587055074" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.001428" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: <System.ArgumentOutOfRangeException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDeltaThrowsWithoutChangingState (System.Single delta) [0x0004b] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:292
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3076" name="InvalidDeltaThrowsWithoutChangingState(float.NaN)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDeltaThrowsWithoutChangingState(float.NaN)" methodname="InvalidDeltaThrowsWithoutChangingState" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="124750383" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000181" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: <System.ArgumentOutOfRangeException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDeltaThrowsWithoutChangingState (System.Single delta) [0x0004b] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:292
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3077" name="InvalidDeltaThrowsWithoutChangingState(float.PositiveInfinity)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDeltaThrowsWithoutChangingState(float.PositiveInfinity)" methodname="InvalidDeltaThrowsWithoutChangingState" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="213123619" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000170" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: <System.ArgumentOutOfRangeException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDeltaThrowsWithoutChangingState (System.Single delta) [0x0004b] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:292
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="3083" name="InvalidDurationCannotCreateRunner" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDurationCannotCreateRunner" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" testcasecount="4" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.001417" total="4" passed="0" failed="4" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3079" name="InvalidDurationCannotCreateRunner(0.0f)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDurationCannotCreateRunner(0.0f)" methodname="InvalidDurationCannotCreateRunner" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1022937434" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000314" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: <System.ArgumentOutOfRangeException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDurationCannotCreateRunner (System.Single duration) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:301
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3080" name="InvalidDurationCannotCreateRunner(-1.0f)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDurationCannotCreateRunner(-1.0f)" methodname="InvalidDurationCannotCreateRunner" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1024082438" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000168" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: <System.ArgumentOutOfRangeException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDurationCannotCreateRunner (System.Single duration) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:301
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3081" name="InvalidDurationCannotCreateRunner(float.NaN)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDurationCannotCreateRunner(float.NaN)" methodname="InvalidDurationCannotCreateRunner" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1442196147" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000160" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: <System.ArgumentOutOfRangeException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDurationCannotCreateRunner (System.Single duration) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:301
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3082" name="InvalidDurationCannotCreateRunner(float.PositiveInfinity)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDurationCannotCreateRunner(float.PositiveInfinity)" methodname="InvalidDurationCannotCreateRunner" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="2083532948" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000161" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: <System.ArgumentOutOfRangeException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.InvalidDurationCannotCreateRunner (System.Single duration) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:301
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                </test-suite>
+                <test-case id="3069" name="LayoutInvalidationRetiresOldCallbacksAndRequiresFreshBinding" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.LayoutInvalidationRetiresOldCallbacksAndRequiresFreshBinding" methodname="LayoutInvalidationRetiresOldCallbacksAndRequiresFreshBinding" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="378883180" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000439" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                    <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.LayoutInvalidationRetiresOldCallbacksAndRequiresFreshBinding () [0x00032] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:217 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3065" name="PausedArrivalCancelledBeforeResumeCannotPlaceCup" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.PausedArrivalCancelledBeforeResumeCannotPlaceCup" methodname="PausedArrivalCancelledBeforeResumeCannotPlaceCup" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1472548446" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000298" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                    <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.PausedArrivalCancelledBeforeResumeCannotPlaceCup () [0x0002a] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:187 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3064" name="PausedArrivalDefersDelivery" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.PausedArrivalDefersDelivery" methodname="PausedArrivalDefersDelivery" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="771751381" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000388" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                    <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.PausedArrivalDefersDelivery () [0x0002a] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:172 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3074" name="PauseFreezesWorkAndRejectsNewStart" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.PauseFreezesWorkAndRejectsNewStart" methodname="PauseFreezesWorkAndRejectsNewStart" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1568368884" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000343" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: 1.5f
+  But was:  0.0f
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.PauseFreezesWorkAndRejectsNewStart () [0x0005e] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:281
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3060" name="RecoveredIsNotDelivered" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.RecoveredIsNotDelivered" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" testcasecount="4" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.001671" total="4" passed="0" failed="4" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3056" name="RecoveredIsNotDelivered(Recovered)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.RecoveredIsNotDelivered(Recovered)" methodname="RecoveredIsNotDelivered" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="398517792" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000450" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                      <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.RecoveredIsNotDelivered (AnimalCafe.Navigation.MovementStatus status) [0x00023] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:114 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3057" name="RecoveredIsNotDelivered(Failed)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.RecoveredIsNotDelivered(Failed)" methodname="RecoveredIsNotDelivered" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1790581810" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000191" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                      <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.RecoveredIsNotDelivered (AnimalCafe.Navigation.MovementStatus status) [0x00023] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:114 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3058" name="RecoveredIsNotDelivered(Cancelled)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.RecoveredIsNotDelivered(Cancelled)" methodname="RecoveredIsNotDelivered" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1373565426" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000185" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                      <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.RecoveredIsNotDelivered (AnimalCafe.Navigation.MovementStatus status) [0x00023] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:114 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3059" name="RecoveredIsNotDelivered(LayoutChanged)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.RecoveredIsNotDelivered(LayoutChanged)" methodname="RecoveredIsNotDelivered" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1017883770" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000175" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                      <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.RecoveredIsNotDelivered (AnimalCafe.Navigation.MovementStatus status) [0x00023] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:114 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                    </failure>
+                  </test-case>
+                </test-suite>
+                <test-case id="3063" name="ReentrantCancelCleansOnce" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.ReentrantCancelCleansOnce" methodname="ReentrantCancelCleansOnce" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="12033454" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000451" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: 1
+  But was:  0
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.ReentrantCancelCleansOnce () [0x000a2] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:161
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3068" name="ReturnFailurePreservesDeliveredOutcome" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.ReturnFailurePreservesDeliveredOutcome" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.001201" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3066" name="ReturnFailurePreservesDeliveredOutcome(Failed)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.ReturnFailurePreservesDeliveredOutcome(Failed)" methodname="ReturnFailurePreservesDeliveredOutcome" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="416171458" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000592" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                      <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.ReturnFailurePreservesDeliveredOutcome (AnimalCafe.Navigation.MovementStatus status) [0x00023] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:197 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3067" name="ReturnFailurePreservesDeliveredOutcome(Recovered)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.ReturnFailurePreservesDeliveredOutcome(Recovered)" methodname="ReturnFailurePreservesDeliveredOutcome" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1920795928" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000176" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                      <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.ReturnFailurePreservesDeliveredOutcome (AnimalCafe.Navigation.MovementStatus status) [0x00023] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:197 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                    </failure>
+                  </test-case>
+                </test-suite>
+                <test-case id="3061" name="StaleSessionCannotPlaceCup" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.StaleSessionCannotPlaceCup" methodname="StaleSessionCannotPlaceCup" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="250999021" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000400" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                    <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.StaleSessionCannotPlaceCup () [0x0003d] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:129 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3054" name="SynchronousCompletionCannotOverwriteNextLeg" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.SynchronousCompletionCannotOverwriteNextLeg" methodname="SynchronousCompletionCannotOverwriteNextLeg" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1962079055" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000420" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: Returning
+  But was:  Initializing
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.SynchronousCompletionCannotOverwriteNextLeg () [0x00034] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:88
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3073" name="SynchronousMoveRejectionBlocksWithoutClaimingArrival" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.SynchronousMoveRejectionBlocksWithoutClaimingArrival" methodname="SynchronousMoveRejectionBlocksWithoutClaimingArrival" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="826666029" result="Failed" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000311" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: Blocked
+  But was:  Initializing
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.SynchronousMoveRejectionBlocksWithoutClaimingArrival () [0x0002a] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:268
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3062" name="WrongRequestOrActorCannotCompleteDelivery" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.WrongRequestOrActorCannotCompleteDelivery" methodname="WrongRequestOrActorCannotCompleteDelivery" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests" runstate="Runnable" seed="1805369349" result="Failed" label="Error" start-time="2026-10-14 14:34:42Z" end-time="2026-10-14 14:34:42Z" duration="0.000343" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[System.ArgumentOutOfRangeException : Index was out of range. Must be non-negative and less than the size of the collection.
+Parameter name: index]]></message>
+                    <stack-trace><![CDATA[  at System.Collections.Generic.List`1[T].get_Item (System.Int32 index) [0x00009] in <816f70bc2a9c4332b0bd119906a8d40e>:0 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskEnvironmentFake.Complete (System.Int32 index, AnimalCafe.Navigation.MovementStatus status, System.Nullable`1[T] requestId, System.String actorId) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskTestSupport.cs:44 
+  at AnimalCafe.Tests.EditMode.Phase13.EmployeeTaskRunnerTests.WrongRequestOrActorCannotCompleteDelivery () [0x00023] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeTaskRunnerTests.cs:144 
+  at (wrapper managed-to-native) System.Reflection.RuntimeMethodInfo.InternalInvoke(System.Reflection.RuntimeMethodInfo,object,object[],System.Exception&)
+  at System.Reflection.RuntimeMethodInfo.Invoke (System.Object obj, System.Reflection.BindingFlags invokeAttr, System.Reflection.Binder binder, System.Object[] parameters, System.Globalization.CultureInfo culture) [0x0006a] in <816f70bc2a9c4332b0bd119906a8d40e>:0 ]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

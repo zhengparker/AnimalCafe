@@ -1,0 +1,281 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="32" result="Passed" total="32" passed="32" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 15:46:09Z" end-time="2026-10-14 15:46:23Z" duration="13.6054979">
+  <test-suite type="TestSuite" id="2412" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1250" result="Passed" start-time="2026-10-14 15:46:09Z" end-time="2026-10-14 15:46:23Z" duration="13.605498" total="32" passed="32" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1510" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="462" result="Passed" start-time="2026-10-14 15:46:10Z" end-time="2026-10-14 15:46:23Z" duration="13.555830" total="32" passed="32" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="35768" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1511" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="462" result="Passed" start-time="2026-10-14 15:46:10Z" end-time="2026-10-14 15:46:23Z" duration="13.548255" total="32" passed="32" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1512" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="462" result="Passed" start-time="2026-10-14 15:46:10Z" end-time="2026-10-14 15:46:23Z" duration="13.540992" total="32" passed="32" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1513" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="462" result="Passed" start-time="2026-10-14 15:46:10Z" end-time="2026-10-14 15:46:23Z" duration="13.526914" total="32" passed="32" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1519" name="EditorSceneLoading" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading" runstate="Runnable" testcasecount="232" result="Passed" start-time="2026-10-14 15:46:10Z" end-time="2026-10-14 15:46:14Z" duration="4.213715" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1248" name="NavigationLayoutIntegrationTests" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-10-14 15:46:10Z" end-time="2026-10-14 15:46:14Z" duration="4.193517" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1250" name="FurniturePreviewTurnsRedOverStationaryActorAndGreenAfterMovingAway" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests.FurniturePreviewTurnsRedOverStationaryActorAndGreenAfterMovingAway" methodname="FurniturePreviewTurnsRedOverStationaryActorAndGreenAfterMovingAway" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" seed="345931991" result="Passed" start-time="2026-10-14 15:46:10Z" end-time="2026-10-14 15:46:11Z" duration="1.105466" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1252" name="MissingPreviewGeometryTurnsRedWithoutSuspendingNavigation" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests.MissingPreviewGeometryTurnsRedWithoutSuspendingNavigation" methodname="MissingPreviewGeometryTurnsRedWithoutSuspendingNavigation" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" seed="2122657660" result="Passed" start-time="2026-10-14 15:46:11Z" end-time="2026-10-14 15:46:11Z" duration="0.279659" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1254" name="MountedConfirmAndAttachedSupportUseAuthoredSolidBeforeCommit" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests.MountedConfirmAndAttachedSupportUseAuthoredSolidBeforeCommit" methodname="MountedConfirmAndAttachedSupportUseAuthoredSolidBeforeCommit" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" seed="1051853308" result="Passed" start-time="2026-10-14 15:46:11Z" end-time="2026-10-14 15:46:11Z" duration="0.300729" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1257" name="NewActorCannotBindOnlyForeignFloor" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests.NewActorCannotBindOnlyForeignFloor" methodname="NewActorCannotBindOnlyForeignFloor" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" seed="22531480" result="Passed" start-time="2026-10-14 15:46:11Z" end-time="2026-10-14 15:46:12Z" duration="0.280773" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1251" name="PreviewRootDriftTurnsRedWithoutSuspendingNavigation" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests.PreviewRootDriftTurnsRedWithoutSuspendingNavigation" methodname="PreviewRootDriftTurnsRedWithoutSuspendingNavigation" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" seed="1842094575" result="Passed" start-time="2026-10-14 15:46:12Z" end-time="2026-10-14 15:46:12Z" duration="0.281970" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1249" name="RealFurnitureConfirmRejectsBeforeCommitThenConfirmStoreInvalidateAndFreshMoveWorks" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests.RealFurnitureConfirmRejectsBeforeCommitThenConfirmStoreInvalidateAndFreshMoveWorks" methodname="RealFurnitureConfirmRejectsBeforeCommitThenConfirmStoreInvalidateAndFreshMoveWorks" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" seed="1902596239" result="Passed" start-time="2026-10-14 15:46:12Z" end-time="2026-10-14 15:46:12Z" duration="0.417066" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1258" name="RebuildCannotRebindExistingActorToForeignFloor" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests.RebuildCannotRebindExistingActorToForeignFloor" methodname="RebuildCannotRebindExistingActorToForeignFloor" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" seed="1391585392" result="Passed" start-time="2026-10-14 15:46:12Z" end-time="2026-10-14 15:46:13Z" duration="0.311419" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1259" name="RootDriftRejectsConfirmAsConfigurationErrorAndRepairRevalidates" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests.RootDriftRejectsConfirmAsConfigurationErrorAndRepairRevalidates" methodname="RootDriftRejectsConfirmAsConfigurationErrorAndRepairRevalidates" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" seed="1354329885" result="Passed" start-time="2026-10-14 15:46:13Z" end-time="2026-10-14 15:46:13Z" duration="0.300359" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1253" name="RotationRejectsBeforeMutation" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests.RotationRejectsBeforeMutation" methodname="RotationRejectsBeforeMutation" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" seed="1920416544" result="Passed" start-time="2026-10-14 15:46:13Z" end-time="2026-10-14 15:46:13Z" duration="0.285153" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1256" name="SameRevisionReleaseTerminatesOnceBeforeReentrantStart" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests.SameRevisionReleaseTerminatesOnceBeforeReentrantStart" methodname="SameRevisionReleaseTerminatesOnceBeforeReentrantStart" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" seed="163075976" result="Passed" start-time="2026-10-14 15:46:13Z" end-time="2026-10-14 15:46:13Z" duration="0.275378" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1255" name="SolidWallConfirmRejectsBeforeCommitAndStoreInvalidates" fullname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests.SolidWallConfirmRejectsBeforeCommitAndStoreInvalidates" methodname="SolidWallConfirmRejectsBeforeCommitAndStoreInvalidates" classname="AnimalCafe.Tests.PlayMode.EditorSceneLoading.NavigationLayoutIntegrationTests" runstate="Runnable" seed="1785384145" result="Passed" start-time="2026-10-14 15:46:13Z" end-time="2026-10-14 15:46:14Z" duration="0.331771" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+            </test-suite>
+            <test-suite type="TestSuite" id="1517" name="Phase12" fullname="AnimalCafe.Tests.PlayMode.Phase12" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 15:46:14Z" end-time="2026-10-14 15:46:14Z" duration="0.007703" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1207" name="NavigationRuntimeIdentityTests" fullname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests" classname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 15:46:14Z" end-time="2026-10-14 15:46:14Z" duration="0.007054" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-suite type="ParameterizedMethod" id="1210" name="SamePrefabInstancesHaveIndependentImmutableVisitIds" fullname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests.SamePrefabInstancesHaveIndependentImmutableVisitIds" classname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 15:46:14Z" end-time="2026-10-14 15:46:14Z" duration="0.006252" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="1208" name="SamePrefabInstancesHaveIndependentImmutableVisitIds(&quot;Shiba&quot;)" fullname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests.SamePrefabInstancesHaveIndependentImmutableVisitIds(&quot;Shiba&quot;)" methodname="SamePrefabInstancesHaveIndependentImmutableVisitIds" classname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests" runstate="Runnable" seed="994999116" result="Passed" start-time="2026-10-14 15:46:14Z" end-time="2026-10-14 15:46:14Z" duration="0.004314" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="1209" name="SamePrefabInstancesHaveIndependentImmutableVisitIds(&quot;Westie&quot;)" fullname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests.SamePrefabInstancesHaveIndependentImmutableVisitIds(&quot;Westie&quot;)" methodname="SamePrefabInstancesHaveIndependentImmutableVisitIds" classname="AnimalCafe.Tests.PlayMode.Phase12.NavigationRuntimeIdentityTests" runstate="Runnable" seed="901196386" result="Passed" start-time="2026-10-14 15:46:14Z" end-time="2026-10-14 15:46:14Z" duration="0.000579" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+            <test-suite type="TestSuite" id="1514" name="Phase13" fullname="AnimalCafe.Tests.PlayMode.Phase13" runstate="Runnable" testcasecount="24" result="Passed" start-time="2026-10-14 15:46:14Z" end-time="2026-10-14 15:46:23Z" duration="9.254602" total="19" passed="19" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1064" name="EmployeeDecorationTests" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-10-14 15:46:14Z" end-time="2026-10-14 15:46:19Z" duration="4.942981" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1073" name="CashierWaitsForP12NewRegisterWhenEmployeeStepsFirst" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests.CashierWaitsForP12NewRegisterWhenEmployeeStepsFirst" methodname="CashierWaitsForP12NewRegisterWhenEmployeeStepsFirst" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" seed="1178104171" result="Passed" start-time="2026-10-14 15:46:14Z" end-time="2026-10-14 15:46:14Z" duration="0.589539" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1067" name="ConfirmedEditRetiresOldTaskAndRepeatedConfirmKeepsEmployeeIdentity" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests.ConfirmedEditRetiresOldTaskAndRepeatedConfirmKeepsEmployeeIdentity" methodname="ConfirmedEditRetiresOldTaskAndRepeatedConfirmKeepsEmployeeIdentity" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" seed="266327791" result="Passed" start-time="2026-10-14 15:46:14Z" end-time="2026-10-14 15:46:15Z" duration="0.559303" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[DECOR_REAL_RETURN same bodies and IDs; actual final=(0.50, 0.00, -1.50)
+]]></output>
+                </test-case>
+                <test-case id="1075" name="DestroyedActorRetiresOnlyItsOwnedTask" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests.DestroyedActorRetiresOnlyItsOwnedTask" methodname="DestroyedActorRetiresOnlyItsOwnedTask" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" seed="100767334" result="Passed" start-time="2026-10-14 15:46:15Z" end-time="2026-10-14 15:46:15Z" duration="0.306185" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1069" name="DisabledBodyCannotBeBypassed" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests.DisabledBodyCannotBeBypassed" methodname="DisabledBodyCannotBeBypassed" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" seed="1676349770" result="Passed" start-time="2026-10-14 15:46:15Z" end-time="2026-10-14 15:46:16Z" duration="0.300720" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1071" name="DisableDoesNotRevokeDeliveredTableCup" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests.DisableDoesNotRevokeDeliveredTableCup" methodname="DisableDoesNotRevokeDeliveredTableCup" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" seed="606075608" result="Passed" start-time="2026-10-14 15:46:16Z" end-time="2026-10-14 15:46:16Z" duration="0.428012" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1068" name="FlowDisableCancelsOwnedTaskAndReenableReturnsSameBody" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests.FlowDisableCancelsOwnedTaskAndReenableReturnsSameBody" methodname="FlowDisableCancelsOwnedTaskAndReenableReturnsSameBody" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" seed="1912875286" result="Passed" start-time="2026-10-14 15:46:16Z" end-time="2026-10-14 15:46:16Z" duration="0.380222" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1074" name="MissingStationIsReadableAndRepairReturnsActualBody" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests.MissingStationIsReadableAndRepairReturnsActualBody" methodname="MissingStationIsReadableAndRepairReturnsActualBody" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" seed="1430795491" result="Passed" start-time="2026-10-14 15:46:16Z" end-time="2026-10-14 15:46:17Z" duration="0.448947" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1072" name="RemovedPickupRejectsStaleSceneObjectAndRefreshesOwnedCup" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests.RemovedPickupRejectsStaleSceneObjectAndRefreshesOwnedCup" methodname="RemovedPickupRejectsStaleSceneObjectAndRefreshesOwnedCup" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" seed="1338459519" result="Passed" start-time="2026-10-14 15:46:17Z" end-time="2026-10-14 15:46:17Z" duration="0.505592" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1070" name="SameRevisionNavigationSuspensionResumesSameHandle" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests.SameRevisionNavigationSuspensionResumesSameHandle" methodname="SameRevisionNavigationSuspensionResumesSameHandle" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" seed="1280891541" result="Passed" start-time="2026-10-14 15:46:17Z" end-time="2026-10-14 15:46:18Z" duration="0.433689" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1066" name="UnchangedDecorationPreservesCarrierAndRequest" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests.UnchangedDecorationPreservesCarrierAndRequest" methodname="UnchangedDecorationPreservesCarrierAndRequest" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" seed="1112641211" result="Passed" start-time="2026-10-14 15:46:18Z" end-time="2026-10-14 15:46:18Z" duration="0.478163" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1065" name="UnchangedDecorationResumesSameTask" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests.UnchangedDecorationResumesSameTask" methodname="UnchangedDecorationResumesSameTask" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDecorationTests" runstate="Runnable" seed="1160461833" result="Passed" start-time="2026-10-14 15:46:18Z" end-time="2026-10-14 15:46:19Z" duration="0.509891" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="1076" name="EmployeeFlowTests" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-10-14 15:46:19Z" end-time="2026-10-14 15:46:23Z" duration="4.310248" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1080" name="BlockedCarrierStopsWithoutLosingCup" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests.BlockedCarrierStopsWithoutLosingCup" methodname="BlockedCarrierStopsWithoutLosingCup" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests" runstate="Runnable" seed="1649441372" result="Passed" start-time="2026-10-14 15:46:19Z" end-time="2026-10-14 15:46:19Z" duration="0.640637" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1077" name="CreatesTwoUniqueEmployeesAtSafeWorkAnchors" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests.CreatesTwoUniqueEmployeesAtSafeWorkAnchors" methodname="CreatesTwoUniqueEmployeesAtSafeWorkAnchors" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests" runstate="Runnable" seed="1447828513" result="Passed" start-time="2026-10-14 15:46:19Z" end-time="2026-10-14 15:46:20Z" duration="0.353819" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1083" name="DisplayDestroyCleansOwnedCupsOutsideItsHost" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests.DisplayDestroyCleansOwnedCupsOutsideItsHost" methodname="DisplayDestroyCleansOwnedCupsOutsideItsHost" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests" runstate="Runnable" seed="629951857" result="Passed" start-time="2026-10-14 15:46:20Z" end-time="2026-10-14 15:46:20Z" duration="0.430255" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1079" name="FiveRealDeliveriesKeepThreeCupsAndReturnIdle" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests.FiveRealDeliveriesKeepThreeCupsAndReturnIdle" methodname="FiveRealDeliveriesKeepThreeCupsAndReturnIdle" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests" runstate="Runnable" seed="1178357387" result="Passed" start-time="2026-10-14 15:46:20Z" end-time="2026-10-14 15:46:21Z" duration="1.208762" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[REAL_CYCLE 1: delivered=true, returned=Idle, cups=1, workPose=(0.50, 0.00, 0.50)
+REAL_CYCLE 2: delivered=true, returned=Idle, cups=2, workPose=(0.50, 0.00, 0.50)
+REAL_CYCLE 3: delivered=true, returned=Idle, cups=3, workPose=(0.50, 0.00, 0.50)
+REAL_CYCLE 4: delivered=true, returned=Idle, cups=3, workPose=(0.50, 0.00, 0.50)
+REAL_CYCLE 5: delivered=true, returned=Idle, cups=3, workPose=(0.50, 0.00, 0.50)
+]]></output>
+                </test-case>
+                <test-case id="1081" name="MissingCupConfigurationCannotReportDeliverySuccess" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests.MissingCupConfigurationCannotReportDeliverySuccess" methodname="MissingCupConfigurationCannotReportDeliverySuccess" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests" runstate="Runnable" seed="1762877977" result="Passed" start-time="2026-10-14 15:46:21Z" end-time="2026-10-14 15:46:22Z" duration="0.373385" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1082" name="MissingVisualCannotReportDeliverySuccess" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests.MissingVisualCannotReportDeliverySuccess" methodname="MissingVisualCannotReportDeliverySuccess" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests" runstate="Runnable" seed="1319794129" result="Passed" start-time="2026-10-14 15:46:22Z" end-time="2026-10-14 15:46:22Z" duration="0.391882" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1078" name="RealBaristaPlacesCupOnlyAfterPickupArrived" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests.RealBaristaPlacesCupOnlyAfterPickupArrived" methodname="RealBaristaPlacesCupOnlyAfterPickupArrived" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests" runstate="Runnable" seed="1458769570" result="Passed" start-time="2026-10-14 15:46:22Z" end-time="2026-10-14 15:46:23Z" duration="0.476514" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1084" name="RemovedFormalPickupCannotReceiveCupThroughStaleRepresentation" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests.RemovedFormalPickupCannotReceiveCupThroughStaleRepresentation" methodname="RemovedFormalPickupCannotReceiveCupThroughStaleRepresentation" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeFlowTests" runstate="Runnable" seed="1602563499" result="Passed" start-time="2026-10-14 15:46:23Z" end-time="2026-10-14 15:46:23Z" duration="0.431633" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

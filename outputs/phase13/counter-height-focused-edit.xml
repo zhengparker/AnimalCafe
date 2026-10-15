@@ -1,0 +1,419 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="60" result="Passed" total="60" passed="60" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:03:48Z" duration="132.8768298">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2599" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:03:48Z" duration="132.876830" total="60" passed="60" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="3975" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2599" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:03:48Z" duration="132.846388" total="60" passed="60" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="51504" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="3976" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2599" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:03:48Z" duration="132.821260" total="60" passed="60" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3977" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2599" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:03:48Z" duration="132.796486" total="60" passed="60" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="3983" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1717" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:03:44Z" duration="128.206100" total="37" passed="37" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="3989" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="108" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:01:36Z" duration="0.051492" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="3016" name="CounterHeightRegressionTests" fullname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests" classname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:01:36Z" duration="0.046369" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-suite type="ParameterizedMethod" id="3022" name="CounterVisualColliderAndEverySlotShareApproved42cmPlane" fullname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests.CounterVisualColliderAndEverySlotShareApproved42cmPlane" classname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:01:36Z" duration="0.042223" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3017" name="CounterVisualColliderAndEverySlotShareApproved42cmPlane(&quot;Assets/Art/Phase4/Prefabs/PF_Furniture_CounterModule_01.prefab&quot;,1,1)" fullname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests.CounterVisualColliderAndEverySlotShareApproved42cmPlane(&quot;Assets/Art/Phase4/Prefabs/PF_Furniture_CounterModule_01.prefab&quot;,1,1)" methodname="CounterVisualColliderAndEverySlotShareApproved42cmPlane" classname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests" runstate="Runnable" seed="90357931" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:01:36Z" duration="0.027419" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3018" name="CounterVisualColliderAndEverySlotShareApproved42cmPlane(&quot;Assets/Art/Phase6/Prefabs/PF_CounterPreset_1x2.prefab&quot;,1,2)" fullname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests.CounterVisualColliderAndEverySlotShareApproved42cmPlane(&quot;Assets/Art/Phase6/Prefabs/PF_CounterPreset_1x2.prefab&quot;,1,2)" methodname="CounterVisualColliderAndEverySlotShareApproved42cmPlane" classname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests" runstate="Runnable" seed="300679280" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:01:36Z" duration="0.000872" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3019" name="CounterVisualColliderAndEverySlotShareApproved42cmPlane(&quot;Assets/Art/Phase6/Prefabs/PF_CounterPreset_1x3.prefab&quot;,1,3)" fullname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests.CounterVisualColliderAndEverySlotShareApproved42cmPlane(&quot;Assets/Art/Phase6/Prefabs/PF_CounterPreset_1x3.prefab&quot;,1,3)" methodname="CounterVisualColliderAndEverySlotShareApproved42cmPlane" classname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests" runstate="Runnable" seed="1919106" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:01:36Z" duration="0.000633" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3020" name="CounterVisualColliderAndEverySlotShareApproved42cmPlane(&quot;Assets/Art/Phase6/Prefabs/PF_CounterPreset_2x3.prefab&quot;,2,3)" fullname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests.CounterVisualColliderAndEverySlotShareApproved42cmPlane(&quot;Assets/Art/Phase6/Prefabs/PF_CounterPreset_2x3.prefab&quot;,2,3)" methodname="CounterVisualColliderAndEverySlotShareApproved42cmPlane" classname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests" runstate="Runnable" seed="130417993" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:01:36Z" duration="0.000739" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3021" name="CounterVisualColliderAndEverySlotShareApproved42cmPlane(&quot;Assets/Art/Phase4/Prefabs/PF_Validation_Counter_1x3_01.prefab&quot;,1,3)" fullname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests.CounterVisualColliderAndEverySlotShareApproved42cmPlane(&quot;Assets/Art/Phase4/Prefabs/PF_Validation_Counter_1x3_01.prefab&quot;,1,3)" methodname="CounterVisualColliderAndEverySlotShareApproved42cmPlane" classname="AnimalCafe.Tests.EditMode.Phase13.CounterHeightRegressionTests" runstate="Runnable" seed="764513728" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:01:36Z" duration="0.000530" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+            <test-suite type="TestSuite" id="3987" name="Phase6" fullname="AnimalCafe.Tests.EditMode.Phase6" runstate="Runnable" testcasecount="436" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:03:44Z" duration="128.107077" total="32" passed="32" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="2535" name="Phase6DecorationAssetBuilderTests" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" testcasecount="32" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:03:44Z" duration="128.092942" total="32" passed="32" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2538" name="BuildAll_CreatesDeterministicSpriteThumbnailsWithApprovedImportSettings" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_CreatesDeterministicSpriteThumbnailsWithApprovedImportSettings" methodname="BuildAll_CreatesDeterministicSpriteThumbnailsWithApprovedImportSettings" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1751728311" result="Passed" start-time="2026-10-15 00:01:36Z" end-time="2026-10-15 00:01:39Z" duration="3.049380" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2536" name="BuildAll_CreatesExactMultiCellPrefabCompositionAndDefinitionContracts" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_CreatesExactMultiCellPrefabCompositionAndDefinitionContracts" methodname="BuildAll_CreatesExactMultiCellPrefabCompositionAndDefinitionContracts" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="124410808" result="Passed" start-time="2026-10-15 00:01:39Z" end-time="2026-10-15 00:01:40Z" duration="1.151596" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2548" name="BuildAll_FirstPublishFaultLeavesNoTask6UiTargetOrFolderMetaResidue" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_FirstPublishFaultLeavesNoTask6UiTargetOrFolderMetaResidue" methodname="BuildAll_FirstPublishFaultLeavesNoTask6UiTargetOrFolderMetaResidue" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="312004935" result="Passed" start-time="2026-10-15 00:01:40Z" end-time="2026-10-15 00:01:42Z" duration="1.710973" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2541" name="BuildAll_FirstRepairAfterFreshImportPreservesCanonicalFontBytesAndLookupFlags" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_FirstRepairAfterFreshImportPreservesCanonicalFontBytesAndLookupFlags" methodname="BuildAll_FirstRepairAfterFreshImportPreservesCanonicalFontBytesAndLookupFlags" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1319543463" result="Passed" start-time="2026-10-15 00:01:42Z" end-time="2026-10-15 00:01:49Z" duration="7.557025" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2550" name="BuildAll_RemovesStalePersistentButtonCallbacksWithoutChangingLocalIds" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_RemovesStalePersistentButtonCallbacksWithoutChangingLocalIds" methodname="BuildAll_RemovesStalePersistentButtonCallbacksWithoutChangingLocalIds" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="220298956" result="Passed" start-time="2026-10-15 00:01:49Z" end-time="2026-10-15 00:01:52Z" duration="2.661277" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2549" name="BuildAll_RepairsValidUiDriftInPlaceAndRestoresDeterministicSnapshot" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_RepairsValidUiDriftInPlaceAndRestoresDeterministicSnapshot" methodname="BuildAll_RepairsValidUiDriftInPlaceAndRestoresDeterministicSnapshot" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="779562405" result="Passed" start-time="2026-10-15 00:01:52Z" end-time="2026-10-15 00:02:00Z" duration="7.791218" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Main Object Name 'Valid Drift Font' does not match filename 'NotoSansSC-Phase6 SDF'
+]]></output>
+                </test-case>
+                <test-case id="2537" name="BuildAll_ReusesPhase4CounterWithoutChangingItsGuidOrBytes" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_ReusesPhase4CounterWithoutChangingItsGuidOrBytes" methodname="BuildAll_ReusesPhase4CounterWithoutChangingItsGuidOrBytes" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="971278029" result="Passed" start-time="2026-10-15 00:02:00Z" end-time="2026-10-15 00:02:01Z" duration="1.280533" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2539" name="BuildAll_TwicePreservesEveryGeneratedGuidAndCatalogueCounts" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_TwicePreservesEveryGeneratedGuidAndCatalogueCounts" methodname="BuildAll_TwicePreservesEveryGeneratedGuidAndCatalogueCounts" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1099990379" result="Passed" start-time="2026-10-15 00:02:01Z" end-time="2026-10-15 00:02:03Z" duration="2.196238" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2544" name="BuildAll_UiCandidateFailureDoesNotFlushUnrelatedDirtyAssets" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_UiCandidateFailureDoesNotFlushUnrelatedDirtyAssets" methodname="BuildAll_UiCandidateFailureDoesNotFlushUnrelatedDirtyAssets" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1234067466" result="Passed" start-time="2026-10-15 00:02:03Z" end-time="2026-10-15 00:02:15Z" duration="11.827710" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2547" name="BuildAll_UiCandidateFailureOnAbsentTargetsLeavesNoTask6FontOrPrefabFolders" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_UiCandidateFailureOnAbsentTargetsLeavesNoTask6FontOrPrefabFolders" methodname="BuildAll_UiCandidateFailureOnAbsentTargetsLeavesNoTask6FontOrPrefabFolders" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1731967178" result="Passed" start-time="2026-10-15 00:02:15Z" end-time="2026-10-15 00:02:16Z" duration="1.138133" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2543" name="BuildAll_UiCandidateFailureTouchesNoLiveTask6UiAsset" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_UiCandidateFailureTouchesNoLiveTask6UiAsset" methodname="BuildAll_UiCandidateFailureTouchesNoLiveTask6UiAsset" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="869601737" result="Passed" start-time="2026-10-15 00:02:16Z" end-time="2026-10-15 00:02:23Z" duration="6.958576" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2560" name="BuildAll_UiFailedAndSuccessfulRunsNeverChangeProtectedPhase5FontThemeBytes" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_UiFailedAndSuccessfulRunsNeverChangeProtectedPhase5FontThemeBytes" methodname="BuildAll_UiFailedAndSuccessfulRunsNeverChangeProtectedPhase5FontThemeBytes" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="2081223811" result="Passed" start-time="2026-10-15 00:02:23Z" end-time="2026-10-15 00:02:55Z" duration="31.595183" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2546" name="BuildAll_UiPostPublishValidationFaultRollsBackEveryByteMetaAndIdentity" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_UiPostPublishValidationFaultRollsBackEveryByteMetaAndIdentity" methodname="BuildAll_UiPostPublishValidationFaultRollsBackEveryByteMetaAndIdentity" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1664354250" result="Passed" start-time="2026-10-15 00:02:55Z" end-time="2026-10-15 00:03:02Z" duration="7.577195" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2545" name="BuildAll_UiPublishFaultAfterFirstWriteRollsBackEveryByteMetaAndIdentity" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_UiPublishFaultAfterFirstWriteRollsBackEveryByteMetaAndIdentity" methodname="BuildAll_UiPublishFaultAfterFirstWriteRollsBackEveryByteMetaAndIdentity" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1153801469" result="Passed" start-time="2026-10-15 00:03:02Z" end-time="2026-10-15 00:03:10Z" duration="7.247047" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2540" name="BuildAll_UiSuccessTwicePreservesBytesGuidsSubassetOrderAndViewLocalIds" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.BuildAll_UiSuccessTwicePreservesBytesGuidsSubassetOrderAndViewLocalIds" methodname="BuildAll_UiSuccessTwicePreservesBytesGuidsSubassetOrderAndViewLocalIds" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1117722226" result="Passed" start-time="2026-10-15 00:03:10Z" end-time="2026-10-15 00:03:17Z" duration="6.917985" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2561" name="ProductionLookupCatalogue_RetainsPhase4FurnitureAndAddsThreePresets" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ProductionLookupCatalogue_RetainsPhase4FurnitureAndAddsThreePresets" methodname="ProductionLookupCatalogue_RetainsPhase4FurnitureAndAddsThreePresets" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1534622659" result="Passed" start-time="2026-10-15 00:03:17Z" end-time="2026-10-15 00:03:18Z" duration="1.078606" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2564" name="PublishDecorationCatalogue_InvalidCandidatePreservesLiveAsset" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.PublishDecorationCatalogue_InvalidCandidatePreservesLiveAsset" methodname="PublishDecorationCatalogue_InvalidCandidatePreservesLiveAsset" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1541162572" result="Passed" start-time="2026-10-15 00:03:18Z" end-time="2026-10-15 00:03:20Z" duration="2.235463" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2542" name="PublishedUiFont_UsesOnlyCanonicalNoneLookupFlags" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.PublishedUiFont_UsesOnlyCanonicalNoneLookupFlags" methodname="PublishedUiFont_UsesOnlyCanonicalNoneLookupFlags" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1652908365" result="Passed" start-time="2026-10-15 00:03:20Z" end-time="2026-10-15 00:03:20Z" duration="0.056447" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2563" name="PublishProductionCatalogue_InvalidCandidatePreservesLiveAsset" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.PublishProductionCatalogue_InvalidCandidatePreservesLiveAsset" methodname="PublishProductionCatalogue_InvalidCandidatePreservesLiveAsset" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1421618801" result="Passed" start-time="2026-10-15 00:03:20Z" end-time="2026-10-15 00:03:22Z" duration="2.186304" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2562" name="ValidateCatalogue_DuplicateIdsReportBothAssetPaths" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidateCatalogue_DuplicateIdsReportBothAssetPaths" methodname="ValidateCatalogue_DuplicateIdsReportBothAssetPaths" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="111085928" result="Passed" start-time="2026-10-15 00:03:22Z" end-time="2026-10-15 00:03:23Z" duration="1.110920" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="2570" name="ValidateCounterPresetContract_RejectsBrokenGeneratedContract" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidateCounterPresetContract_RejectsBrokenGeneratedContract" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-10-15 00:03:23Z" end-time="2026-10-15 00:03:29Z" duration="5.946133" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2565" name="ValidateCounterPresetContract_RejectsBrokenGeneratedContract(&quot;lattice&quot;,&quot;lattice&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidateCounterPresetContract_RejectsBrokenGeneratedContract(&quot;lattice&quot;,&quot;lattice&quot;)" methodname="ValidateCounterPresetContract_RejectsBrokenGeneratedContract" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1979493723" result="Passed" start-time="2026-10-15 00:03:23Z" end-time="2026-10-15 00:03:24Z" duration="1.284297" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2566" name="ValidateCounterPresetContract_RejectsBrokenGeneratedContract(&quot;duplicate-id&quot;,&quot;unique&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidateCounterPresetContract_RejectsBrokenGeneratedContract(&quot;duplicate-id&quot;,&quot;unique&quot;)" methodname="ValidateCounterPresetContract_RejectsBrokenGeneratedContract" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="739293353" result="Passed" start-time="2026-10-15 00:03:24Z" end-time="2026-10-15 00:03:26Z" duration="1.186199" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2567" name="ValidateCounterPresetContract_RejectsBrokenGeneratedContract(&quot;rotation&quot;,&quot;rotation&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidateCounterPresetContract_RejectsBrokenGeneratedContract(&quot;rotation&quot;,&quot;rotation&quot;)" methodname="ValidateCounterPresetContract_RejectsBrokenGeneratedContract" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="725860715" result="Passed" start-time="2026-10-15 00:03:26Z" end-time="2026-10-15 00:03:27Z" duration="1.212731" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2568" name="ValidateCounterPresetContract_RejectsBrokenGeneratedContract(&quot;height&quot;,&quot;surface Y&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidateCounterPresetContract_RejectsBrokenGeneratedContract(&quot;height&quot;,&quot;surface Y&quot;)" methodname="ValidateCounterPresetContract_RejectsBrokenGeneratedContract" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1480606535" result="Passed" start-time="2026-10-15 00:03:27Z" end-time="2026-10-15 00:03:28Z" duration="1.136036" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2569" name="ValidateCounterPresetContract_RejectsBrokenGeneratedContract(&quot;clearance&quot;,&quot;above&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidateCounterPresetContract_RejectsBrokenGeneratedContract(&quot;clearance&quot;,&quot;above&quot;)" methodname="ValidateCounterPresetContract_RejectsBrokenGeneratedContract" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="2032316204" result="Passed" start-time="2026-10-15 00:03:28Z" end-time="2026-10-15 00:03:29Z" duration="1.093059" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="2559" name="ValidatePublishedUiSet_RejectsBrokenTmpOwnershipReferences" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidatePublishedUiSet_RejectsBrokenTmpOwnershipReferences" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-15 00:03:29Z" end-time="2026-10-15 00:03:37Z" duration="7.739436" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2556" name="ValidatePublishedUiSet_RejectsBrokenTmpOwnershipReferences(&quot;font-material&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidatePublishedUiSet_RejectsBrokenTmpOwnershipReferences(&quot;font-material&quot;)" methodname="ValidatePublishedUiSet_RejectsBrokenTmpOwnershipReferences" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="304052498" result="Passed" start-time="2026-10-15 00:03:29Z" end-time="2026-10-15 00:03:32Z" duration="2.576161" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2557" name="ValidatePublishedUiSet_RejectsBrokenTmpOwnershipReferences(&quot;font-atlas&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidatePublishedUiSet_RejectsBrokenTmpOwnershipReferences(&quot;font-atlas&quot;)" methodname="ValidatePublishedUiSet_RejectsBrokenTmpOwnershipReferences" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1752701887" result="Passed" start-time="2026-10-15 00:03:32Z" end-time="2026-10-15 00:03:34Z" duration="2.562344" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2558" name="ValidatePublishedUiSet_RejectsBrokenTmpOwnershipReferences(&quot;material-texture&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidatePublishedUiSet_RejectsBrokenTmpOwnershipReferences(&quot;material-texture&quot;)" methodname="ValidatePublishedUiSet_RejectsBrokenTmpOwnershipReferences" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1376951102" result="Passed" start-time="2026-10-15 00:03:34Z" end-time="2026-10-15 00:03:37Z" duration="2.598623" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="2555" name="ValidatePublishedUiSet_RejectsCanonicalPrefabDrift" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidatePublishedUiSet_RejectsCanonicalPrefabDrift" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-15 00:03:37Z" end-time="2026-10-15 00:03:44Z" duration="7.062845" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2552" name="ValidatePublishedUiSet_RejectsCanonicalPrefabDrift(&quot;copy&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidatePublishedUiSet_RejectsCanonicalPrefabDrift(&quot;copy&quot;)" methodname="ValidatePublishedUiSet_RejectsCanonicalPrefabDrift" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1123449410" result="Passed" start-time="2026-10-15 00:03:37Z" end-time="2026-10-15 00:03:39Z" duration="2.332717" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2553" name="ValidatePublishedUiSet_RejectsCanonicalPrefabDrift(&quot;background&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidatePublishedUiSet_RejectsCanonicalPrefabDrift(&quot;background&quot;)" methodname="ValidatePublishedUiSet_RejectsCanonicalPrefabDrift" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1936923323" result="Passed" start-time="2026-10-15 00:03:39Z" end-time="2026-10-15 00:03:42Z" duration="2.352968" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2554" name="ValidatePublishedUiSet_RejectsCanonicalPrefabDrift(&quot;theme&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidatePublishedUiSet_RejectsCanonicalPrefabDrift(&quot;theme&quot;)" methodname="ValidatePublishedUiSet_RejectsCanonicalPrefabDrift" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="457779254" result="Passed" start-time="2026-10-15 00:03:42Z" end-time="2026-10-15 00:03:44Z" duration="2.374863" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="2551" name="ValidatePublishedUiSet_RejectsMissingScriptOnNestedChild" fullname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests.ValidatePublishedUiSet_RejectsMissingScriptOnNestedChild" methodname="ValidatePublishedUiSet_RejectsMissingScriptOnNestedChild" classname="AnimalCafe.Tests.EditMode.Phase6.Phase6DecorationAssetBuilderTests" runstate="Runnable" seed="1157586329" result="Passed" start-time="2026-10-15 00:03:44Z" end-time="2026-10-15 00:03:44Z" duration="0.004538" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+          <test-suite type="TestSuite" id="3981" name="Phase4" fullname="AnimalCafe.Tests.Phase4" runstate="Runnable" testcasecount="246" result="Passed" start-time="2026-10-15 00:03:44Z" end-time="2026-10-15 00:03:48Z" duration="4.546465" total="23" passed="23" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestFixture" id="1887" name="Phase4ProductionAssetTests" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" testcasecount="23" result="Passed" start-time="2026-10-15 00:03:44Z" end-time="2026-10-15 00:03:48Z" duration="4.538604" total="23" passed="23" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1891" name="BoundsRule_AcceptsToleranceBoundaryAndRejectsBeyondIt" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.BoundsRule_AcceptsToleranceBoundaryAndRejectsBeyondIt" methodname="BoundsRule_AcceptsToleranceBoundaryAndRejectsBeyondIt" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="1133584839" result="Passed" start-time="2026-10-15 00:03:44Z" end-time="2026-10-15 00:03:44Z" duration="0.000614" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1901" name="BuildProductionContent_AuthorsExactDefinitionAndCatalogueContracts" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.BuildProductionContent_AuthorsExactDefinitionAndCatalogueContracts" methodname="BuildProductionContent_AuthorsExactDefinitionAndCatalogueContracts" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="750890687" result="Passed" start-time="2026-10-15 00:03:44Z" end-time="2026-10-15 00:03:44Z" duration="0.304702" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1900" name="BuildProductionContent_CreatesExactlyApprovedFurnitureDefinitions" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.BuildProductionContent_CreatesExactlyApprovedFurnitureDefinitions" methodname="BuildProductionContent_CreatesExactlyApprovedFurnitureDefinitions" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="71051630" result="Passed" start-time="2026-10-15 00:03:44Z" end-time="2026-10-15 00:03:44Z" duration="0.153640" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1904" name="BuildProductionContent_CreatesExactSpatialMarkers" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.BuildProductionContent_CreatesExactSpatialMarkers" methodname="BuildProductionContent_CreatesExactSpatialMarkers" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="203122516" result="Passed" start-time="2026-10-15 00:03:44Z" end-time="2026-10-15 00:03:45Z" duration="0.155066" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1905" name="BuildProductionContent_CreatesOneValidationOnlyLongCounterFixture" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.BuildProductionContent_CreatesOneValidationOnlyLongCounterFixture" methodname="BuildProductionContent_CreatesOneValidationOnlyLongCounterFixture" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="1319636459" result="Passed" start-time="2026-10-15 00:03:45Z" end-time="2026-10-15 00:03:45Z" duration="0.153685" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1902" name="BuildProductionContent_ModelBoundsDoNotRewriteOneByOneFootprints" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.BuildProductionContent_ModelBoundsDoNotRewriteOneByOneFootprints" methodname="BuildProductionContent_ModelBoundsDoNotRewriteOneByOneFootprints" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="1712258375" result="Passed" start-time="2026-10-15 00:03:45Z" end-time="2026-10-15 00:03:45Z" duration="0.155736" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1896" name="BuildProductionContent_PreservesImportedCounterAndCashRegisterFbxBytes" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.BuildProductionContent_PreservesImportedCounterAndCashRegisterFbxBytes" methodname="BuildProductionContent_PreservesImportedCounterAndCashRegisterFbxBytes" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="1452355743" result="Passed" start-time="2026-10-15 00:03:45Z" end-time="2026-10-15 00:03:45Z" duration="0.367126" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1903" name="BuildProductionContent_RegistersCupVisualAndWindowOnlyInTheirApprovedRoles" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.BuildProductionContent_RegistersCupVisualAndWindowOnlyInTheirApprovedRoles" methodname="BuildProductionContent_RegistersCupVisualAndWindowOnlyInTheirApprovedRoles" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="1277670420" result="Passed" start-time="2026-10-15 00:03:45Z" end-time="2026-10-15 00:03:45Z" duration="0.136018" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1908" name="BuildProductionContent_TwicePreservesGuidsAndExactCounts" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.BuildProductionContent_TwicePreservesGuidsAndExactCounts" methodname="BuildProductionContent_TwicePreservesGuidsAndExactCounts" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="1765255225" result="Passed" start-time="2026-10-15 00:03:45Z" end-time="2026-10-15 00:03:46Z" duration="0.280684" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1895" name="CashRegisterProductionFiles_ExistAtExactBlendFbxAndTexturePaths" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.CashRegisterProductionFiles_ExistAtExactBlendFbxAndTexturePaths" methodname="CashRegisterProductionFiles_ExistAtExactBlendFbxAndTexturePaths" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="437390661" result="Passed" start-time="2026-10-15 00:03:46Z" end-time="2026-10-15 00:03:46Z" duration="0.000498" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1899" name="CashRegisterProductionTexture_IsExact512Square" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.CashRegisterProductionTexture_IsExact512Square" methodname="CashRegisterProductionTexture_IsExact512Square" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="450641493" result="Passed" start-time="2026-10-15 00:03:46Z" end-time="2026-10-15 00:03:46Z" duration="0.000255" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1893" name="CashRegisterTriangleRule_UsesExactMaximum" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.CashRegisterTriangleRule_UsesExactMaximum" methodname="CashRegisterTriangleRule_UsesExactMaximum" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="1351387692" result="Passed" start-time="2026-10-15 00:03:46Z" end-time="2026-10-15 00:03:46Z" duration="0.000215" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1894" name="CounterProductionFiles_ExistAtExactBlendAndFbxPaths" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.CounterProductionFiles_ExistAtExactBlendAndFbxPaths" methodname="CounterProductionFiles_ExistAtExactBlendAndFbxPaths" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="2143669410" result="Passed" start-time="2026-10-15 00:03:46Z" end-time="2026-10-15 00:03:46Z" duration="0.000262" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1910" name="GlobalValidation_IncludesLaterPhaseAssetsWithoutWeakeningInvalidDefinitionDetection" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.GlobalValidation_IncludesLaterPhaseAssetsWithoutWeakeningInvalidDefinitionDetection" methodname="GlobalValidation_IncludesLaterPhaseAssetsWithoutWeakeningInvalidDefinitionDetection" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="1637279292" result="Passed" start-time="2026-10-15 00:03:46Z" end-time="2026-10-15 00:03:47Z" duration="1.349639" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1898" name="ImportedCashRegisterModel_MeetsBoundsTrianglesAndRootScaleContracts" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.ImportedCashRegisterModel_MeetsBoundsTrianglesAndRootScaleContracts" methodname="ImportedCashRegisterModel_MeetsBoundsTrianglesAndRootScaleContracts" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="1080394033" result="Passed" start-time="2026-10-15 00:03:47Z" end-time="2026-10-15 00:03:47Z" duration="0.001918" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1897" name="ImportedCounterModel_MeetsBoundsAndRootScaleContracts" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.ImportedCounterModel_MeetsBoundsAndRootScaleContracts" methodname="ImportedCounterModel_MeetsBoundsAndRootScaleContracts" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="611062736" result="Passed" start-time="2026-10-15 00:03:47Z" end-time="2026-10-15 00:03:47Z" duration="0.000314" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1907" name="LongCounterSurfaceSlots_QuarterTurnPreservesLocalMarkersAndRotatesWorldRelations" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.LongCounterSurfaceSlots_QuarterTurnPreservesLocalMarkersAndRotatesWorldRelations" methodname="LongCounterSurfaceSlots_QuarterTurnPreservesLocalMarkersAndRotatesWorldRelations" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="555466621" result="Passed" start-time="2026-10-15 00:03:47Z" end-time="2026-10-15 00:03:47Z" duration="0.140791" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1906" name="LongCounterSurfaceSlots_TranslationPreservesLocalMarkersAndMovesWorldPositions" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.LongCounterSurfaceSlots_TranslationPreservesLocalMarkersAndMovesWorldPositions" methodname="LongCounterSurfaceSlots_TranslationPreservesLocalMarkersAndMovesWorldPositions" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="488978131" result="Passed" start-time="2026-10-15 00:03:47Z" end-time="2026-10-15 00:03:47Z" duration="0.141961" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1909" name="ProductionContent_AllApprovedDefinitionsPassPhase4Validation" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.ProductionContent_AllApprovedDefinitionsPassPhase4Validation" methodname="ProductionContent_AllApprovedDefinitionsPassPhase4Validation" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="562021412" result="Passed" start-time="2026-10-15 00:03:47Z" end-time="2026-10-15 00:03:48Z" duration="1.185872" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1888" name="ProductionInputs_UseApprovedSourcesAndNotOldPosSource" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.ProductionInputs_UseApprovedSourcesAndNotOldPosSource" methodname="ProductionInputs_UseApprovedSourcesAndNotOldPosSource" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="1237692945" result="Passed" start-time="2026-10-15 00:03:48Z" end-time="2026-10-15 00:03:48Z" duration="0.000900" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1889" name="ProductionOutputs_UseExactBlendAndFbxNames" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.ProductionOutputs_UseExactBlendAndFbxNames" methodname="ProductionOutputs_UseExactBlendAndFbxNames" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="670992976" result="Passed" start-time="2026-10-15 00:03:48Z" end-time="2026-10-15 00:03:48Z" duration="0.000249" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1890" name="ProductionTargets_UseApprovedUnityAxisBounds" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.ProductionTargets_UseApprovedUnityAxisBounds" methodname="ProductionTargets_UseApprovedUnityAxisBounds" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="2032729272" result="Passed" start-time="2026-10-15 00:03:48Z" end-time="2026-10-15 00:03:48Z" duration="0.000291" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1892" name="TextureRule_UsesExactTargetAndMaximumCases" fullname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests.TextureRule_UsesExactTargetAndMaximumCases" methodname="TextureRule_UsesExactTargetAndMaximumCases" classname="AnimalCafe.Tests.Phase4.Phase4ProductionAssetTests" runstate="Runnable" seed="1467638711" result="Passed" start-time="2026-10-15 00:03:48Z" end-time="2026-10-15 00:03:48Z" duration="0.000287" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+                <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+              </test-case>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

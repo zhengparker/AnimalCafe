@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="7" result="Failed(Child)" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 17:26:33Z" end-time="2026-10-14 17:26:38Z" duration="4.5182878">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2594" result="Failed" site="Child" start-time="2026-10-14 17:26:33Z" end-time="2026-10-14 17:26:38Z" duration="4.518288" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3968" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2594" result="Failed" site="Child" start-time="2026-10-14 17:26:33Z" end-time="2026-10-14 17:26:38Z" duration="4.486235" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="23148" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3969" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2594" result="Failed" site="Child" start-time="2026-10-14 17:26:33Z" end-time="2026-10-14 17:26:38Z" duration="4.460738" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3970" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2594" result="Failed" site="Child" start-time="2026-10-14 17:26:33Z" end-time="2026-10-14 17:26:38Z" duration="4.435409" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="3976" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1712" result="Failed" site="Child" start-time="2026-10-14 17:26:34Z" end-time="2026-10-14 17:26:38Z" duration="4.396655" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="3982" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="103" result="Failed" site="Child" start-time="2026-10-14 17:26:34Z" end-time="2026-10-14 17:26:38Z" duration="4.375908" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="3111" name="Phase13LegacySceneCompatibilityTests" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" testcasecount="7" result="Failed" site="Child" start-time="2026-10-14 17:26:34Z" end-time="2026-10-14 17:26:38Z" duration="4.373567" total="7" passed="5" failed="2" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="3119" name="Phase12ValidationCopyExcludesEmployeesAndPreservesLoadedMainCafe" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase12ValidationCopyExcludesEmployeesAndPreservesLoadedMainCafe" methodname="Phase12ValidationCopyExcludesEmployeesAndPreservesLoadedMainCafe" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="726100492" result="Failed" start-time="2026-10-14 17:26:34Z" end-time="2026-10-14 17:26:35Z" duration="1.335609" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected string length 28 but was 51. Strings differ at index 14.
+  Expected: "Assets/Scenes/MainCafe.unity"
+  But was:  "Assets/Scenes/Validation/Phase12CustomerQueue.unity"
+  -------------------------^
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase12ValidationCopyExcludesEmployeesAndPreservesLoadedMainCafe () [0x000ac] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\Phase13LegacySceneCompatibilityTests.cs:71
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[AC_P12_SCENE_READY Assets/Scenes/Validation/Phase12CustomerQueue.unity
+Unloading the last loaded scene Assets/Scenes/Validation/Phase12CustomerQueue.unity(build index: -1), is not supported. Please use SceneManager.LoadScene()/EditorSceneManager.OpenScene() to switch to another scene.
+]]></output>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3118" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" testcasecount="6" result="Failed" site="Child" start-time="2026-10-14 17:26:35Z" end-time="2026-10-14 17:26:38Z" duration="3.025734" total="6" passed="5" failed="1" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3112" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;valid&quot;,False)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;valid&quot;,False)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="827943994" result="Failed" start-time="2026-10-14 17:26:35Z" end-time="2026-10-14 17:26:35Z" duration="0.568627" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  valid
+  Expected: False
+  But was:  True
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud (System.String variant, System.Boolean rejected) [0x00139] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\Phase13LegacySceneCompatibilityTests.cs:45
+]]></stack-trace>
+                    </failure>
+                    <output><![CDATA[Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="3113" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;unknown&quot;,True)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;unknown&quot;,True)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="2059261294" result="Passed" start-time="2026-10-14 17:26:35Z" end-time="2026-10-14 17:26:36Z" duration="0.490156" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="3114" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;duplicate-p13&quot;,True)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;duplicate-p13&quot;,True)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="758906268" result="Passed" start-time="2026-10-14 17:26:36Z" end-time="2026-10-14 17:26:36Z" duration="0.502322" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="3115" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;missing-core&quot;,True)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;missing-core&quot;,True)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="1703896061" result="Passed" start-time="2026-10-14 17:26:36Z" end-time="2026-10-14 17:26:37Z" duration="0.489530" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="3116" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;name-only&quot;,True)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;name-only&quot;,True)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="1122147192" result="Passed" start-time="2026-10-14 17:26:37Z" end-time="2026-10-14 17:26:37Z" duration="0.481301" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="3117" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;wrong-owner&quot;,True)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;wrong-owner&quot;,True)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="1297542429" result="Passed" start-time="2026-10-14 17:26:37Z" end-time="2026-10-14 17:26:38Z" duration="0.481450" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

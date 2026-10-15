@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="1" result="Passed" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 16:44:51Z" end-time="2026-10-14 16:45:07Z" duration="15.6039245">
+  <test-suite type="TestSuite" id="2421" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1258" result="Passed" start-time="2026-10-14 16:44:51Z" end-time="2026-10-14 16:45:07Z" duration="15.603925" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1519" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="470" result="Passed" start-time="2026-10-14 16:44:51Z" end-time="2026-10-14 16:45:07Z" duration="15.573402" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="30904" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1520" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="470" result="Passed" start-time="2026-10-14 16:44:51Z" end-time="2026-10-14 16:45:07Z" duration="15.560306" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1521" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="470" result="Passed" start-time="2026-10-14 16:44:51Z" end-time="2026-10-14 16:45:07Z" duration="15.547551" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1522" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="470" result="Passed" start-time="2026-10-14 16:44:51Z" end-time="2026-10-14 16:45:07Z" duration="15.534410" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1523" name="Phase13" fullname="AnimalCafe.Tests.PlayMode.Phase13" runstate="Runnable" testcasecount="32" result="Passed" start-time="2026-10-14 16:44:51Z" end-time="2026-10-14 16:45:07Z" duration="15.523046" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1085" name="EmployeeMainCafeTests" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-10-14 16:44:51Z" end-time="2026-10-14 16:45:07Z" duration="15.516664" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1091" name="RotatedMultiSlotTableKeepsCupModule" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests.RotatedMultiSlotTableKeepsCupModule" methodname="RotatedMultiSlotTableKeepsCupModule" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" seed="1679967783" result="Passed" start-time="2026-10-14 16:44:51Z" end-time="2026-10-14 16:45:07Z" duration="15.498086" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[P13_SCREEN_CAPTURE E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\outputs\phase13\p13-actual-working.png 1080x1920
+P13_SCREEN_CAPTURE E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\outputs\phase13\p13-actual-carrying.png 1080x1920
+P13_SCREEN_CAPTURE E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\outputs\phase13\p13-actual-three-cups.png 1080x1920
+REAL_ROTATED_MULTISLOT grid/representations/floor rigid 37deg; actual three deliveries to slot.1 local triangle
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

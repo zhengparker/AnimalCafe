@@ -35,7 +35,10 @@ namespace AnimalCafe.Navigation
                     var toward = Horizontal(corners[corner] - Position);
                     if (corner == corners.Length - 1 && toward.magnitude <= actor.Settings.Epsilon)
                     { actor.Agent.isStopped = true; return Vector3.zero; }
-                    return toward.normalized * actor.Settings.MaxSpeed;
+                    // Vector3.normalized has a hidden near-zero cutoff. A non-final corner
+                    // still needs its last guarded micrometers / 保留拐点前最后的合法微小位移。
+                    var length = toward.magnitude;
+                    return length > 0 ? toward / length * actor.Settings.MaxSpeed : Vector3.zero;
                 }
                 if (Vector3.Distance(Position, destination) <= actor.Settings.ArrivalDistance)
                 { actor.Agent.isStopped = true; return Vector3.zero; }
@@ -211,7 +214,11 @@ namespace AnimalCafe.Navigation
             while (corner < corners.Length - 1)
             {
                 var distance = Horizontal(corners[corner] - Position).magnitude;
-                if (distance <= actor.Settings.Epsilon) { corner++; continue; }
+                // A near corner can still separate two NavMesh polygons. Finish the tiny
+                // approach unless the next complete leg is safe; never cut it by epsilon.
+                // 接近拐点不等于已经过弯；下一腿不安全时走完原拐点，避免被边界裁成零。
+                if (distance == 0 || (distance <= actor.Settings.Epsilon && actor.World != null &&
+                    actor.World.CanTraverseStraight(actor, corners[corner + 1]))) { corner++; continue; }
                 // Native corner按Agent半径生成，可能贴近完整skin。只在原到达范围内，
                 // 且真实pose到下一corner整段通过原guards时，移除这个多余拐点。
                 if (distance <= actor.Settings.ArrivalDistance && actor.World != null &&

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="4" result="Failed(Child)" total="4" passed="2" failed="2" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.1752107">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2581" result="Failed" site="Child" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.175211" total="4" passed="2" failed="2" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3951" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2581" result="Failed" site="Child" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.143782" total="4" passed="2" failed="2" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="33168" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3952" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2581" result="Failed" site="Child" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.117789" total="4" passed="2" failed="2" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3953" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2581" result="Failed" site="Child" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.092537" total="4" passed="2" failed="2" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="3959" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1699" result="Failed" site="Child" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.063520" total="4" passed="2" failed="2" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="3965" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="90" result="Failed" site="Child" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.044146" total="4" passed="2" failed="2" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="3055" name="EmployeeLifecycleTests" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests" runstate="Runnable" testcasecount="4" result="Failed" site="Child" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.041789" total="4" passed="2" failed="2" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="3056" name="FailedTaskReasonSurvivesActualReturnUntilNextStart" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests.FailedTaskReasonSurvivesActualReturnUntilNextStart" methodname="FailedTaskReasonSurvivesActualReturnUntilNextStart" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests" runstate="Runnable" seed="786572864" result="Failed" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.023649" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected string length 23 but was 0. Strings differ at index 0.
+  Expected: "Failed: MovementTimeout"
+  But was:  <string.Empty>
+  -----------^
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests.FailedTaskReasonSurvivesActualReturnUntilNextStart () [0x000a5] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeLifecycleTests.cs:16
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3058" name="RepeatedRevisionInvalidationCleansOldHandleOnceAndRejectsOldCallback" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests.RepeatedRevisionInvalidationCleansOldHandleOnceAndRejectsOldCallback" methodname="RepeatedRevisionInvalidationCleansOldHandleOnceAndRejectsOldCallback" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests" runstate="Runnable" seed="173495177" result="Passed" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.003394" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3057" name="RepeatedSameRevisionSuspensionHasBoundedAutomaticResume" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests.RepeatedSameRevisionSuspensionHasBoundedAutomaticResume" methodname="RepeatedSameRevisionSuspensionHasBoundedAutomaticResume" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests" runstate="Runnable" seed="1881883235" result="Passed" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.000376" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3059" name="SameRevisionSuspensionRetainsHandleCupAndResubmitsOnlyOnceWhenReady" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests.SameRevisionSuspensionRetainsHandleCupAndResubmitsOnlyOnceWhenReady" methodname="SameRevisionSuspensionRetainsHandleCupAndResubmitsOnlyOnceWhenReady" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests" runstate="Runnable" seed="1766017748" result="Failed" start-time="2026-10-14 15:33:01Z" end-time="2026-10-14 15:33:01Z" duration="0.001388" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: 1
+  But was:  0
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeLifecycleTests.SameRevisionSuspensionRetainsHandleCupAndResubmitsOnlyOnceWhenReady () [0x00057] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeLifecycleTests.cs:42
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

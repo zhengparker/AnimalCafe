@@ -1,0 +1,348 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="24" result="Failed(Child)" total="24" passed="8" failed="16" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 14:23:34Z" end-time="2026-10-14 14:23:35Z" duration="0.2489043">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2515" result="Failed" site="Child" start-time="2026-10-14 14:23:34Z" end-time="2026-10-14 14:23:35Z" duration="0.248904" total="24" passed="8" failed="16" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="3868" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2515" result="Failed" site="Child" start-time="2026-10-14 14:23:34Z" end-time="2026-10-14 14:23:35Z" duration="0.216794" total="24" passed="8" failed="16" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="32392" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="3869" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2515" result="Failed" site="Child" start-time="2026-10-14 14:23:34Z" end-time="2026-10-14 14:23:35Z" duration="0.191265" total="24" passed="8" failed="16" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="3870" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2515" result="Failed" site="Child" start-time="2026-10-14 14:23:34Z" end-time="2026-10-14 14:23:35Z" duration="0.165979" total="24" passed="8" failed="16" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="3876" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1633" result="Failed" site="Child" start-time="2026-10-14 14:23:34Z" end-time="2026-10-14 14:23:35Z" duration="0.136343" total="24" passed="8" failed="16" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="3882" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="24" result="Failed" site="Child" start-time="2026-10-14 14:23:34Z" end-time="2026-10-14 14:23:35Z" duration="0.111508" total="24" passed="8" failed="16" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="3016" name="EmployeeBindingTests" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="24" result="Failed" site="Child" start-time="2026-10-14 14:23:34Z" end-time="2026-10-14 14:23:35Z" duration="0.110180" total="24" passed="8" failed="16" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-suite type="ParameterizedMethod" id="3025" name="BaristaChoosesFirstReachablePair" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BaristaChoosesFirstReachablePair" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-14 14:23:34Z" end-time="2026-10-14 14:23:35Z" duration="0.064437" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3023" name="BaristaChoosesFirstReachablePair(False)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BaristaChoosesFirstReachablePair(False)" methodname="BaristaChoosesFirstReachablePair" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="516158419" result="Failed" start-time="2026-10-14 14:23:34Z" end-time="2026-10-14 14:23:35Z" duration="0.054879" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Employee binding 尚未实现
+  Expected: True
+  But was:  False
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BaristaChoosesFirstReachablePair (System.Boolean reverse) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:59
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3024" name="BaristaChoosesFirstReachablePair(True)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BaristaChoosesFirstReachablePair(True)" methodname="BaristaChoosesFirstReachablePair" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="688258101" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.002082" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Employee binding 尚未实现
+  Expected: True
+  But was:  False
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BaristaChoosesFirstReachablePair (System.Boolean reverse) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:59
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                </test-suite>
+                <test-case id="3026" name="BaristaSkipsCoffeeMachineWhenNoPickupHasCompleteRoundTrip" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BaristaSkipsCoffeeMachineWhenNoPickupHasCompleteRoundTrip" methodname="BaristaSkipsCoffeeMachineWhenNoPickupHasCompleteRoundTrip" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1522658944" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.001467" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Employee binding 尚未实现
+  Expected: True
+  But was:  False
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BaristaSkipsCoffeeMachineWhenNoPickupHasCompleteRoundTrip () [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:72
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3045" name="BindingRejectsIncompleteRoleContract" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="6" result="Failed" site="Child" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.007570" total="6" passed="0" failed="6" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3039" name="BindingRejectsIncompleteRoleContract(0)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(0)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1456403366" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.002010" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: instance of <System.ArgumentException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract (System.Int32 invalid) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:157
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3040" name="BindingRejectsIncompleteRoleContract(1)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(1)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1251833815" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.000242" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: instance of <System.ArgumentException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract (System.Int32 invalid) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:157
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3041" name="BindingRejectsIncompleteRoleContract(2)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(2)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="130221723" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.000218" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: instance of <System.ArgumentException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract (System.Int32 invalid) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:157
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3042" name="BindingRejectsIncompleteRoleContract(3)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(3)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1564363944" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.000186" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: instance of <System.ArgumentException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract (System.Int32 invalid) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:157
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3043" name="BindingRejectsIncompleteRoleContract(4)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(4)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="766071675" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.000165" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: instance of <System.ArgumentException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract (System.Int32 invalid) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:157
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3044" name="BindingRejectsIncompleteRoleContract(5)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract(5)" methodname="BindingRejectsIncompleteRoleContract" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1563727758" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.000219" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Expected: instance of <System.ArgumentException>
+  But was:  null
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.BindingRejectsIncompleteRoleContract (System.Int32 invalid) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:157
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                </test-suite>
+                <test-case id="3046" name="CashierBindingRejectsPickupFields" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.CashierBindingRejectsPickupFields" methodname="CashierBindingRejectsPickupFields" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="405628403" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.000467" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: instance of <System.ArgumentException>
+  But was:  null
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.CashierBindingRejectsPickupFields () [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:170
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="3028" name="DeletedPickupRepresentationCannotKeepBindingAlive" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.DeletedPickupRepresentationCannotKeepBindingAlive" methodname="DeletedPickupRepresentationCannotKeepBindingAlive" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="451596037" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.001676" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Expected: True
+  But was:  False
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.DeletedPickupRepresentationCannotKeepBindingAlive () [0x00006] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:91
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3022" name="EmptySelectedRegisterUsesP12OrdinalChoice" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.EmptySelectedRegisterUsesP12OrdinalChoice" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.003095" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3020" name="EmptySelectedRegisterUsesP12OrdinalChoice(False)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.EmptySelectedRegisterUsesP12OrdinalChoice(False)" methodname="EmptySelectedRegisterUsesP12OrdinalChoice" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1067611676" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.001358" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Employee binding 尚未实现
+  Expected: True
+  But was:  False
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.EmptySelectedRegisterUsesP12OrdinalChoice (System.Boolean reverse) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:47
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3021" name="EmptySelectedRegisterUsesP12OrdinalChoice(True)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.EmptySelectedRegisterUsesP12OrdinalChoice(True)" methodname="EmptySelectedRegisterUsesP12OrdinalChoice" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1756606038" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.001150" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Employee binding 尚未实现
+  Expected: True
+  But was:  False
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.EmptySelectedRegisterUsesP12OrdinalChoice (System.Boolean reverse) [0x00000] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:47
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="3038" name="InvalidResolverInputReturnsExplicitFailure" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.010365" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3033" name="InvalidResolverInputReturnsExplicitFailure(0)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure(0)" methodname="InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="914386855" result="Passed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.006033" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3034" name="InvalidResolverInputReturnsExplicitFailure(1)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure(1)" methodname="InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1807881976" result="Passed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.000131" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3035" name="InvalidResolverInputReturnsExplicitFailure(2)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure(2)" methodname="InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1686137424" result="Passed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.001165" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3036" name="InvalidResolverInputReturnsExplicitFailure(3)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure(3)" methodname="InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="366389544" result="Passed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.000904" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3037" name="InvalidResolverInputReturnsExplicitFailure(4)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidResolverInputReturnsExplicitFailure(4)" methodname="InvalidResolverInputReturnsExplicitFailure" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1701577956" result="Passed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.000930" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="3032" name="InvalidStationIsSkippedEvenWhenPathQueryAcceptsItsPosition" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidStationIsSkippedEvenWhenPathQueryAcceptsItsPosition" methodname="InvalidStationIsSkippedEvenWhenPathQueryAcceptsItsPosition" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1126200341" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.002191" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Employee binding 尚未实现
+  Expected: True
+  But was:  False
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.InvalidStationIsSkippedEvenWhenPathQueryAcceptsItsPosition () [0x0000d] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:126
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3031" name="MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.003756" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3029" name="MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister(False)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister(False)" methodname="MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="761181899" result="Passed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.001455" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3030" name="MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister(True)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister(True)" methodname="MissingOrInvalidSelectedRegisterNeverFallsBackToAnotherRegister" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1608825038" result="Passed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.001402" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="3027" name="ReturnPathMustAlsoBeComplete" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.ReturnPathMustAlsoBeComplete" methodname="ReturnPathMustAlsoBeComplete" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="1442972871" result="Passed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.001156" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3019" name="SelectedRegisterWinsRegardlessOfEnumerationOrder" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.SelectedRegisterWinsRegardlessOfEnumerationOrder" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" testcasecount="2" result="Failed" site="Child" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.003799" total="2" passed="0" failed="2" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <failure>
+                    <message><![CDATA[One or more child tests had errors]]></message>
+                  </failure>
+                  <test-case id="3017" name="SelectedRegisterWinsRegardlessOfEnumerationOrder(False)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.SelectedRegisterWinsRegardlessOfEnumerationOrder(False)" methodname="SelectedRegisterWinsRegardlessOfEnumerationOrder" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="2068285623" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.001673" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Employee binding 尚未实现
+  Expected: True
+  But was:  False
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.SelectedRegisterWinsRegardlessOfEnumerationOrder (System.Boolean reverse) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:32
+]]></stack-trace>
+                    </failure>
+                  </test-case>
+                  <test-case id="3018" name="SelectedRegisterWinsRegardlessOfEnumerationOrder(True)" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.SelectedRegisterWinsRegardlessOfEnumerationOrder(True)" methodname="SelectedRegisterWinsRegardlessOfEnumerationOrder" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests" runstate="Runnable" seed="426585249" result="Failed" start-time="2026-10-14 14:23:35Z" end-time="2026-10-14 14:23:35Z" duration="0.001326" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <failure>
+                      <message><![CDATA[  Employee binding 尚未实现
+  Expected: True
+  But was:  False
+]]></message>
+                      <stack-trace><![CDATA[at AnimalCafe.Tests.EditMode.Phase13.EmployeeBindingTests.SelectedRegisterWinsRegardlessOfEnumerationOrder (System.Boolean reverse) [0x0000c] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\EditMode\Phase13\EmployeeBindingTests.cs:32
+]]></stack-trace>
+                    </failure>
+                    <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

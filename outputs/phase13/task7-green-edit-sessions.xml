@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="3" result="Passed" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 16:08:26Z" end-time="2026-10-14 16:08:30Z" duration="4.4379889">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2585" result="Passed" start-time="2026-10-14 16:08:26Z" end-time="2026-10-14 16:08:30Z" duration="4.437989" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="3957" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2585" result="Passed" start-time="2026-10-14 16:08:26Z" end-time="2026-10-14 16:08:30Z" duration="4.297811" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="33976" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="3958" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2585" result="Passed" start-time="2026-10-14 16:08:26Z" end-time="2026-10-14 16:08:30Z" duration="4.255794" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3959" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2585" result="Passed" start-time="2026-10-14 16:08:26Z" end-time="2026-10-14 16:08:30Z" duration="4.245294" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="3965" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1703" result="Passed" start-time="2026-10-14 16:08:26Z" end-time="2026-10-14 16:08:30Z" duration="4.215417" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="3971" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="94" result="Passed" start-time="2026-10-14 16:08:26Z" end-time="2026-10-14 16:08:30Z" duration="4.173059" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="3061" name="EmployeePlaySessionTests" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 16:08:26Z" end-time="2026-10-14 16:08:28Z" duration="2.505158" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="3062" name="RepeatedPlayStartsOneFreshSessionWithDomainReload" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests.RepeatedPlayStartsOneFreshSessionWithDomainReload" methodname="RepeatedPlayStartsOneFreshSessionWithDomainReload" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" runstate="Runnable" seed="2124006748" result="Passed" start-time="2026-10-14 16:08:16Z" end-time="2026-10-14 16:08:26Z" duration="10.631152" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[REAL_PLAY_SESSION domainReload=True run=1 actor=employee-96f76c8f52be40ec9f4f25566a9d85a2-Cashier
+REAL_PLAY_SESSION domainReload=True run=2 actor=employee-29af904a28fa4a75bdff8a3d1b51672a-Cashier
+]]></output>
+                </test-case>
+                <test-case id="3063" name="RepeatedPlayStartsOneFreshSessionWithoutDomainReload" fullname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests.RepeatedPlayStartsOneFreshSessionWithoutDomainReload" methodname="RepeatedPlayStartsOneFreshSessionWithoutDomainReload" classname="AnimalCafe.Tests.EditMode.Phase13.EmployeePlaySessionTests" runstate="Runnable" seed="644820635" result="Passed" start-time="2026-10-14 16:08:26Z" end-time="2026-10-14 16:08:28Z" duration="1.952629" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[REAL_PLAY_SESSION domainReload=False run=1 actor=employee-f50eab9702e543aa8fc28b802b6b9261-Cashier
+REAL_PLAY_SESSION domainReload=False run=2 actor=employee-2122f9a3561547768f71d9c667807af9-Cashier
+]]></output>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="3111" name="Phase13SceneBuilderTests" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" runstate="Runnable" testcasecount="1" result="Passed" start-time="2026-10-14 16:08:28Z" end-time="2026-10-14 16:08:30Z" duration="1.657106" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="3112" name="BuildIsIdempotentAndProtectsOtherScenes" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests.BuildIsIdempotentAndProtectsOtherScenes" methodname="BuildIsIdempotentAndProtectsOtherScenes" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13SceneBuilderTests" runstate="Runnable" seed="1211172086" result="Passed" start-time="2026-10-14 16:08:28Z" end-time="2026-10-14 16:08:30Z" duration="1.656179" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[AC_P13_SCENE_READY Assets/Scenes/Validation/Phase13EmployeeTasks.unity
+AC_P13_SCENE_READY Assets/Scenes/Validation/Phase13EmployeeTasks.unity
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="4" result="Failed(Child)" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 16:05:16Z" end-time="2026-10-14 16:05:21Z" duration="5.671092">
+  <test-suite type="TestSuite" id="2417" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1254" result="Failed" site="Child" start-time="2026-10-14 16:05:16Z" end-time="2026-10-14 16:05:21Z" duration="5.671092" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1515" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="466" result="Failed" site="Child" start-time="2026-10-14 16:05:16Z" end-time="2026-10-14 16:05:21Z" duration="5.641506" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="11480" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1516" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="466" result="Failed" site="Child" start-time="2026-10-14 16:05:16Z" end-time="2026-10-14 16:05:21Z" duration="5.626261" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1517" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="466" result="Failed" site="Child" start-time="2026-10-14 16:05:16Z" end-time="2026-10-14 16:05:21Z" duration="5.611243" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="1518" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="466" result="Failed" site="Child" start-time="2026-10-14 16:05:16Z" end-time="2026-10-14 16:05:21Z" duration="5.601904" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="1519" name="Phase13" fullname="AnimalCafe.Tests.PlayMode.Phase13" runstate="Runnable" testcasecount="28" result="Failed" site="Child" start-time="2026-10-14 16:05:16Z" end-time="2026-10-14 16:05:21Z" duration="5.594382" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="1085" name="EmployeeMainCafeTests" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" testcasecount="4" result="Failed" site="Child" start-time="2026-10-14 16:05:16Z" end-time="2026-10-14 16:05:21Z" duration="5.592402" total="4" passed="3" failed="1" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="1086" name="EmptyCafeRemainsEditableUntilStationsAreReady" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests.EmptyCafeRemainsEditableUntilStationsAreReady" methodname="EmptyCafeRemainsEditableUntilStationsAreReady" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" seed="1129531223" result="Failed" start-time="2026-10-14 16:05:16Z" end-time="2026-10-14 16:05:18Z" duration="2.393002" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Timeout: Cashier Initializing  | Barista Initializing  Customers:营业中
+  Expected: True
+  But was:  False
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests+<Wait>d__23.MoveNext () [0x00076] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeMainCafeTests.cs:179
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                </test-case>
+                <test-case id="1089" name="HudControlsRemainClickableAcrossAspectRatios" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests.HudControlsRemainClickableAcrossAspectRatios" methodname="HudControlsRemainClickableAcrossAspectRatios" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" seed="2002829697" result="Passed" start-time="2026-10-14 16:05:18Z" end-time="2026-10-14 16:05:19Z" duration="0.866316" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1088" name="RotatedMultiSlotTableKeepsCupModule" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests.RotatedMultiSlotTableKeepsCupModule" methodname="RotatedMultiSlotTableKeepsCupModule" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" seed="2107703275" result="Passed" start-time="2026-10-14 16:05:19Z" end-time="2026-10-14 16:05:20Z" duration="1.234623" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[REAL_ROTATED_MULTISLOT grid/representations/floor rigid 37deg; actual three deliveries to slot.1 local triangle
+]]></output>
+                </test-case>
+                <test-case id="1087" name="StaffAndCustomersShareSelectedRegister" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests.StaffAndCustomersShareSelectedRegister" methodname="StaffAndCustomersShareSelectedRegister" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" seed="1115886256" result="Passed" start-time="2026-10-14 16:05:20Z" end-time="2026-10-14 16:05:21Z" duration="1.082462" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[REAL_SHARED_CR four customers + two employees; FIFO front leave; body distances checked each moving frame
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

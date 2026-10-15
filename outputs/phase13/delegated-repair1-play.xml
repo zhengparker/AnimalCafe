@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="5" result="Failed(Child)" total="5" passed="2" failed="3" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 21:35:41Z" end-time="2026-10-14 21:37:46Z" duration="125.2919902">
+  <test-suite type="TestSuite" id="2431" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1267" result="Failed" site="Child" start-time="2026-10-14 21:35:41Z" end-time="2026-10-14 21:37:46Z" duration="125.291990" total="5" passed="2" failed="3" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <failure>
+      <message><![CDATA[One or more child tests had errors]]></message>
+    </failure>
+    <test-suite type="Assembly" id="1529" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="479" result="Failed" site="Child" start-time="2026-10-14 21:35:41Z" end-time="2026-10-14 21:37:46Z" duration="125.195088" total="5" passed="2" failed="3" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="16912" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <failure>
+        <message><![CDATA[One or more child tests had errors]]></message>
+      </failure>
+      <test-suite type="TestSuite" id="1530" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="479" result="Failed" site="Child" start-time="2026-10-14 21:35:41Z" end-time="2026-10-14 21:37:46Z" duration="125.144296" total="5" passed="2" failed="3" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <failure>
+          <message><![CDATA[One or more child tests had errors]]></message>
+        </failure>
+        <test-suite type="TestSuite" id="1531" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="479" result="Failed" site="Child" start-time="2026-10-14 21:35:41Z" end-time="2026-10-14 21:37:46Z" duration="125.128856" total="5" passed="2" failed="3" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <failure>
+            <message><![CDATA[One or more child tests had errors]]></message>
+          </failure>
+          <test-suite type="TestSuite" id="1532" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="479" result="Failed" site="Child" start-time="2026-10-14 21:35:41Z" end-time="2026-10-14 21:37:46Z" duration="125.109525" total="5" passed="2" failed="3" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <failure>
+              <message><![CDATA[One or more child tests had errors]]></message>
+            </failure>
+            <test-suite type="TestSuite" id="1533" name="Phase13" fullname="AnimalCafe.Tests.PlayMode.Phase13" runstate="Runnable" testcasecount="41" result="Failed" site="Child" start-time="2026-10-14 21:35:41Z" end-time="2026-10-14 21:37:46Z" duration="125.053799" total="5" passed="2" failed="3" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <failure>
+                <message><![CDATA[One or more child tests had errors]]></message>
+              </failure>
+              <test-suite type="TestFixture" id="1076" name="EmployeeDelegatedSceneChecks" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks" runstate="Runnable" testcasecount="9" result="Failed" site="Child" start-time="2026-10-14 21:35:41Z" end-time="2026-10-14 21:37:46Z" duration="125.039677" total="5" passed="2" failed="3" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <failure>
+                  <message><![CDATA[One or more child tests had errors]]></message>
+                </failure>
+                <test-case id="1081" name="M008_FixedWorkCellBlockAndRepair" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks.M008_FixedWorkCellBlockAndRepair" methodname="M008_FixedWorkCellBlockAndRepair" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks" runstate="Runnable" seed="1463534888" result="Failed" start-time="2026-10-14 21:35:41Z" end-time="2026-10-14 21:36:32Z" duration="51.100619" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  OPERATOR_WAIT: speed=Paused gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista MovingToWork h=0 rem=0.000 delivered=False reason=
+  Expected: True
+  But was:  False
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks+<Wait>d__50.MoveNext () [0x00062] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeDelegatedSceneChecks.cs:399
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[SETUP API_OPERATOR fresh saved P13 Scene; natural Update/delta; AutoSpawn=false; API operator script, not physical mouse | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-c6066e892e034afca1146ad65d826619-Barista@(0.500, 0.000, 0.500);employee-c6066e892e034afca1146ad65d826619-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+TASK API_OPERATOR HUD click Barista | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Working h=1 rem=3.000 delivered=False reason= pose=employee-c6066e892e034afca1146ad65d826619-Barista@(0.500, 0.000, 0.500);employee-c6066e892e034afca1146ad65d826619-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M008 API_OPERATOR CONFIRMED fixed blocker (4,4) id=ffadb82951524a5ba86a21141bf09c93 reason=工作站不可用 / Station unavailable: 没有具备完整 Employee Anchor 往返路径的 Coffee Machine / Pick-up Point 组合。 | speed=Paused gate=路径被挡住了，请进入装修调整。 Cashier Blocked h=0 rem=0.000 delivered=False reason=布局已变化 / Layout changed | Barista Blocked h=0 rem=0.000 delivered=False reason=工作站不可用 / Station unavailable: 没有具备完整 Employee Anchor 往返路径的 Coffee Machine / Pick-up Point 组合。 pose=employee-c6066e892e034afca1146ad65d826619-Barista@(1.602, 0.000, 0.500);employee-c6066e892e034afca1146ad65d826619-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+CAPTURE API_OPERATOR E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\outputs\phase13\delegated-repair1-m008-confirmed-block.png 1080x1920 | speed=Paused gate=路径被挡住了，请进入装修调整。 Cashier Blocked h=0 rem=0.000 delivered=False reason=布局已变化 / Layout changed | Barista Blocked h=0 rem=0.000 delivered=False reason=工作站不可用 / Station unavailable: 没有具备完整 Employee Anchor 往返路径的 Coffee Machine / Pick-up Point 组合。 pose=employee-c6066e892e034afca1146ad65d826619-Barista@(1.602, 0.000, 0.500);employee-c6066e892e034afca1146ad65d826619-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+CONTEXT API_OPERATOR P13/Retry Blocked Employees | speed=Paused gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista MovingToWork h=0 rem=0.000 delivered=False reason= pose=employee-c6066e892e034afca1146ad65d826619-Barista@(1.574, 0.000, 0.500);employee-c6066e892e034afca1146ad65d826619-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+CONTEXT API_OPERATOR P13/Retry Blocked Employees | speed=Paused gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista MovingToWork h=0 rem=0.000 delivered=False reason= pose=employee-c6066e892e034afca1146ad65d826619-Barista@(1.574, 0.000, 0.500);employee-c6066e892e034afca1146ad65d826619-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M010_AUDIT case=M008_FixedWorkCellBlockAndRepair errors=0 warnings=0
+]]></output>
+                </test-case>
+                <test-case id="1080" name="M008_StoreAndRepairEachRequiredStation" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks.M008_StoreAndRepairEachRequiredStation" methodname="M008_StoreAndRepairEachRequiredStation" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks" runstate="Runnable" seed="1245363533" result="Failed" start-time="2026-10-14 21:36:32Z" end-time="2026-10-14 21:36:36Z" duration="3.693456" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  Cashier Idle 0.0s None
+12000000000000000000000000000004
+Barista Idle 0.0s Cancelled
+bebfec5efe4f4f0cbc66b959592eeb84 → 12000000000000000000000000000006 [slot.0] 0/3杯
+P12 CR: 12000000000000000000000000000004
+Barista：任务已开始
+  Expected: greater than 0
+  But was:  0
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks.Start (AnimalCafe.Employees.EmployeeRole role) [0x00030] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeDelegatedSceneChecks.cs:351
+at AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks+<MakeCup>d__37.MoveNext () [0x0001e] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeDelegatedSceneChecks.cs:350
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[SETUP API_OPERATOR fresh saved P13 Scene; natural Update/delta; AutoSpawn=false; API operator script, not physical mouse | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-64541158b6c74be290c821724d5e7f9c-Barista@(0.500, 0.000, 0.500);employee-64541158b6c74be290c821724d5e7f9c-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+TASK API_OPERATOR HUD click Barista | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Working h=1 rem=3.000 delivered=False reason= pose=employee-64541158b6c74be290c821724d5e7f9c-Barista@(0.500, 0.000, 0.500);employee-64541158b6c74be290c821724d5e7f9c-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M008 API_OPERATOR Stored 12000000000000000000000000000005 actual blocked reason=工作站不可用 / Station unavailable: 没有具备完整 Employee Anchor 往返路径的 Coffee Machine / Pick-up Point 组合。 | speed=Paused gate=路径被挡住了，请进入装修调整。 Cashier Blocked h=0 rem=0.000 delivered=False reason=布局已变化 / Layout changed | Barista Blocked h=0 rem=0.000 delivered=False reason=工作站不可用 / Station unavailable: 没有具备完整 Employee Anchor 往返路径的 Coffee Machine / Pick-up Point 组合。 pose=employee-64541158b6c74be290c821724d5e7f9c-Barista@(0.511, 0.000, 0.500);employee-64541158b6c74be290c821724d5e7f9c-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+CONTEXT API_OPERATOR P13/Retry Blocked Employees | speed=Paused gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-64541158b6c74be290c821724d5e7f9c-Barista@(0.500, 0.000, 0.500);employee-64541158b6c74be290c821724d5e7f9c-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+CONTEXT API_OPERATOR P13/Retry Blocked Employees | speed=Paused gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-64541158b6c74be290c821724d5e7f9c-Barista@(0.500, 0.000, 0.500);employee-64541158b6c74be290c821724d5e7f9c-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+REPAIR API_OPERATOR confirmed layout observed across frames; explicit TimePanel 1x; real return complete | speed=Paused gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-64541158b6c74be290c821724d5e7f9c-Barista@(0.500, 0.000, 0.500);employee-64541158b6c74be290c821724d5e7f9c-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M010_AUDIT case=M008_StoreAndRepairEachRequiredStation errors=0 warnings=0
+]]></output>
+                </test-case>
+                <test-case id="1082" name="M011_RepeatedClicksAndIndependentConcurrentRoles" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks.M011_RepeatedClicksAndIndependentConcurrentRoles" methodname="M011_RepeatedClicksAndIndependentConcurrentRoles" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks" runstate="Runnable" seed="1099221214" result="Passed" start-time="2026-10-14 21:36:36Z" end-time="2026-10-14 21:36:43Z" duration="7.122901" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[SETUP API_OPERATOR fresh saved P13 Scene; natural Update/delta; AutoSpawn=false; API operator script, not physical mouse | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-e1f4b0969cf9478481aa471aa6ea19de-Barista@(0.500, 0.000, 0.500);employee-e1f4b0969cf9478481aa471aa6ea19de-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+TASK API_OPERATOR HUD click Cashier | speed=Normal gate= Cashier Working h=1 rem=2.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-e1f4b0969cf9478481aa471aa6ea19de-Barista@(0.500, 0.000, 0.500);employee-e1f4b0969cf9478481aa471aa6ea19de-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+TASK API_OPERATOR HUD click Barista | speed=Normal gate= Cashier Working h=1 rem=2.000 delivered=False reason= | Barista Working h=1 rem=3.000 delivered=False reason= pose=employee-e1f4b0969cf9478481aa471aa6ea19de-Barista@(0.500, 0.000, 0.500);employee-e1f4b0969cf9478481aa471aa6ea19de-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M011 API_OPERATOR both roles Working; three repeat clicks each keep one handle | speed=Normal gate= Cashier Working h=1 rem=1.988 delivered=False reason= | Barista Working h=1 rem=2.988 delivered=False reason= pose=employee-e1f4b0969cf9478481aa471aa6ea19de-Barista@(0.500, 0.000, 0.500);employee-e1f4b0969cf9478481aa471aa6ea19de-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+TASK API_OPERATOR HUD click Cashier | speed=Normal gate= Cashier Working h=2 rem=2.000 delivered=False reason= | Barista CarryingToPickUp h=1 rem=0.000 delivered=False reason= pose=employee-e1f4b0969cf9478481aa471aa6ea19de-Barista@(0.510, 0.000, 0.500);employee-e1f4b0969cf9478481aa471aa6ea19de-Cashier@(-1.500, 0.000, 0.500) held=1 cups=0
+M011 API_OPERATOR CarryingToPickUp three repeat clicks, independent Cashier handle | speed=Normal gate= Cashier Working h=2 rem=1.990 delivered=False reason= | Barista CarryingToPickUp h=1 rem=0.000 delivered=False reason= pose=employee-e1f4b0969cf9478481aa471aa6ea19de-Barista@(0.522, 0.000, 0.500);employee-e1f4b0969cf9478481aa471aa6ea19de-Cashier@(-1.500, 0.000, 0.500) held=1 cups=0
+M011 API_OPERATOR Returning three repeat clicks, independent Cashier handle | speed=Normal gate= Cashier Working h=2 rem=0.149 delivered=False reason= | Barista Returning h=1 rem=0.000 delivered=True reason= pose=employee-e1f4b0969cf9478481aa471aa6ea19de-Barista@(2.486, 0.000, 0.500);employee-e1f4b0969cf9478481aa471aa6ea19de-Cashier@(-1.500, 0.000, 0.500) held=0 cups=1
+M010_AUDIT case=M011_RepeatedClicksAndIndependentConcurrentRoles errors=0 warnings=0
+]]></output>
+                </test-case>
+                <test-case id="1083" name="M012_SecondCompleteStationSetAndStableRebinding" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks.M012_SecondCompleteStationSetAndStableRebinding" methodname="M012_SecondCompleteStationSetAndStableRebinding" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks" runstate="Runnable" seed="1719676407" result="Failed" start-time="2026-10-14 21:36:43Z" end-time="2026-10-14 21:37:36Z" duration="52.388379" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <failure>
+                    <message><![CDATA[  OPERATOR_WAIT: speed=Paused gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista MovingToWork h=0 rem=0.000 delivered=True reason=
+  Expected: True
+  But was:  False
+]]></message>
+                    <stack-trace><![CDATA[at AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks+<Wait>d__50.MoveNext () [0x00062] in E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\Assets\Tests\PlayMode\EditorSceneLoading\Phase13\EmployeeDelegatedSceneChecks.cs:399
+at UnityEngine.TestTools.TestEnumerator+<Execute>d__7.MoveNext () [0x0003a] in .\Library\PackageCache\com.unity.test-framework@1405238725ab\UnityEngine.TestRunner\NUnitExtensions\Attributes\TestEnumerator.cs:44
+]]></stack-trace>
+                  </failure>
+                  <output><![CDATA[SETUP API_OPERATOR fresh saved P13 Scene; natural Update/delta; AutoSpawn=false; API operator script, not physical mouse | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-ef472e7be9f545888315768695c5bc12-Barista@(0.500, 0.000, 0.500);employee-ef472e7be9f545888315768695c5bc12-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M012 API_OPERATOR complete second set CR(1,6)/CM(3,6)/Pickup(5,6) | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-ef472e7be9f545888315768695c5bc12-Barista@(0.500, 0.000, 0.500);employee-ef472e7be9f545888315768695c5bc12-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+CAPTURE API_OPERATOR E:\Unity\Project\AnimalCafe\.worktrees\phase-13-employee-task-flow\outputs\phase13\delegated-repair1-m012-second-set.png 1080x1920 | speed=Paused gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-ef472e7be9f545888315768695c5bc12-Barista@(0.500, 0.000, 0.500);employee-ef472e7be9f545888315768695c5bc12-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+TASK API_OPERATOR HUD click Cashier | speed=Normal gate= Cashier Working h=1 rem=2.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-ef472e7be9f545888315768695c5bc12-Barista@(0.500, 0.000, 0.500);employee-ef472e7be9f545888315768695c5bc12-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+TASK API_OPERATOR HUD click Barista | speed=Normal gate= Cashier Working h=1 rem=2.000 delivered=False reason= | Barista Working h=1 rem=3.000 delivered=False reason= pose=employee-ef472e7be9f545888315768695c5bc12-Barista@(0.500, 0.000, 0.500);employee-ef472e7be9f545888315768695c5bc12-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M012 API_OPERATOR removed= immutable task binding CM=12000000000000000000000000000005 Pickup=12000000000000000000000000000006 P12CR=12000000000000000000000000000004 | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=True reason= pose=employee-ef472e7be9f545888315768695c5bc12-Barista@(0.500, 0.000, 0.500);employee-ef472e7be9f545888315768695c5bc12-Cashier@(-1.500, 0.000, 0.500) held=0 cups=1
+CONTEXT API_OPERATOR P13/Retry Blocked Employees | speed=Paused gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista MovingToWork h=0 rem=0.000 delivered=True reason= pose=employee-ef472e7be9f545888315768695c5bc12-Barista@(0.499, 0.000, 0.583);employee-ef472e7be9f545888315768695c5bc12-Cashier@(-1.500, 0.000, 0.500) held=0 cups=1
+CONTEXT API_OPERATOR P13/Retry Blocked Employees | speed=Paused gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista MovingToWork h=0 rem=0.000 delivered=True reason= pose=employee-ef472e7be9f545888315768695c5bc12-Barista@(0.499, 0.000, 0.583);employee-ef472e7be9f545888315768695c5bc12-Cashier@(-1.500, 0.000, 0.500) held=0 cups=1
+M010_AUDIT case=M012_SecondCompleteStationSetAndStableRebinding errors=0 warnings=0
+]]></output>
+                </test-case>
+                <test-case id="1085" name="M014_ActualActorAndFlowDisableForOneRealSecond" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks.M014_ActualActorAndFlowDisableForOneRealSecond" methodname="M014_ActualActorAndFlowDisableForOneRealSecond" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks" runstate="Runnable" seed="635568524" result="Passed" start-time="2026-10-14 21:37:36Z" end-time="2026-10-14 21:37:46Z" duration="10.695811" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[SETUP API_OPERATOR fresh saved P13 Scene; natural Update/delta; AutoSpawn=false; API operator script, not physical mouse | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-22aa3cb34ac3489aa8b4c3d7a2b02ebb-Barista@(0.500, 0.000, 0.500);employee-22aa3cb34ac3489aa8b4c3d7a2b02ebb-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+TASK API_OPERATOR HUD click Barista | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Working h=1 rem=3.000 delivered=False reason= pose=employee-22aa3cb34ac3489aa8b4c3d7a2b02ebb-Barista@(0.500, 0.000, 0.500);employee-22aa3cb34ac3489aa8b4c3d7a2b02ebb-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M014 API_OPERATOR disabled actorGO=True actualSeconds=1.055 retained body/ID=employee-22aa3cb34ac3489aa8b4c3d7a2b02ebb-Barista | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Disabled h=0 rem=0.000 delivered=False reason=员工已停用 / Disabled pose=employee-22aa3cb34ac3489aa8b4c3d7a2b02ebb-Barista@(0.802, 0.000, 0.500);employee-22aa3cb34ac3489aa8b4c3d7a2b02ebb-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M014 API_OPERATOR overlap probe admission rejected while actorGOdisabled=True | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Disabled h=0 rem=0.000 delivered=False reason=员工已停用 / Disabled pose=employee-22aa3cb34ac3489aa8b4c3d7a2b02ebb-Barista@(0.802, 0.000, 0.500);employee-22aa3cb34ac3489aa8b4c3d7a2b02ebb-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M014 API_OPERATOR reenabled same body actually returned without old cup/task | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-22aa3cb34ac3489aa8b4c3d7a2b02ebb-Barista@(0.500, 0.000, 0.500);employee-22aa3cb34ac3489aa8b4c3d7a2b02ebb-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+TASK API_OPERATOR HUD click Barista | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Working h=1 rem=3.000 delivered=False reason= pose=employee-2ae95bafe4e64f9c827567798c3fc4da-Barista@(0.500, 0.000, 0.500);employee-2ae95bafe4e64f9c827567798c3fc4da-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M014 API_OPERATOR disabled actorGO=False actualSeconds=1.053 retained body/ID=employee-2ae95bafe4e64f9c827567798c3fc4da-Barista | speed=Normal gate= Cashier Disabled h=0 rem=0.000 delivered=False reason=员工已停用 / Disabled | Barista Disabled h=0 rem=0.000 delivered=False reason=员工已停用 / Disabled pose=employee-2ae95bafe4e64f9c827567798c3fc4da-Barista@(0.805, 0.000, 0.500);employee-2ae95bafe4e64f9c827567798c3fc4da-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M014 API_OPERATOR overlap probe admission rejected while actorGOdisabled=False | speed=Normal gate= Cashier Disabled h=0 rem=0.000 delivered=False reason=员工已停用 / Disabled | Barista Disabled h=0 rem=0.000 delivered=False reason=员工已停用 / Disabled pose=employee-2ae95bafe4e64f9c827567798c3fc4da-Barista@(0.805, 0.000, 0.500);employee-2ae95bafe4e64f9c827567798c3fc4da-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M014 API_OPERATOR reenabled same body actually returned without old cup/task | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-2ae95bafe4e64f9c827567798c3fc4da-Barista@(0.500, 0.000, 0.500);employee-2ae95bafe4e64f9c827567798c3fc4da-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M010_AUDIT case=M014_ActualActorAndFlowDisableForOneRealSecond errors=0 warnings=0
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

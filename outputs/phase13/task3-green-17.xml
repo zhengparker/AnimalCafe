@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="17" result="Passed" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.2105573">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2570" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.210557" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="3935" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2570" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.178050" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="32120" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="3936" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2570" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.152698" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3937" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2570" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.127328" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="3943" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1688" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.097166" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="3949" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="79" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.076800" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="3094" name="PickupCupDisplayTests" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" testcasecount="17" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.074972" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="3113" name="ClearRemovesOnlyOwnedCupsAndIsIdempotent" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.ClearRemovesOnlyOwnedCupsAndIsIdempotent" methodname="ClearRemovesOnlyOwnedCupsAndIsIdempotent" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1350462168" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.030419" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3111" name="DestroyedSupportIsRemovedOnRefresh" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.DestroyedSupportIsRemovedOnRefresh" methodname="DestroyedSupportIsRemovedOnRefresh" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1115873095" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.003233" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3102" name="DifferentModulesDoNotShareCups" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.DifferentModulesDoNotShareCups" methodname="DifferentModulesDoNotShareCups" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1556183030" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.002087" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3100" name="FailedInstantiationDoesNotCommitCount" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.FailedInstantiationDoesNotCommitCount" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.004538" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3097" name="FailedInstantiationDoesNotCommitCount(0)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.FailedInstantiationDoesNotCommitCount(0)" methodname="FailedInstantiationDoesNotCommitCount" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="2135230210" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.001274" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3098" name="FailedInstantiationDoesNotCommitCount(1)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.FailedInstantiationDoesNotCommitCount(1)" methodname="FailedInstantiationDoesNotCommitCount" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="286633215" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.000579" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3099" name="FailedInstantiationDoesNotCommitCount(2)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.FailedInstantiationDoesNotCommitCount(2)" methodname="FailedInstantiationDoesNotCommitCount" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="2135213251" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.000631" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="3101" name="InvalidVisualRollsBackTemporaryClone" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.InvalidVisualRollsBackTemporaryClone" methodname="InvalidVisualRollsBackTemporaryClone" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="922285050" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.000647" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3112" name="MissingConfigurationAndDefaultAddressFailClearly" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.MissingConfigurationAndDefaultAddressFailClearly" methodname="MissingConfigurationAndDefaultAddressFailClearly" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1793544752" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.000565" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3103" name="MovedSupportKeepsLocalPlacement" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.MovedSupportKeepsLocalPlacement" methodname="MovedSupportKeepsLocalPlacement" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1592588508" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.005989" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3104" name="RealCupBottomMeetsSlotSurface" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.RealCupBottomMeetsSlotSurface" methodname="RealCupBottomMeetsSlotSurface" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="46317070" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.001902" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3110" name="RefreshReparentsToReplacementAndCleansOnlyInvalidModule" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.RefreshReparentsToReplacementAndCleansOnlyInvalidModule" methodname="RefreshReparentsToReplacementAndCleansOnlyInvalidModule" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="300826823" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.001474" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3105" name="RuntimeVisualCannotRegisterBusinessOrBlockNavigation" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.RuntimeVisualCannotRegisterBusinessOrBlockNavigation" methodname="RuntimeVisualCannotRegisterBusinessOrBlockNavigation" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="75981270" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.001794" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3109" name="SaturatedDisplayStillValidatesConfirmedSlot" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.SaturatedDisplayStillValidatesConfirmedSlot" methodname="SaturatedDisplayStillValidatesConfirmedSlot" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="370757242" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.000875" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3095" name="TenDeliveriesShowOnlyThreeCups" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.TenDeliveriesShowOnlyThreeCups" methodname="TenDeliveriesShowOnlyThreeCups" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="306067691" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.000973" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3096" name="ThreeOffsetsAreTriangular" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.ThreeOffsetsAreTriangular" methodname="ThreeOffsetsAreTriangular" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="2128407315" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.002538" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3108" name="UnsupportedCupCannotActivateBusinessOrNavigationComponents" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.UnsupportedCupCannotActivateBusinessOrNavigationComponents" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.002176" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3106" name="UnsupportedCupCannotActivateBusinessOrNavigationComponents(True)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.UnsupportedCupCannotActivateBusinessOrNavigationComponents(True)" methodname="UnsupportedCupCannotActivateBusinessOrNavigationComponents" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="902601411" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.000890" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="3107" name="UnsupportedCupCannotActivateBusinessOrNavigationComponents(False)" fullname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests.UnsupportedCupCannotActivateBusinessOrNavigationComponents(False)" methodname="UnsupportedCupCannotActivateBusinessOrNavigationComponents" classname="AnimalCafe.Tests.EditMode.Phase13.PickupCupDisplayTests" runstate="Runnable" seed="1778953844" result="Passed" start-time="2026-10-14 14:53:08Z" end-time="2026-10-14 14:53:08Z" duration="0.000592" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
