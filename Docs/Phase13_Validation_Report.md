@@ -380,3 +380,11 @@ Owner明确指示：“那9和16就按我手测通过记录吧，更新文档，
 ### 版本管理交接（2026-10-14）
 
 上述“未commit、push、PR或merge”为最终review完成时的记录。Owner随后明确授权将P13提交并推送至`codex/phase-13-employee-task-flow`，创建目标为`main`的PR，先不merge。提交包含实现、资产、设计/验收文档及原始XML和引用截图；临时日志、备份及无关材质序列化变化不纳入。版本管理结果以Git提交及对应PR状态为准，保留手动Unity CI流程。
+
+### Merge前云端CI与预算修复（2026-10-19）
+
+Owner授权merge前review及运行PR #13的完整手动Unity CI。[运行39263434360](https://github.com/zhengparker/AnimalCafe/actions/runs/39263434360)精确绑定`2a615b9df5f7d20a4556981dbabbcbac35061447`，PlayMode为1267 PASS / 0 FAIL / 5原有opt-in SKIP，P13的44项全部PASS，两个微小位移边界测试也PASS。EditMode没有最终XML；GitHub明确报告整个job超过1h30m0s，测试job被取消，汇总Unity CI为FAIL，不能用历史EditMode结果替代。
+
+日志确认Library cache miss。PlayMode使用约27分钟，14:23:36 UTC开始EditMode后剩余总预算约56分钟；取消时仍记录旧Phase5 UI prefab导入。Edit日志中两个旧场景被重复导入约800次，多项Phase7定义各约620次，显式Asset Pipeline Refresh累计约28分钟。旧fixture会故意破坏资源并依赖builder恢复；这些重建不能直接删除或共用可变fixture。当前证据确认原90分钟总预算不足，但不能据日志尾部断言某个P13 case挂起。
+
+Owner随后授权修复。最小变更为将同一job的总时限调整至150分钟，并在summary记录tested commit及各suite耗时；保留一次激活、无自动激活重试、manual-only、full suite及两份XML验收guard。生产代码、资产、测试case和断言不变。上限调整本身不等于修复验证通过，仍须在修复commit上取得完整CI结果；最新状态以PR #13对应Actions运行及本地`outputs/p13-premerge-20261019/`记录为准，先不merge。

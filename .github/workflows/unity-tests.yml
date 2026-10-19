@@ -33,7 +33,9 @@ jobs:
     name: Unity EditMode and PlayMode
     if: ${{ inputs.allow_unity_login }}
     runs-on: ubuntu-22.04
-    timeout-minutes: 90
+    # Budget both complete suites plus cold Library imports in one activation.
+    # 冷启动旧资源重建已耗尽原90分钟总预算；仍执行完整suite，完成即结束。
+    timeout-minutes: 150
     steps:
       - name: Check out project
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -99,6 +101,7 @@ jobs:
         if: always() && steps.tests.outcome == 'success'
         env:
           RESULTS_PATH: artifacts/unity
+          TESTED_COMMIT: ${{ github.sha }}
         shell: bash
         run: |
           python3 - <<'PY'
@@ -115,12 +118,15 @@ jobs:
           if {path.name for path, _ in reports} != required_reports:
               raise SystemExit('Both EditMode and PlayMode NUnit XML reports are required.')
           with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
+              summary.write(f"Tested commit: `{os.environ['TESTED_COMMIT']}`\n\n")
               for path, root in reports:
                   passed = int(root.get('passed', '0'))
                   failed = int(root.get('failed', '0'))
                   skipped = int(root.get('skipped', '0'))
                   inconclusive = int(root.get('inconclusive', '0'))
+                  duration_minutes = float(root.get('duration', '0')) / 60
                   summary.write(f'{path.name}: **{passed} PASS / {failed} FAIL / {skipped} SKIP**\n\n')
+                  summary.write(f'Duration: {duration_minutes:.2f} minutes\n\n')
                   # Unity 1.7 may mark a green run with optional skips as Skipped:Ignored.
                   # 有实际 PASS 且零失败时允许已报告的可选 SKIP；全部 SKIP 仍失败。
                   accepted_status = root.get('result') in ('Passed', 'Skipped', 'Skipped:Ignored')
