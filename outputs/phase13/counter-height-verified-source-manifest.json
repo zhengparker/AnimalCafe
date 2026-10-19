@@ -1,0 +1,466 @@
+[
+  {
+    "Path": "ArtSource/Phase13/Tools/ExportEmployeeAnimations.py",
+    "SHA256": "18FDDB1E73A2038074C89A66D28B946DFF166B4258580E6058794BE8F3FA3F7A"
+  },
+  {
+    "Path": "Assets/Art/Phase13.meta",
+    "SHA256": "D2DCB9F8486352418C0F41A2F620F939D5F21E4C202C01D0F7DBD48961EB99F8"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees.meta",
+    "SHA256": "170114E2F4D6C010786BFF60EF71B04B53888468FC8E3E7B91C1FFFD07D2D9BB"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/AM_Employee_CarryUpperBody.mask",
+    "SHA256": "C66928EF563EC101741422BFF3426E627B1FBDFC9FDA2B22DE6CFB4807165AF4"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/AM_Employee_CarryUpperBody.mask.meta",
+    "SHA256": "DDA5DD72335F6024E3D5D76458B0BD7681046F42A058294B76945FF95F6C72E4"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba.meta",
+    "SHA256": "F9DAA10B122BB0453E003438FD750FCDDDA0691AD4541D2459D3B5D1223DDA45"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/AC_Shiba_Employee.controller",
+    "SHA256": "79033BBF196BC637361D43EA0E58165FE07B4668C7DFF11C89DA3C3ACDA6B6D9"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/AC_Shiba_Employee.controller.meta",
+    "SHA256": "EA8DD147D56A946CF66B82A053D81B4D89E9DDC87D2125F7361DC39FF0EA83B2"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/PF_Shiba_Employee.prefab",
+    "SHA256": "82DBAB0DB18354AD1CE688B02A2F32EEE0BC071898E914C6722C7932195A8171"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/PF_Shiba_Employee.prefab.meta",
+    "SHA256": "273C2A9864D053D6593042F10A86B17A47A459A6A6CD2800C4F2666ACED3C1C6"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/SM_Shiba_Carry_Cup.fbx",
+    "SHA256": "C304BA807E4B42DFB99B237B317DAE7BC9B63C7F85DD5494B1D34154C5FF0CF6"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/SM_Shiba_Carry_Cup.fbx.meta",
+    "SHA256": "E086EEEB9A1B1F4A38D1B3F758DFA63DFEA9634FCF29251E91488AD001153B25"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/SM_Shiba_Employee_Walk.fbx",
+    "SHA256": "0120FF42247D6B7C944CD3B3F91DB1C7A84308A057AE23E115C64365FB246B5C"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/SM_Shiba_Employee_Walk.fbx.meta",
+    "SHA256": "D0BDDF1FA22C857CF4FF5FD2860CE7779F741C4C56E760A4744268DF129569C3"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/SM_Shiba_Work_Generic_Busy.fbx",
+    "SHA256": "466679A899A979FCA6AB156131516EE98970B6F96C24A4AF6ED40F41D6D22A73"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/SM_Shiba_Work_Generic_Busy.fbx.meta",
+    "SHA256": "895767F433F4853895D745AF56697AADBD5E550704FED5AAE8D2E728AA960FD3"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/carry-reference.json",
+    "SHA256": "9FEDAB56EAD7C34022F4F6099E7315853AC2166B9A08AB19718DFB000F5205DC"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Shiba/carry-reference.json.meta",
+    "SHA256": "3AF8D95F70D8EE6542D9CF5D44400F139D9ECEEE9962741A78305112FEF78BA2"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie.meta",
+    "SHA256": "85407794D34D3C62D3BAE9E3FE0532C4BFEA53CFFF932FAC27F70FE9EF28BB56"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/AC_Westie_Employee.controller",
+    "SHA256": "49672A7AA57878C648F866630205FCC0E018D8A211BF865EC7E56B18B779C76C"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/AC_Westie_Employee.controller.meta",
+    "SHA256": "6ED623351EFCCD7AAA1E5DBB998FA1ECBC2E9CC6EA83C8129E68C9F85F17C1FD"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/PF_Westie_Employee.prefab",
+    "SHA256": "6B500146763B7E1D2963EBBE40BAE5CEF9211D09AB4CC1FD195DDAA66ED5AC48"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/PF_Westie_Employee.prefab.meta",
+    "SHA256": "48AE70D92241009CDC1AA6AC73E372D76591E314449816F8E1197D4D86730D62"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/SM_Westie_Carry_Cup.fbx",
+    "SHA256": "913825F19D013AAFE2EF7ED04037310B3FA9F58366B0F889BCFE0C3669B040F1"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/SM_Westie_Carry_Cup.fbx.meta",
+    "SHA256": "7738C976EF7AA1971DF14DD7F93646DCFAB2A563A0BA7B2974EBE7F972B77021"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/SM_Westie_Employee_Walk.fbx",
+    "SHA256": "307AA2620F187B8A73AFB710C7D127636810000569001A67A15E88785B589220"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/SM_Westie_Employee_Walk.fbx.meta",
+    "SHA256": "E3C1175F5097ACF0CF5EA3E49A70AB3A65D58E65B17AAA68B33A5C4736209358"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/SM_Westie_Work_Generic_Busy.fbx",
+    "SHA256": "9EB2E456C0D7F8A451DD6E1DE157803291A43470661460A8609591BD4C6EB5F9"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/SM_Westie_Work_Generic_Busy.fbx.meta",
+    "SHA256": "27BA87C558406BD4B8AB10A09CD8899A69A465587DC3FF1C04B1F8B774EAC7B9"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/carry-reference.json",
+    "SHA256": "94FAF615213B46BD06F565787A3A699E57264A59FADC1B08050F11303459A316"
+  },
+  {
+    "Path": "Assets/Art/Phase13/Employees/Westie/carry-reference.json.meta",
+    "SHA256": "F4AEFE72EC34AABEF87AA75672E7CFD6EAA92A09F539835C654DC9CDCA758B2E"
+  },
+  {
+    "Path": "Assets/Editor/Phase13.meta",
+    "SHA256": "A14644BD72D7D4FFE08629D439917F5D6751D856ACBD865305E5212CF48E2EA8"
+  },
+  {
+    "Path": "Assets/Editor/Phase13/Phase13EmployeeAssetBuilder.cs",
+    "SHA256": "4263A922DD04BE42A3ACF4EAFE53CB3823600521FAD339D824A861EF0DCD1EA3"
+  },
+  {
+    "Path": "Assets/Editor/Phase13/Phase13EmployeeAssetBuilder.cs.meta",
+    "SHA256": "34FC240FF064BCA7906991BC29368183D8BB690F7054C884F42ECE34B647FE1C"
+  },
+  {
+    "Path": "Assets/Editor/Phase13/Phase13EmployeeTaskSceneSetup.cs",
+    "SHA256": "438104101249931C67DFD6D43082650492D4123B1E7C4444FF6A02BCA1D773B2"
+  },
+  {
+    "Path": "Assets/Editor/Phase13/Phase13EmployeeTaskSceneSetup.cs.meta",
+    "SHA256": "35E365374C02DDC4B38501A49FCE8174F56BE54E95A1C35FE77C65CC319E704C"
+  },
+  {
+    "Path": "Assets/Scenes/Validation/Phase13EmployeeTasks.unity",
+    "SHA256": "377FDF668B51A531AF6EF2ECB002A75913735BA61F770D8BC28AFBF3C03E11A2"
+  },
+  {
+    "Path": "Assets/Scenes/Validation/Phase13EmployeeTasks.unity.meta",
+    "SHA256": "3303BC10F3462422DF1A4CB5E93D72BD6A5480CAA262F501016CC80BE57091C5"
+  },
+  {
+    "Path": "Assets/Scripts/Employees.meta",
+    "SHA256": "CE09EF0156128833841C5FAD7D95127350C7EBDBC8D30EFA098A4DAB2318BCB3"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeContracts.cs",
+    "SHA256": "A136BCA0B6F57AAD28DD2654AB59D224794BC23A24FC7610AEA317507C9BDBBA"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeContracts.cs.meta",
+    "SHA256": "E78A8EAC98C24B200519C43D2933B8092182E37A44AF4AFBECD1E552AF327BE1"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeFlowController.cs",
+    "SHA256": "DC22264B44B066BBF38E6E7B59A7DA10204588DE66DCCECE670ED95E118D70EA"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeFlowController.cs.meta",
+    "SHA256": "C5F1A7BF0D52AABF2C77424682C345F6E0E6963404CDE9F646CBBF869B9AB56C"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeStationBindingResolver.cs",
+    "SHA256": "C183E6C505891FA5BFAF849511AE9A12DF5AA8233C6F4B3C072481C3D6AB93E1"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeStationBindingResolver.cs.meta",
+    "SHA256": "D24AD9016B4E536A036378538FB328CC56485BD3B8251D235A57BDB1B7175741"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeTaskRunner.cs",
+    "SHA256": "B0A3984A2CFEB676424766E7E6FF5B802E7F780E509F676166379CED38EE9971"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeTaskRunner.cs.meta",
+    "SHA256": "EB7AFEADEB2A4B039D9E1A33ADBC102107A7800C2FA2637BEC93F725DF9AA90E"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeTaskValidationController.cs",
+    "SHA256": "696737D4D1C110538538A499D3945E9FE18FF9407B24C6D3280BF64F51702649"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeTaskValidationController.cs.meta",
+    "SHA256": "B079DF47B544D243A9DA23CCE112D3D40ABFE6505D41F7F292D2B9253F0AAFFC"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeVisualPresenter.cs",
+    "SHA256": "792C9B0E596E9E40E32CF03264525225B340FD5D5C90F5B41D43F7983F1A444E"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/EmployeeVisualPresenter.cs.meta",
+    "SHA256": "3317521A08B55C0F9323E7A0A6A247F52A76809241E0913D08007AFB0D295445"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/PickupCupDisplay.cs",
+    "SHA256": "421DF6FA6391131C228AC7B32521715E712E9143C4ACD8979237F811B5317CE0"
+  },
+  {
+    "Path": "Assets/Scripts/Employees/PickupCupDisplay.cs.meta",
+    "SHA256": "1964FB0BBCBC46A6EC4D1EA5D151E9E94688FF3163D321102A7E23F52838C7D4"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13.meta",
+    "SHA256": "B85E93F5258E3F1019DA01CD1D9ECF995049BDED444CBCF5E08001854575368D"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/CounterHeightRegressionTests.cs",
+    "SHA256": "6CE3E7DD57B5D6B58F2FEE8130D93AFAA364B8C4B9A846D5BA575CFA2BB223BE"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/CounterHeightRegressionTests.cs.meta",
+    "SHA256": "CCC49CF9310FD7BFC45B046CDBFB03DFAF84F0699401A3B76778BFC7CF029E7A"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeeAssetTests.cs",
+    "SHA256": "07621B8889075D6177CE50FB407980EDE4EC1514DFF99775A44253DEAA49DB84"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeeAssetTests.cs.meta",
+    "SHA256": "A2C55391CA66A9385AA2A20EC94CE6937402016E19869367F33CC84DB1F984BA"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeeBindingTests.cs",
+    "SHA256": "DF5D154CD23052B6854413D1AA1116A3B03C8C8012B2531D254837241ACD7FA3"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeeBindingTests.cs.meta",
+    "SHA256": "96D4AF8E906EB37AD09336A47F451C52002559E976DE1C17A573A12A55423432"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeeLifecycleTests.cs",
+    "SHA256": "10C2C24FDC2762BA8C49EC4EB5EF60419EF9202A6C6318E846373ADA9D1FB5B3"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeeLifecycleTests.cs.meta",
+    "SHA256": "58309166B9EA3ED58B170C2616C157126455CFA1363D1E52340965220AA2F450"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeePlaySessionTests.cs",
+    "SHA256": "A821649728EACB6C3B79951F8427BD88E75F2D55EA304885BCE99373CF68424C"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeePlaySessionTests.cs.meta",
+    "SHA256": "E7383A88E9E1A56D255ADE178DCC8A2F08CC229624504BB2E9A4A7A41184372C"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeeTaskRunnerTests.cs",
+    "SHA256": "74EC0FA3735A7311B0B5109091030A9E6C5317A5ED60E2E7DF8619E9D0521E47"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeeTaskRunnerTests.cs.meta",
+    "SHA256": "ABE5E658EFEB8D0895677F5AD6FB329161F72B50C7803A1156774928C4238CC4"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeeTaskTestSupport.cs",
+    "SHA256": "260D1028B144250FFB67EC90D8FDB5D0C83B6EF3CC688800236A050344C60136"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/EmployeeTaskTestSupport.cs.meta",
+    "SHA256": "5D65675F34C47B49FD1EA37FC5F262D86E54055176289DA985DB9BA252996F67"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/Phase13LegacySceneCompatibilityTests.cs",
+    "SHA256": "24D77DD54F57D29A9E3623F8C81645B34485FE873EF7FFF5930FB4A233BD7940"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/Phase13LegacySceneCompatibilityTests.cs.meta",
+    "SHA256": "93ED88E25F4ADCC879F34CEB8B4A65A0225D3964B97E4296DA116E96D5A85E34"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/Phase13SceneBuilderTests.cs",
+    "SHA256": "C2E1013961CF305FC6A620F7C86C914B26084A1089DF56C1BEA2D642B1A8B67B"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/Phase13SceneBuilderTests.cs.meta",
+    "SHA256": "8550F8FA56FBABBBCF433F4A7972E15CDBFA521A9C01488A64BE30ADA3A557ED"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/PickupCupDisplayTests.cs",
+    "SHA256": "5C737259B34BE5A79E9B659CAE80B7E6147DAD015435843E9C7196719D0923CD"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase13/PickupCupDisplayTests.cs.meta",
+    "SHA256": "DA01E38E2476C2B2903713575F6D0CE0158FB50680F326F4883D2EE3F4844B28"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13.meta",
+    "SHA256": "7DF4BAC5299E31188DEAF333A79B84FFD056C5270D1608713F839E03E4055F65"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeAnimationTests.cs",
+    "SHA256": "79D8F68FF8B51FFCEE29213728004F10AE57CE340C3BC0E1B199CF115B9077CD"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeAnimationTests.cs.meta",
+    "SHA256": "7663CA0559CA9AFA813E260B7FFE1673A724F972230D2293B8BD1B19CF8766E1"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeCounterHeightTests.cs",
+    "SHA256": "5AEAEFA304CFF81A10502E1FD24934ABAC1B60DFBA5CF6B051F7D63D217C0531"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeCounterHeightTests.cs.meta",
+    "SHA256": "7980AD4C45BF292D6EEB6ABFDF7F9AD24D930E1A8AED66BCE4D96C75C9D25C9E"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeDecorationTests.cs",
+    "SHA256": "E2B3BDEF4C4C7DC5C9B1817D90FFD7DE37C6D542F4926AE28161867A57517300"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeDecorationTests.cs.meta",
+    "SHA256": "F2DD3FE91E681F3FD45FFB6A65E29747F2DC93728EFAE97ED7848DFA9EFCF3D8"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeDelegatedSceneChecks.cs",
+    "SHA256": "734A0BE4661EE41DF4E809C11FE2F5337AC0409185957C99CA646651D3B0FB68"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeDelegatedSceneChecks.cs.meta",
+    "SHA256": "3D3843142D33250D67EC553CA9A5D02F1F53658C1D625BF7F88034137BFED03C"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeFlowTests.cs",
+    "SHA256": "D617F35E7278A51AEF57A7B94671F29D0A1FE57176895B76AD2458DF09D796AF"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeFlowTests.cs.meta",
+    "SHA256": "A393ED1FEC616E7E79C17A85BDBF069CE2D00EA42041F6F945510B29955A5E70"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeMainCafeTests.cs",
+    "SHA256": "4C2218A11794D03701F92F2F9901BE42AB8E837BB88BD577723A88457D8E13DC"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase13/EmployeeMainCafeTests.cs.meta",
+    "SHA256": "0274BD4184B56B82A5875AE90E46E56ADCB0785B7F4ABBF6EA2F987FBC2AE33E"
+  },
+  {
+    "Path": "ArtSource/Phase4/Blender/SM_Furniture_CounterModule_01.blend",
+    "SHA256": "EF36FF4DB28E1ABF5583FD1CF21980EA278979257C8391467D3946948E245769"
+  },
+  {
+    "Path": "ArtSource/Phase4/Previews/SM_Furniture_CounterModule_01_employee_front_preview.png",
+    "SHA256": "60D3D05EE247C8D8EDA9419413C1FE29E3B151215EB84A2C8ECE9A4156766374"
+  },
+  {
+    "Path": "ArtSource/Phase4/Tools/BuildPhase4ProductionAssets.py",
+    "SHA256": "1E5E3ED325BDA72869CED02CBA04E0FFD1A3DE5689256BB6AFFD2D2A90BEB750"
+  },
+  {
+    "Path": "Assets/Art/Phase4/Models/SM_Furniture_CounterModule_01.fbx",
+    "SHA256": "B341C23A6330DFCB34EBF52EF938DF2E5D200C43FDEAF15ED223AE68F5A9D8B3"
+  },
+  {
+    "Path": "Assets/Art/Phase4/Prefabs/PF_Furniture_CounterModule_01.prefab",
+    "SHA256": "534B8B10761C2FEB82A055877E887A468EE2FA6458DD4F6A99DF020BA7DC0A36"
+  },
+  {
+    "Path": "Assets/Art/Phase4/Prefabs/PF_Validation_Counter_1x3_01.prefab",
+    "SHA256": "C4DBAB0B25A760313A0A63E520928C6DF253BC4613C7B29F2E311909AC3DEFFF"
+  },
+  {
+    "Path": "Assets/Art/Phase6/Prefabs/PF_CounterPreset_1x2.prefab",
+    "SHA256": "AB023D6E303A5C0FB1D5ACEC0105088B03DA3EE8D5C83B9B570ECE59CE0AE3CA"
+  },
+  {
+    "Path": "Assets/Art/Phase6/Prefabs/PF_CounterPreset_1x3.prefab",
+    "SHA256": "502DEBC569AAD7725315172DD5C88C1AACEC7862552D6E53FC920C9FE45F247E"
+  },
+  {
+    "Path": "Assets/Art/Phase6/Prefabs/PF_CounterPreset_2x3.prefab",
+    "SHA256": "21EC875440CAC1F1C22313666D4F50D69B90BCD03474A8819E4BFE0C54D935EE"
+  },
+  {
+    "Path": "Assets/Editor/Phase12/Phase12CustomerQueueSceneSetup.cs",
+    "SHA256": "CDFB09FD465BBC9C8784EA0B9CFB00D9755D477FD3F8F2DD9D48D1A986564843"
+  },
+  {
+    "Path": "Assets/Editor/Phase4/Phase4ProductionAssetBuilder.cs",
+    "SHA256": "3FDFEF5C2D960A40220FC4561C17AFE66504FF9F24AED1F34E03B35769F96584"
+  },
+  {
+    "Path": "Assets/Editor/Phase6/Phase6DecorationAssetBuilder.cs",
+    "SHA256": "9FCE034FDD5F5830EBDA0B4926936952161D104B925916E434FD794F40A1B3B7"
+  },
+  {
+    "Path": "Assets/Editor/Phase8/Phase8Validator.cs",
+    "SHA256": "DB33AA236BCBF64DB0DFF048B0A30D67D54F7EA64F3AF182EFF95235F320B2C1"
+  },
+  {
+    "Path": "Assets/Scenes/MainCafe.unity",
+    "SHA256": "A729E795984140C1B3712110E7F7BB485099ECF4383CA6462423CCE4DB669A3B"
+  },
+  {
+    "Path": "Assets/Scripts/Navigation/NavMeshMovementDriver.cs",
+    "SHA256": "D494EF2A55B8E2F84544A15408E5317D645630FCEF689969AAA0FDB8F3D86E3A"
+  },
+  {
+    "Path": "Assets/Scripts/Navigation/NavigationCollisionGuard.cs",
+    "SHA256": "E9ABE451AC96D451C491CA3F150B971035B8A525B698CDAB52927BBA3CDB6B8D"
+  },
+  {
+    "Path": "Assets/Scripts/Navigation/NavigationWalkPresenter.cs",
+    "SHA256": "838D267952675D8C4D44C5114BB4C43CAE6D3A100DD254BC88BC084C7ADE6AF0"
+  },
+  {
+    "Path": "Assets/Scripts/UI/Decoration/CashRegisterSideIndicatorView.cs",
+    "SHA256": "E1C0A591A43D464481710B8B46B690939A11DE25BDF7EA11CFD7E6EC6FC241DE"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase4/Phase4ProductionAssetTests.cs",
+    "SHA256": "E2A3C5201CE60C82416B35754E237BF87D4BB89927C2AFDE067E94CC87AB8041"
+  },
+  {
+    "Path": "Assets/Tests/EditMode/Phase6/Phase6DecorationAssetBuilderTests.cs",
+    "SHA256": "F1EDC606C5732684D7D423835AA580EBD6C6DB6B3C7121DA70705DCD002491CA"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/P8RCashRegisterSideIndicatorTests.cs",
+    "SHA256": "E7D5DBBCCB684FD13F096B8566E3A9563397E355C15B0F0BB6FE302B12804FA9"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase11/NavigationMovementTests.cs",
+    "SHA256": "221668AF2A9E56C885AA8F51440AFE3145C69BC74DE0396BC45F0038E25C9E77"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase12/Phase12CustomerQueueSceneTests.cs",
+    "SHA256": "5A3C498387348EC0ADA0C2F3AB1A3A6F8EEFEC4A41AD446B661F81BAE8420E15"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase6DecorationMainCafeSceneTests.cs",
+    "SHA256": "2A187E74FE6E0F8462BDD0023941EB53416499E5356150DB12AED5774A9A1050"
+  },
+  {
+    "Path": "Assets/Tests/PlayMode/EditorSceneLoading/Phase8MainCafeSceneTests.cs",
+    "SHA256": "608DF2A679D153D5BC81B36F8DCA41EF204304A43F53FCBFDB2B1C2E08A6C6FE"
+  },
+  {
+    "Path": "Assets/UI/Phase6/Thumbnails/TH_CounterPreset_1x1.png",
+    "SHA256": "E6E4C3F21C7B0BE4CDBEA7B6E3686A4884A79E8F2D81F6D4903ED8A0A17DE4B1"
+  },
+  {
+    "Path": "Assets/UI/Phase6/Thumbnails/TH_CounterPreset_1x2.png",
+    "SHA256": "C1D08330562F680ED914CEC6FCC602243CE619FF622E3092F2A74A8E5874FDB2"
+  },
+  {
+    "Path": "Assets/UI/Phase6/Thumbnails/TH_CounterPreset_1x3.png",
+    "SHA256": "83B8741517B0F9767921F837C2CE04A848EB61A24C8655380D94556C5BBC8A10"
+  },
+  {
+    "Path": "Assets/UI/Phase6/Thumbnails/TH_CounterPreset_2x3.png",
+    "SHA256": "960B7163748E8D9C320B28C6774207940B77B2272A5035FF1193F627020C1836"
+  }
+]

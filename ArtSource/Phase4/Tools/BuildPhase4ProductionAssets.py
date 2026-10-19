@@ -23,7 +23,10 @@ from mathutils import Matrix, Vector
 WORK_TABLE_SHA256 = "CDA670B6DEAF309225E1636AA3B07EEBECC6D7D8497939027BC05659C156F60A"
 CASH_REGISTER_SHA256 = "28859431416BD3D40D0C52D9F56DE9CD577566964094CD945B69C9120253321D"
 
-COUNTER_TARGET_XYZ = Vector((1.00, 1.00, 0.72))
+COUNTER_TARGET_XYZ = Vector((1.00, 1.00, 0.42))
+# Preserve the approved countertop/base thickness while shortening the cabinet.
+# 先还原原始72cm比例，再缩短中段；避免直接缩放导致台面变薄。
+COUNTER_ORIGINAL_XYZ = Vector((1.00, 1.00, 0.72))
 CASH_TARGET_XYZ = Vector((0.43, 0.26, 0.45))
 CASH_MAX_TRIANGLES = 6000
 TARGET_TEXTURE_SIZE = 512
@@ -291,10 +294,11 @@ def save_counter_source(path, obj, source_hash, scale_factors):
     bpy.context.preferences.filepaths.save_version = 0
     obj["AnimalCafeSourceSha256"] = source_hash
     obj["AnimalCafeStudioOwnerApproval"] = (
-        "2026-08-04 controlled non-uniform Counter derivative"
+        "2026-08-04 controlled derivative; 2026-10-14 P13 approved 42cm counter"
     )
     obj["AnimalCafePerAxisScaleXYZ"] = json.dumps(scale_factors)
-    obj["AnimalCafeProductionTargetXYZ"] = "1.00 width, 1.00 depth, 0.72 height"
+    obj["AnimalCafeProductionTargetXYZ"] = "1.00 width, 1.00 depth, 0.42 height"
+    obj["AnimalCafeHeightAdaptation"] = "Keep bottom 0.10m and top 0.08m; shorten middle by 0.30m"
     obj["AnimalCafeForwardBlender"] = "+Y"
     obj["AnimalCafeUnityForward"] = "+Z via FBX Forward -Z / Up Y"
     bpy.context.scene["animalcafe_phase"] = "Phase4 Task7"
@@ -350,13 +354,21 @@ def build_counter(project_root, work_table_path, source_hash):
     source_image_size = tuple(source_image.size)
 
     scale_factors = tuple(
-        float(COUNTER_TARGET_XYZ[index]) / input_dimensions[index]
+        float(COUNTER_ORIGINAL_XYZ[index]) / input_dimensions[index]
         for index in range(3)
     )
     obj.scale = Vector(scale_factors)
     select_only(obj)
     bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
     bottom_center_geometry(obj)
+    drop = float(COUNTER_ORIGINAL_XYZ.z - COUNTER_TARGET_XYZ.z)
+    for vertex in obj.data.vertices:
+        if vertex.co.z >= 0.64:
+            vertex.co.z -= drop
+        elif vertex.co.z > 0.10:
+            vertex.co.z = 0.10 + (vertex.co.z - 0.10) * ((0.54 - drop) / 0.54)
+    obj.data.update()
+    bpy.context.view_layer.update()
     obj.name = "SM_Furniture_CounterModule_01"
     obj.data.name = "SM_Furniture_CounterModule_01"
     assert_close_dimensions(dimensions_tuple(obj), COUNTER_TARGET_XYZ, "Counter")

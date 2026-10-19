@@ -1,0 +1,30 @@
+first-play M010_AUDIT case=M005_RealTimeBothRolesAndTwoSecondPause errors=0 warnings=0
+first-play M010_AUDIT case=M006_ActualDecorExitAndCancelledPreviewPreserveTask errors=0 warnings=0
+first-play M010_AUDIT case=M007_ConfirmedRotationAndSafeSupportMovesKeepEmployees errors=0 warnings=0
+first-play M010_AUDIT case=M008_FixedWorkCellBlockAndRepair errors=0 warnings=0
+first-play M010_AUDIT case=M008_StoreAndRepairEachRequiredStation errors=0 warnings=0
+first-play M010_AUDIT case=M011_RepeatedClicksAndIndependentConcurrentRoles errors=0 warnings=0
+first-play M010_AUDIT case=M012_SecondCompleteStationSetAndStableRebinding errors=0 warnings=0
+first-play M010_AUDIT case=M013_ContextCancelTwiceAtEveryApplicablePhase errors=0 warnings=0
+first-play M010_AUDIT case=M014_ActualActorAndFlowDisableForOneRealSecond errors=0 warnings=0
+NATIVE_LOG outputs/phase13/delegated-first-play.log matches=1
+line=85 [Licensing::Module] Error: Access token is unavailable; failed to update
+repair1-play M010_AUDIT case=M008_FixedWorkCellBlockAndRepair errors=0 warnings=0
+repair1-play M010_AUDIT case=M008_StoreAndRepairEachRequiredStation errors=0 warnings=0
+repair1-play M010_AUDIT case=M011_RepeatedClicksAndIndependentConcurrentRoles errors=0 warnings=0
+repair1-play M010_AUDIT case=M012_SecondCompleteStationSetAndStableRebinding errors=0 warnings=0
+repair1-play M010_AUDIT case=M014_ActualActorAndFlowDisableForOneRealSecond errors=0 warnings=0
+NATIVE_LOG outputs/phase13/delegated-repair1-play.log matches=1
+line=85 [Licensing::Module] Error: Access token is unavailable; failed to update
+repair2-play M010_AUDIT case=M008_FixedWorkCellBlockAndRepair errors=0 warnings=0
+repair2-play M010_AUDIT case=M008_StoreAndRepairEachRequiredStation errors=0 warnings=0
+repair2-play M010_AUDIT case=M012_SecondCompleteStationSetAndStableRebinding errors=0 warnings=0
+NATIVE_LOG outputs/phase13/delegated-repair2-play.log matches=1
+line=85 [Licensing::Module] Error: Access token is unavailable; failed to update
+m015-edit REAL_PLAY_SESSION domainReload=True run=1 actor=employee-4931360ae0cf4f5d84218f8001309799-Cashier
+m015-edit REAL_PLAY_SESSION domainReload=True run=2 actor=employee-d9f7d500bef041f4846b32194b2143db-Cashier
+m015-edit EDITOR_RESTORED trueReload settings=False/None scenes=
+m015-edit REAL_PLAY_SESSION domainReload=False run=1 actor=employee-7cfd1d840f4949188a5a0a0893602536-Cashier
+m015-edit REAL_PLAY_SESSION domainReload=False run=2 actor=employee-17330289d81f4bfa8cc315d56499c8b4-Cashier
+m015-edit EDITOR_RESTORED noReload settings=False/None scenes=
+NATIVE_LOG outputs/phase13/delegated-m015-edit.log matches=0

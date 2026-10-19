@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AM_Employee_CarryUpperBody
+  m_Mask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+  m_Elements:
+  - m_Path: 
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root/pelvis
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/chest_socket
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/head
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/head/ear.L
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/head/ear.R
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/head/head_socket
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/upper_arm.L
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/upper_arm.L/forearm.L
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/upper_arm.L/forearm.L/hand.L
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/upper_arm.L/forearm.L/hand.L/hand_socket.L
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/upper_arm.R
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/upper_arm.R/forearm.R
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/upper_arm.R/forearm.R/hand.R
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/chest/upper_arm.R/forearm.R/hand.R/hand_socket.R
+    m_Weight: 1
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/tail_01
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/tail_01/tail_02
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/tail_01/tail_02/tail_03
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/tail_01/tail_02/tail_03/tail_04
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/thigh.L
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/thigh.L/shin.L
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/thigh.L/shin.L/foot.L
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/thigh.R
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/thigh.R/shin.R
+    m_Weight: 0
+  - m_Path: AnimalCafe_MasterRig/root/pelvis/thigh.R/shin.R/foot.R
+    m_Weight: 0
+  - m_Path: Westie_ReferenceBody_Mesh
+    m_Weight: 0

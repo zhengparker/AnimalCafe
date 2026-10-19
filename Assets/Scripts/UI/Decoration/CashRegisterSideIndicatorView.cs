@@ -187,7 +187,7 @@ namespace AnimalCafe.UI.Decoration
             if (maximumOffset < minimumOffset) { ClearPresentation(); return; }
             // Match the confirmed Pickup sign's visible center at the authored camera angle.
             // 对齐常驻取餐牌的视觉高度（台面 + lift + billboard 中心），不包含拖动额外抬高。
-            var naturalHeight = worldCamera.WorldToScreenPoint(anchor + floor.up * (1.4f * cellSize)).y - first.y;
+            var naturalHeight = worldCamera.WorldToScreenPoint(anchor + floor.up * (1.1f * cellSize)).y - first.y;
             var offset = Mathf.Clamp(naturalHeight, minimumOffset, maximumOffset);
             var a = IconRect(first, offset, iconPixels);
             var b = IconRect(second, offset, iconPixels);

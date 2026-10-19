@@ -1,0 +1,70 @@
+[
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase4\\Prefabs\\PF_Equipment_CoffeeMachine_01.prefab",
+    "Hash": "FAC8B6CA6A27CE4D72F68FD277015135C6BB29FB15899A0A1E3D90BD1E8A4406"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase4\\Prefabs\\PF_Equipment_CashRegister_01.prefab",
+    "Hash": "7D25F6BCB2A2F89565E3AF3B0A4FB8C961698DF7F61C6E231E6AC184DEB993EE"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase4\\Prefabs\\PF_Item_CeramicCup_01.prefab",
+    "Hash": "593C3341660D2351A1C5C2CBEC69B3C869079D840C4DA0A14875998F114BDB32"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase4\\Models\\SM_Equipment_CashRegister_01.fbx",
+    "Hash": "93B4E5CB6BD25C80BA3F853DBB101C95C9B740F4527B9BF7444E58BE0FD3E7D5"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Scenes\\MainCafe.unity",
+    "Hash": "A729E795984140C1B3712110E7F7BB485099ECF4383CA6462423CCE4DB669A3B"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Scenes\\Validation\\Phase13EmployeeTasks.unity",
+    "Hash": "377FDF668B51A531AF6EF2ECB002A75913735BA61F770D8BC28AFBF3C03E11A2"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase13\\Employees\\AM_Employee_CarryUpperBody.mask",
+    "Hash": "C66928EF563EC101741422BFF3426E627B1FBDFC9FDA2B22DE6CFB4807165AF4"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase13\\Employees\\Shiba\\AC_Shiba_Employee.controller",
+    "Hash": "79033BBF196BC637361D43EA0E58165FE07B4668C7DFF11C89DA3C3ACDA6B6D9"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase13\\Employees\\Shiba\\PF_Shiba_Employee.prefab",
+    "Hash": "82DBAB0DB18354AD1CE688B02A2F32EEE0BC071898E914C6722C7932195A8171"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase13\\Employees\\Shiba\\SM_Shiba_Carry_Cup.fbx",
+    "Hash": "C304BA807E4B42DFB99B237B317DAE7BC9B63C7F85DD5494B1D34154C5FF0CF6"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase13\\Employees\\Shiba\\SM_Shiba_Employee_Walk.fbx",
+    "Hash": "0120FF42247D6B7C944CD3B3F91DB1C7A84308A057AE23E115C64365FB246B5C"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase13\\Employees\\Shiba\\SM_Shiba_Work_Generic_Busy.fbx",
+    "Hash": "466679A899A979FCA6AB156131516EE98970B6F96C24A4AF6ED40F41D6D22A73"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase13\\Employees\\Westie\\AC_Westie_Employee.controller",
+    "Hash": "49672A7AA57878C648F866630205FCC0E018D8A211BF865EC7E56B18B779C76C"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase13\\Employees\\Westie\\PF_Westie_Employee.prefab",
+    "Hash": "6B500146763B7E1D2963EBBE40BAE5CEF9211D09AB4CC1FD195DDAA66ED5AC48"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase13\\Employees\\Westie\\SM_Westie_Carry_Cup.fbx",
+    "Hash": "913825F19D013AAFE2EF7ED04037310B3FA9F58366B0F889BCFE0C3669B040F1"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase13\\Employees\\Westie\\SM_Westie_Employee_Walk.fbx",
+    "Hash": "307AA2620F187B8A73AFB710C7D127636810000569001A67A15E88785B589220"
+  },
+  {
+    "Path": "E:\\Unity\\Project\\AnimalCafe\\.worktrees\\phase-13-employee-task-flow\\Assets\\Art\\Phase13\\Employees\\Westie\\SM_Westie_Work_Generic_Busy.fbx",
+    "Hash": "9EB2E456C0D7F8A451DD6E1DE157803291A43470661460A8609591BD4C6EB5F9"
+  }
+]

@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="44" result="Passed" total="44" passed="44" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.3637835">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2515" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.363784" total="44" passed="44" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="3868" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2515" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.288490" total="44" passed="44" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="35572" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="3869" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2515" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.252932" total="44" passed="44" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3870" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2515" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.222081" total="44" passed="44" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="3876" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1633" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.175795" total="44" passed="44" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="3878" name="Phase8" fullname="AnimalCafe.Tests.EditMode.Phase8" runstate="Runnable" testcasecount="231" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.140857" total="44" passed="44" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="2213" name="InteractionAnchorResolverTests" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" testcasecount="17" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.058708" total="17" passed="17" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-suite type="ParameterizedMethod" id="2218" name="ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.038828" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2214" name="ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation(Degrees0,AnimalCafe.Layout.GridPosition,South,AnimalCafe.Layout.GridPosition,North)" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation(Degrees0,AnimalCafe.Layout.GridPosition,South,AnimalCafe.Layout.GridPosition,North)" methodname="ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="192831290" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.030954" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2215" name="ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation(Degrees90,AnimalCafe.Layout.GridPosition,West,AnimalCafe.Layout.GridPosition,East)" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation(Degrees90,AnimalCafe.Layout.GridPosition,West,AnimalCafe.Layout.GridPosition,East)" methodname="ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="1024329480" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000208" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2216" name="ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation(Degrees180,AnimalCafe.Layout.GridPosition,North,AnimalCafe.Layout.GridPosition,South)" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation(Degrees180,AnimalCafe.Layout.GridPosition,North,AnimalCafe.Layout.GridPosition,South)" methodname="ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="1761958" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000157" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2217" name="ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation(Degrees270,AnimalCafe.Layout.GridPosition,East,AnimalCafe.Layout.GridPosition,West)" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation(Degrees270,AnimalCafe.Layout.GridPosition,East,AnimalCafe.Layout.GridPosition,West)" methodname="ResolveMounted_CashRegisterReturnsExactAutomaticAnchorsForEveryEquipmentRotation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="615545397" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000131" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="2223" name="ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.002591" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2219" name="ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation(Degrees0,AnimalCafe.Layout.GridPosition,South)" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation(Degrees0,AnimalCafe.Layout.GridPosition,South)" methodname="ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="1026195164" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000887" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2220" name="ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation(Degrees90,AnimalCafe.Layout.GridPosition,West)" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation(Degrees90,AnimalCafe.Layout.GridPosition,West)" methodname="ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="1489837868" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000138" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2221" name="ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation(Degrees180,AnimalCafe.Layout.GridPosition,North)" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation(Degrees180,AnimalCafe.Layout.GridPosition,North)" methodname="ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="1592746005" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000118" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2222" name="ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation(Degrees270,AnimalCafe.Layout.GridPosition,East)" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation(Degrees270,AnimalCafe.Layout.GridPosition,East)" methodname="ResolveMounted_CoffeeMachineReturnsOnlyEmployeeAnchorForEveryEquipmentRotation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="560958849" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000114" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="2227" name="ResolveMounted_PreservesCalculatedAnchorOnBlockedReservationForReadinessValidation" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_PreservesCalculatedAnchorOnBlockedReservationForReadinessValidation" methodname="ResolveMounted_PreservesCalculatedAnchorOnBlockedReservationForReadinessValidation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="143992371" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001270" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2226" name="ResolveMounted_PreservesCalculatedAnchorOutsideUnlockedRegionForReadinessValidation" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_PreservesCalculatedAnchorOutsideUnlockedRegionForReadinessValidation" methodname="ResolveMounted_PreservesCalculatedAnchorOutsideUnlockedRegionForReadinessValidation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="648553337" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000199" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2225" name="ResolveMounted_PreservesCalculatedAnchorWhenCellIsOccupiedForReadinessValidation" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_PreservesCalculatedAnchorWhenCellIsOccupiedForReadinessValidation" methodname="ResolveMounted_PreservesCalculatedAnchorWhenCellIsOccupiedForReadinessValidation" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="808724140" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000561" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2224" name="ResolveMounted_RecalculatesFromCurrentSupportMoveAndCombinedRotationsWithoutChangingBinding" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolveMounted_RecalculatesFromCurrentSupportMoveAndCombinedRotationsWithoutChangingBinding" methodname="ResolveMounted_RecalculatesFromCurrentSupportMoveAndCombinedRotationsWithoutChangingBinding" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="1424518485" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.002013" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2232" name="ResolvePickUp_NoWalkableAdjacentCellReturnsNoAnchors" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolvePickUp_NoWalkableAdjacentCellReturnsNoAnchors" methodname="ResolvePickUp_NoWalkableAdjacentCellReturnsNoAnchors" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="670111713" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001339" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2228" name="ResolvePickUp_PrefersNorthSouthOppositePairAndIsDeterministic" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolvePickUp_PrefersNorthSouthOppositePairAndIsDeterministic" methodname="ResolvePickUp_PrefersNorthSouthOppositePairAndIsDeterministic" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="81868843" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001961" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2231" name="ResolvePickUp_SharesTheOnlyWalkableCellBetweenBothRoles" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolvePickUp_SharesTheOnlyWalkableCellBetweenBothRoles" methodname="ResolvePickUp_SharesTheOnlyWalkableCellBetweenBothRoles" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="2055190460" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000260" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2229" name="ResolvePickUp_UsesEastWestWhenFirstOppositePairIsUnavailable" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolvePickUp_UsesEastWestWhenFirstOppositePairIsUnavailable" methodname="ResolvePickUp_UsesEastWestWhenFirstOppositePairIsUnavailable" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="86802332" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000270" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2230" name="ResolvePickUp_UsesFirstTwoDistinctWalkableCellsInCardinalOrder" fullname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests.ResolvePickUp_UsesFirstTwoDistinctWalkableCellsInCardinalOrder" methodname="ResolvePickUp_UsesFirstTwoDistinctWalkableCellsInCardinalOrder" classname="AnimalCafe.Tests.EditMode.Phase8.InteractionAnchorResolverTests" runstate="Runnable" seed="1852638159" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000273" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="2233" name="LayoutReadinessEvaluatorTests" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" testcasecount="27" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.074419" total="27" passed="27" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="2234" name="CafeLayout_ReadOnlyQueriesExposeUnlockedAndReservationCells" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.CafeLayout_ReadOnlyQueriesExposeUnlockedAndReservationCells" methodname="CafeLayout_ReadOnlyQueriesExposeUnlockedAndReservationCells" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1409733265" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001669" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2258" name="Evaluate_AllInstancesOfCapabilityInvalidKeepsEveryStationFailure" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_AllInstancesOfCapabilityInvalidKeepsEveryStationFailure" methodname="Evaluate_AllInstancesOfCapabilityInvalidKeepsEveryStationFailure" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="894770448" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.022308" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2251" name="Evaluate_ClassifiesOutsideBlockedAndUnreachableAnchors" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_ClassifiesOutsideBlockedAndUnreachableAnchors" methodname="Evaluate_ClassifiesOutsideBlockedAndUnreachableAnchors" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1095022048" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.003590" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2253" name="Evaluate_ConfirmedFloorFurnitureBarrierMakesAnchorUnreachable" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_ConfirmedFloorFurnitureBarrierMakesAnchorUnreachable" methodname="Evaluate_ConfirmedFloorFurnitureBarrierMakesAnchorUnreachable" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="324832249" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001902" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2252" name="Evaluate_ConfirmedFloorFurnitureOnRequiredAnchorIsBlocked" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_ConfirmedFloorFurnitureOnRequiredAnchorIsBlocked" methodname="Evaluate_ConfirmedFloorFurnitureOnRequiredAnchorIsBlocked" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="947392620" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000927" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2250" name="Evaluate_CorruptBindingsReturnStableSpecificFailuresWithoutThrowing" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_CorruptBindingsReturnStableSpecificFailuresWithoutThrowing" methodname="Evaluate_CorruptBindingsReturnStableSpecificFailuresWithoutThrowing" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1901242064" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.003426" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2242" name="Evaluate_CorruptExtraDoesNotUpgradeStructurallyValidUnavailableExtraToBlocking" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_CorruptExtraDoesNotUpgradeStructurallyValidUnavailableExtraToBlocking" methodname="Evaluate_CorruptExtraDoesNotUpgradeStructurallyValidUnavailableExtraToBlocking" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1780777762" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.002094" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="2248" name="Evaluate_CorruptMountedDefinitionReportsBlockingFailureWithoutInventingStationType" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_CorruptMountedDefinitionReportsBlockingFailureWithoutInventingStationType" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.002911" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2246" name="Evaluate_CorruptMountedDefinitionReportsBlockingFailureWithoutInventingStationType(&quot;equipment.unknown&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_CorruptMountedDefinitionReportsBlockingFailureWithoutInventingStationType(&quot;equipment.unknown&quot;)" methodname="Evaluate_CorruptMountedDefinitionReportsBlockingFailureWithoutInventingStationType" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1115984364" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001781" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2247" name="Evaluate_CorruptMountedDefinitionReportsBlockingFailureWithoutInventingStationType(&quot;furniture.counter.one&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_CorruptMountedDefinitionReportsBlockingFailureWithoutInventingStationType(&quot;furniture.counter.one&quot;)" methodname="Evaluate_CorruptMountedDefinitionReportsBlockingFailureWithoutInventingStationType" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1004547826" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000671" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="2259" name="Evaluate_CounterBarrierAllowsSeparateCustomerAndEmployeeNetworks" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_CounterBarrierAllowsSeparateCustomerAndEmployeeNetworks" methodname="Evaluate_CounterBarrierAllowsSeparateCustomerAndEmployeeNetworks" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="583110425" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001282" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2260" name="Evaluate_CustomerAnchorDisconnectedFromEntranceFailsOnlyCustomerReachability" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_CustomerAnchorDisconnectedFromEntranceFailsOnlyCustomerReachability" methodname="Evaluate_CustomerAnchorDisconnectedFromEntranceFailsOnlyCustomerReachability" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="2028289374" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000884" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2235" name="Evaluate_DenseEntranceClearanceFloodFillsWithinStableBudget" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_DenseEntranceClearanceFloodFillsWithinStableBudget" methodname="Evaluate_DenseEntranceClearanceFloodFillsWithinStableBudget" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="241957711" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.012014" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2262" name="Evaluate_DualNetworkCombinationKeepsInvalidExtraStationAsWarning" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_DualNetworkCombinationKeepsInvalidExtraStationAsWarning" methodname="Evaluate_DualNetworkCombinationKeepsInvalidExtraStationAsWarning" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="2043513391" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001075" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2261" name="Evaluate_EmployeeAnchorsInDifferentWalkableComponentsCannotFormCombination" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_EmployeeAnchorsInDifferentWalkableComponentsCannotFormCombination" methodname="Evaluate_EmployeeAnchorsInDifferentWalkableComponentsCannotFormCombination" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="776581187" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000864" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2263" name="Evaluate_IndividuallyValidStationsInDisconnectedComponentsCannotOpen" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_IndividuallyValidStationsInDisconnectedComponentsCannotOpen" methodname="Evaluate_IndividuallyValidStationsInDisconnectedComponentsCannotOpen" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="879017353" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000746" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2249" name="Evaluate_LaterSameTypeStationCanWinWhileEarlierUnmatchedRemainsValidAndInvalidExtraWarns" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_LaterSameTypeStationCanWinWhileEarlierUnmatchedRemainsValidAndInvalidExtraWarns" methodname="Evaluate_LaterSameTypeStationCanWinWhileEarlierUnmatchedRemainsValidAndInvalidExtraWarns" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1333987762" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.002130" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="2264" name="Evaluate_LayoutChangeProducesFreshReadinessInsteadOfReusingOldResult" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_LayoutChangeProducesFreshReadinessInsteadOfReusingOldResult" methodname="Evaluate_LayoutChangeProducesFreshReadinessInsteadOfReusingOldResult" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1515580866" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001759" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="2257" name="Evaluate_MissingRequiredCapabilityReturnsItsBlockingFailure" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_MissingRequiredCapabilityReturnsItsBlockingFailure" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.003024" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2254" name="Evaluate_MissingRequiredCapabilityReturnsItsBlockingFailure(False,True,True,MissingCashRegister)" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_MissingRequiredCapabilityReturnsItsBlockingFailure(False,True,True,MissingCashRegister)" methodname="Evaluate_MissingRequiredCapabilityReturnsItsBlockingFailure" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1859410069" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001108" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2255" name="Evaluate_MissingRequiredCapabilityReturnsItsBlockingFailure(True,False,True,MissingCoffeeMachine)" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_MissingRequiredCapabilityReturnsItsBlockingFailure(True,False,True,MissingCoffeeMachine)" methodname="Evaluate_MissingRequiredCapabilityReturnsItsBlockingFailure" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1442144433" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000666" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2256" name="Evaluate_MissingRequiredCapabilityReturnsItsBlockingFailure(True,True,False,MissingPickUpPoint)" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_MissingRequiredCapabilityReturnsItsBlockingFailure(True,True,False,MissingPickUpPoint)" methodname="Evaluate_MissingRequiredCapabilityReturnsItsBlockingFailure" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="2005738686" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000580" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="2245" name="Evaluate_MountedDefinitionMissingDirectionCatalogEntryReportsBlockingFailure" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_MountedDefinitionMissingDirectionCatalogEntryReportsBlockingFailure" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.002231" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2243" name="Evaluate_MountedDefinitionMissingDirectionCatalogEntryReportsBlockingFailure(False)" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_MountedDefinitionMissingDirectionCatalogEntryReportsBlockingFailure(False)" methodname="Evaluate_MountedDefinitionMissingDirectionCatalogEntryReportsBlockingFailure" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1864696201" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001224" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2244" name="Evaluate_MountedDefinitionMissingDirectionCatalogEntryReportsBlockingFailure(True)" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_MountedDefinitionMissingDirectionCatalogEntryReportsBlockingFailure(True)" methodname="Evaluate_MountedDefinitionMissingDirectionCatalogEntryReportsBlockingFailure" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="1858005855" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000655" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="2236" name="Evaluate_OneCompleteReachableServiceCombinationCanOpenBusiness" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_OneCompleteReachableServiceCombinationCanOpenBusiness" methodname="Evaluate_OneCompleteReachableServiceCombinationCanOpenBusiness" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="149705621" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001208" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="2241" name="Evaluate_ValidCombinationKeepsCorruptExtraBindingBlocking" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_ValidCombinationKeepsCorruptExtraBindingBlocking" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" testcasecount="3" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.003018" total="3" passed="3" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2238" name="Evaluate_ValidCombinationKeepsCorruptExtraBindingBlocking(MissingSupportFurniture)" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_ValidCombinationKeepsCorruptExtraBindingBlocking(MissingSupportFurniture)" methodname="Evaluate_ValidCombinationKeepsCorruptExtraBindingBlocking" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="184638819" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001161" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2239" name="Evaluate_ValidCombinationKeepsCorruptExtraBindingBlocking(MissingSurfaceSlot)" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_ValidCombinationKeepsCorruptExtraBindingBlocking(MissingSurfaceSlot)" methodname="Evaluate_ValidCombinationKeepsCorruptExtraBindingBlocking" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="787562826" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000669" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                  <test-case id="2240" name="Evaluate_ValidCombinationKeepsCorruptExtraBindingBlocking(DuplicateSurfaceOccupancy)" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_ValidCombinationKeepsCorruptExtraBindingBlocking(DuplicateSurfaceOccupancy)" methodname="Evaluate_ValidCombinationKeepsCorruptExtraBindingBlocking" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="2068976274" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.000705" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                  </test-case>
+                </test-suite>
+                <test-case id="2237" name="Evaluate_ValidCombinationKeepsInvalidExtraAsWarningAndReturnsAllStationsSorted" fullname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests.Evaluate_ValidCombinationKeepsInvalidExtraAsWarningAndReturnsAllStationsSorted" methodname="Evaluate_ValidCombinationKeepsInvalidExtraAsWarningAndReturnsAllStationsSorted" classname="AnimalCafe.Tests.EditMode.Phase8.LayoutReadinessEvaluatorTests" runstate="Runnable" seed="391753205" result="Passed" start-time="2026-10-14 14:25:46Z" end-time="2026-10-14 14:25:46Z" duration="0.001881" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

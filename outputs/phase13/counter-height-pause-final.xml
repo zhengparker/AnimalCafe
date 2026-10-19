@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="7" result="Passed" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-15 02:02:15Z" end-time="2026-10-15 02:02:48Z" duration="32.6159731">
+  <test-suite type="TestSuite" id="2436" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="1272" result="Passed" start-time="2026-10-15 02:02:15Z" end-time="2026-10-15 02:02:48Z" duration="32.615973" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="PlayMode" />
+    </properties>
+    <test-suite type="Assembly" id="1534" name="AnimalCafe.EditorSceneLoading.PlayModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditorSceneLoading.PlayModeTests.dll" runstate="Runnable" testcasecount="484" result="Passed" start-time="2026-10-15 02:02:15Z" end-time="2026-10-15 02:02:48Z" duration="32.584001" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="55248" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="PlayMode" />
+        <property name="EditorOnly" value="False" />
+      </properties>
+      <test-suite type="TestSuite" id="1535" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="484" result="Passed" start-time="2026-10-15 02:02:15Z" end-time="2026-10-15 02:02:48Z" duration="32.577408" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1536" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="484" result="Passed" start-time="2026-10-15 02:02:15Z" end-time="2026-10-15 02:02:48Z" duration="32.570626" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="1537" name="PlayMode" fullname="AnimalCafe.Tests.PlayMode" runstate="Runnable" testcasecount="484" result="Passed" start-time="2026-10-15 02:02:15Z" end-time="2026-10-15 02:02:48Z" duration="32.561370" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="1538" name="Phase13" fullname="AnimalCafe.Tests.PlayMode.Phase13" runstate="Runnable" testcasecount="44" result="Passed" start-time="2026-10-15 02:02:15Z" end-time="2026-10-15 02:02:48Z" duration="32.546871" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="1058" name="EmployeeAnimationTests" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-10-15 02:02:15Z" end-time="2026-10-15 02:02:16Z" duration="1.138242" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1061" name="BothSpeciesCarryKeepsUpperPoseAndRealWalkWithOwnedCup" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.BothSpeciesCarryKeepsUpperPoseAndRealWalkWithOwnedCup" methodname="BothSpeciesCarryKeepsUpperPoseAndRealWalkWithOwnedCup" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" seed="796145341" result="Passed" start-time="2026-10-15 02:02:15Z" end-time="2026-10-15 02:02:16Z" duration="0.450133" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1059" name="DefaultNavigationPresenterStillSelectsWalkHold" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.DefaultNavigationPresenterStillSelectsWalkHold" methodname="DefaultNavigationPresenterStillSelectsWalkHold" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" seed="1996142999" result="Passed" start-time="2026-10-15 02:02:16Z" end-time="2026-10-15 02:02:16Z" duration="0.006051" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1063" name="PauseAndFastScaleWorkingExactlyOnce" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.PauseAndFastScaleWorkingExactlyOnce" methodname="PauseAndFastScaleWorkingExactlyOnce" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" seed="2054944090" result="Passed" start-time="2026-10-15 02:02:16Z" end-time="2026-10-15 02:02:16Z" duration="0.653035" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[PAUSE runningDelta=0.0011705003 pausedDelta=0 normalizedDrift=0
+]]></output>
+                </test-case>
+                <test-case id="1062" name="ReenableResyncsWithoutDuplicateMotionOwnershipOrInactivePlay" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.ReenableResyncsWithoutDuplicateMotionOwnershipOrInactivePlay" methodname="ReenableResyncsWithoutDuplicateMotionOwnershipOrInactivePlay" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" seed="198918795" result="Passed" start-time="2026-10-15 02:02:16Z" end-time="2026-10-15 02:02:16Z" duration="0.003057" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="1060" name="WorkingCannotBeOverwrittenByMotionZero" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests.WorkingCannotBeOverwrittenByMotionZero" methodname="WorkingCannotBeOverwrittenByMotionZero" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeAnimationTests" runstate="Runnable" seed="2142031826" result="Passed" start-time="2026-10-15 02:02:16Z" end-time="2026-10-15 02:02:16Z" duration="0.010493" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="1088" name="EmployeeDelegatedSceneChecks" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks" runstate="Runnable" testcasecount="9" result="Passed" start-time="2026-10-15 02:02:16Z" end-time="2026-10-15 02:02:38Z" duration="21.386690" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1089" name="M005_RealTimeBothRolesAndTwoSecondPause" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks.M005_RealTimeBothRolesAndTwoSecondPause" methodname="M005_RealTimeBothRolesAndTwoSecondPause" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeDelegatedSceneChecks" runstate="Runnable" seed="656822360" result="Passed" start-time="2026-10-15 02:02:16Z" end-time="2026-10-15 02:02:38Z" duration="21.384144" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[SETUP API_OPERATOR fresh saved P13 Scene; natural Update/delta; AutoSpawn=false; API operator script, not physical mouse | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(0.500, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+TASK API_OPERATOR HUD click Cashier | speed=Normal gate= Cashier Working h=1 rem=2.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=False reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(0.500, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+TASK API_OPERATOR HUD click Barista | speed=Normal gate= Cashier Working h=1 rem=2.000 delivered=False reason= | Barista Working h=1 rem=3.000 delivered=False reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(0.500, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=0 cups=0
+M005 API_OPERATOR Normal actual seconds cashier=1.999 work=2.999 carry=1.668 maxFrame=0.005 | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Returning h=1 rem=0.000 delivered=True reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(2.499, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=0 cups=1
+TASK API_OPERATOR HUD click Cashier | speed=Fast gate= Cashier Working h=2 rem=2.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=True reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(0.501, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=0 cups=1
+TASK API_OPERATOR HUD click Barista | speed=Fast gate= Cashier Working h=2 rem=2.000 delivered=False reason= | Barista Working h=2 rem=3.000 delivered=False reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(0.501, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=0 cups=1
+M005 API_OPERATOR Fast actual seconds cashier=1.000 work=1.500 carry=0.918 maxFrame=0.001 | speed=Fast gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Returning h=2 rem=0.000 delivered=True reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(2.500, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=0 cups=2
+TASK API_OPERATOR HUD click Cashier | speed=Normal gate= Cashier Working h=3 rem=2.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=True reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(0.501, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=0 cups=2
+TASK API_OPERATOR HUD click Barista | speed=Normal gate= Cashier Working h=3 rem=2.000 delivered=False reason= | Barista Working h=3 rem=3.000 delivered=False reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(0.501, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=0 cups=2
+M005 API_OPERATOR M005 working actually frozen seconds=2.050 bones=58 | speed=Paused gate= Cashier Working h=3 rem=1.799 delivered=False reason= | Barista Working h=3 rem=2.799 delivered=False reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(0.501, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=0 cups=2
+M005 API_OPERATOR M005 carrying actually frozen seconds=2.050 bones=31 | speed=Paused gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista CarryingToPickUp h=3 rem=0.000 delivered=False reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(0.700, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=1 cups=2
+M005 API_OPERATOR completed work/carry pause and resumed actual delivery | speed=Normal gate= Cashier Idle h=0 rem=0.000 delivered=False reason= | Barista Idle h=0 rem=0.000 delivered=True reason= pose=employee-712958862b124dec9d6e2c1ad9a7e234-Barista@(0.501, 0.000, 0.500);employee-712958862b124dec9d6e2c1ad9a7e234-Cashier@(-1.500, 0.000, 0.500) held=0 cups=3
+M010_AUDIT case=M005_RealTimeBothRolesAndTwoSecondPause errors=0 warnings=0
+]]></output>
+                </test-case>
+              </test-suite>
+              <test-suite type="TestFixture" id="1064" name="EmployeeMainCafeTests" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-10-15 02:02:38Z" end-time="2026-10-15 02:02:48Z" duration="10.019137" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="1071" name="RealGameTimeScalesWorkCarryAndFreezesCarrier" fullname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests.RealGameTimeScalesWorkCarryAndFreezesCarrier" methodname="RealGameTimeScalesWorkCarryAndFreezesCarrier" classname="AnimalCafe.Tests.PlayMode.Phase13.EmployeeMainCafeTests" runstate="Runnable" seed="1556041250" result="Passed" start-time="2026-10-15 02:02:38Z" end-time="2026-10-15 02:02:48Z" duration="10.016029" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[QA01_REAL_TIME speed=Normal cashier=1.9967s barista=2.9969s carry=1.6660s distance=1.9986m maxFrame=0.0016s
+QA01_REAL_TIME speed=Fast cashier=1.0002s barista=1.5001s carry=0.9180s distance=1.9975m maxFrame=0.0009s
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

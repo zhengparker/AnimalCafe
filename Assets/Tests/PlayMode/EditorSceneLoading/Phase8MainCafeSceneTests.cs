@@ -4,6 +4,7 @@ using System.Linq;
 using AnimalCafe.Content;
 using AnimalCafe.Decoration;
 using AnimalCafe.Decoration.Input;
+using AnimalCafe.Employees;
 using AnimalCafe.Layout;
 using AnimalCafe.UI.Decoration;
 using AnimalCafe.UI.Feedback;
@@ -247,9 +248,22 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
                 FindObjectsInactive.Include, FindObjectsSortMode.None), Has.Length.EqualTo(1));
             Assert.That(Object.FindObjectsByType<PickUpPointIndicatorView>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None), Has.Length.EqualTo(1));
-            Assert.That(Object.FindObjectsByType<Canvas>(
-                    FindObjectsInactive.Include, FindObjectsSortMode.None).Select(canvas => canvas.name),
-                Is.EquivalentTo(new[] { "HUD Canvas", "Screen Canvas", "Toast Canvas" }));
+            // Approved P13 adds exactly one owned task overlay to the three canonical core Canvases.
+            var canvases = Object.FindObjectsByType<Canvas>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            Assert.That(canvases.Select(canvas => canvas.name),
+                Is.EquivalentTo(new[] { "HUD Canvas", "Screen Canvas", "Toast Canvas", "P13 Task HUD" }));
+            var roots = SceneManager.GetActiveScene().GetRootGameObjects();
+            var staff = roots.SelectMany(root => root.GetComponentsInChildren<EmployeeFlowController>(true)).ToArray();
+            var owners = roots.SelectMany(root => root.GetComponentsInChildren<EmployeeTaskValidationController>(true)).ToArray();
+            Assert.That(staff, Has.Length.EqualTo(1)); Assert.That(owners, Has.Length.EqualTo(1));
+            var owner = owners.Single(); var employeeHud = canvases.Single(canvas => canvas.name == "P13 Task HUD");
+            Assert.That(owner.name, Is.EqualTo("P13 Employees")); Assert.That(owner.transform.parent, Is.Null);
+            Assert.That(owner.gameObject, Is.SameAs(staff.Single().gameObject));
+            Assert.That(employeeHud.transform.parent, Is.SameAs(owner.transform));
+            var ownership = new SerializedObject(owner);
+            Assert.That(ownership.FindProperty("hud").objectReferenceValue, Is.SameAs(employeeHud.gameObject));
+            Assert.That(ownership.FindProperty("employees").objectReferenceValue, Is.SameAs(staff.Single()));
             Assert.That(Object.FindObjectsByType<InteractionAnchorDebugView>(
                 FindObjectsInactive.Include, FindObjectsSortMode.None), Is.Empty);
             Assert.That(Object.FindObjectsByType<Transform>(

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="8" result="Passed" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 15:09:56Z" end-time="2026-10-14 15:09:57Z" duration="0.4421594">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2577" result="Passed" start-time="2026-10-14 15:09:56Z" end-time="2026-10-14 15:09:57Z" duration="0.442159" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="3946" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2577" result="Passed" start-time="2026-10-14 15:09:56Z" end-time="2026-10-14 15:09:57Z" duration="0.380759" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="22104" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="3947" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2577" result="Passed" start-time="2026-10-14 15:09:56Z" end-time="2026-10-14 15:09:57Z" duration="0.373572" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3948" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2577" result="Passed" start-time="2026-10-14 15:09:56Z" end-time="2026-10-14 15:09:57Z" duration="0.366555" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="3954" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1695" result="Passed" start-time="2026-10-14 15:09:56Z" end-time="2026-10-14 15:09:57Z" duration="0.349969" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="3962" name="Phase11" fullname="AnimalCafe.Tests.EditMode.Phase11" runstate="Runnable" testcasecount="77" result="Passed" start-time="2026-10-14 15:09:56Z" end-time="2026-10-14 15:09:57Z" duration="0.331144" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="3186" name="NavigationAssetTests" fullname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests" classname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests" runstate="Runnable" testcasecount="8" result="Passed" start-time="2026-10-14 15:09:56Z" end-time="2026-10-14 15:09:57Z" duration="0.328891" total="8" passed="8" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="3192" name="BothClipsIncludeActionLastFrame" fullname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests.BothClipsIncludeActionLastFrame" methodname="BothClipsIncludeActionLastFrame" classname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests" runstate="Runnable" seed="478150793" result="Passed" start-time="2026-10-14 15:09:52Z" end-time="2026-10-14 15:09:52Z" duration="0.047851" asserts="0">
+                  <properties />
+                </test-case>
+                <test-case id="3187" name="CharacterUsesOriginalScaleAndWalk" fullname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests.CharacterUsesOriginalScaleAndWalk" methodname="CharacterUsesOriginalScaleAndWalk" classname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests" runstate="Runnable" seed="1254991048" result="Passed" start-time="2026-10-14 15:09:52Z" end-time="2026-10-14 15:09:52Z" duration="0.029357" asserts="0">
+                  <properties />
+                </test-case>
+                <test-case id="3191" name="FinalCharacterValidatorHasNoIssues" fullname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests.FinalCharacterValidatorHasNoIssues" methodname="FinalCharacterValidatorHasNoIssues" classname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests" runstate="Runnable" seed="1099009945" result="Passed" start-time="2026-10-14 15:09:52Z" end-time="2026-10-14 15:09:52Z" duration="0.006895" asserts="0">
+                  <properties />
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3195" name="ImportedWalkHasAmplifiedLimbSwing" fullname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests.ImportedWalkHasAmplifiedLimbSwing" classname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 15:09:52Z" end-time="2026-10-14 15:09:52Z" duration="0.006214" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3193" name="ImportedWalkHasAmplifiedLimbSwing(&quot;Shiba&quot;,30.0f)" fullname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests.ImportedWalkHasAmplifiedLimbSwing(&quot;Shiba&quot;,30.0f)" methodname="ImportedWalkHasAmplifiedLimbSwing" classname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests" runstate="Runnable" seed="2047099586" result="Passed" start-time="2026-10-14 15:09:52Z" end-time="2026-10-14 15:09:52Z" duration="0.002997" asserts="0">
+                    <properties />
+                  </test-case>
+                  <test-case id="3194" name="ImportedWalkHasAmplifiedLimbSwing(&quot;Westie&quot;,24.0f)" fullname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests.ImportedWalkHasAmplifiedLimbSwing(&quot;Westie&quot;,24.0f)" methodname="ImportedWalkHasAmplifiedLimbSwing" classname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests" runstate="Runnable" seed="229041786" result="Passed" start-time="2026-10-14 15:09:52Z" end-time="2026-10-14 15:09:52Z" duration="0.001079" asserts="0">
+                    <properties />
+                  </test-case>
+                </test-suite>
+                <test-case id="3188" name="NoRootMotionOrAutomaticAgentTransform" fullname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests.NoRootMotionOrAutomaticAgentTransform" methodname="NoRootMotionOrAutomaticAgentTransform" classname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests" runstate="Runnable" seed="1511091730" result="Passed" start-time="2026-10-14 15:09:52Z" end-time="2026-10-14 15:09:52Z" duration="0.000917" asserts="0">
+                  <properties />
+                </test-case>
+                <test-case id="3189" name="RuntimeActorDisablesAutomaticAgentTransformBeforeBinding" fullname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests.RuntimeActorDisablesAutomaticAgentTransformBeforeBinding" methodname="RuntimeActorDisablesAutomaticAgentTransformBeforeBinding" classname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests" runstate="Runnable" seed="546044376" result="Passed" start-time="2026-10-14 15:09:52Z" end-time="2026-10-14 15:09:57Z" duration="4.515308" asserts="0">
+                  <properties>
+                    <property name="_JOINTYPE" value="UnityCombinatorial" />
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                </test-case>
+                <test-case id="3190" name="ValidatorReportsEmptyAnimatorLayersWithoutThrowing" fullname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests.ValidatorReportsEmptyAnimatorLayersWithoutThrowing" methodname="ValidatorReportsEmptyAnimatorLayersWithoutThrowing" classname="AnimalCafe.Tests.EditMode.Phase11.NavigationAssetTests" runstate="Runnable" seed="1821391468" result="Passed" start-time="2026-10-14 15:09:57Z" end-time="2026-10-14 15:09:57Z" duration="0.043094" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[The Animator Controller (AC_Shiba_Navigation) you have used is not valid. Animations will not play
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

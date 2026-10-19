@@ -5,8 +5,9 @@ checkbox. It activates once, then runs EditMode and PlayMode sequentially.
 GameCI's activation retry loop is removed from its pinned runner before use.
 Unity Editor may still reconnect internally during that one activation invocation.
 
-**Currently disabled in GitHub. Do not enable or dispatch until the owner explicitly
-allows Unity login/testing again.** Updating Secrets does not authorize a run.
+**Each manual run requires the owner's authorization for Unity login/testing.**
+The workflow was enabled for owner-authorized P12/P13 runs; it has no automatic
+push or pull-request trigger. Updating Secrets does not authorize a run.
 
 ## One-time activation setup
 
@@ -19,8 +20,8 @@ allows Unity login/testing again.** Updating Secrets does not authorize a run.
 4. Also create `UNITY_EMAIL` and `UNITY_PASSWORD` for the same Unity account.
    Personal CI requires all three. 输入在 GitHub Secrets，不发到聊天或写入代码。
 5. Do not push/rerun to verify credentials. After account recovery and explicit
-   owner approval, enable the workflow and dispatch it manually from the intended
-   branch, selecting the authorization checkbox. This has not been done yet.
+   owner approval, enable the workflow if necessary and dispatch it manually from
+   the intended branch, selecting the authorization checkbox.
 
 Never commit a Unity license file or its contents to this repository.
 
@@ -30,6 +31,16 @@ One job publishes both suites' results for 14 days. Both NUnit XML reports must
 exist and pass. All branches share a concurrency group to prevent simultaneous
 account login. A failed activation ends that run without a second activation call.
 There is no automatic trigger for PR changes or main pushes.
+
+The complete job has a **150-minute upper limit**, shared by both suites and
+Library imports, and stops as soon as they finish. A cold P13 run exhausted the
+old 90-minute combined budget: PlayMode completed in 27 minutes, while EditMode
+was still rebuilding legacy assets. This budget change does not filter tests or
+weaken the requirement for both final XML reports. The run summary records the
+tested commit and each suite's duration. Missing XML or timeout still fails CI.
+
+完整job的150分钟是总上限，不是固定等待时间；冷启动会重建Library和旧资源。
+两套最终XML、零失败及原有SKIP的报告要求保持不变。
 
 See [Unity CI Guide](../Docs/Unity_CI_Guide.md) for the complete configuration,
 report checks, and the separate owner step to require the `Unity CI` status check.

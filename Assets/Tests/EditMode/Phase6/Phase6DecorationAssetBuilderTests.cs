@@ -844,7 +844,7 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 var expectedZ = index / width - (depth - 1) * 0.5f;
                 Assert.That(slots[index].SlotId, Is.EqualTo($"slot.{index}"));
                 Assert.That(slots[index].transform.localPosition,
-                    Is.EqualTo(new Vector3(expectedX, 0.72f, expectedZ)));
+                    Is.EqualTo(new Vector3(expectedX, 0.42f, expectedZ)));
                 Assert.That(slots[index].transform.localRotation, Is.EqualTo(Quaternion.identity));
             }
 
@@ -855,7 +855,7 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             Assert.That(collider, Is.Not.Null);
             Assert.That(collider.size.x, Is.EqualTo(width).Within(0.03f));
             Assert.That(collider.size.z, Is.EqualTo(depth).Within(0.03f));
-            Assert.That(collider.bounds.max.y, Is.LessThanOrEqualTo(0.7201f));
+            Assert.That(collider.bounds.max.y, Is.LessThanOrEqualTo(0.4201f));
         }
 
         private static Bounds GetRootLocalRendererBounds(GameObject root)

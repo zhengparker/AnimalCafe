@@ -7,10 +7,12 @@ using System.Linq;
 using System.Reflection;
 using AnimalCafe.Decoration;
 using AnimalCafe.Decoration.Input;
+using AnimalCafe.Employees;
 using AnimalCafe.Layout;
 using AnimalCafe.UI.Decoration;
 using NUnit.Framework;
 using TMPro;
+using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -119,8 +121,18 @@ namespace AnimalCafe.Tests.PlayMode
             var scene = SceneManager.GetActiveScene();
 
             Assert.That(FindAll(scene, "UI Root"), Has.Length.EqualTo(1));
+            // Approved P13 adds exactly one owned task overlay; core Canvas names remain mandatory.
             Assert.That(FindAll<Canvas>(scene).Select(canvas => canvas.name),
-                Is.EquivalentTo(new[] { "HUD Canvas", "Screen Canvas", "Toast Canvas" }));
+                Is.EquivalentTo(new[] { "HUD Canvas", "Screen Canvas", "Toast Canvas", "P13 Task HUD" }));
+            var staff = FindAll<EmployeeFlowController>(scene); var owners = FindAll<EmployeeTaskValidationController>(scene);
+            Assert.That(staff, Has.Length.EqualTo(1)); Assert.That(owners, Has.Length.EqualTo(1));
+            var owner = owners.Single(); var employeeHud = FindAll<Canvas>(scene).Single(canvas => canvas.name == "P13 Task HUD");
+            Assert.That(owner.name, Is.EqualTo("P13 Employees")); Assert.That(owner.transform.parent, Is.Null);
+            Assert.That(owner.gameObject, Is.SameAs(staff.Single().gameObject));
+            Assert.That(employeeHud.transform.parent, Is.SameAs(owner.transform));
+            var ownership = new SerializedObject(owner);
+            Assert.That(ownership.FindProperty("hud").objectReferenceValue, Is.SameAs(employeeHud.gameObject));
+            Assert.That(ownership.FindProperty("employees").objectReferenceValue, Is.SameAs(staff.Single()));
             Assert.That(FindAll<EventSystem>(scene), Has.Length.EqualTo(1));
             Assert.That(FindAll<InputSystemUIInputModule>(scene), Has.Length.EqualTo(1));
             Assert.That(FindAll<StandaloneInputModule>(scene), Is.Empty);

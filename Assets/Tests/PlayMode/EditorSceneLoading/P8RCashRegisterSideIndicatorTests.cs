@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using AnimalCafe.Content;
 using AnimalCafe.Decoration;
 using AnimalCafe.Decoration.Input;
 using AnimalCafe.Layout;
@@ -661,9 +662,15 @@ namespace AnimalCafe.Tests.PlayMode.EditorSceneLoading
             var readiness = runtime.CurrentReadiness;
             var version = runtime.ReadinessVersion;
             var ghostPosition = Component<SurfaceMountedPreviewView>().CurrentGhost.transform.position;
-            var floor = Field<Transform>(controller, "gridRoot");
-            var center = floor.TransformPoint(new Vector3(2.5f, .72f, 3.5f));
-            var edge = floor.TransformPoint(new Vector3(2.94f, .72f, 3.94f));
+            Assert.That(Component<FurnitureSceneRegistry>().TryGet(address.SupportFurnitureInstanceId,
+                out var support), Is.True);
+            var slot = support.GetComponentsInChildren<SurfaceSlotMarker>(true)
+                .Single(marker => marker.SlotId == address.SlotId);
+            // Follow the authored tabletop; keep the original near-corner drag probe.
+            // 从当前真实 Slot 推导台面中心，仍拖到距中心 0.44 格的近角落位置。
+            var center = slot.transform.position;
+            var edge = center + (support.transform.right + support.transform.forward)
+                * (.44f * runtime.Layout.GridSettings.CellSize);
             var camera = UnityEngine.Camera.main;
             var router = Field<DecorationTouchRouter>(controller, "touchRouter");
             var classifier = (IDecorationTouchHitClassifier)controller;

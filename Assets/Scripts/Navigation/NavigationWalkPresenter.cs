@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 namespace AnimalCafe.Navigation
 {
@@ -10,9 +11,18 @@ namespace AnimalCafe.Navigation
         private float walkDuration;
         private bool walking;
         private bool needsStateSync = true;
+        private bool externalAnimationDriver;
+        public event Action<float> MotionChanged;
         public float ActualSpeed { get; private set; }
         public float TravelPerCycle => travelPerCycle;
         public float WalkDuration => walkDuration;
+        // 员工显式接管；默认顾客仍走原有 Walk/Hold 路径。
+        public void SetExternalAnimationDriver(bool enabled)
+        {
+            externalAnimationDriver = enabled;
+            needsStateSync = true;
+            if (!enabled) SetMotion(ActualSpeed);
+        }
         private void Awake()
         {
             animator = GetComponent<NavigationActor>().ModelAnimator;
@@ -26,6 +36,8 @@ namespace AnimalCafe.Navigation
         public void SetMotion(float actualSpeed)
         {
             ActualSpeed = float.IsNaN(actualSpeed) || float.IsInfinity(actualSpeed) ? 0 : Mathf.Max(0, actualSpeed);
+            MotionChanged?.Invoke(ActualSpeed);
+            if (externalAnimationDriver) return;
             if (animator == null || walkDuration <= 0) return;
             // Inactive Animators can reset to Hold; resync once after they return.
             // 不对 inactive Animator 调用 Play；恢复后按实际速度重新选择状态。

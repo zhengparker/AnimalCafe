@@ -114,7 +114,7 @@ namespace AnimalCafe.EditorTools.Phase4
 
         // Unity axes are X=width, Y=height, Z=depth.
         public static readonly Vector3 CounterTargetBounds =
-            new Vector3(1.00f, 0.72f, 1.00f);
+            new Vector3(1.00f, 0.42f, 1.00f);
         public static readonly Vector3 CashRegisterTargetBounds =
             new Vector3(0.43f, 0.45f, 0.26f);
 
@@ -207,6 +207,19 @@ namespace AnimalCafe.EditorTools.Phase4
             RequireFile(GetAbsoluteProjectPath(CashRegisterFbxPath), "Cash Register FBX");
             RequireFile(GetAbsoluteProjectPath(CashRegisterTexturePath), "Cash Register Base Color");
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+        }
+
+        /// <summary>Rebuild only counter prefabs / 高度适配不重建设备、杯子或目录。</summary>
+        public static void RebuildCounterContent()
+        {
+            ConfigureProductionModelImporter(CounterFbxPath);
+            var material = RequireAsset<Material>(
+                MaterialFolderPath + "/M_Furniture_CounterModule_01.mat", "Counter Material");
+            BuildImportedModelPrefab(CounterFbxPath, CounterPrefabPath,
+                "PF_Furniture_CounterModule_01", material,
+                root => AddSurfaceSlot(root.transform, "slot.0", GetVisibleBounds(root).max.y));
+            BuildLongCounterFixture(material);
+            AssetDatabase.SaveAssets();
         }
 
         [MenuItem("AnimalCafe/Phase 4/Build Production Content")]

@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using AnimalCafe.Customers;
+using AnimalCafe.Employees;
 using AnimalCafe.Navigation;
 using AnimalCafe.Decoration;
 using AnimalCafe.Core.Time;
@@ -35,9 +36,32 @@ namespace AnimalCafe.EditorTools.Phase12
             if(EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play before creating scene");
             var previous=SceneManager.GetActiveScene();
             if(previous.IsValid() && previous.isDirty) throw new InvalidOperationException("Save your active scene first");
-            var scene=EditorSceneManager.OpenScene("Assets/Scenes/MainCafe.unity",OpenSceneMode.Additive);
+            string candidate=null; Scene scene=default;
+            if(validation)
+            {
+                foreach(var path in new[]{"Assets/Scenes/MainCafe.unity",ScenePath})
+                {
+                    var loaded=SceneManager.GetSceneByPath(path);
+                    if(loaded.IsValid() && loaded.isLoaded && loaded.isDirty) throw new InvalidOperationException("Save your dirty scene first: "+path);
+                }
+                // Work on a copy; SaveAs must never rename or strip the user's loaded MainCafe.
+                candidate=AssetDatabase.GenerateUniqueAssetPath("Assets/Scenes/Validation/__P12BuildCandidate.unity");
+                if(!AssetDatabase.CopyAsset("Assets/Scenes/MainCafe.unity",candidate)) throw new InvalidOperationException("Could not copy MainCafe for P12 validation");
+            }
             try
             {
+                scene=EditorSceneManager.OpenScene(candidate ?? "Assets/Scenes/MainCafe.unity",OpenSceneMode.Additive);
+                if(validation)
+                {
+                    foreach(var employeeRoot in scene.GetRootGameObjects().Where(item=>item.name=="P13 Employees"))
+                    {
+                        if(employeeRoot.GetComponent<EmployeeFlowController>()==null || employeeRoot.GetComponent<EmployeeTaskValidationController>()==null)
+                            throw new InvalidOperationException("Unrecognized P13 employee root; cannot isolate P12 validation");
+                        UnityEngine.Object.DestroyImmediate(employeeRoot);
+                    }
+                    if(All<EmployeeFlowController>(scene).Length!=0 || All<EmployeeTaskValidationController>(scene).Length!=0 || All<PickupCupDisplay>(scene).Length!=0)
+                        throw new InvalidOperationException("P13 employees must not enter the P12 validation copy");
+                }
                 var decoration=All<DecorationModeController>(scene).Single();
                 var runtime=Read<CafeLayoutRuntime>(decoration,"layoutRuntime"); var grid=Read<Transform>(decoration,"gridRoot");
                 var world=All<NavigationWorld>(scene).Single(); var adapter=All<NavigationLayoutAdapter>(scene).Single(); var bridge=All<NavigationDecorationBridge>(scene).Single();
@@ -67,7 +91,12 @@ namespace AnimalCafe.EditorTools.Phase12
                 if(!EditorSceneManager.SaveScene(scene,validation?ScenePath:"Assets/Scenes/MainCafe.unity")) throw new InvalidOperationException("P12 scene save failed");
                 Debug.Log("AC_P12_SCENE_READY "+scene.path);
             }
-            finally { EditorSceneManager.CloseScene(scene,true); if(previous.IsValid() && previous.isLoaded) SceneManager.SetActiveScene(previous); }
+            finally
+            {
+                if(scene.IsValid() && scene.isLoaded) EditorSceneManager.CloseScene(scene,true);
+                if(candidate!=null) AssetDatabase.DeleteAsset(candidate);
+                if(previous.IsValid() && previous.isLoaded) SceneManager.SetActiveScene(previous);
+            }
         }
         private static Transform Marker(Transform parent,string name,Vector3 point)
         { var marker=parent.Find(name); if(marker==null) { marker=new GameObject(name).transform; marker.SetParent(parent); } marker.position=point; return marker; }

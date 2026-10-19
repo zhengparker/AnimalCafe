@@ -346,6 +346,48 @@ namespace AnimalCafe.Tests.PlayMode.Phase11
             Assert.That(safe,Is.EqualTo(projected));
         }
 
+        [UnityTest] public IEnumerator MicroCornerBelowNormalizeCutoffStillMoves()
+        { yield return CheckMicroCorner(5e-6f); }
+
+        [UnityTest] public IEnumerator MicroCornerBelowProjectionCutoffStillMoves()
+        { yield return CheckMicroCorner(5e-7f); }
+
+        private IEnumerator CheckMicroCorner(float gap)
+        {
+            Bake();
+            var actor = Actor("micro", new Vector3(-gap, 0, 0));
+            Assert.That(actor.TryEnableSteadyPathMotion(), Is.True);
+            Assert.That(world.Register(actor), Is.True);
+            var blocker = Actor("blocker", new Vector3(1.5f, 0, 0));
+            Assert.That(world.Register(blocker), Is.True);
+            Assert.That(world.Service.MoveTo(actor.ActorId,
+                new NavigationTarget(Vector3.right * 3), _ => { }).Accepted, Is.True);
+            yield return null;
+
+            // Seed only the near-corner fixture; the World, NavMesh, bodies and guards are real.
+            // 仅固定两段拐点，隔离最后一步；真实身体挡住下一整腿，不挡当前微小位移。
+            const System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.NonPublic;
+            var drivers = (System.Collections.IDictionary)typeof(NavigationWorld)
+                .GetField("drivers", flags).GetValue(world);
+            var driver = (NavMeshMovementDriver)drivers[actor];
+            var points = new[] { Vector3.zero, Vector3.right * 3 };
+            void Put(string name, object value) => typeof(NavMeshMovementDriver)
+                .GetField(name, flags).SetValue(driver, value);
+            Put("rawCorners", points); Put("corners", (Vector3[])points.Clone());
+            Put("adjustedCorners", new[] { true, true }); Put("corner", 0);
+            bool CanReach(Vector3 target) => (bool)typeof(NavigationWorld)
+                .GetMethod("CanTraverseStraight", flags).Invoke(world, new object[] { actor, target });
+            Assert.That(CanReach(Vector3.zero), Is.True, "Current approach passes all original guards");
+            Assert.That(CanReach(points[1]), Is.False, "Real registered body blocks the whole next leg");
+            var velocity = driver.DesiredVelocity;
+            TestContext.WriteLine("MICRO gap=" + gap.ToString("R") + " velocity=" + velocity.ToString("F9"));
+            Assert.That(velocity.sqrMagnitude, Is.GreaterThan(0), "Nonzero intermediate approach must retain movement");
+            world.Step(1f / 60);
+            Assert.That(actor.transform.position, Is.EqualTo(Vector3.zero), "Finish the approved micro step without skipping the corner");
+            Assert.That(CanReach(points[1]), Is.False, "Reaching the corner must not bypass the body");
+        }
+
         private Vector3 OutsideEdge()
         {
             Assert.That(NavMesh.FindClosestEdge(new Vector3(5, 0, 0), out var edge, NavMesh.AllAreas), Is.True);

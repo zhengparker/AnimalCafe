@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="15" result="Passed" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-10-14 17:29:33Z" end-time="2026-10-14 17:29:39Z" duration="6.2974767">
+  <test-suite type="TestSuite" id="1000" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2594" result="Passed" start-time="2026-10-14 17:29:33Z" end-time="2026-10-14 17:29:39Z" duration="6.297477" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="3968" name="AnimalCafe.EditModeTests.dll" fullname="E:/Unity/Project/AnimalCafe/.worktrees/phase-13-employee-task-flow/Library/ScriptAssemblies/AnimalCafe.EditModeTests.dll" runstate="Runnable" testcasecount="2594" result="Passed" start-time="2026-10-14 17:29:33Z" end-time="2026-10-14 17:29:39Z" duration="6.265014" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="30168" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="3969" name="AnimalCafe" fullname="AnimalCafe" runstate="Runnable" testcasecount="2594" result="Passed" start-time="2026-10-14 17:29:33Z" end-time="2026-10-14 17:29:39Z" duration="6.238453" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="3970" name="Tests" fullname="AnimalCafe.Tests" runstate="Runnable" testcasecount="2594" result="Passed" start-time="2026-10-14 17:29:33Z" end-time="2026-10-14 17:29:39Z" duration="6.212454" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestSuite" id="3976" name="EditMode" fullname="AnimalCafe.Tests.EditMode" runstate="Runnable" testcasecount="1712" result="Passed" start-time="2026-10-14 17:29:33Z" end-time="2026-10-14 17:29:39Z" duration="6.150144" total="15" passed="15" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="TestSuite" id="3986" name="P8R" fullname="AnimalCafe.Tests.EditMode.P8R" runstate="Runnable" testcasecount="357" result="Passed" start-time="2026-10-14 17:29:33Z" end-time="2026-10-14 17:29:34Z" duration="0.681163" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="3631" name="P8RSceneWiringTests" fullname="AnimalCafe.Tests.EditMode.P8R.P8RSceneWiringTests" classname="AnimalCafe.Tests.EditMode.P8R.P8RSceneWiringTests" runstate="Runnable" testcasecount="9" result="Passed" start-time="2026-10-14 17:29:33Z" end-time="2026-10-14 17:29:34Z" duration="0.646269" total="1" passed="1" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="3637" name="CompleteP8R_ValidatesAndBothAuthoringCommandsAreByteStable" fullname="AnimalCafe.Tests.EditMode.P8R.P8RSceneWiringTests.CompleteP8R_ValidatesAndBothAuthoringCommandsAreByteStable" methodname="CompleteP8R_ValidatesAndBothAuthoringCommandsAreByteStable" classname="AnimalCafe.Tests.EditMode.P8R.P8RSceneWiringTests" runstate="Runnable" seed="1596265561" result="Passed" start-time="2026-10-14 17:29:33Z" end-time="2026-10-14 17:29:34Z" duration="0.625224" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[P8R Furniture UI authored. Original P6/P8 assets retained.
+Phase 8 validation passed for 'Assets/Scenes/MainCafe.unity'.
+MainCafe uses approved P8R UI. Legacy Phase 8 authoring kept its references unchanged.
+MainCafe Phase 8 functional furniture wiring configured and validated.
+Phase 8 validation passed for 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                </test-case>
+              </test-suite>
+            </test-suite>
+            <test-suite type="TestSuite" id="3982" name="Phase13" fullname="AnimalCafe.Tests.EditMode.Phase13" runstate="Runnable" testcasecount="103" result="Passed" start-time="2026-10-14 17:29:34Z" end-time="2026-10-14 17:29:39Z" duration="4.659524" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="3111" name="Phase13LegacySceneCompatibilityTests" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" testcasecount="7" result="Passed" start-time="2026-10-14 17:29:34Z" end-time="2026-10-14 17:29:39Z" duration="4.649787" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-case id="3119" name="Phase12ValidationCopyExcludesEmployeesAndPreservesLoadedMainCafe" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase12ValidationCopyExcludesEmployeesAndPreservesLoadedMainCafe" methodname="Phase12ValidationCopyExcludesEmployeesAndPreservesLoadedMainCafe" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="128233475" result="Passed" start-time="2026-10-14 17:29:34Z" end-time="2026-10-14 17:29:35Z" duration="1.583644" asserts="0">
+                  <properties>
+                    <property name="retryIteration" value="0" />
+                    <property name="repeatIteration" value="0" />
+                  </properties>
+                  <output><![CDATA[AC_P12_SCENE_READY Assets/Scenes/Validation/Phase12CustomerQueue.unity
+]]></output>
+                </test-case>
+                <test-suite type="ParameterizedMethod" id="3118" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-10-14 17:29:35Z" end-time="2026-10-14 17:29:39Z" duration="3.065136" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="3112" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;valid&quot;,False)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;valid&quot;,False)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="263171772" result="Passed" start-time="2026-10-14 17:29:36Z" end-time="2026-10-14 17:29:36Z" duration="0.498794" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation passed for 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="3113" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;unknown&quot;,True)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;unknown&quot;,True)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="1925557349" result="Passed" start-time="2026-10-14 17:29:36Z" end-time="2026-10-14 17:29:37Z" duration="0.521749" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="3114" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;duplicate-p13&quot;,True)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;duplicate-p13&quot;,True)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="613625057" result="Passed" start-time="2026-10-14 17:29:37Z" end-time="2026-10-14 17:29:37Z" duration="0.524477" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="3115" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;missing-core&quot;,True)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;missing-core&quot;,True)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="1357982902" result="Passed" start-time="2026-10-14 17:29:37Z" end-time="2026-10-14 17:29:38Z" duration="0.488167" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="3116" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;name-only&quot;,True)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;name-only&quot;,True)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="1343505537" result="Passed" start-time="2026-10-14 17:29:38Z" end-time="2026-10-14 17:29:38Z" duration="0.514597" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="3117" name="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;wrong-owner&quot;,True)" fullname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests.Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud(&quot;wrong-owner&quot;,True)" methodname="Phase8CanvasGateAcceptsOnlyTheOwnedEmployeeHud" classname="AnimalCafe.Tests.EditMode.Phase13.Phase13LegacySceneCompatibilityTests" runstate="Runnable" seed="109835520" result="Passed" start-time="2026-10-14 17:29:38Z" end-time="2026-10-14 17:29:39Z" duration="0.507251" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+            <test-suite type="TestSuite" id="3978" name="Phase8" fullname="AnimalCafe.Tests.EditMode.Phase8" runstate="Runnable" testcasecount="231" result="Passed" start-time="2026-10-14 17:29:39Z" end-time="2026-10-14 17:29:39Z" duration="0.739881" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-suite type="TestFixture" id="2400" name="Phase8ValidatorTests" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-10-14 17:29:39Z" end-time="2026-10-14 17:29:39Z" duration="0.720228" total="7" passed="7" failed="0" inconclusive="0" skipped="0" asserts="0">
+                <properties />
+                <test-suite type="ParameterizedMethod" id="2403" name="ValidateOpenScene_ConfiguredPersistentScene_HasNoIssues" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests.ValidateOpenScene_ConfiguredPersistentScene_HasNoIssues" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-10-14 17:29:39Z" end-time="2026-10-14 17:29:39Z" duration="0.341476" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2401" name="ValidateOpenScene_ConfiguredPersistentScene_HasNoIssues(&quot;Assets/Scenes/MainCafe.unity&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests.ValidateOpenScene_ConfiguredPersistentScene_HasNoIssues(&quot;Assets/Scenes/MainCafe.unity&quot;)" methodname="ValidateOpenScene_ConfiguredPersistentScene_HasNoIssues" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests" runstate="Runnable" seed="1670523398" result="Passed" start-time="2026-10-14 17:29:39Z" end-time="2026-10-14 17:29:39Z" duration="0.250223" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 assets built and validated.
+Phase 8 validation passed for 'Assets/Scenes/MainCafe.unity'.
+MainCafe uses approved P8R UI. Legacy Phase 8 authoring kept its references unchanged.
+MainCafe Phase 8 functional furniture wiring configured and validated.
+Phase 8 validation passed for 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="2402" name="ValidateOpenScene_ConfiguredPersistentScene_HasNoIssues(&quot;Assets/Scenes/Validation/Phase8FunctionalFurniture.unity&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests.ValidateOpenScene_ConfiguredPersistentScene_HasNoIssues(&quot;Assets/Scenes/Validation/Phase8FunctionalFurniture.unity&quot;)" methodname="ValidateOpenScene_ConfiguredPersistentScene_HasNoIssues" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests" runstate="Runnable" seed="45158971" result="Passed" start-time="2026-10-14 17:29:39Z" end-time="2026-10-14 17:29:39Z" duration="0.090266" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 assets built and validated.
+Phase 8 validation passed for 'Assets/Scenes/Validation/Phase8FunctionalFurniture.unity'.
+Phase 8 validation Scene configured and validated.
+Phase 8 validation passed for 'Assets/Scenes/Validation/Phase8FunctionalFurniture.unity'.
+]]></output>
+                  </test-case>
+                </test-suite>
+                <test-suite type="ParameterizedMethod" id="2420" name="ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests.ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-10-14 17:29:39Z" end-time="2026-10-14 17:29:39Z" duration="0.376093" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+                  <properties />
+                  <test-case id="2415" name="ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue(&quot;Assets/Scenes/MainCafe.unity&quot;,&quot;wrong-singleton&quot;,&quot;P8-SCENE-REFERENCES&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests.ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue(&quot;Assets/Scenes/MainCafe.unity&quot;,&quot;wrong-singleton&quot;,&quot;P8-SCENE-REFERENCES&quot;)" methodname="ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests" runstate="Runnable" seed="926524658" result="Passed" start-time="2026-10-14 17:29:39Z" end-time="2026-10-14 17:29:39Z" duration="0.081270" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 assets built and validated.
+Phase 8 validation passed for 'Assets/Scenes/MainCafe.unity'.
+MainCafe uses approved P8R UI. Legacy Phase 8 authoring kept its references unchanged.
+MainCafe Phase 8 functional furniture wiring configured and validated.
+Phase 8 validation found 2 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+Phase 8 validation found 2 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="2416" name="ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue(&quot;Assets/Scenes/MainCafe.unity&quot;,&quot;wrong-root&quot;,&quot;P8-SCENE-REFERENCES&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests.ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue(&quot;Assets/Scenes/MainCafe.unity&quot;,&quot;wrong-root&quot;,&quot;P8-SCENE-REFERENCES&quot;)" methodname="ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests" runstate="Runnable" seed="289155812" result="Passed" start-time="2026-10-14 17:29:39Z" end-time="2026-10-14 17:29:39Z" duration="0.077315" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 assets built and validated.
+Phase 8 validation passed for 'Assets/Scenes/MainCafe.unity'.
+MainCafe uses approved P8R UI. Legacy Phase 8 authoring kept its references unchanged.
+MainCafe Phase 8 functional furniture wiring configured and validated.
+Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="2417" name="ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue(&quot;Assets/Scenes/MainCafe.unity&quot;,&quot;wrong-prefab-asset&quot;,&quot;P8-SCENE-REFERENCES&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests.ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue(&quot;Assets/Scenes/MainCafe.unity&quot;,&quot;wrong-prefab-asset&quot;,&quot;P8-SCENE-REFERENCES&quot;)" methodname="ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests" runstate="Runnable" seed="1868314748" result="Passed" start-time="2026-10-14 17:29:39Z" end-time="2026-10-14 17:29:39Z" duration="0.075692" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 assets built and validated.
+Phase 8 validation passed for 'Assets/Scenes/MainCafe.unity'.
+MainCafe uses approved P8R UI. Legacy Phase 8 authoring kept its references unchanged.
+MainCafe Phase 8 functional furniture wiring configured and validated.
+Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+Phase 8 validation found 1 issue(s) in 'Assets/Scenes/MainCafe.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="2418" name="ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue(&quot;Assets/Scenes/Validation/Phase8FunctionalFurniture.unity&quot;,&quot;wrong-debug-root&quot;,&quot;P8-SCENE-DEBUG-REFERENCES&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests.ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue(&quot;Assets/Scenes/Validation/Phase8FunctionalFurniture.unity&quot;,&quot;wrong-debug-root&quot;,&quot;P8-SCENE-DEBUG-REFERENCES&quot;)" methodname="ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests" runstate="Runnable" seed="6790658" result="Passed" start-time="2026-10-14 17:29:39Z" end-time="2026-10-14 17:29:39Z" duration="0.068003" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 assets built and validated.
+Phase 8 validation passed for 'Assets/Scenes/Validation/Phase8FunctionalFurniture.unity'.
+Phase 8 validation Scene configured and validated.
+Phase 8 validation found 1 issue(s) in 'Assets/Scenes/Validation/Phase8FunctionalFurniture.unity'.
+Phase 8 validation found 1 issue(s) in 'Assets/Scenes/Validation/Phase8FunctionalFurniture.unity'.
+]]></output>
+                  </test-case>
+                  <test-case id="2419" name="ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue(&quot;Assets/Scenes/Validation/Phase8FunctionalFurniture.unity&quot;,&quot;wrong-debug-material&quot;,&quot;P8-SCENE-DEBUG-REFERENCES&quot;)" fullname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests.ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue(&quot;Assets/Scenes/Validation/Phase8FunctionalFurniture.unity&quot;,&quot;wrong-debug-material&quot;,&quot;P8-SCENE-DEBUG-REFERENCES&quot;)" methodname="ValidateOpenScene_WrongNonNullControllerReference_ReportsStableIssue" classname="AnimalCafe.Tests.EditMode.Phase8.Phase8ValidatorTests" runstate="Runnable" seed="1460042915" result="Passed" start-time="2026-10-14 17:29:39Z" end-time="2026-10-14 17:29:39Z" duration="0.070377" asserts="0">
+                    <properties>
+                      <property name="retryIteration" value="0" />
+                      <property name="repeatIteration" value="0" />
+                    </properties>
+                    <output><![CDATA[Phase 8 assets built and validated.
+Phase 8 validation passed for 'Assets/Scenes/Validation/Phase8FunctionalFurniture.unity'.
+Phase 8 validation Scene configured and validated.
+Phase 8 validation found 1 issue(s) in 'Assets/Scenes/Validation/Phase8FunctionalFurniture.unity'.
+Phase 8 validation found 1 issue(s) in 'Assets/Scenes/Validation/Phase8FunctionalFurniture.unity'.
+Saving results to: C:/Users/zheng/AppData/LocalLow/DefaultCompany/AnimalCafe\TestResults.xml
+]]></output>
+                  </test-case>
+                </test-suite>
+              </test-suite>
+            </test-suite>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>
