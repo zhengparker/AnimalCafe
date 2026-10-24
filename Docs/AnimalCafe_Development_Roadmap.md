@@ -1127,6 +1127,10 @@ Employee 一次拥有一个 task handle；task 负责声明 station capability�
 
 ## Phase 14 — Integrated Takeout Cafe Loop
 
+**状态（2026-10-23）：自然单列、P14一秒收银已实现，最终同源直接Edit267／Play171全部PASS，0F/0S。** 制作3秒、来客1～5秒、旧P13默认2秒保持。19原家具／rapid变体按真实Paid请求2／4／6人，短队明确CAPACITY_LIMITED且无slot不收费；前移／原token排空与2个controlled恢复case通过，独立QA已关闭自动化问题。普通Editor与清理结果见Validation Report；Owner只补新队形／动作观感，旧三项visual PASS保持。旧256／164保留2秒历史，Phase尚未Completed／未跨Phase。
+
+批准文件：[Design](superpowers/specs/2026-10-19-phase-14-integrated-takeout-loop-design.md)、[Test Cases](superpowers/specs/2026-10-19-phase-14-integrated-takeout-loop-test-cases.md)、[Implementation Plan](superpowers/plans/2026-10-19-phase-14-integrated-takeout-loop.md)。实际结果见 [Validation Report](Phase14_Validation_Report.md)，手测入口见 [Beginner Guide](Phase14_Beginner_Guide.md)。工作区为`E:/Unity/Project/AnimalCafe/.worktrees/phase-14-integrated-takeout-loop`，branch为`codex/phase-14-integrated-takeout-loop`；尚未commit／push／merge，无自动CI授权。
+
 ### Goal
 
 整合第一个完整、自动运行的外带经营循环。
@@ -2748,7 +2752,9 @@ Phase 50 先证明共享 Touch UI 和 gesture rules；本 Phase 只处理 platfo
 
 ## 7. Current Next Step
 
-**Current Next Step（P13，2026-10-14）：开发、追加回归及16项manual验收已完成；最终review通过，下一步由Owner决定版本管理收尾。** M-009/M-016已按Owner明确指示记录手测PASS，computer-use未完成尝试单独保留。工作位于E盘项目内P13 worktree；证据见 [P13 Validation Report](Phase13_Validation_Report.md)，操作入口见 [Beginner Guide](Phase13_Beginner_Guide.md)。本轮未commit / push / PR / merge，未进入P14。以下条目保留历史状态。
+**Current Next Step（P14，2026-10-23）：本轮自然单列＋P14收银1秒已完成技术验证，Owner仅确认Guide中新队形与前移观感。** 受影响直接Edit267／Play171均PASS，19原变体／真实人数上限／自然20单两档与2个controlled恢复分列；普通Editor六人及自然三单完成，临时helper／317protected／15冻结源／Editor0已核对。原三项visual PASS保持。实际人数表、独立review和清理见P14 Guide／Report。制作3秒、来客1～5秒与P13两秒保持；Phase最终完整suite／Player／真机仍另行收尾，未提交／未进入下一Phase。
+
+**历史记录（P13，2026-10-14）：开发、追加回归及16项manual验收已完成；最终review通过，下一步由Owner决定版本管理收尾。** M-009/M-016已按Owner明确指示记录手测PASS，computer-use未完成尝试单独保留。工作位于E盘项目内P13 worktree；证据见 [P13 Validation Report](Phase13_Validation_Report.md)，操作入口见 [Beginner Guide](Phase13_Beginner_Guide.md)。本轮未commit / push / PR / merge，未进入P14。以下条目保留历史状态。
 
 **历史 Next Step（P12，2026-10-09）：20fps修复与受影响回归已通过，补连续来客/前移视觉观察。** 直接Play112 PASS、P11/P12 Edit126 PASS，原失败的排空与30游戏分钟循环通过。真实场景覆盖20fps，原到期计时与安全同向并发回归保持。仅补默认Play等待六到八位、让队首离开两三次的人工观察；M1～M8与桌角既有Owner PASS保留为历史快照。全项目完整suite/Player/真机本轮NOT_RUN，无commit/push/PR/merge。Owner已重新授权提交、push当前branch并创建合并到main的PR；merge与branch/worktree清理未授权，不进入P13。以下P9–P11描述为历史交接。
 

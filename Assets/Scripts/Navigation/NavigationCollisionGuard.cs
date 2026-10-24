@@ -118,6 +118,7 @@ namespace AnimalCafe.Navigation
         private static bool BoxSweepClear(NavigationActor actor, Vector3 start, Vector3 delta, Collider collider)
         {
             if (!(collider is BoxCollider box)) return false;
+            if (!Finite(start) || !Finite(delta) || delta.y != 0) return false;
             // Only the axis-aligned, unit-scale Box geometry is certified here. Other shapes stop.
             // 当前仅证明世界坐标轴对齐、单位缩放的 Box；不猜测其它形状的安全间距。
             var matrix = box.transform.localToWorldMatrix;
@@ -126,32 +127,60 @@ namespace AnimalCafe.Navigation
                 matrix.m12 != 0 || matrix.m20 != 0 || matrix.m21 != 0) return false;
             var center = box.transform.TransformPoint(box.center);
             var end = start + delta; // Exactly the float32 endpoint committed by NavigationWorld.
+            if (!Finite(end)) return false;
             var minX = (double)center.x - (double)box.size.x * .5;
             var maxX = (double)center.x + (double)box.size.x * .5;
             var minZ = (double)center.z - (double)box.size.z * .5;
             var maxZ = (double)center.z + (double)box.size.z * .5;
-            var sideX = start.x < minX ? -1 : start.x > maxX ? 1 : 0;
-            var sideZ = start.z < minZ ? -1 : start.z > maxZ ? 1 : 0;
-            var endSideX = end.x < minX ? -1 : end.x > maxX ? 1 : 0;
-            var endSideZ = end.z < minZ ? -1 : end.z > maxZ ? 1 : 0;
-            if ((sideX == 0 && sideZ == 0) || sideX != endSideX || sideZ != endSideZ) return false;
+            Capsule(actor, start, out var bottom, out var top);
+            var minY = (double)center.y - (double)box.size.y * .5;
+            var maxY = (double)center.y + (double)box.size.y * .5;
+            var verticalGap = bottom.y > maxY ? bottom.y - maxY : top.y < minY ? minY - top.y : 0;
             var radius = (double)(actor.Settings.AgentRadius + actor.Settings.CollisionSkin);
-            if (sideX == 0)
-                return System.Math.Min(System.Math.Abs(start.z - (sideZ < 0 ? minZ : maxZ)),
-                    System.Math.Abs(end.z - (sideZ < 0 ? minZ : maxZ))) >= radius;
-            if (sideZ == 0)
-                return System.Math.Min(System.Math.Abs(start.x - (sideX < 0 ? minX : maxX)),
-                    System.Math.Abs(end.x - (sideX < 0 ? minX : maxX))) >= radius;
+            // The vertical capsule axis sweeps a horizontal segment; its Y gap stays constant.
+            // 全skin的3D最小距离：低柜须计入球心到柜顶的间隙，高柜重叠轴时该间隙为0。
+            var horizontalSquared = SquaredSegmentRectangleDistance(start.x, start.z, end.x, end.z, minX, maxX, minZ, maxZ);
+            return horizontalSquared + verticalGap * verticalGap >= radius * radius;
+        }
 
-            // Same corner region throughout: the exact segment-to-corner minimum certifies the sweep.
-            // 起终点位于同一个角点区域，整段最小距离可直接计算，无采样遗漏或 skin 容差。
-            var x = start.x - (sideX < 0 ? minX : maxX);
-            var z = start.z - (sideZ < 0 ? minZ : maxZ);
-            var dx = (double)end.x - start.x; var dz = (double)end.z - start.z;
-            var squaredLength = dx * dx + dz * dz;
-            var time = squaredLength == 0 ? 0 : System.Math.Max(0, System.Math.Min(1, -(x * dx + z * dz) / squaredLength));
-            x += time * dx; z += time * dz;
-            return x * x + z * z >= radius * radius;
+        private static double SquaredSegmentRectangleDistance(double x, double z, double endX, double endZ,
+            double minX, double maxX, double minZ, double maxZ)
+        {
+            var dx = endX - x; var dz = endZ - z; var enter = 0d; var exit = 1d;
+            if (ClipAxisInterval(x, dx, minX, maxX, ref enter, ref exit) &&
+                ClipAxisInterval(z, dz, minZ, maxZ, ref enter, ref exit)) return 0;
+            // Without an intersection, a closest pair includes an endpoint of one boundary segment.
+            // 不只看起终点；四个角到完整线段的距离也覆盖跨side/corner的连续最小值。
+            var distance = System.Math.Min(SquaredPointRectangleDistance(x, z, minX, maxX, minZ, maxZ),
+                SquaredPointRectangleDistance(endX, endZ, minX, maxX, minZ, maxZ));
+            distance = System.Math.Min(distance, SquaredPointSegmentDistance(minX, minZ, x, z, dx, dz));
+            distance = System.Math.Min(distance, SquaredPointSegmentDistance(minX, maxZ, x, z, dx, dz));
+            distance = System.Math.Min(distance, SquaredPointSegmentDistance(maxX, minZ, x, z, dx, dz));
+            return System.Math.Min(distance, SquaredPointSegmentDistance(maxX, maxZ, x, z, dx, dz));
+        }
+
+        private static bool ClipAxisInterval(double start, double delta, double min, double max, ref double enter, ref double exit)
+        {
+            if (delta == 0) return start >= min && start <= max;
+            var first = (min - start) / delta; var last = (max - start) / delta;
+            if (first > last) { var swap = first; first = last; last = swap; }
+            enter = System.Math.Max(enter, first); exit = System.Math.Min(exit, last);
+            return enter <= exit;
+        }
+
+        private static double SquaredPointRectangleDistance(double x, double z, double minX, double maxX, double minZ, double maxZ)
+        {
+            var dx = x < minX ? minX - x : x > maxX ? x - maxX : 0;
+            var dz = z < minZ ? minZ - z : z > maxZ ? z - maxZ : 0;
+            return dx * dx + dz * dz;
+        }
+
+        private static double SquaredPointSegmentDistance(double pointX, double pointZ, double x, double z, double dx, double dz)
+        {
+            var offsetX = pointX - x; var offsetZ = pointZ - z; var lengthSquared = dx * dx + dz * dz;
+            var time = lengthSquared == 0 ? 0 : System.Math.Max(0, System.Math.Min(1, (offsetX * dx + offsetZ * dz) / lengthSquared));
+            offsetX -= time * dx; offsetZ -= time * dz;
+            return offsetX * offsetX + offsetZ * offsetZ;
         }
 
         internal bool StartClear(NavigationActor actor, IReadOnlyList<NavigationActor> actors, IReadOnlyList<Collider> solids)

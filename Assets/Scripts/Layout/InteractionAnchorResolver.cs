@@ -104,6 +104,23 @@ namespace AnimalCafe.Layout
             return CreatePair(slotCell, walkableDirections[0], walkableDirections[0]);
         }
 
+        public IReadOnlyList<InteractionAnchor> ResolvePickUpCandidates(PickUpPointInstance instance,
+            CafeLayout cafeLayout, SurfaceSlotCatalog slots, Func<GridPosition,bool> isWalkable,
+            InteractionRole role=InteractionRole.Customer)
+        {
+            if(instance==null) throw new ArgumentNullException(nameof(instance));
+            if(cafeLayout==null) throw new ArgumentNullException(nameof(cafeLayout));
+            if(slots==null) throw new ArgumentNullException(nameof(slots));
+            if(isWalkable==null) throw new ArgumentNullException(nameof(isWalkable));
+            if(!Enum.IsDefined(typeof(InteractionRole),role)) throw new ArgumentOutOfRangeException(nameof(role));
+            var result=new List<InteractionAnchor>();
+            if(TryResolveSlotCell(instance.Address,cafeLayout,slots,out var cell,out _))
+                foreach(var direction in CandidateDirections)
+                    if(TryOffset(cell,direction,out var candidate) && isWalkable(candidate))
+                        result.Add(CreateAnchor(role,cell,direction));
+            return result.AsReadOnly();
+        }
+
         private static ResolvedStationAnchors CreatePair(
             GridPosition slotCell,
             CardinalDirection employeeDirection,

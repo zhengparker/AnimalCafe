@@ -1,0 +1,12 @@
+{
+    "name": "long-counter-drained",
+    "utc": "2026-10-23T23:14:21.6113542Z",
+    "frame": 14514,
+    "width": 1600,
+    "height": 1600,
+    "paid": 6,
+    "orders": 6,
+    "captureDeltaTime": 0.0,
+    "timeScale": 1.0,
+    "entries": []
+}

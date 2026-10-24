@@ -610,6 +610,44 @@ namespace AnimalCafe.Tests.PlayMode.Phase11Integration
                 TestContext.WriteLine("P11_MANUAL_PROBE_FINAL "+ProbeState(id,framesPerSecond));
             }
         }
+        [UnityTest] public IEnumerator RecordedLegalLowCounterPoseArrivesWithNativeMovement()
+        {
+            Time.captureDeltaTime=0; yield return null; // Real variable PlayerLoop, including native path planning.
+            var world=Object.FindFirstObjectByType<NavigationWorld>();
+            var original=controller.Actors.ToArray(); var originalPoses=original.Select(a=>a.transform.position).ToArray();
+            var prefab=UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Phase11/Characters/Shiba/PF_Shiba_Navigation.prefab");
+            var recorded=new Vector3(.4999816f,0,-1.959028f); var target=new Vector3(3,0,0);
+            var fresh=Object.Instantiate(prefab,recorded,Quaternion.identity); var actor=fresh.GetComponent<NavigationActor>();
+            MovementResult? result=null;
+            try
+            {
+                Assert.That(original.Length,Is.EqualTo(8));
+                Assert.That(actor.TryInitializeRuntimeId("P11Recorded-"+Guid.NewGuid().ToString("N")),Is.True);
+                Assert.That(actor.SteadyPathMotion,Is.False,"Exercise the original native desiredVelocity path");
+                Assert.That(actor.Settings.AgentRadius,Is.EqualTo(.45f)); Assert.That(actor.Settings.CollisionSkin,Is.EqualTo(.01f));
+                Assert.That(world.Register(actor),Is.True,"The recorded legal initial pose must bind without repair");
+                Assert.That(actor.transform.position,Is.EqualTo(recorded));
+                var request=world.Service.MoveTo(actor.ActorId,new NavigationTarget(target),value=>result=value);
+                Assert.That(request.Accepted,Is.True,request.Reason.ToString());
+                var deadline=Time.realtimeSinceStartup+45;
+                while(!result.HasValue && Time.realtimeSinceStartup<deadline)
+                {
+                    var before=actor.transform.position; yield return null;
+                    var budget=Mathf.Min(Time.deltaTime,actor.Settings.MaxSubstepSeconds*actor.Settings.MaxSubstepsPerFrame);
+                    Assert.That(Vector3.Distance(before,actor.transform.position),Is.LessThanOrEqualTo(actor.Settings.MaxSpeed*budget+.002f),"Only actual bounded World movement may advance the actor");
+                }
+                CollectionAssert.AreEqual(originalPoses,original.Select(a=>a.transform.position).ToArray(),"Original eight actors stay at their real poses");
+                Assert.That(result.HasValue,Is.True,"Recorded native request must terminate under normal movement deadlines");
+                TestContext.WriteLine("P11_RECORDED_NATIVE status="+result.Value.Status+" reason="+result.Value.Reason+" retries="+result.Value.RetryCount+
+                    " position="+actor.transform.position.ToString("F9")+" desired="+actor.Agent.desiredVelocity.ToString("F9")+" steering="+actor.Agent.steeringTarget.ToString("F9"));
+                Assert.That(result.Value.Status,Is.EqualTo(MovementStatus.Arrived));
+                Assert.That(result.Value.RetryCount,Is.Zero);
+                Assert.That(Vector3.Distance(actor.transform.position,target),Is.LessThanOrEqualTo(actor.Settings.ArrivalDistance));
+                Assert.That(result.Value.FinalPosition,Is.EqualTo(actor.transform.position));
+            }
+            finally { Object.DestroyImmediate(fresh); }
+        }
+
         private string ProbeState(string id,int fps)
             => id+" fps="+(fps==0?"variable":fps.ToString())+" dt="+Time.deltaTime+" status="+controller.StatusText+
                " actors="+string.Join(";",controller.Actors.Select(a=>a.ActorId+"="+a.transform.position.ToString("F9")))+

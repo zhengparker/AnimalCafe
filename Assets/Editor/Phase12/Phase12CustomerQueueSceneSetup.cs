@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using AnimalCafe.Customers;
 using AnimalCafe.Employees;
+using AnimalCafe.CafeLoop;
 using AnimalCafe.Navigation;
 using AnimalCafe.Decoration;
 using AnimalCafe.Core.Time;
@@ -53,6 +54,12 @@ namespace AnimalCafe.EditorTools.Phase12
                 scene=EditorSceneManager.OpenScene(candidate ?? "Assets/Scenes/MainCafe.unity",OpenSceneMode.Additive);
                 if(validation)
                 {
+                    foreach(var cafeRoot in scene.GetRootGameObjects().Where(item=>item.name=="P14 Cafe Loop"))
+                    {
+                        if(cafeRoot.GetComponent<CafeLoopController>()==null || cafeRoot.GetComponent<CafeLoopValidationController>()==null)
+                            throw new InvalidOperationException("Unrecognized P14 root; cannot isolate P12 validation");
+                        UnityEngine.Object.DestroyImmediate(cafeRoot);
+                    }
                     foreach(var employeeRoot in scene.GetRootGameObjects().Where(item=>item.name=="P13 Employees"))
                     {
                         if(employeeRoot.GetComponent<EmployeeFlowController>()==null || employeeRoot.GetComponent<EmployeeTaskValidationController>()==null)
@@ -77,6 +84,7 @@ namespace AnimalCafe.EditorTools.Phase12
                 var root=scene.GetRootGameObjects().FirstOrDefault(r=>r.name=="Phase12 Customer Flow");
                 if(root==null) { root=new GameObject("Phase12 Customer Flow"); SceneManager.MoveGameObjectToScene(root,scene); }
                 var flow=root.GetComponent<CustomerFlowController>() ?? root.AddComponent<CustomerFlowController>();
+                if(validation) { flow.SetIntegratedMode(false); flow.AutoSpawn=true; }
                 var spawn=Marker(root.transform,"Entrance Spawn",grid.TransformPoint(new Vector3(3.5f,0,.65f)));
                 var exit=Marker(root.transform,"Entrance Exit",grid.TransformPoint(new Vector3(4.5f,0,.65f)));
                 var prefabs=new[]{"Shiba","Westie"}.Select(s=>AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Art/Phase11/Characters/"+s+"/PF_"+s+"_Navigation.prefab").GetComponent<NavigationActor>()).ToArray();

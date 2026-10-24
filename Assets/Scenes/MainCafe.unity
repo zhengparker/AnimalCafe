@@ -710,11 +710,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1408089549}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.3}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -12, y: -8}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
+  m_AnchoredPosition: {x: 0, y: 14}
+  m_SizeDelta: {x: -28, y: 172}
+  m_Pivot: {x: 0.5, y: 0}
 --- !u!222 &282601485
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -745,18 +745,19 @@ MonoBehaviour:
       m_Calls: []
   m_FontData:
     m_Font: {fileID: 12800000, guid: 864990ee39142b943a8bb5800962fcbd, type: 3}
-    m_FontSize: 10
+    m_FontSize: 12
     m_FontStyle: 0
-    m_BestFit: 1
+    m_BestFit: 0
     m_MinSize: 8
-    m_MaxSize: 10
+    m_MaxSize: 12
     m_Alignment: 0
     m_AlignByGeometry: 0
     m_RichText: 1
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 
+  m_Text: "\u7B49\u5F85\u5B8C\u6574\u670D\u52A1\u7EC4\u5408 / Waiting for stations\nEpoch
+    1  Cups 0/0  Completed 0\n\nCounter \u2014\nPickup \u2014"
 --- !u!1 &296227130
 GameObject:
   m_ObjectHideFlags: 0
@@ -1550,7 +1551,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &456858030
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1976,6 +1977,81 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2099846907}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &593723893
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 593723894}
+  - component: {fileID: 593723896}
+  - component: {fileID: 593723895}
+  m_Layer: 0
+  m_Name: P14 Readonly Background
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &593723894
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 593723893}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1408089549}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
+  m_AnchoredPosition: {x: 0, y: 8}
+  m_SizeDelta: {x: -16, y: 184}
+  m_Pivot: {x: 0.5, y: 0}
+--- !u!114 &593723895
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 593723893}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.08, g: 0.1, b: 0.12, a: 0.93}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 0}
+  m_Type: 0
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &593723896
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 593723893}
+  m_CullTransparentMesh: 1
 --- !u!1 &595927511
 GameObject:
   m_ObjectHideFlags: 0
@@ -3030,6 +3106,97 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 832575517}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &839544731
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 839544735}
+  - component: {fileID: 839544734}
+  - component: {fileID: 839544733}
+  - component: {fileID: 839544732}
+  m_Layer: 0
+  m_Name: P14 Cafe Loop
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &839544732
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 839544731}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b416e36cd3485c4985c780a42489a00, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.CafeLoop.CafeLoopStatusView
+  owner: {fileID: 839544734}
+  status: {fileID: 282601486}
+  hud: {fileID: 2074015353}
+--- !u!114 &839544733
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 839544731}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f894db75a81f4a04a8c7322d8fe58420, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.CafeLoop.CafeLoopValidationController
+  owner: {fileID: 839544734}
+  customers: {fileID: 1345984190}
+  employees: {fileID: 1681051113}
+  time: {fileID: 1368244272}
+  adapter: {fileID: 1590706617}
+  decoration: {fileID: 1437096830}
+  runtime: {fileID: 1437096831}
+  catalog: {fileID: 11400000, guid: f5a3ceba61ecaf949aa330a98e4df68f, type: 2}
+  blockerPrefab: {fileID: 5045778350392011819, guid: 9add48371c2e122478112fa9cbcfdcfb, type: 3}
+  departure: {fileID: 775416448}
+  seedValidationLayout: 0
+  sharedFixture: 0
+--- !u!114 &839544734
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 839544731}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f58146de896a8044a0e1051ff7bbca0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.CafeLoop.CafeLoopController
+  customers: {fileID: 1345984190}
+  employees: {fileID: 1681051113}
+  cups: {fileID: 1681051112}
+  time: {fileID: 1368244272}
+  adapter: {fileID: 1590706617}
+  decoration: {fileID: 1437096830}
+--- !u!4 &839544735
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 839544731}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -4491,8 +4658,8 @@ MonoBehaviour:
   adapter: {fileID: 1590706617}
   time: {fileID: 1368244272}
   prefabs:
-  - {fileID: 5045778350392011819, guid: 9add48371c2e122478112fa9cbcfdcfb, type: 3}
-  - {fileID: 8474801555108097642, guid: 3d6eaa0b6a1beed45bf6541a26bad7cb, type: 3}
+  - {fileID: 8706064830614708121, guid: 1cb965575f43b6e498f62171ba8f44f3, type: 3}
+  - {fileID: 3542281986540398158, guid: b007fbc41ccb8bd418ab5daa2eb3d7b0, type: 3}
   spawn: {fileID: 1675317877}
   exit: {fileID: 775416448}
   validationHead: {fileID: 0}
@@ -4500,6 +4667,19 @@ MonoBehaviour:
   runtime: {fileID: 1437096831}
   decoration: {fileID: 1437096830}
   autoSpawn: 1
+  integratedMode: 1
+  collectedCupPrefab: {fileID: 3622824039692705310, guid: 761c33d3122077843ab4e1838c576215, type: 3}
+  collectedCarryAppearances:
+  - CustomerPrefab: {fileID: 8706064830614708121, guid: 1cb965575f43b6e498f62171ba8f44f3, type: 3}
+    CarryController: {fileID: 9100000, guid: 6bb9d9474098ac74cbdaedca7a8a06c2, type: 2}
+    CupLocalPosition: {x: -0.00008550942, y: 0.00015937281, z: -0.00061921496}
+    CupLocalRotation: {x: -0.40269187, y: 0.6382993, z: 0.554865, w: -0.35005456}
+    CupLocalScale: {x: 0.009999997, y: 0.009999998, z: 0.010000001}
+  - CustomerPrefab: {fileID: 3542281986540398158, guid: b007fbc41ccb8bd418ab5daa2eb3d7b0, type: 3}
+    CarryController: {fileID: 9100000, guid: abedb8a47eef7384e8a0e125a8ac8b06, type: 2}
+    CupLocalPosition: {x: -0.000085508866, y: 0.00015937275, z: -0.00061921653}
+    CupLocalRotation: {x: -0.40269202, y: 0.6382995, z: 0.5548648, w: -0.3500545}
+    CupLocalScale: {x: 0.009999995, y: 0.009999999, z: 0.009999999}
 --- !u!4 &1345984191
 Transform:
   m_ObjectHideFlags: 0
@@ -4801,6 +4981,7 @@ GameObject:
   - component: {fileID: 1408089549}
   - component: {fileID: 1408089551}
   - component: {fileID: 1408089550}
+  - component: {fileID: 1408089552}
   m_Layer: 0
   m_Name: Panel
   m_TagString: Untagged
@@ -4820,15 +5001,16 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 593723894}
   - {fileID: 282601484}
   - {fileID: 1651999839}
   - {fileID: 456858033}
   m_Father: {fileID: 2074015354}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: 0, y: 8}
-  m_SizeDelta: {x: -16, y: 148}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &1408089550
 MonoBehaviour:
@@ -4843,7 +5025,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.08, g: 0.1, b: 0.12, a: 0.93}
+  m_Color: {r: 0, g: 0, b: 0, a: 0}
   m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -4868,6 +5050,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1408089548}
   m_CullTransparentMesh: 1
+--- !u!114 &1408089552
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1408089548}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52582a571f6a56c4e91914a57a0113b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.UI.Components.SafeAreaContainer
+  autoApplyRuntimeSafeArea: 1
 --- !u!1 &1418468868
 GameObject:
   m_ObjectHideFlags: 0
@@ -6107,7 +6302,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1651999839
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6406,7 +6601,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1681051110}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ae3515fb4431e6640bfd9f4006b9ed98, type: 3}
   m_Name: 
@@ -6433,6 +6628,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 559c9cc56b085d249bd3f736a976efff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: AnimalCafe.Runtime::AnimalCafe.Employees.PickupCupDisplay
+  integratedMode: 1
 --- !u!114 &1681051113
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6456,6 +6652,7 @@ MonoBehaviour:
   baristaPrefab: {fileID: 3288213933717590793, guid: 0ed929a44b186914aabbcd3b29625b6c, type: 3}
   display: {fileID: 1681051112}
   cupPrefab: {fileID: 3622824039692705310, guid: 761c33d3122077843ab4e1838c576215, type: 3}
+  integratedMode: 1
 --- !u!4 &1681051114
 Transform:
   m_ObjectHideFlags: 0
@@ -7236,7 +7433,7 @@ MonoBehaviour:
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 360, y: 640}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0.5
+  m_MatchWidthOrHeight: 1
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -7652,3 +7849,4 @@ SceneRoots:
   - {fileID: 1590706619}
   - {fileID: 1345984191}
   - {fileID: 1681051114}
+  - {fileID: 839544735}

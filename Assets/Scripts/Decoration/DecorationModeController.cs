@@ -186,6 +186,10 @@ namespace AnimalCafe.Decoration
         // Only normal Done after committed edits advances this marker; shutdown keeps NPCs.
         // 仅正常完成已确认修改递增；顾客与员工各自决定如何响应。
         public long CompletedLayoutChangeVersion { get; private set; }
+        public event Action<long> ChangedLayoutExitPreparing;
+        public bool HasPendingSpeedRestore => pauseCoordinator != null && pauseCoordinator.HasPendingRestore;
+        public bool TryRestorePendingSpeed() => !isOpen && !isCleaningUp &&
+            pauseCoordinator != null && pauseCoordinator.TryRestorePendingSpeed();
         public DecorationModeKind ActiveMode => activeMode;
         public SurfaceEditScope FloorRange => floorRange;
         public GridPosition? SelectedFloorTarget => selectedFloorTarget;
@@ -4974,6 +4978,7 @@ namespace AnimalCafe.Decoration
                 session?.Exit();
                 // Keep the decoration pause until normal validation or teardown suspension finishes.
                 // 先阻止恢复营业，再释放装修暂停；Unity 已销毁的 bridge 按 null 处理。
+                if (completedEditedSession) ChangedLayoutExitPreparing?.Invoke(CompletedLayoutChangeVersion + 1);
                 if (navigationBridge != null)
                 {
                     if (validateNavigation) navigationBridge.PrepareExit();

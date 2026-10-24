@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using AnimalCafe.Content;
+using AnimalCafe.CafeLoop;
+using AnimalCafe.Orders;
 using AnimalCafe.Core.Time;
 using AnimalCafe.Customers;
 using AnimalCafe.Decoration;
@@ -99,7 +101,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
             var time = Find<GameTimeService>();
             Assert.That(time.TrySetSpeed(GameSpeed.Normal), Is.True, time.ResumeBlockReason);
             yield return Ready();
-            yield return AssertStaffAndCustomersShareSelectedRegister();
+            yield return AssertIntegratedStaffAndCustomersShareSelectedRegister();
         }
         [UnityTest] public IEnumerator RealGameTimeScalesWorkCarryAndFreezesCarrier()
         {
@@ -107,7 +109,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
             var time=Find<GameTimeService>(); var display=Find<PickupCupDisplay>();
             Assert.That(flow.TryGetBinding(EmployeeRole.Barista,out var binding),Is.True);
             var barista=world.RegisteredActors.Single(a=>a.ActorId==State(EmployeeRole.Barista).ActorId);
-            var carryReal=new float[2]; var carryDistance=new float[2];
+            var carryBudgetEquivalentRunningTime=new float[2]; var carryDistance=new float[2];
+            var worldMotionSettings=(NavigationSettings)typeof(NavigationWorld).GetField("settings",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(world);
+            var motionBudgetLimit=worldMotionSettings.MaxSubstepSeconds*worldMotionSettings.MaxSubstepsPerFrame;
             Time.captureDeltaTime=0; // Actual production Update/delta, not injected Step or capture-frame delta.
             for(var pass=0;pass<2;pass++)
             {
@@ -130,7 +134,10 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
                 var held=barista.GetComponentsInChildren<Transform>().Single(t=>t.name=="EmployeeHeldCup");
                 var tables=display.VisibleCount(binding.CupAddress.Value);
                 var carryStart=barista.transform.position;
-                if(pass==0)
+                var carryDoorStart=Time.realtimeSinceStartup;
+                TestContext.WriteLine($"CARRY_BEGIN speed={speed} pending={barista.Agent.pathPending} hasPath={barista.Agent.hasPath} status={barista.Agent.pathStatus} position={carryStart:F4}");
+                // Both speeds start the measured route after the same real pause/path-ready phase.
+                // 两段都暂停并验证真实native路径；保留capture0，不把准备等待只算进2x。
                 {
                     time.SetPaused(); yield return null; // Drain the already evaluated running frame.
                     var paused=State(EmployeeRole.Barista); var position=barista.transform.position; var facing=barista.transform.rotation;
@@ -150,12 +157,24 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
                         for(var b=0;b<bones.Length;b++)
                         { Assert.That(Vector3.Distance(bones[b].localPosition,positions[b]),Is.LessThan(.00001f)); Assert.That(Quaternion.Angle(bones[b].localRotation,rotations[b]),Is.LessThan(.001f)); }
                     }
+                    for(var frame=0;frame<120 && barista.Agent.pathPending;frame++)
+                    { yield return null; Assert.That(barista.transform.position,Is.EqualTo(position)); }
+                    Assert.That(barista.Agent.pathPending,Is.False);
+                    Assert.That(barista.Agent.hasPath,Is.True);
+                    Assert.That(barista.Agent.pathStatus,Is.EqualTo(UnityEngine.AI.NavMeshPathStatus.PathComplete));
                     Assert.That(time.TrySetSpeed(speed),Is.True);
                 }
-                var last=barista.transform.position; var carrySeconds=0f;
+                TestContext.WriteLine($"CARRY_SAMPLE_START speed={speed} pending={barista.Agent.pathPending} hasPath={barista.Agent.hasPath} status={barista.Agent.pathStatus}");
+                var selectedScale=pass==0?1f:2f; Assert.That(Time.timeScale,Is.EqualTo(selectedScale));
+                var last=barista.transform.position; var carrySeconds=0f; var carryScaled=0f; var carryBudget=0f;
+                var carryMaxUnscaled=0f; var carryMaxScaled=0f; var pendingFrames=0; var cappedFrames=0;
                 while(!State(EmployeeRole.Barista).Delivered && carrySeconds<15)
                 {
                     yield return null; carrySeconds+=Time.unscaledDeltaTime;
+                    carryScaled+=Time.deltaTime; var budget=Mathf.Min(Time.deltaTime,motionBudgetLimit);
+                    carryBudget+=budget; if(budget<Time.deltaTime) cappedFrames++;
+                    if(barista.Agent.pathPending) pendingFrames++;
+                    carryMaxUnscaled=Mathf.Max(carryMaxUnscaled,Time.unscaledDeltaTime); carryMaxScaled=Mathf.Max(carryMaxScaled,Time.deltaTime);
                     carryDistance[pass]+=Vector3.Distance(last,barista.transform.position); last=barista.transform.position;
                 }
                 Assert.That(State(EmployeeRole.Barista).Delivered,Is.True);
@@ -164,8 +183,12 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
                 Assert.That(carryDistance[pass],Is.GreaterThan(1));
                 Assert.That(display.VisibleCount(binding.CupAddress.Value),Is.EqualTo(tables+1));
                 Assert.That(barista.GetComponentsInChildren<Transform>().Any(t=>t.name=="EmployeeHeldCup"),Is.False);
-                carryReal[pass]=carrySeconds;
+                // Count every frame's accepted motion budget, including waiting/zero movement.
+                // 长帧按既有World合同丢弃运动时间；不把wall stall误作角色速度，也不筛正位移帧。
+                Assert.That(Time.timeScale,Is.EqualTo(selectedScale));
+                carryBudgetEquivalentRunningTime[pass]=carryBudget/selectedScale;
                 TestContext.WriteLine($"QA01_REAL_TIME speed={speed} cashier={cashierSeconds:F4}s barista={elapsed:F4}s carry={carrySeconds:F4}s distance={carryDistance[pass]:F4}m maxFrame={maxFrame:F4}s");
+                TestContext.WriteLine($"CARRY_CLOCK speed={speed} scaled={carryScaled:R} budget={carryBudget:R} budgetEquivalentRunningTime={carryBudgetEquivalentRunningTime[pass]:R} maxUnscaled={carryMaxUnscaled:R} maxScaled={carryMaxScaled:R} pendingFrames={pendingFrames} cappedFrames={cappedFrames} doorWall={Time.realtimeSinceStartup-carryDoorStart:R}");
                 var returnSeconds=0f;
                 while(State(EmployeeRole.Barista).State!=EmployeeState.Idle && returnSeconds<15)
                 { yield return null; returnSeconds+=Time.unscaledDeltaTime; }
@@ -173,7 +196,8 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
                 Assert.That(Vector3.Distance(barista.transform.position,binding.WorkTarget.Position),Is.LessThanOrEqualTo(.08f));
             }
             Assert.That(carryDistance[1]/carryDistance[0],Is.EqualTo(1).Within(.12f),"Same real route at both speeds");
-            Assert.That(carryReal[1]/carryReal[0],Is.EqualTo(.5f).Within(.12f),"Actual carrier must run twice, not four times, as fast");
+            Assert.That(carryBudgetEquivalentRunningTime[1]/carryBudgetEquivalentRunningTime[0],Is.EqualTo(.5f).Within(.12f),
+                "Actual carrier must run twice, not four times, as fast in budget-equivalent running time; discarded wall stalls are logged separately");
         }
 
         [UnityTest] public IEnumerator MainCafeConfirmedDecorResetsFourCustomersAndPreservesActiveStaff()
@@ -184,22 +208,22 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
             Seed(); decor.RefreshConfirmedNavigationPresentation(); Find<NavigationDecorationBridge>().ResumeAfterRepair();
             yield return null; // Existing MainCafe setup panel releases its independent resume block on Update.
             Assert.That(Find<GameTimeService>().TrySetSpeed(GameSpeed.Normal),Is.True,Find<GameTimeService>().ResumeBlockReason);
+            yield return Ready();
             Assert.That(layout.CurrentReadiness.CanOpenForBusiness,Is.True);
             Assert.That(Find<NavigationLayoutAdapter>().CurrentReadiness.CanResume,Is.True);
-            yield return Ready();
-            for(var i=0;i<4;i++)
-            { Assert.That(customers.TrySpawn(),Is.True,customers.Status); yield return Wait(()=>customers.Snapshot.All(v=>v.State==CustomerVisitState.Queued),true); }
+            var owner=Find<CafeLoopController>(); owner.HoldCollection=true;
+            yield return AdmitIntegratedCustomers(4);
             Assert.That(customers.Snapshot.Count,Is.EqualTo(4)); Assert.That(world.RegisteredActors.Count,Is.EqualTo(6));
             var staff=flow.Snapshot.ToArray(); var staffActors=staff.Select(s=>world.RegisteredActors.Single(a=>a.ActorId==s.ActorId)).ToArray();
             var proxies=staffActors.Select(a=>a.Proxy).ToArray(); var radii=proxies.Select(p=>p.radius).ToArray(); var heights=proxies.Select(p=>p.height).ToArray();
             var oldVisits=customers.Snapshot.Select(v=>v.VisitId).ToArray();
             var oldCustomerActors=world.RegisteredActors.Except(staffActors).ToArray();
             Assert.That(flow.TryGetBinding(EmployeeRole.Barista,out var oldBinding),Is.True);
-            Assert.That(flow.TryStartTask(EmployeeRole.Barista),Is.True);
-            yield return Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.CarryingToPickUp,true);
+            Assert.That(flow.TryStartTask(EmployeeRole.Barista),Is.False);
             var barista=staffActors.Single(a=>a.ActorId==State(EmployeeRole.Barista).ActorId);
-            yield return Wait(()=>Vector3.Distance(barista.transform.position,oldBinding.WorkTarget.Position)>.3f,true);
-            Assert.That(flow.TryStartTask(EmployeeRole.Cashier),Is.True);
+            yield return Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.CarryingToPickUp &&
+                Vector3.Distance(barista.transform.position,oldBinding.WorkTarget.Position)>.3f && State(EmployeeRole.Cashier).State==EmployeeState.Working,true);
+            Assert.That(flow.TryStartTask(EmployeeRole.Cashier),Is.False); Assert.That(State(EmployeeRole.Cashier).HandleId,Is.GreaterThan(0));
             var oldHandle=State(EmployeeRole.Barista).HandleId;
             var held=barista.GetComponentsInChildren<Transform>().Single(t=>t.name=="EmployeeHeldCup");
             var before=barista.transform.position; var version=decor.CompletedLayoutChangeVersion;
@@ -236,9 +260,12 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
                 Assert.That(actor,Is.SameAs(staffActors[index])); Assert.That(actor.Proxy,Is.SameAs(proxies[index]));
                 Assert.That(actor.Proxy.radius,Is.EqualTo(radii[index])); Assert.That(actor.Proxy.height,Is.EqualTo(heights[index]));
             }
-            Assert.That(flow.TryStartTask(EmployeeRole.Barista),Is.True); Assert.That(State(EmployeeRole.Barista).HandleId,Is.Not.EqualTo(oldHandle));
-            yield return Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.Idle,true);
+            yield return AdmitIntegratedCustomers(1);
+            yield return Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.Working,true);
+            Assert.That(State(EmployeeRole.Barista).HandleId,Is.Not.EqualTo(oldHandle));
+            yield return Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.Idle && State(EmployeeRole.Barista).Delivered,true);
             Assert.That(State(EmployeeRole.Barista).Delivered,Is.True); Assert.That(display.VisibleCount(newBinding.CupAddress.Value),Is.EqualTo(1));
+            owner.HoldCollection=false; yield return Wait(()=>customers.Snapshot.Count==0,true);
             Assert.That(customers.Snapshot,Is.Empty);
             TestContext.WriteLine($"QA03_REAL_MAINCAFE Confirm reset4Customers; same2Employee objects/IDs/roles/proxies; returned {travelled:F3}m to changed anchor then new task delivered");
         }
@@ -270,6 +297,59 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
             Assert.That(Vector3.Distance(barista.transform.position, baristaBinding.WorkTarget.Position), Is.LessThanOrEqualTo(.08f), "Actually return to the CM work anchor");
             Assert.That(Find<PickupCupDisplay>().VisibleCount(baristaBinding.CupAddress.Value), Is.EqualTo(1), "Actual delivery keeps one table cup");
             TestContext.WriteLine("REAL_SHARED_CR scene=" + scene.path + " four customers + two employees; FIFO front leave; body distances checked each moving frame; Barista delivered and returned to CM");
+        }
+        private IEnumerator AdmitIntegratedCustomers(int count)
+        {
+            customers.AutoSpawn=false;
+            for(var frame=0;frame<1200 && customers.Snapshot.Count<count;frame++)
+            { customers.TrySpawn(); AssertBodies(); yield return null; }
+            Assert.That(customers.Snapshot.Count,Is.EqualTo(count),customers.Status);
+        }
+        private IEnumerator AssertIntegratedStaffAndCustomersShareSelectedRegister()
+        {
+            var owner=Find<CafeLoopController>(); owner.HoldCollection=true;
+            var traced=false; owner.SnapshotChanged+=_=> { if(!traced && customers.Snapshot.Any(v=>v.State==CustomerVisitState.Blocked)) { traced=true; LogIntegratedNavigation(); } };
+            Assert.That(flow.TryGetBinding(EmployeeRole.Cashier,out var cashierBinding),Is.True);
+            Assert.That(cashierBinding.WorkStationId,Is.EqualTo(customers.SelectedRegisterId));
+            var cashier=world.RegisteredActors.Single(a=>a.ActorId==State(EmployeeRole.Cashier).ActorId);
+            Assert.That(Vector3.Distance(cashier.transform.position,cashierBinding.WorkTarget.Position),Is.LessThan(.08f));
+            var serviced=new HashSet<string>();
+            flow.IntegratedTaskEvent+=value=>
+            {
+                if(value.Role!=EmployeeRole.Cashier || value.Checkpoint.Stage!=CafeWorkStage.Working || !serviced.Add(value.Checkpoint.VisitId)) return;
+                var head=customers.CounterAssignments.First(); Assert.That(head.VisitId,Is.EqualTo(value.Checkpoint.VisitId)); Assert.That(head.Arrived,Is.True);
+                Assert.That(Vector3.Distance(customers.Snapshot.Single(v=>v.VisitId==head.VisitId).Position,cashier.transform.position),Is.GreaterThan(1.8f));
+            };
+            yield return AdmitIntegratedCustomers(4);
+            var ids=customers.Snapshot.Select(v=>v.VisitId).ToArray();
+            Assert.That(world.RegisteredActors.Count,Is.EqualTo(6));
+            Assert.That(flow.TryStartTask(EmployeeRole.Cashier),Is.False); Assert.That(flow.TryStartTask(EmployeeRole.Barista),Is.False);
+            Assert.That(customers.TryLetFrontLeave(),Is.False,"P14 ownership rejects the legacy early-exit route");
+            yield return Wait(()=>owner.Snapshot.Delivery.Count==4 && flow.Snapshot.All(e=>e.State==EmployeeState.Idle),true);
+            CollectionAssert.AreEquivalent(ids,owner.Snapshot.PaidVisitIds); Assert.That(serviced.Count,Is.EqualTo(4));
+            Assert.That(State(EmployeeRole.Cashier).Outcome,Is.EqualTo(EmployeeTaskOutcome.Succeeded)); Assert.That(State(EmployeeRole.Barista).Delivered,Is.True);
+            Assert.That(flow.TryGetBinding(EmployeeRole.Barista,out var baristaBinding),Is.True);
+            var barista=world.RegisteredActors.Single(a=>a.ActorId==State(EmployeeRole.Barista).ActorId);
+            Assert.That(Vector3.Distance(barista.transform.position,baristaBinding.WorkTarget.Position),Is.LessThanOrEqualTo(.08f));
+            Assert.That(Find<PickupCupDisplay>().VisibleCount(baristaBinding.CupAddress.Value),Is.EqualTo(3),"Four logical deliveries retain the physical visual cap");
+            owner.HoldCollection=false;
+            yield return Wait(()=>customers.Snapshot.Count==0 && owner.Snapshot.Orders.Values.All(o=>o.State==OrderState.Completed),true);
+            Assert.That(world.RegisteredActors.Count,Is.EqualTo(2)); Assert.That(Find<PickupCupDisplay>().VisibleOrders,Is.Empty);
+        }
+        private void LogIntegratedNavigation()
+        {
+            Find<CafeLoopValidationController>().PrintSnapshot();
+            foreach(var actor in world.RegisteredActors) TestContext.WriteLine("MAIN_BODY "+actor.ActorId+" "+actor.transform.position.ToString("F3"));
+            var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+            var visits=(System.Collections.IDictionary)typeof(CustomerFlowController).GetField("visits",flags).GetValue(customers);
+            foreach(System.Collections.DictionaryEntry pair in visits)
+            {
+                var type=pair.Value.GetType(); var actor=(NavigationActor)type.GetField("Actor").GetValue(pair.Value);
+                var route=(Queue<Vector3>)type.GetField("Route").GetValue(pair.Value);
+                TestContext.WriteLine("MAIN_VISIT "+pair.Key+" "+type.GetField("State").GetValue(pair.Value)+" request="+type.GetField("RequestId").GetValue(pair.Value)+
+                    " pending="+type.GetField("PendingExitSegment").GetValue(pair.Value)+" final="+((NavigationTarget)type.GetField("FinalTarget").GetValue(pair.Value)).Position.ToString("F3")+
+                    " agent="+actor.Agent.destination.ToString("F3")+" remaining="+string.Join(" / ",(route??Enumerable.Empty<Vector3>()).Select(p=>p.ToString("F3"))));
+            }
         }
         [UnityTest] public IEnumerator RotatedMultiSlotTableKeepsCupModule()
         {
@@ -381,8 +461,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
         {
             var support = layout.Layout.FurnitureInstances.Single(); var catalog = Ref<FurnitureContentCatalog>(decor, "contentCatalog");
             var slot = catalog.BuildSurfaceSlotCatalog(layout.Layout.GridSettings).GetForSupport(support.DefinitionId).First().SlotId;
-            Assert.That(layout.Layout.PlaceFurniture(FurnitureInstance.Restore("12000000000000000000000000000002", support.DefinitionId, new GridPosition(4, 3), FurnitureRotation.Degrees0)).Succeeded, Is.True);
-            Assert.That(layout.Layout.PlaceFurniture(FurnitureInstance.Restore("12000000000000000000000000000003", support.DefinitionId, new GridPosition(6, 3), FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            Assert.That(layout.Layout.MoveFurniture(support.InstanceId,new GridPosition(1,5)).Succeeded,Is.True);
+            Assert.That(layout.Layout.PlaceFurniture(FurnitureInstance.Restore("12000000000000000000000000000002", support.DefinitionId, new GridPosition(4, 6), FurnitureRotation.Degrees0)).Succeeded, Is.True);
+            Assert.That(layout.Layout.PlaceFurniture(FurnitureInstance.Restore("12000000000000000000000000000003", support.DefinitionId, new GridPosition(6, 6), FurnitureRotation.Degrees0)).Succeeded, Is.True);
             Assert.That(layout.FunctionalSurfaceLayout.PlaceMounted(new SurfaceMountedInstance("12000000000000000000000000000004", "equipment.cash-register.01", new SurfaceSlotAddress(support.InstanceId, slot), FurnitureRotation.Degrees0)).Succeeded, Is.True);
             Assert.That(layout.FunctionalSurfaceLayout.PlaceMounted(new SurfaceMountedInstance("12000000000000000000000000000005", "equipment.coffee-machine.01", new SurfaceSlotAddress("12000000000000000000000000000002", slot), FurnitureRotation.Degrees0)).Succeeded, Is.True);
             Assert.That(layout.FunctionalSurfaceLayout.PlacePickUp(new PickUpPointInstance("12000000000000000000000000000006", new SurfaceSlotAddress("12000000000000000000000000000003", slot))).Succeeded, Is.True);
