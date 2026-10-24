@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using AnimalCafe.Layout;
 using AnimalCafe.Navigation;
@@ -10,7 +11,8 @@ namespace AnimalCafe.Employees
     {
         public bool TryResolve(EmployeeRole role, LayoutReadinessReport report, string selectedRegisterId,
             int layoutRevision, Func<InteractionAnchor, NavigationTarget> toTarget,
-            Func<Vector3, Vector3, bool> canReach, out EmployeeStationBinding binding, out string reason)
+            Func<Vector3, Vector3, bool> canReach, out EmployeeStationBinding binding, out string reason,
+            Func<string,IReadOnlyList<NavigationTarget>> pickupTargets=null)
         {
             binding = null;
             if (!Enum.IsDefined(typeof(EmployeeRole), role) || layoutRevision < 0 ||
@@ -58,7 +60,11 @@ namespace AnimalCafe.Employees
                 foreach (var pickup in pickups)
                 {
                     if (!pickup.Anchors.TryGetAnchor(InteractionRole.Employee, out var deliveryAnchor)) continue;
-                    var deliveryTarget = toTarget(deliveryAnchor);
+                    var defaultTarget = toTarget(deliveryAnchor);
+                    IEnumerable<NavigationTarget> candidates=pickupTargets==null?new[]{defaultTarget}:pickupTargets(pickup.InstanceId)
+                        .OrderBy(t=>t.Position==defaultTarget.Position?0:1);
+                    foreach(var deliveryTarget in candidates)
+                    {
                     // 制杯、交付、返回组成完整路径；这里只查询，不生成 actor 或 Cup。
                     if (!canReach(workTarget.Position, deliveryTarget.Position) ||
                         !canReach(deliveryTarget.Position, workTarget.Position)) continue;
@@ -69,6 +75,7 @@ namespace AnimalCafe.Employees
                         layoutRevision);
                     reason = "";
                     return true;
+                    }
                 }
             }
 

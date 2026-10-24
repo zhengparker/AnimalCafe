@@ -7,6 +7,9 @@ namespace AnimalCafe.Layout
 {
     public sealed class LayoutReadinessEvaluator
     {
+        private readonly bool allPickupSides;
+        public LayoutReadinessEvaluator():this(false) { }
+        public LayoutReadinessEvaluator(bool allPickupSides) { this.allPickupSides=allPickupSides; }
         private static readonly GridPosition[] NeighborOffsets =
         {
             new GridPosition(0, 1),
@@ -295,11 +298,21 @@ namespace AnimalCafe.Layout
                 return candidate;
             }
 
-            ValidateAnchors(
-                candidate,
-                cafeLayout,
-                componentByCell,
-                entranceComponentIds);
+            if(allPickupSides)
+            {
+                // P14 opts in to all real components. Legacy pair snapshots retain unique roles.
+                foreach(var anchor in anchorResolver.ResolvePickUpCandidates(instance,cafeLayout,slots,isWalkable))
+                    if(componentByCell.TryGetValue(anchor.Position,out var component))
+                    {
+                        if(!candidate.EmployeeComponentIds.Contains(component)) candidate.EmployeeComponentIds.Add(component);
+                        if(entranceComponentIds.Contains(component) && !candidate.CustomerComponentIds.Contains(component)) candidate.CustomerComponentIds.Add(component);
+                    }
+                if(candidate.EmployeeComponentIds.Count==0 || candidate.CustomerComponentIds.Count==0)
+                    candidate.AddFailure(LayoutReadinessFailureCode.AnchorUnreachable,null,null,"Pick-up has no reachable customer/employee candidate side.");
+                candidate.EmployeeComponentIds.Sort(); candidate.CustomerComponentIds.Sort();
+                candidate.ReachableComponentIds.AddRange(candidate.EmployeeComponentIds.Union(candidate.CustomerComponentIds).OrderBy(c=>c));
+            }
+            else ValidateAnchors(candidate,cafeLayout,componentByCell,entranceComponentIds);
             return candidate;
         }
 

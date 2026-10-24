@@ -75,8 +75,11 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
             var time = Find<GameTimeService>();
             Assert.That(time.TrySetSpeed(GameSpeed.Normal), Is.True, time.ResumeBlockReason);
             yield return Ready(); AssertLoweredDevices();
-            Assert.That(flow.TryStartTask(EmployeeRole.Cashier), Is.True);
-            Assert.That(flow.TryStartTask(EmployeeRole.Barista), Is.True);
+            var owner=Find<AnimalCafe.CafeLoop.CafeLoopController>(); owner.HoldCollection=true;
+            Assert.That(flow.TryStartTask(EmployeeRole.Cashier), Is.False);
+            Assert.That(flow.TryStartTask(EmployeeRole.Barista), Is.False);
+            yield return AdmitIntegratedCustomers(1);
+            yield return Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.Working,true);
             yield return null; time.SetPaused(); yield return null;
             yield return CaptureLoweredCounter("main-cafe-working");
             Assert.That(time.TrySetSpeed(GameSpeed.Normal), Is.True, time.ResumeBlockReason);

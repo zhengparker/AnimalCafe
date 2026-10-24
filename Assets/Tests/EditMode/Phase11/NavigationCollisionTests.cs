@@ -264,6 +264,92 @@ namespace AnimalCafe.Tests.EditMode.Phase11
             Assert.That((Vector3)method.Invoke(guard,new object[]{actor,proposed,new Collider[0]}),Is.EqualTo(Vector3.zero));
         }
 
+        [Test] public void RecordedLowCounterSentinelPreservesFullSkinTangentAcrossFaceAndCorner()
+        {
+            var start=new Vector3(.4999816f,0,-1.959028f);
+            var actor=Actor("low-counter-recorded",start);
+            var counter=Box(new Vector3(0,.21f,0),new Vector3(1,.42f,3));
+            var raw=new Vector3(1.180919f,0,.2131472f)*.0006057044f;
+            Physics.SyncTransforms();
+            var radius=actor.Settings.AgentRadius+actor.Settings.CollisionSkin;
+            var bottom=start+Vector3.up*actor.Settings.AgentRadius;
+            var top=start+Vector3.up*(actor.Settings.CapsuleHeight-actor.Settings.AgentRadius);
+            var direction=raw/raw.magnitude;
+            var sentinel=false;
+            foreach(var hit in Physics.CapsuleCastAll(bottom,top,radius,direction,raw.magnitude,~0,QueryTriggerInteraction.Ignore))
+                if(hit.collider==counter && hit.distance==0 && hit.point.sqrMagnitude==0 && Vector3.Dot(hit.normal,direction)<-.9999f) sentinel=true;
+            Assert.That(sentinel,Is.True,"Reproduce the real low-counter Physics start sentinel");
+            var project=typeof(NavigationCollisionGuard).GetMethod("ProjectStaticAvoidance",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+            var tangent=(Vector3)project.Invoke(guard,new object[]{actor,raw,new Collider[]{counter}});
+            Assert.That(tangent.x,Is.GreaterThan(raw.x*.99f),"A legal native lateral component must not become a permanent zero");
+            Assert.That(tangent.z,Is.EqualTo(0).Within(.000000001f));
+            Assert.That(tangent.magnitude,Is.LessThanOrEqualTo(raw.magnitude));
+            var safe=guard.ClampDisplacement(actor,tangent,new[]{actor},new Collider[]{counter});
+            Assert.That(safe.x,Is.GreaterThan(raw.x*.99f));
+            var end=start+safe; Assert.That(end.x,Is.GreaterThan(.5f),"The real float32 sweep crosses the side/corner boundary");
+            // X only moves away from this face, so its continuous minimum is the face gap.
+            // 完整3D距离包含下球心到低柜顶的间隔；不减radius或skin。
+            var vertical=(double)bottom.y-((double)counter.transform.position.y+(double)counter.size.y*.5);
+            var horizontal=(double)start.z+1.5;
+            Assert.That(horizontal*horizontal+vertical*vertical,Is.GreaterThanOrEqualTo((double)radius*radius));
+            actor.transform.position=end; Physics.SyncTransforms();
+            var startClear=typeof(NavigationCollisionGuard).GetMethod("StartClear",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+            Assert.That((bool)startClear.Invoke(guard,new object[]{actor,new[]{actor},new Collider[]{counter}}),Is.True,"The actual rounded committed endpoint remains legal");
+        }
+
+        [Test] public void RecordedLowCounterHeadOnIntentionStillStops()
+        {
+            var actor=Actor("low-headon",new Vector3(.4999816f,0,-1.959028f));
+            var counter=Box(new Vector3(0,.21f,0),new Vector3(1,.42f,3)); Physics.SyncTransforms();
+            var project=typeof(NavigationCollisionGuard).GetMethod("ProjectStaticAvoidance",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+            var raw=Vector3.forward*.001f;
+            Assert.That((Vector3)project.Invoke(guard,new object[]{actor,raw,new Collider[]{counter}}),Is.EqualTo(Vector3.zero));
+            Assert.That(guard.ClampDisplacement(actor,raw,new[]{actor},new Collider[]{counter}),Is.EqualTo(Vector3.zero));
+        }
+
+        [Test] public void RecordedLowPoseIsRejectedByHighCounterFullHorizontalSkin()
+        {
+            var actor=Actor("high-counter",new Vector3(.4999816f,0,-1.959028f));
+            var counter=Box(new Vector3(0,.36f,0),new Vector3(1,.72f,3)); Physics.SyncTransforms();
+            Assert.That(BoxProof(actor,actor.transform.position,Vector3.right*.001f,counter),Is.False);
+            var project=typeof(NavigationCollisionGuard).GetMethod("ProjectStaticAvoidance",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+            Assert.That((Vector3)project.Invoke(guard,new object[]{actor,Vector3.right*.001f,new Collider[]{counter}}),Is.EqualTo(Vector3.zero));
+            Assert.That(guard.ClampDisplacement(actor,Vector3.right*.001f,new[]{actor},new Collider[]{counter}),Is.EqualTo(Vector3.zero));
+        }
+
+        [Test] public void LowBoxProofChecksWholeCrossRegionSweepAndDegenerateAxes()
+        {
+            var actor=Actor("low-sweep",new Vector3(.4999816f,0,-1.959028f));
+            var counter=Box(new Vector3(0,.21f,0),new Vector3(1,.42f,3)); Physics.SyncTransforms();
+            Assert.That(BoxProof(actor,actor.transform.position,Vector3.zero,counter),Is.True,"A zero-length legal capsule is still a legal geometric certificate");
+            Assert.That(BoxProof(actor,actor.transform.position,Vector3.right*.001f,counter),Is.True,"A continuously clear face-to-corner tangent is allowed");
+            var crossing=new Vector3(-1.6f,0,3.7f);
+            var startClear=typeof(NavigationCollisionGuard).GetMethod("StaticClear",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+            Assert.That((bool)startClear.Invoke(guard,new object[]{actor,actor.transform.position,new Collider[]{counter}}),Is.True);
+            Assert.That((bool)startClear.Invoke(guard,new object[]{actor,actor.transform.position+crossing,new Collider[]{counter}}),Is.True);
+            Assert.That(BoxProof(actor,actor.transform.position,crossing,counter),Is.False,"Clear endpoints cannot hide an intersecting middle");
+            Assert.That(guard.ClampDisplacement(actor,crossing,new[]{actor},new Collider[]{counter}),Is.EqualTo(Vector3.zero));
+            Assert.That(BoxProof(actor,new Vector3(0,0,-2),new Vector3(0,0,4),counter),Is.False,"Zero dx slab still detects a through-box sweep");
+            Assert.That(BoxProof(actor,new Vector3(2,0,0),new Vector3(0,0,.5f),counter),Is.True,"Parallel clear segment with zero dx stays clear");
+            Assert.That(BoxProof(actor,Vector3.zero,Vector3.zero,counter),Is.False,"A degenerate intersecting segment is not exempt");
+        }
+
+        [Test] public void BoxProofStillRejectsRotationScaleAndOtherColliderShapes()
+        {
+            var actor=Actor("unsupported-box",new Vector3(2,0,0));
+            var box=Box(Vector3.zero,Vector3.one);
+            box.transform.rotation=Quaternion.Euler(0,15,0);
+            Assert.That(BoxProof(actor,actor.transform.position,Vector3.right,box),Is.False);
+            box.transform.rotation=Quaternion.identity; box.transform.localScale=new Vector3(2,1,1);
+            Assert.That(BoxProof(actor,actor.transform.position,Vector3.right,box),Is.False);
+            var go=new GameObject("unsupported-sphere"); objects.Add(go);
+            Assert.That(BoxProof(actor,actor.transform.position,Vector3.right,go.AddComponent<SphereCollider>()),Is.False);
+        }
+
+        private static bool BoxProof(NavigationActor actor,Vector3 start,Vector3 delta,Collider collider)
+            => (bool)typeof(NavigationCollisionGuard).GetMethod("BoxSweepClear",System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.NonPublic)
+                .Invoke(null,new object[]{actor,start,delta,collider});
+
         private NavigationActor Actor(string id, Vector3 position)
         {
             var go = new GameObject(id); objects.Add(go); go.SetActive(false); go.transform.position = position;
