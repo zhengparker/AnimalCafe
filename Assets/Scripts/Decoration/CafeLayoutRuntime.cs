@@ -18,6 +18,13 @@ namespace AnimalCafe.Decoration
         private SurfaceSlotCatalog surfaceSlotCatalog;
         private FunctionalDirectionCatalog functionalDirectionCatalog;
         private LayoutReadinessReport currentReadiness;
+        private bool allPickupSides;
+        public void EnableMultiSidePickupReadiness()
+        {
+            if(allPickupSides) return;
+            allPickupSides=true;
+            if(Layout!=null && FunctionalSurfaceLayout!=null && currentReadiness!=null) RecalculateReadiness();
+        }
 
         public CafeLayout Layout { get; private set; }
         public RoomSurfaceLayout RoomSurfaceLayout { get; private set; }
@@ -144,7 +151,7 @@ namespace AnimalCafe.Decoration
                 layoutCandidate,
                 runtimeCatalogCandidate,
                 slotCatalogCandidate);
-            var readinessCandidate = new LayoutReadinessEvaluator().Evaluate(
+            var readinessCandidate = new LayoutReadinessEvaluator(allPickupSides).Evaluate(
                 layoutCandidate,
                 functionalLayoutCandidate,
                 slotCatalogCandidate,
@@ -193,7 +200,7 @@ namespace AnimalCafe.Decoration
                     "CafeLayoutRuntime must be initialized before recalculating readiness.");
             }
 
-            var nextReadiness = new LayoutReadinessEvaluator().Evaluate(
+            var nextReadiness = new LayoutReadinessEvaluator(allPickupSides).Evaluate(
                 Layout,
                 FunctionalSurfaceLayout,
                 surfaceSlotCatalog,

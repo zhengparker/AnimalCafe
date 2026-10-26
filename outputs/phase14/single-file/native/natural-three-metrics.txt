@@ -1,0 +1,1 @@
+fixture=Phase14CafeLoop captureDeltaTime=0 speed=Normal naturalArrivals=True collectionHeld=False physicalSlots=9 maxPaidUncollected=2 maxPaidMovingToPickup=2 actualStableWaiting=1 maxCRQueueIncludingEnteringAndAdvancing=2

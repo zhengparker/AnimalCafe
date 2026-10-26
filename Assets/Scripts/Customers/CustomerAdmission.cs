@@ -8,7 +8,7 @@ namespace AnimalCafe.Customers
         private readonly CapacityService capacity;
         private readonly string owner;
         private readonly CapacityToken[] tokens;
-        private bool disposed,inside,queued,queueLeft,pickupCancelled;
+        private bool disposed,inside,queued,queueLeft,pickupCancelled,pickupWaiting,pickupLeft;
         private CustomerAdmission(CapacityService service,string id,CapacityToken[] reservations)
         { capacity=service; owner=id; tokens=reservations; }
         public static bool TryCreate(CapacityService capacity,string owner,out CustomerAdmission lease)
@@ -26,7 +26,16 @@ namespace AnimalCafe.Customers
         public void LeaveQueue()
         { if(!disposed && !queueLeft) queueLeft=capacity.Release(tokens[1],owner).Succeeded; }
         public void CancelUnusedPickup()
-        { if(!disposed && !pickupCancelled) pickupCancelled=capacity.Release(tokens[2],owner).Succeeded; }
+        { if(!disposed && !pickupCancelled && !pickupWaiting) pickupCancelled=capacity.Release(tokens[2],owner).Succeeded; }
+        // 实际到达才Occupy；始终沿用入店前同一owner/token / No replacement lease.
+        public bool MarkPickupWaiting()
+        {
+            if(disposed || pickupCancelled || pickupLeft) return false;
+            if(pickupWaiting) return true;
+            return pickupWaiting=capacity.Occupy(tokens[2],owner).Succeeded;
+        }
+        public void LeavePickup()
+        { if(!disposed && !pickupLeft) pickupLeft=capacity.Release(tokens[2],owner).Succeeded; }
         // Dispose仅用于创建rollback、真实Exit Arrived或session teardown。
         public void Dispose()
         {

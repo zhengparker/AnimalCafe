@@ -1,7 +1,8 @@
 using UnityEngine;
 namespace AnimalCafe.Customers
 {
-    public enum CustomerVisitState { Entering, Queued, Advancing, Exiting, Blocked, Removed }
+    public enum CustomerVisitState { Entering, Queued, Advancing, Exiting, Blocked, Removed,
+        MovingToPickup, PickupWaiting, PickupAdvancing, MovingToPickupService, PickupService }
     public readonly struct QueueAssignment
     {
         public string VisitId { get; }

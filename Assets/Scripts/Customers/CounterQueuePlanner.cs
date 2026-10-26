@@ -3,15 +3,27 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace AnimalCafe.Customers
 {
+    internal sealed class QueueForwardRejection
+    {
+        internal readonly Vector3 Point,Previous,Direction;
+        internal readonly IReadOnlyList<Vector3> Prefix;
+        internal readonly string Reason;
+        internal QueueForwardRejection(Vector3 point,Vector3 previous,Vector3 direction,IReadOnlyList<Vector3> prefix,string reason)
+        { Point=point;Previous=previous;Direction=direction;Prefix=new List<Vector3>(prefix).AsReadOnly();Reason=reason; }
+    }
     public sealed class CounterQueuePlanner
     {
         private const int CandidateBudget=256;
         private readonly float spacing;
-        public CounterQueuePlanner(float spacing=1.0f)
+        private readonly bool preserveStraightPrefix;
+        // Read-only diagnostic of the original gate result; null adds no queries.
+        internal Action<Vector3,Vector3,Vector3,IReadOnlyList<Vector3>,string> RejectedForward;
+        public CounterQueuePlanner(float spacing=1.0f,bool preserveStraightPrefix=false)
         {
             if (float.IsNaN(spacing) || float.IsInfinity(spacing) || spacing<1.0f)
                 throw new ArgumentOutOfRangeException(nameof(spacing));
             this.spacing=spacing;
+            this.preserveStraightPrefix=preserveStraightPrefix;
         }
         public IReadOnlyList<Vector3> Build(Vector3 head, Vector3 outward, int maxSlots,
             Func<Vector3,Vector3?,bool> isLegal,Func<Vector3,IReadOnlyList<Vector3>,bool> canReach=null,
@@ -30,9 +42,15 @@ namespace AnimalCafe.Customers
                 if(checkedCandidates>=CandidateBudget) return false;
                 checkedCandidates++; return isLegal(point,previous);
             }
+            var reachFailure="";
             bool Reachable(Vector3 point)
-                => !result.Exists(p=>Vector3.Distance(p,point)<spacing-.001f) &&
-                    (canReach==null || canReach(point,prefix));
+            {
+                if(result.Exists(p=>Vector3.Distance(p,point)<spacing-.001f))
+                { reachFailure="duplicate-spacing";return false; }
+                if(canReach!=null && !canReach(point,prefix))
+                { reachFailure="canReach";return false; }
+                return true;
+            }
             bool AlignEdge(Vector3 direction)
             {
                 var last=result.Count-1;
@@ -79,12 +97,14 @@ namespace AnimalCafe.Customers
                 var previous=result[result.Count-1];
                 var forward=previous+direction*spacing;
                 var forwardLegal=Legal(forward,previous);
+                if(!forwardLegal) RejectedForward?.Invoke(forward,previous,direction,prefix,"isLegal");
                 if(!forwardLegal && mayAlign && checkedCandidates<CandidateBudget)
                 {
                     var saved=result.ToArray();
                     if(AlignEdge(direction))
                     {
                         if(Extend(direction,false,true)) return true;
+                        if(preserveStraightPrefix) return false;
                         result.Clear(); result.AddRange(saved);
                     }
                 }
@@ -93,10 +113,19 @@ namespace AnimalCafe.Customers
                     if(checkedCandidates>=CandidateBudget) return false;
                     var candidate=previous+candidateDirection*spacing;
                     var sameDirection=candidateDirection==direction;
-                    if(!(sameDirection?forwardLegal:Legal(candidate,previous)) || !Reachable(candidate)) continue;
+                    if(!(sameDirection?forwardLegal:Legal(candidate,previous))) continue;
+                    if(!Reachable(candidate))
+                    {
+                        if(sameDirection) RejectedForward?.Invoke(candidate,previous,direction,prefix,reachFailure);
+                        continue;
+                    }
                     // prefix只含当前分支；被放弃的站位不会继续充当虚拟障碍。
                     result.Add(candidate);
                     if(Extend(candidateDirection,true,aligned)) return true;
+                    // P14 keeps the first verified safe chain, even when another
+                    // branch could fit more bodies. Legacy Counter still backtracks.
+                    // 安全直行已成立就不为容量换支路；旧Counter默认算法不变。
+                    if(preserveStraightPrefix) return false;
                     result.RemoveAt(result.Count-1);
                 }
                 return false;

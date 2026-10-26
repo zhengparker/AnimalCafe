@@ -227,6 +227,7 @@ namespace AnimalCafe.Navigation
         }
         private List<NavigationSolidPose> Capture(List<string> structural)
         {
+            structural.Add("MultiSidePickup="+allPickupSides);
             var result=new List<NavigationSolidPose>(); AddCollider(result,"floor",floor,floor.transform.localToWorldMatrix);
             foreach(var wall in walls) if(wall!=null && wall.enabled && !wall.isTrigger) AddCollider(result,"wall:"+wall.GetEntityId(),wall,wall.transform.localToWorldMatrix);
             foreach(var root in confirmedFurnitureRoots) if(root!=null) AddPrefab(result,"fixed:"+root.GetEntityId(),root.gameObject,root.localToWorldMatrix);
@@ -314,20 +315,44 @@ namespace AnimalCafe.Navigation
             result.Add(new NavigationSolidPose(id,matrix.MultiplyPoint3x4(center),rotation,extent*2));
         }
         private Vector3 WorldAnchor(InteractionAnchor anchor) => gridRoot.TransformPoint(Grid.GetCellCenterLocal(anchor.Position));
+        private bool allPickupSides;
+        // Explicit P14 opt-in; existing P11/P13 callers keep their original pair contract.
+        public void EnableMultiSidePickupReadiness()
+        {
+            if(allPickupSides) return;
+            allPickupSides=true;
+            // Policy changed, so old published business readiness cannot admit P14 work.
+            // Only the existing legal preparation path may refresh/bake; disabled callers do not initialize navigation.
+            PublishedRevision=-1; CurrentReadiness=Result(false,"Pickup readiness policy changed");
+        }
         private bool ValidateBusiness(Dictionary<string,string> failures)
         {
             var report=layoutRuntime?.CurrentReadiness;
             if(report==null) return false;
+            IEnumerable<Vector3> Targets(StationReadiness station,InteractionRole role)
+            {
+                if(allPickupSides && station.FunctionType==LayoutStationType.PickUpPoint)
+                {
+                    var pickup=layoutRuntime.FunctionalSurfaceLayout.PickUpPoints.FirstOrDefault(p=>p.InstanceId==station.InstanceId);
+                    if(pickup==null) yield break;
+                    var candidates=new InteractionAnchorResolver().ResolvePickUpCandidates(pickup,layoutRuntime.Layout,layoutRuntime.SurfaceSlotCatalog,
+                        p=>layoutRuntime.Layout.IsInsideUnlockedRegion(p) && !layoutRuntime.Layout.HasReservation(p,LayoutReservationType.Blocked) && !layoutRuntime.Layout.TryGetOccupant(p,out _),role);
+                    foreach(var candidateAnchor in candidates) if(SampleAnchor(WorldAnchor(candidateAnchor),out _)) yield return WorldAnchor(candidateAnchor);
+                }
+                else if(station.Anchors.TryGetAnchor(role,out var anchor) && SampleAnchor(WorldAnchor(anchor),out _)) yield return WorldAnchor(anchor);
+            }
             var viable=new List<StationReadiness>();
             foreach(var station in report.Stations)
             {
                 if(!station.IsValid) { failures[station.InstanceId]="P8 station unavailable"; continue; }
-                if(station.Anchors.Anchors.Any(a=>!SampleAnchor(WorldAnchor(a),out _))) { failures[station.InstanceId]="Anchor blocked at actor radius"; continue; }
+                var sampled=allPickupSides && station.FunctionType==LayoutStationType.PickUpPoint
+                    ?Targets(station,InteractionRole.Customer).Any():station.Anchors.Anchors.All(a=>SampleAnchor(WorldAnchor(a),out _));
+                if(!sampled) { failures[station.InstanceId]="Anchor blocked at actor radius"; continue; }
                 viable.Add(station);
             }
             var entrance=gridRoot.TransformPoint(Grid.GetCellCenterLocal(new GridPosition(3,0)));
             bool Connected(StationReadiness a,InteractionRole ar,StationReadiness b,InteractionRole br)
-                => a.Anchors.TryGetAnchor(ar,out var aa) && b.Anchors.TryGetAnchor(br,out var ba) && Path(WorldAnchor(aa),WorldAnchor(ba));
+                => Targets(a,ar).Any(from=>Targets(b,br).Any(to=>Path(from,to)));
             var participating=new HashSet<string>();
             foreach(var cash in viable.Where(s=>s.FunctionType==LayoutStationType.CashRegister))
             foreach(var coffee in viable.Where(s=>s.FunctionType==LayoutStationType.CoffeeMachine))

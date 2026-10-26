@@ -1,0 +1,41 @@
+{
+  "utc": "2026-10-23T23:20:18.1164793Z",
+  "protectedCount": 317,
+  "protectedMismatch": 0,
+  "protectedScenes": 13,
+  "sourceCount": 15,
+  "sourceOrCopyMismatch": 0,
+  "helper": [
+    {
+      "path": "Assets/Editor/Phase14/Phase14SingleFileNative.cs",
+      "absent": true,
+      "archiveHash": "7B5804988E35CFF4685165ACF9216D7CF1BE87D598BCA9C3011AC5F69D9DBF84",
+      "match": true
+    },
+    {
+      "path": "Assets/Editor/Phase14/Phase14SingleFileNative.cs.meta",
+      "absent": true,
+      "archiveHash": "2FF044BF2A3211AFBA33A5CC10E6CE1A208CA14D931692C4C3E96027A4720E9C",
+      "match": true
+    }
+  ],
+  "automatic": [
+    {
+      "path": "UserSettings\\EditorUserSettings.asset",
+      "archiveMatches": true,
+      "restoredMatches": true
+    },
+    {
+      "path": "UserSettings\\Layouts\\default-6000.dwlt",
+      "archiveMatches": true,
+      "restoredMatches": true
+    },
+    {
+      "path": "Assets\\Art\\Phase7\\Materials\\M_WallProjection_Invalid.mat",
+      "archiveMatches": true,
+      "restoredMatches": true
+    }
+  ],
+  "exactEditorPath": "E:\\Unity\\Hub\\Editor\\6000.5.5f1\\Editor\\Unity.exe",
+  "exactEditorCount": 0
+}

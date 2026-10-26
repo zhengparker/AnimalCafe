@@ -19,6 +19,7 @@ namespace AnimalCafe.Core.Time
         public event Action ResumeAvailabilityChanged;
         // Explicit choices invalidate an older UI restore, including Pause while already paused.
         public int ExplicitChoiceVersion { get; private set; }
+        public GameSpeed? LastExplicitSpeed { get; private set; }
 
         public IDisposable AcquireResumeBlock(object owner, string reason)
         {
@@ -89,7 +90,7 @@ namespace AnimalCafe.Core.Time
             }
 
             if (speed != GameSpeed.Paused && IsResumeBlocked) return false;
-            if (explicitChoice) ExplicitChoiceVersion++;
+            if (explicitChoice) { ExplicitChoiceVersion++; LastExplicitSpeed = speed; }
 
             if (speed == CurrentSpeed)
             {

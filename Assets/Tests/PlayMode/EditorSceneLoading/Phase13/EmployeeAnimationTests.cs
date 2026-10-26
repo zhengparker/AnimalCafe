@@ -14,7 +14,11 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
     public sealed class EmployeeAnimationTests
     {
         GameObject instance; RuntimeAnimatorController fixtureController;
-        [TearDown] public void Cleanup() { if(instance!=null) Object.DestroyImmediate(instance); if(fixtureController!=null) Object.DestroyImmediate(fixtureController); Time.timeScale=1; }
+        float savedScale;
+        // Own the fixture clock; a preceding navigation test may correctly leave Pause.
+        // 仅初始化本测试的1x时钟，结束恢复原值，不改变生产暂停规则。
+        [SetUp] public void Setup() { savedScale=Time.timeScale; Time.timeScale=1; }
+        [TearDown] public void Cleanup() { if(instance!=null) Object.DestroyImmediate(instance); if(fixtureController!=null) Object.DestroyImmediate(fixtureController); Time.timeScale=savedScale; }
         NavigationActor Load(string species,bool employee=true) {
             var path=employee?"Assets/Art/Phase13/Employees/"+species+"/PF_"+species+"_Employee.prefab":"Assets/Art/Phase11/Characters/"+species+"/PF_"+species+"_Navigation.prefab";
             var prefab=AssetDatabase.LoadAssetAtPath<GameObject>(path); Assert.That(prefab,Is.Not.Null,path);
@@ -76,21 +80,44 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
             actor.GetComponent<NavigationWalkPresenter>().SetMotion(0); yield return null; Assert.That(actor.ModelAnimator.GetCurrentAnimatorStateInfo(0).IsName("Working"),Is.True);
         }
         [UnityTest] public IEnumerator PauseAndFastScaleWorkingExactlyOnce() {
-            var actor=Load("Shiba"); var visual=instance.GetComponent<EmployeeVisualPresenter>(); visual.SetMode(EmployeeVisualMode.Working); yield return null;
-            var runningDelta=Time.deltaTime;
-            Time.timeScale=0;
-            // Drain the already evaluated running frame before measuring a paused frame.
-            // 等切换帧结束后取暂停基线；保留原精度，不把旧帧delta误算为暂停推进。
-            yield return null; Assert.That(Time.deltaTime,Is.EqualTo(0));
-            var before=actor.ModelAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime; yield return new WaitForSecondsRealtime(.15f);
-            TestContext.WriteLine("PAUSE runningDelta="+runningDelta.ToString("R")+" pausedDelta="+Time.deltaTime.ToString("R")+
-                " normalizedDrift="+(actor.ModelAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime-before).ToString("R"));
-            Assert.That(actor.ModelAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime,Is.EqualTo(before).Within(.001f));
-            Time.timeScale=1; before=actor.ModelAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime; var start=Time.realtimeSinceStartup; yield return new WaitForSecondsRealtime(.25f);
-            var normal=(actor.ModelAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime-before)/(Time.realtimeSinceStartup-start);
-            Time.timeScale=2; before=actor.ModelAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime; start=Time.realtimeSinceStartup; yield return new WaitForSecondsRealtime(.25f);
-            var fast=(actor.ModelAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime-before)/(Time.realtimeSinceStartup-start);
-            Assert.That(fast/normal,Is.InRange(1.7f,2.3f));
+            var previousCapture=Time.captureDeltaTime;
+            try {
+                // Compare equal complete game frames, not Editor wall-clock scheduling.
+                // 固定采样步长并恢复原设置；Animator仍由真实PlayerLoop推进，不手动Update。
+                Time.captureDeltaTime=1f/60f;
+                var actor=Load("Shiba"); var visual=instance.GetComponent<EmployeeVisualPresenter>();
+                visual.SetMode(EmployeeVisualMode.Working); yield return null;
+                var animator=actor.ModelAnimator; var runningDelta=Time.deltaTime;
+                Time.timeScale=0;
+                // Drain the already evaluated running frame before measuring a paused frame.
+                yield return null; Assert.That(Time.deltaTime,Is.EqualTo(0));
+                var before=animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+                yield return new WaitForSecondsRealtime(.15f);
+                TestContext.WriteLine("PAUSE runningDelta="+runningDelta.ToString("R")+" pausedDelta="+Time.deltaTime.ToString("R")+
+                    " normalizedDrift="+(animator.GetCurrentAnimatorStateInfo(0).normalizedTime-before).ToString("R"));
+                Assert.That(animator.GetCurrentAnimatorStateInfo(0).normalizedTime,Is.EqualTo(before).Within(.001f));
+                const int frames=30;
+                Time.timeScale=1; yield return null;
+                before=animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+                var normalDelta=0f;
+                for(var i=0;i<frames;i++) { yield return null; normalDelta+=Time.deltaTime; }
+                var normalAdvance=animator.GetCurrentAnimatorStateInfo(0).normalizedTime-before;
+                Time.timeScale=2; yield return null;
+                before=animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+                var fastDelta=0f;
+                for(var i=0;i<frames;i++) { yield return null; fastDelta+=Time.deltaTime; }
+                var fastAdvance=animator.GetCurrentAnimatorStateInfo(0).normalizedTime-before;
+                TestContext.WriteLine("FRAME_CLOCK frames="+frames+" captureDelta="+Time.captureDeltaTime.ToString("R")+
+                    " normalAdvance="+normalAdvance.ToString("R")+" normalDelta="+normalDelta.ToString("R")+
+                    " fastAdvance="+fastAdvance.ToString("R")+" fastDelta="+fastDelta.ToString("R"));
+                Assert.That(normalAdvance,Is.GreaterThan(0));
+                Assert.That(fastAdvance/normalAdvance,Is.InRange(1.7f,2.3f));
+                Assert.That(fastDelta/normalDelta,Is.EqualTo(2).Within(.001f));
+                Assert.That((fastAdvance/fastDelta)/(normalAdvance/normalDelta),Is.EqualTo(1).Within(.01f));
+                Assert.That(animator.speed,Is.EqualTo(1));
+                Assert.That(animator.updateMode,Is.EqualTo(AnimatorUpdateMode.Normal));
+                Assert.That(animator.GetCurrentAnimatorStateInfo(0).IsName("Working"),Is.True);
+            } finally { Time.captureDeltaTime=previousCapture; }
         }
     }
 }

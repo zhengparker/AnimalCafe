@@ -97,7 +97,9 @@ namespace AnimalCafe.EditorTools.Phase13
                 MakeButton(panel.transform, "Barista Task", "制作咖啡", font, .5f);
             }
             var statusText = hud.Find("Panel/Status").GetComponent<Text>();
-            statusText.resizeTextForBestFit = true; statusText.resizeTextMinSize = 8; statusText.resizeTextMaxSize = 10;
+            // P14复用此Canvas；旧installer不能覆盖只读HUD的字号策略。
+            if(All<AnimalCafe.CafeLoop.CafeLoopStatusView>(root.scene).Length==0)
+            { statusText.resizeTextForBestFit = true; statusText.resizeTextMinSize = 8; statusText.resizeTextMaxSize = 10; }
             Set(controller, "hud", hud.gameObject); Set(controller, "status", statusText);
             Set(controller, "cashierButton", hud.Find("Panel/Cashier Task").GetComponent<Button>());
             Set(controller, "baristaButton", hud.Find("Panel/Barista Task").GetComponent<Button>());

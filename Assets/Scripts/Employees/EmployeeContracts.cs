@@ -1,12 +1,13 @@
 using System;
 using AnimalCafe.Layout;
 using AnimalCafe.Navigation;
+using AnimalCafe.CafeLoop;
 
 namespace AnimalCafe.Employees
 {
     public enum EmployeeRole { Cashier, Barista }
 
-    public enum EmployeeState { Initializing, Idle, MovingToWork, Working, CarryingToPickUp, Returning, Blocked, Disabled }
+    public enum EmployeeState { Initializing, Idle, MovingToWork, Working, CarryingToPickUp, Returning, Blocked, Disabled, WaitingToDeliver }
     public enum EmployeeTaskOutcome { None, Succeeded, Failed, Cancelled }
     public enum EmployeeVisualMode { Idle, Walking, Working, Carrying }
 
@@ -37,6 +38,13 @@ namespace AnimalCafe.Employees
         bool TryPlaceCup(SurfaceSlotAddress address, out string reason);
         void SetVisualMode(EmployeeVisualMode mode);
         void CleanupTask(long handleId);
+    }
+    // P14扩展保持独立，P13 ports无需实现新成员 / Optional integrated task port.
+    public interface IIntegratedEmployeeTaskEnvironment : IEmployeeTaskEnvironment
+    {
+        bool TryAcquireDelivery(string actorId);
+        bool TryCommitDelivery(CafeTaskEvent arrival, SurfaceSlotAddress address, out string reason);
+        void HideHeldCup();
     }
     public sealed class EmployeeStationBinding
     {

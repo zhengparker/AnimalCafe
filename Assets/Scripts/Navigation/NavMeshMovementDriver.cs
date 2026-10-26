@@ -227,9 +227,20 @@ namespace AnimalCafe.Navigation
                 {
                     // 提前检查下一腿；贴桌角可能在进入到站范围前就被skin挡住。
                     // Failed connections may become safe as the actual pose/bodies change.
-                    if (TrySkinSafeCorner(rawCorners[corner], out var candidate) && actor.World != null &&
-                        actor.World.CanTraverseStraight(actor, candidate))
-                    { corners[corner] = candidate; adjustedCorners[corner] = true; }
+                    if (TrySkinSafeCorner(rawCorners[corner], out var candidate) && actor.World != null)
+                    {
+                        var offset = candidate - rawCorners[corner];
+                        // The full outward offset can leave a narrow NavMesh strip. Try only
+                        // bounded shorter offsets; every actual connection keeps both guards.
+                        // 完整外移点可能越出窄NavMesh；有限缩短，每条真实连接仍须完整认证。
+                        for (var attempt = 0; attempt < 4; attempt++)
+                        {
+                            candidate = rawCorners[corner] + offset;
+                            if (actor.World.CanTraverseStraight(actor, candidate))
+                            { corners[corner] = candidate; adjustedCorners[corner] = true; break; }
+                            offset *= .5f;
+                        }
+                    }
                 }
                 break; // 每次只简化一段；最终destination始终保留。
             }
