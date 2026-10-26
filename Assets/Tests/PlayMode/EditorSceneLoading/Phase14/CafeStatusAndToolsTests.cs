@@ -120,12 +120,34 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 CafeLoopRuntimeProof.Set(customers,"clock",new CustomerSpawnClock(()=>0));
                 TestContext.WriteLine("P14_HIGH_LOAD input=one-second legitimate minimum random interval, capture="+Time.captureDeltaTime);
                 maximumDelivery=0; captured=false; ring.Clear(); tools.HoldCollection(); tools.ResumeArrivals();
-                var full=false; deadline=Time.realtimeSinceStartup+150;
+                var full=false; string priorGatedHead=null,gatedHead=null; var loggedDepartingHead=false;
+                deadline=Time.realtimeSinceStartup+150;
                 while(Time.realtimeSinceStartup<deadline)
                 {
-                    full=owner.Snapshot.Delivery.Count>=5 && owner.ViewSnapshot.Counter.Count>0 &&
-                        (owner.ViewSnapshot.Reception.StartsWith("Waiting /",StringComparison.Ordinal) || customers.Capacity.GetCapacities().Any(c=>c.Used==c.Limit)) &&
-                        employees.Snapshot.Where(e=>e.Role==EmployeeRole.Cashier).All(e=>e.State==EmployeeState.Idle && e.HandleId==0);
+                    var head=customers.CounterAssignments.FirstOrDefault();
+                    var visit=owner.Snapshot.Visits.FirstOrDefault(v=>v.VisitId==head.VisitId);
+                    var waitVisit=CafeLoopRuntimeProof.Field<string>(owner,"pickupWaitVisit");
+                    var waitReason=CafeLoopRuntimeProof.Field<string>(owner,"pickupWaitReason");
+                    // A paid departing body can still own Counter[0]; sample the real gate, not generic Waiting.
+                    // 已付款顾客尚未离开CR时仍可能占队首；未付款/无Order保留为下面的独立断言。
+                    var gated=owner.Snapshot.Delivery.Count>=5 && owner.CanProgress && !string.IsNullOrEmpty(head.VisitId) && head.Arrived &&
+                        visit.IsEnabled && visit.NavigationState==CustomerVisitState.Queued && visit.CounterArrived &&
+                        employees.Snapshot.Any(e=>e.Role==EmployeeRole.Cashier && e.State==EmployeeState.Idle && e.HandleId==0) &&
+                        waitVisit==head.VisitId && !string.IsNullOrWhiteSpace(waitReason);
+                    if(!loggedDepartingHead && owner.Snapshot.Delivery.Count>=5 && visit.NavigationState==CustomerVisitState.MovingToPickup)
+                    {
+                        loggedDepartingHead=true;
+                        TestContext.WriteLine("P14_GATE_REJECT_DEPARTING_HEAD visit="+head.VisitId+" state="+visit.NavigationState+
+                            " paid="+owner.Snapshot.PaidVisitIds.Contains(head.VisitId)+" arrived="+head.Arrived+" waitVisit="+waitVisit);
+                    }
+                    full=gated && priorGatedHead==head.VisitId;
+                    priorGatedHead=gated?head.VisitId:null;
+                    if(full)
+                    {
+                        gatedHead=head.VisitId;
+                        TestContext.WriteLine("P14_GATE_CONFIRMED_TWO_FRAMES visit="+gatedHead+" state="+visit.NavigationState+
+                            " counterArrived="+visit.CounterArrived+" assignmentArrived="+head.Arrived+" reason="+waitReason);
+                    }
                     if(full || Blocked()) break;
                     yield return null;
                 }
@@ -134,8 +156,10 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 DumpRoutes();
                 if(full)
                 {
-                    var head=owner.ViewSnapshot.Counter.First().VisitId;
+                    var head=customers.CounterAssignments.First().VisitId;
+                    Assert.That(head,Is.EqualTo(gatedHead),"The same actual Counter[0] owns the observed reservation gate");
                     Assert.That(owner.Snapshot.PaidVisitIds.Contains(head),Is.False,"The actual gated head remains unpaid without a cashier handle");
+                    Assert.That(owner.Snapshot.Orders.Values.Any(o=>o.CustomerId==head),Is.False,"The gated head has no committed Order");
                     Assert.That(Find<PickupCupDisplay>().VisibleOrders.Count,Is.EqualTo(3));
                     Assert.That(scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<Transform>(true)).Count(t=>t.name.StartsWith("PickupCup_")),Is.EqualTo(3),"Exactly three real table cup objects, no hidden extras");
                     if(!Application.isBatchMode)
