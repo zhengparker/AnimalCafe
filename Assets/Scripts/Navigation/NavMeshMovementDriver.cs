@@ -90,41 +90,119 @@ namespace AnimalCafe.Navigation
             return Mathf.Abs(delta.y) <= .05f && new Vector2(delta.x, delta.z).magnitude <= actor.Settings.Epsilon;
         }
 
+#if UNITY_EDITOR
+        internal static System.Action<NavigationActor,string,string> PathObserver;
+#endif
+        // Record only values already evaluated here. Formatting is opt-in; Player calls vanish.
+        // 仅记录原查询结果；未执行的后续stage均为NOT_EVALUATED。
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void TracePath(string stage, bool? outcome=null, Vector3? point=null,
+            Vector3[] path=null, NavMeshPathStatus? status=null, NavMeshQueryFilter? queryFilter=null)
+        {
+#if UNITY_EDITOR
+            if(PathObserver==null) return;
+            PathObserver(actor,stage,"generation="+generation+" layout="+revision+" outcome="+outcome+
+                " requested="+target.Position.ToString("F9")+" point="+(point.HasValue?point.Value.ToString("F9"):"NOT_EVALUATED")+
+                " pathStatus="+(status.HasValue?status.ToString():"NOT_EVALUATED")+
+                " corners="+(path==null?"NOT_EVALUATED":string.Join(";",System.Array.ConvertAll(path,p=>p.ToString("F9"))))+
+                " failure="+failure+" cornerIndex="+corner+" moving="+moving+
+                " raw="+string.Join(";",System.Array.ConvertAll(rawCorners,p=>p.ToString("F9")))+
+                " current="+string.Join(";",System.Array.ConvertAll(corners,p=>p.ToString("F9")))+
+                " adjusted="+string.Join(",",adjustedCorners)+" filterType="+queryFilter?.agentTypeID+" areaMask="+queryFilter?.areaMask);
+#endif
+        }
+
         public NavigationFailure BeginPath(NavigationTarget value, int pathGeneration, int layoutRevision)
         {
             Stop(); target = value; generation = pathGeneration; revision = layoutRevision;
             failure = NavigationFailure.None;
-            if (!actor.isActiveAndEnabled) return Fail(NavigationFailure.ActorUnavailable);
+            TracePath("begin");
+            var active=actor.isActiveAndEnabled; TracePath("start.active",active);
+            if (!active) return Fail(NavigationFailure.ActorUnavailable);
+            TracePath("start.layout",layoutAvailable);
             if (!layoutAvailable) return Fail(NavigationFailure.LayoutUnavailable);
-            if ((actor.World != null && !actor.World.CanStartActor(actor)) || !ValidStart() || (!Bound && !TryBind())) return Fail(NavigationFailure.InvalidStart);
-            if (!NavigationCollisionGuard.Finite(value.Position) ||
-                !NavMesh.SamplePosition(value.Position, out var sample, actor.Settings.TargetSampleDistance, Filter) ||
-                Vector3.Distance(value.Position, sample.position) > actor.Settings.TargetSampleDistance + actor.Settings.Epsilon ||
-                Mathf.Abs(sample.position.y - Position.y) > .05f || Mathf.Abs(sample.position.y - value.Position.y) > .05f ||
-                (value.AllowedRegion.HasValue && !value.AllowedRegion.Value.Contains(sample.position)) ||
-                !SameSide(value.Position, sample.position)) return Fail(NavigationFailure.InvalidTarget);
+            if(actor.World != null)
+            {
+                var canStart=actor.World.CanStartActor(actor); TracePath("start.world",canStart);
+                if(!canStart) return Fail(NavigationFailure.InvalidStart);
+            }
+            var valid=ValidStart(); TracePath("start.valid",valid);
+            if(!valid) return Fail(NavigationFailure.InvalidStart);
+            var bound=Bound; TracePath("start.bound",bound);
+            if(!bound)
+            {
+                var bind=TryBind(); TracePath("start.bind",bind);
+                if(!bind) return Fail(NavigationFailure.InvalidStart);
+            }
+            var finite=NavigationCollisionGuard.Finite(value.Position); TracePath("target.finite",finite);
+            if(!finite) return Fail(NavigationFailure.InvalidTarget);
+            var targetFilter=Filter;
+            var sampled=NavMesh.SamplePosition(value.Position,out var sample,actor.Settings.TargetSampleDistance,targetFilter);
+            TracePath("target.sample",sampled,sample.position,queryFilter:targetFilter);
+            if(!sampled) return Fail(NavigationFailure.InvalidTarget);
+            var tooFar=Vector3.Distance(value.Position,sample.position)>actor.Settings.TargetSampleDistance+actor.Settings.Epsilon;
+            TracePath("target.distance-refused",tooFar,sample.position);
+            if(tooFar) return Fail(NavigationFailure.InvalidTarget);
+            var wrongHeight=Mathf.Abs(sample.position.y-Position.y)>.05f; TracePath("target.start-height-refused",wrongHeight);
+            if(wrongHeight) return Fail(NavigationFailure.InvalidTarget);
+            wrongHeight=Mathf.Abs(sample.position.y-value.Position.y)>.05f; TracePath("target.request-height-refused",wrongHeight);
+            if(wrongHeight) return Fail(NavigationFailure.InvalidTarget);
+            if(value.AllowedRegion.HasValue)
+            {
+                var inside=value.AllowedRegion.Value.Contains(sample.position); TracePath("target.region",inside);
+                if(!inside) return Fail(NavigationFailure.InvalidTarget);
+            }
+            var sameSide=SameSide(value.Position,sample.position); TracePath("target.side",sameSide);
+            if(!sameSide) return Fail(NavigationFailure.InvalidTarget);
             destination = sample.position;
             var path = new NavMeshPath();
-            if (!NavMesh.CalculatePath(Position, destination, Filter, path) || path.status != NavMeshPathStatus.PathComplete)
-                return Fail(NavigationFailure.IncompletePath);
-            var completeCorners = path.corners;
+            var pathFilter=Filter;
+#if UNITY_EDITOR
+            var calculated=NavigationCostObservation.CalculatePath(2,Position,destination,pathFilter,path);
+#else
+            var calculated=NavMesh.CalculatePath(Position,destination,pathFilter,path);
+#endif
+            TracePath("path.calculate",calculated,destination,queryFilter:pathFilter);
+            if(!calculated) return Fail(NavigationFailure.IncompletePath);
+            var status=path.status; TracePath("path.status",status==NavMeshPathStatus.PathComplete,status:status);
+            if(status!=NavMeshPathStatus.PathComplete) return Fail(NavigationFailure.IncompletePath);
+            var completeCorners = path.corners; TracePath("path.corners",completeCorners.Length>0,path:completeCorners);
             if (completeCorners.Length == 0) return Fail(NavigationFailure.IncompletePath);
             actor.Agent.isStopped = false;
-            if (!actor.Agent.SetPath(path))
+            var set=actor.Agent.SetPath(path); TracePath("path.set",set);
+            if (!set)
             {
-                // A complete query can outlive the Agent's native binding after guarded movement.
-                // 仅校验真实起点后原地重新绑定一次；不Warp、不写Transform、不放宽碰撞。
-                if (!layoutAvailable || !actor.isActiveAndEnabled ||
-                    (actor.World != null && !actor.World.CanStartActor(actor)) || !ValidStart())
-                    return Fail(NavigationFailure.InvalidStart);
+                // Original single rebind, unchanged queries/order and no extra retry.
+                TracePath("rebind.layout",layoutAvailable);
+                if(!layoutAvailable) return Fail(NavigationFailure.InvalidStart);
+                active=actor.isActiveAndEnabled; TracePath("rebind.active",active);
+                if(!active) return Fail(NavigationFailure.InvalidStart);
+                if(actor.World != null)
+                {
+                    var canStart=actor.World.CanStartActor(actor); TracePath("rebind.world",canStart);
+                    if(!canStart) return Fail(NavigationFailure.InvalidStart);
+                }
+                valid=ValidStart(); TracePath("rebind.valid",valid);
+                if(!valid) return Fail(NavigationFailure.InvalidStart);
                 actor.Agent.enabled = false;
-                if (!TryBind()) return Fail(NavigationFailure.InvalidStart);
+                var bind=TryBind(); TracePath("rebind.bind",bind);
+                if(!bind) return Fail(NavigationFailure.InvalidStart);
                 path = new NavMeshPath();
-                if (!NavMesh.CalculatePath(Position, destination, Filter, path) ||
-                    path.status != NavMeshPathStatus.PathComplete || path.corners.Length == 0)
-                    return Fail(NavigationFailure.IncompletePath);
+                pathFilter=Filter;
+#if UNITY_EDITOR
+                calculated=NavigationCostObservation.CalculatePath(3,Position,destination,pathFilter,path);
+#else
+                calculated=NavMesh.CalculatePath(Position,destination,pathFilter,path);
+#endif
+                TracePath("rebind.calculate",calculated,destination,queryFilter:pathFilter);
+                if(!calculated) return Fail(NavigationFailure.IncompletePath);
+                status=path.status; TracePath("rebind.status",status==NavMeshPathStatus.PathComplete,status:status);
+                if(status!=NavMeshPathStatus.PathComplete) return Fail(NavigationFailure.IncompletePath);
+                var retryCorners=path.corners; TracePath("rebind.corners",retryCorners.Length>0,path:retryCorners);
+                if(retryCorners.Length==0) return Fail(NavigationFailure.IncompletePath);
                 actor.Agent.isStopped = false;
-                if (!actor.Agent.SetPath(path)) return Fail(NavigationFailure.IncompletePath);
+                set=actor.Agent.SetPath(path); TracePath("rebind.set",set);
+                if(!set) return Fail(NavigationFailure.IncompletePath);
                 completeCorners = path.corners;
             }
             pathLength = Length(Position, completeCorners);
@@ -133,7 +211,7 @@ namespace AnimalCafe.Navigation
                 rawCorners = completeCorners; corners = (Vector3[])completeCorners.Clone();
                 adjustedCorners = new bool[corners.Length]; corner = 0;
             }
-            moving = true;
+            moving = true; TracePath("begin.accepted",true,destination,completeCorners);
             return NavigationFailure.None;
         }
 
@@ -142,10 +220,10 @@ namespace AnimalCafe.Navigation
             var state = NavigationPathState.Complete;
             var remaining = 0f;
             if (failure != NavigationFailure.None || !Bound || actor.Agent.isOnOffMeshLink)
-            { state = NavigationPathState.Invalid; if (failure == NavigationFailure.None) failure = NavigationFailure.InvalidStart; }
-            else if (actor.Agent.pathPending) state = NavigationPathState.Pending;
+            { state = NavigationPathState.Invalid; if (failure == NavigationFailure.None) failure = NavigationFailure.InvalidStart; TracePath("observe.invalid-start",false); }
+            else if (actor.Agent.pathPending) { state = NavigationPathState.Pending; TracePath("observe.pending"); }
             else if (moving && actor.Agent.pathStatus != NavMeshPathStatus.PathComplete)
-            { state = NavigationPathState.Invalid; failure = NavigationFailure.IncompletePath; }
+            { state = NavigationPathState.Invalid; failure = NavigationFailure.IncompletePath; TracePath("observe.incomplete",false); }
             else if (moving) remaining = actor.SteadyPathMotion ? RemainingCornerDistance()
                 : Mathf.Max(Vector3.Distance(Position, destination), Length(Position, actor.Agent.path.corners));
             var facing = target.Facing.HasValue ? Vector3.Angle(actor.transform.forward, target.Facing.Value) : 0;
@@ -176,6 +254,8 @@ namespace AnimalCafe.Navigation
             delta.y = 0;
             if (NavMesh.Raycast(Position, Position + delta, out var hit, Filter))
             {
+                var original = delta;
+                var firstHit = hit;
                 // Native smoothing can cut a convex polygon corner. Keep only its safe tangent.
                 // Hit normal points into the walkable polygon; never invent a waypoint or push.
                 var normal = hit.normal; normal.y = 0;
@@ -189,8 +269,12 @@ namespace AnimalCafe.Navigation
                 // One projection only; another boundary remains a hard limit.
                 if (NavMesh.Raycast(Position, Position + delta, out hit, Filter))
                 {
-                    var offset = hit.position - Position; offset.y = 0;
-                    delta = Vector3.ClampMagnitude(delta, Mathf.Max(0, offset.magnitude - actor.Settings.Epsilon));
+                    if (CanKeepBoundaryTangent(original, firstHit, hit)) delta = original;
+                    else
+                    {
+                        var offset = hit.position - Position; offset.y = 0;
+                        delta = Vector3.ClampMagnitude(delta, Mathf.Max(0, offset.magnitude - actor.Settings.Epsilon));
+                    }
                 }
             }
             var end = Position + delta;
@@ -198,6 +282,48 @@ namespace AnimalCafe.Navigation
                 new Vector2(sample.position.x - end.x, sample.position.z - end.z).magnitude > actor.Settings.Epsilon ||
                 Mathf.Abs(sample.position.y - end.y) > .05f) return Vector3.zero;
             return delta;
+        }
+
+        // Degenerate zero-normal seam only. Every certificate is read-only; the World
+        // still applies its original full-body sweep. 查询内移不应用到实际actor。
+        private bool CanKeepBoundaryTangent(Vector3 delta, NavMeshHit first, NavMeshHit second)
+        {
+            var epsilon = actor.Settings.Epsilon;
+            if (!moving || !layoutAvailable || !actor.SteadyPathMotion || !Bound ||
+                failure != NavigationFailure.None || actor.Agent.pathPending || actor.Agent.isOnOffMeshLink ||
+                actor.Agent.pathStatus != NavMeshPathStatus.PathComplete || corner >= corners.Length || delta.sqrMagnitude == 0 ||
+                !NavigationCollisionGuard.Finite(first.position) || !NavigationCollisionGuard.Finite(second.position) ||
+                first.normal != Vector3.zero || second.normal != Vector3.zero ||
+                Horizontal(first.position - Position).magnitude > epsilon || Horizontal(second.position - Position).magnitude > epsilon) return false;
+            var toward = Horizontal(corners[corner] - Position);
+            // Input must remain on the already owned current leg, never a new waypoint.
+            if (toward.sqrMagnitude == 0 || Vector3.Dot(delta, toward) <= 0 ||
+                Vector3.Cross(delta.normalized, toward.normalized).sqrMagnitude > epsilon * epsilon ||
+                delta.magnitude > toward.magnitude + epsilon) return false;
+            if (!NavMesh.FindClosestEdge(Position, out var edge, Filter) || !NavigationCollisionGuard.Finite(edge.position) ||
+                !NavigationCollisionGuard.Finite(edge.normal) || Horizontal(edge.position - Position).magnitude > epsilon) return false;
+            var normal = Horizontal(edge.normal);
+            if (normal.sqrMagnitude <= 1e-12f) return false;
+            normal.Normalize();
+            // Exact tangent: an outward or inward requested step uses ordinary clipping.
+            // 不允许把真实向外位移误判为沿边界；只处理原本的切向输入。
+            var outward = Vector3.Dot(delta.normalized, normal);
+            if (outward < 0 || outward > 1e-6f) return false;
+            var end = Position + delta;
+            if (!NavMesh.SamplePosition(end, out var sample, .05f, Filter) ||
+                Horizontal(sample.position - end).magnitude > epsilon || Mathf.Abs(sample.position.y - end.y) > .05f) return false;
+            var shortPath = new NavMeshPath();
+#if UNITY_EDITOR
+            if (!NavigationCostObservation.CalculatePath(4,Position,end,Filter,shortPath) || shortPath.status != NavMeshPathStatus.PathComplete) return false;
+#else
+            if (!NavMesh.CalculatePath(Position, end, Filter, shortPath) || shortPath.status != NavMeshPathStatus.PathComplete) return false;
+#endif
+            var proof = shortPath.corners;
+            if (proof.Length != 2 || Horizontal(proof[0] - Position).magnitude > epsilon ||
+                Horizontal(proof[1] - end).magnitude > epsilon || Mathf.Abs(proof[0].y - Position.y) > .05f ||
+                Mathf.Abs(proof[1].y - end.y) > .05f) return false;
+            var queryStart = Position + normal * epsilon;
+            return !NavMesh.Raycast(queryStart, queryStart + delta, out _, Filter);
         }
 
         // 不越过转角、不补走guard裁剪的距离 / cap each substep at its current corner.
@@ -291,7 +417,7 @@ namespace AnimalCafe.Navigation
             return true;
         }
 
-        private NavigationFailure Fail(NavigationFailure reason) { failure = reason; return reason; }
+        private NavigationFailure Fail(NavigationFailure reason) { failure = reason; TracePath("begin.failed",false); return reason; }
         private static float Length(Vector3 start, Vector3[] corners)
         {
             var length = 0f;

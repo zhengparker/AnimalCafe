@@ -58,6 +58,78 @@ namespace AnimalCafe.Tests.EditMode.Phase11
                 if(originalNavigationSettings!=null) System.IO.File.WriteAllBytes(NavigationSettingsPath,originalNavigationSettings);
             }
         }
+        private static bool ActualPointArrivable(NavigationLayoutAdapter owner,Vector3 point,float tolerance)
+        {
+            var method=typeof(NavigationLayoutAdapter).GetMethod("IsPointArrivable",BindingFlags.Public|BindingFlags.Instance);
+            Assert.That(method,Is.Not.Null,"FEATURE: canonical candidate needs the actual consumer arrival tolerance");
+            return (bool)method.Invoke(owner,new object[]{point,tolerance});
+        }
+        private object NativeQueryContext()=>typeof(NavigationLayoutAdapter).GetProperty("NativePathQueryContext")?.GetValue(adapter);
+        [Test] public void OwnedNativeQueryContextIsRevokedWhenDataOrAvailabilityIsRemoved()
+        {
+            Assert.That(NativeQueryContext(),Is.Null);Assert.That(adapter.RebuildAndValidate().CanResume,Is.True);
+            var original=NativeQueryContext();Assert.That(original,Is.Not.Null,"A live published owned NavMesh must certify its query context");
+            adapter.enabled=false;Assert.That(NativeQueryContext(),Is.Null);adapter.enabled=true;
+            Assert.That(NativeQueryContext(),Is.SameAs(original));world.SuspendLayout(adapter.Revision);Assert.That(NativeQueryContext(),Is.Null);
+            adapter.ReleaseOwnedNavigation();Assert.That(NativeQueryContext(),Is.Null);
+        }
+        [Test] public void RebuildingSameRevisionPublishesANewNativeQueryContext()
+        {
+            Assert.That(adapter.RebuildAndValidate().CanResume,Is.True);var original=NativeQueryContext();Assert.That(original,Is.Not.Null);
+            var revision=adapter.Revision;adapter.ReleaseOwnedNavigation();Assert.That(NativeQueryContext(),Is.Null);
+            Assert.That(adapter.RebuildAndValidate().CanResume,Is.True);Assert.That(adapter.Revision,Is.EqualTo(revision));
+            Assert.That(NativeQueryContext(),Is.Not.Null);Assert.That(NativeQueryContext(),Is.Not.SameAs(original));
+        }
+
+        [Test] public void SampleableEdgeOutsideActualArrivalToleranceCannotBeCanonicalGoal()
+        {
+            Assert.That(adapter.RebuildAndValidate().CanResume,Is.True);
+            var point=new Vector3(.35f,0,4f);
+            var owned=(NavMeshQueryFilter)typeof(NavigationLayoutAdapter).GetProperty("OwnedFilter",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(adapter);
+            Assert.That(NavMesh.SamplePosition(point,out var sample,.15f,owned),Is.True,"FIXTURE: real owned edge is sampleable");
+            Assert.That(Vector3.Distance(point,sample.position),Is.GreaterThan(.08f),"FIXTURE: canonical goal is outside actual arrival tolerance");
+            Assert.That(Vector3.Distance(point,sample.position),Is.LessThanOrEqualTo(.15f));
+            Assert.That(adapter.IsPointWalkable(point),Is.True,"Original broad walkable/sample meaning stays unchanged");
+            Assert.That(ActualPointArrivable(adapter,point,.08f),Is.False,"A sampled neighbour is not arrival at this canonical point");
+        }
+        [Test] public void ActualInsideGoalRemainsArrivableAtOriginalTolerance()
+        {
+            Assert.That(adapter.RebuildAndValidate().CanResume,Is.True);
+            var point=new Vector3(1.5f,0,1.5f);
+            var owned=(NavMeshQueryFilter)typeof(NavigationLayoutAdapter).GetProperty("OwnedFilter",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(adapter);
+            Assert.That(NavMesh.SamplePosition(point,out var sample,.15f,owned),Is.True);
+            Assert.That(Vector3.Distance(point,sample.position),Is.LessThanOrEqualTo(.08f),"Independent owned-sample fixture qualification");
+            Assert.That(ActualPointArrivable(adapter,point,.08f),Is.True);
+        }
+        [TestCase(0f)] [TestCase(-.01f)] [TestCase(float.NaN)] [TestCase(float.PositiveInfinity)] [TestCase(float.NegativeInfinity)]
+        public void InvalidCanonicalArrivalToleranceFailsClosed(float tolerance)
+        {
+            Assert.That(adapter.RebuildAndValidate().CanResume,Is.True);
+            var point=new Vector3(1.5f,0,1.5f);Assert.That(adapter.IsPointWalkable(point),Is.True);
+            Assert.That(ActualPointArrivable(adapter,point,tolerance),Is.False);
+        }
+        [Test] public void ForeignNavMeshCannotSatisfyCanonicalArrivalPredicate()
+        {
+            Assert.That(adapter.RebuildAndValidate().CanResume,Is.True);
+            var owned=(NavMeshQueryFilter)typeof(NavigationLayoutAdapter).GetProperty("OwnedFilter",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(adapter);
+            var settings=NavMesh.GetSettingsByIndex(0);settings.agentRadius=.45f;settings.agentHeight=1.3f;settings.agentClimb=.1f;
+            settings.overrideVoxelSize=true;settings.voxelSize=.025f;settings.overrideTileSize=true;settings.tileSize=128;settings.minRegionArea=.01f;
+            Assert.That(owned.agentTypeID,Is.Not.EqualTo(settings.agentTypeID));
+            var foreign=NavMeshBuilder.BuildNavMeshData(settings,new List<NavMeshBuildSource>{new NavMeshBuildSource {
+                shape=NavMeshBuildSourceShape.Box,size=new Vector3(4,.2f,4),transform=Matrix4x4.TRS(new Vector3(30,-.1f,30),Quaternion.identity,Vector3.one)}},
+                new Bounds(new Vector3(30,0,30),new Vector3(8,4,8)),Vector3.zero,Quaternion.identity);
+            var instance=NavMesh.AddNavMeshData(foreign);
+            try
+            {
+                var point=new Vector3(30,0,30);
+                Assert.That(NavMesh.SamplePosition(point,out _, .15f,new NavMeshQueryFilter{agentTypeID=settings.agentTypeID,areaMask=NavMesh.AllAreas}),Is.True,
+                    "FIXTURE: a live foreign floor really exists at the target");
+                Assert.That(NavMesh.SamplePosition(point,out _, .15f,owned),Is.False,"The target has no owned sample");
+                Assert.That(ActualPointArrivable(adapter,point,.08f),Is.False,"Never borrow another agent/owner NavMesh");
+                Assert.That(instance.valid,Is.True);
+            }
+            finally{instance.Remove();Object.DestroyImmediate(foreign);}
+        }
         [Test] public void PreviewDoesNotChangeRevision()
         {
             adapter.RefreshConfirmedLayout(); var before=adapter.Revision;

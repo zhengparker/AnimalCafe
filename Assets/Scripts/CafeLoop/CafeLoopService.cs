@@ -54,8 +54,14 @@ namespace AnimalCafe.CafeLoop
             new[]{cashier,barista}.Where(w=>w!=null).Select(w=>w.Checkpoint).ToArray(),
             disposed?"Disposed":HasBlocked?"Blocked":projectionDirty?"视觉待刷新":"营业中",
             string.IsNullOrEmpty(failure)?visualFailure:failure);
+        // Existing typed current work fact; raw diagnostic strings are not status authority.
+        internal bool HasBlockedWork => !disposed && HasBlocked;
         private bool HasBlocked => cashier?.Blocked==true || barista?.Blocked==true ||
             pickupMoves.Count>0 || exitMoves.Count>0 || blockedCollections.Count>0;
+        // 历史Completed/paid不是待办；真实callback、恢复集合及尚未离店身份仍须保留。
+        internal bool HasPendingBusinessWork => disposed || cashier!=null || barista!=null || events.Count>0 ||
+            pickupMoves.Count>0 || exitMoves.Count>0 || blockedCollections.Count>0 || collected.Count>0 ||
+            projectionDirty || projecting || orders.GetOrders().Any(order=>order.State!=OrderState.Completed);
         private Work Current(EmployeeRole role) => role==EmployeeRole.Cashier?cashier:barista;
         private bool Live(Work work) => !disposed && work!=null && work.Token.Epoch==epoch && ReferenceEquals(Current(work.Checkpoint.Role),work);
         private bool Gate(long expectedEpoch)
@@ -69,6 +75,36 @@ namespace AnimalCafe.CafeLoop
         internal bool HasQueuedCashierCompletion(string visitId) => Live(cashier) && !cashier.Blocked &&
             cashier.Checkpoint.VisitId==visitId && events.Any(e=>e.Role==EmployeeRole.Cashier &&
                 e.Kind==CafeTaskEventKind.ServiceFinished && e.Checkpoint.Stage==CafeWorkStage.Finished && Matches(cashier,e));
+
+        // Capture only an actually accepted Working task. The reader follows that one Work into its real paid fact.
+        // 原Work/Token/Handle不变；完成队列与付款事实只读，不注册新业务状态。
+        internal bool TryCaptureCounterWorkingTask(string visitId,out CafeTaskToken token,out string actorId,out long handle,
+            out Func<CafeOrderKey?,bool> readOriginal)
+        {
+            token=default;actorId=null;handle=0;readOriginal=null;var work=cashier;
+            if(!Live(work) || work.Blocked || !work.Accepted || work.Checkpoint.Role!=EmployeeRole.Cashier ||
+                work.Checkpoint.VisitId!=visitId || work.Checkpoint.Stage!=CafeWorkStage.Working ||
+                work.Checkpoint.RemainingWorkSeconds<=0 || work.Handle<=0 || work.Generation<=0 || work.LayoutRevision<0 || paid.ContainsKey(visitId))return false;
+            var savedToken=work.Token;var savedActor=work.ActorId;var savedHandle=work.Handle;var savedGeneration=work.Generation;var savedRevision=work.LayoutRevision;
+            token=savedToken;actorId=savedActor;handle=savedHandle;
+            readOriginal=expectedPaid=>
+            {
+                if(disposed || epoch!=savedToken.Epoch || sessionId!=savedToken.SessionId || work.Blocked || !work.Accepted ||
+                    !work.Token.Equals(savedToken) || work.ActorId!=savedActor || work.Handle!=savedHandle ||
+                    work.Generation!=savedGeneration || work.LayoutRevision!=savedRevision || work.Checkpoint.VisitId!=visitId ||
+                    work.Checkpoint.Role!=EmployeeRole.Cashier)return false;
+                if(expectedPaid.HasValue)
+                    return work.Checkpoint.Stage==CafeWorkStage.Finished && work.SubmissionPending && paid.TryGetValue(visitId,out var actual) &&
+                        actual.Equals(expectedPaid.Value) && actual.SessionId==sessionId && actual.Epoch==epoch;
+                if(!Live(work) || paid.ContainsKey(visitId))return false;
+                if(work.Checkpoint.Stage==CafeWorkStage.Working)return work.Checkpoint.RemainingWorkSeconds>0 &&
+                    !float.IsNaN(work.Checkpoint.RemainingWorkSeconds) && !float.IsInfinity(work.Checkpoint.RemainingWorkSeconds);
+                return work.Checkpoint.Stage==CafeWorkStage.Finished && (work.SubmissionPending || events.Any(e=>
+                    e.Role==EmployeeRole.Cashier && e.Kind==CafeTaskEventKind.ServiceFinished && e.Checkpoint.Stage==CafeWorkStage.Finished &&
+                    e.HandleId==savedHandle && e.Generation==savedGeneration && e.LayoutRevision==savedRevision && Matches(work,e)));
+            };
+            return true;
+        }
 
         public void Tick(float scaledDeltaTime)
         {

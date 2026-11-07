@@ -18,6 +18,10 @@ namespace AnimalCafe.Navigation
         private IDisposable unavailableResumeBlock;
         private int currentRevision;
         private NavigationActor[] pendingStartupActors;
+#if UNITY_EDITOR
+        // Opt-in observation of original evaluations only / 不额外查询或推进driver。
+        internal Action<NavigationActor, Vector3, Vector3, Vector3, Vector3, Vector3, Vector3, Vector3, float> StepObserver;
+#endif
         // Only the validation fixture pins its initial roster; ordinary worlds stay dynamic.
         internal void RequireStartupActors(IReadOnlyList<NavigationActor> required)
         {
@@ -175,9 +179,10 @@ namespace AnimalCafe.Navigation
                     var driver = drivers[actor]; var start = actor.transform.position;
                     var velocity = actor.isActiveAndEnabled ? driver.DesiredVelocity : Vector3.zero;
                     velocity.y = 0;
-                    var proposed = guard.ProjectAvoidance(actor, driver.ClampToCurrentCorner(velocity * dt), actors);
-                    proposed = guard.ProjectStaticAvoidance(actor, proposed, solids);
-                    proposed = driver.ClampToNavMesh(proposed);
+                    var cornerDelta = driver.ClampToCurrentCorner(velocity * dt);
+                    var dynamicDelta = guard.ProjectAvoidance(actor, cornerDelta, actors);
+                    var staticDelta = guard.ProjectStaticAvoidance(actor, dynamicDelta, solids);
+                    var proposed = driver.ClampToNavMesh(staticDelta);
                     var delta = guard.ClampDisplacement(actor, proposed, actors, solids);
                     var facing = driver.Facing ?? delta;
                     var rotation = actor.transform.rotation;
@@ -185,6 +190,9 @@ namespace AnimalCafe.Navigation
                         rotation = Quaternion.RotateTowards(rotation, Quaternion.LookRotation(facing), settings.TurnSpeedDegrees * dt);
                     actor.transform.SetPositionAndRotation(start + delta, rotation);
                     driver.AcceptPose(start + delta, rotation, delta.magnitude / dt);
+#if UNITY_EDITOR
+                    StepObserver?.Invoke(actor, start, velocity, cornerDelta, dynamicDelta, staticDelta, proposed, delta, dt);
+#endif
                     distances[actor] += delta.magnitude;
                     sweeps.Add(new NavigationCollisionGuard.Sweep { Actor = actor, Start = start, Delta = delta });
                 }

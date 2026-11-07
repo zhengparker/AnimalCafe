@@ -12,6 +12,9 @@ namespace AnimalCafe.Employees
         private sealed class MoveLeg
         {
             internal int Generation, LayoutRevision;
+            internal int NativeLegGeneration;
+            internal NavigationTarget Target;
+            internal bool AwaitingTraffic, TrafficIntermediate;
             internal long RequestId;
             internal bool Completed;
             internal EmployeeState State;
@@ -30,6 +33,83 @@ namespace AnimalCafe.Employees
         private long handleId, nextHandle;
         private int generation, layoutRevision = -1;
         private MoveLeg moveLeg;
+        private int nextNativeLegGeneration;
+        // Identity of the actual unissued leg; pause/navigation availability stays with its consumer.
+        // 只封存真实 MoveLeg；没有 checkpoint 的初始返岗不读取默认 task 字段。
+        internal sealed class PreparedMovementStamp
+        {
+            private readonly EmployeeTaskRunner owner;
+            private readonly MoveLeg leg;
+            private readonly IEmployeeTaskEnvironment environment;
+            private readonly EmployeeStationBinding binding;
+            private readonly bool hasCheckpoint;
+            private readonly bool integrated;
+            private readonly CafeTaskToken token;
+            private readonly CafeWorkCheckpoint checkpoint;
+            private readonly CafeTaskToken? acceptedHistory;
+            private readonly CafeWorkCheckpoint? savedHistory;
+            private readonly int generation,revision,nativeGeneration;
+            private readonly long handle,selection;
+            private readonly EmployeeState state;
+            private readonly NavigationTarget target;
+            private PreparedMovementStamp(EmployeeTaskRunner owner,CafeTaskToken? accepted,CafeWorkCheckpoint? saved)
+            {
+                this.owner=owner;leg=owner.moveLeg;environment=owner.environment;binding=owner.binding;
+                hasCheckpoint=owner.hasCheckpoint;integrated=owner.integrated;
+                if(hasCheckpoint){token=owner.taskToken;checkpoint=owner.checkpoint;}
+                else{acceptedHistory=accepted;savedHistory=saved;}
+                generation=owner.generation;revision=owner.layoutRevision;nativeGeneration=leg.NativeLegGeneration;
+                handle=owner.handleId;selection=owner.trafficSelectionVersion;state=owner.state;target=leg.Target;
+            }
+            internal NavigationTarget Target=>target;
+            internal int NativeGeneration=>nativeGeneration;
+            internal static bool TryCapture(EmployeeTaskRunner owner,CafeTaskToken? accepted,CafeWorkCheckpoint? saved,out PreparedMovementStamp stamp)
+            {
+                stamp=null;if(owner==null || !owner.UnissuedMovementAvailable)return false;
+                // Retained Finished history is not a current task; seal its exact legitimate pair.
+                // Finished 历史不冒充当前 checkpoint；只封存真实且匹配的 token/checkpoint。
+                if(!owner.hasCheckpoint && (accepted.HasValue || saved.HasValue) &&
+                    (!accepted.HasValue || !saved.HasValue || saved.Value.Stage!=CafeWorkStage.Finished ||
+                        !owner.ValidContext(accepted.Value,saved.Value)))return false;
+                stamp=new PreparedMovementStamp(owner,accepted,saved);return true;
+            }
+            internal bool BelongsTo(EmployeeTaskRunner runner,EmployeeStationBinding actualBinding,IEmployeeTaskEnvironment actualPort,
+                EmployeeRole actualRole,CafeTaskToken? accepted,CafeWorkCheckpoint? saved)
+                =>ReferenceEquals(owner,runner) && ReferenceEquals(binding,actualBinding) && ReferenceEquals(environment,actualPort) &&
+                    owner.role==actualRole && binding.Role==actualRole && (hasCheckpoint
+                        ?accepted.HasValue && saved.HasValue && token.Equals(accepted.Value) && checkpoint.Equals(saved.Value)
+                        :Nullable.Equals(acceptedHistory,accepted) && Nullable.Equals(savedHistory,saved));
+            internal bool IsCurrent
+            {
+                get
+                {
+                    try
+                    {
+                        return owner.UnissuedMovementAvailable && ReferenceEquals(owner.moveLeg,leg) &&
+                            ReferenceEquals(owner.environment,environment) && ReferenceEquals(owner.binding,binding) &&
+                            owner.hasCheckpoint==hasCheckpoint && owner.integrated==integrated && owner.generation==generation &&
+                            owner.layoutRevision==revision && owner.handleId==handle && owner.trafficSelectionVersion==selection &&
+                            owner.state==state && leg.NativeLegGeneration==nativeGeneration && leg.Target.Equals(target) &&
+                            (!hasCheckpoint || owner.taskToken.Equals(token) && owner.checkpoint.Equals(checkpoint));
+                    }
+                    catch(Exception){return false;}
+                }
+            }
+        }
+        private bool UnissuedMovementAvailable=>binding!=null && binding.Role==role && binding.LayoutRevision==layoutRevision &&
+            moveLeg!=null && IsLive(moveLeg) && moveLeg.State==state && moveLeg.AwaitingTraffic && !moveLeg.Completed &&
+            moveLeg.RequestId==0 && moveLeg.NativeLegGeneration>0 && !suspendedMove.HasValue && !pendingArrival.HasValue &&
+            !HasSelectedDeliveryRoute && !HasSelectedReturnRoute &&
+            (hasCheckpoint ? integrated && checkpoint.Role==role : handleId==0 && state==EmployeeState.MovingToWork);
+        internal bool TryCapturePreparedMovementStamp(CafeTaskToken? accepted,CafeWorkCheckpoint? saved,out PreparedMovementStamp stamp)
+        {
+            stamp=null;
+            try{return PreparedMovementStamp.TryCapture(this,accepted,saved,out stamp);}
+            catch(Exception){stamp=null;return false;}
+        }
+
+        internal int CurrentNativeLegGeneration => moveLeg?.NativeLegGeneration ?? 0;
+        internal int CurrentTrafficRouteIndex => state==EmployeeState.Returning ? returnRouteIndex : deliveryRouteIndex;
         private MovementResult? pendingArrival;
         private EmployeeState? suspendedMove;
         private bool navigationResumeUsed;
@@ -42,12 +122,138 @@ namespace AnimalCafe.Employees
         private int deliveryRouteIndex;
         private NavigationTarget[] returnRoute,pendingReturnRoute;
         private int returnRouteIndex;
+        private long trafficSelectionVersion;
+        // Sealed read-only provenance of this actual Prepared task, before route selection.
+        // 只绑定真实 task 身份；不准备路线、不改 checkpoint、不产生移动权限。
+        internal sealed class PreparedPickupStamp
+        {
+            private readonly EmployeeTaskRunner owner;
+            private readonly EmployeeStationBinding binding;
+            private readonly CafeTaskToken token;
+            private readonly CafeWorkCheckpoint checkpoint;
+            private readonly long handle,selection;
+            private readonly int generation,revision;
+            private readonly NavigationTarget work;
+            private PreparedPickupStamp(EmployeeTaskRunner owner)
+            {
+                this.owner=owner;binding=owner.binding;token=owner.taskToken;checkpoint=owner.checkpoint;
+                handle=owner.handleId;selection=owner.trafficSelectionVersion;generation=owner.generation;revision=owner.layoutRevision;
+                work=binding.WorkTarget;Context=owner.PickupTrafficContext;
+            }
+            internal string Context { get; }
+            internal static bool TryCapture(EmployeeTaskRunner owner,out PreparedPickupStamp stamp)
+            { stamp=null;if(owner==null || !owner.PreparedPickupAvailable)return false;stamp=new PreparedPickupStamp(owner);return true; }
+            internal bool BelongsTo(EmployeeTaskRunner runner,EmployeeStationBinding actualBinding,CafeTaskToken accepted,CafeWorkCheckpoint saved)
+                =>ReferenceEquals(owner,runner) && ReferenceEquals(binding,actualBinding) && token.Equals(accepted) && checkpoint.Equals(saved);
+            internal bool IsCurrent
+            {
+                get
+                {
+                    try
+                    {
+                        return owner.PreparedPickupAvailable && ReferenceEquals(owner.binding,binding) &&
+                            owner.taskToken.Equals(token) && owner.checkpoint.Equals(checkpoint) && owner.handleId==handle &&
+                            owner.generation==generation && owner.layoutRevision==revision && owner.trafficSelectionVersion==selection &&
+                            binding.WorkTarget.Position==work.Position && binding.WorkTarget.Facing==work.Facing && owner.PickupTrafficContext==Context;
+                    }
+                    catch(Exception) { return false; }
+                }
+            }
+        }
+        private bool PreparedPickupAvailable => integrated && hasCheckpoint && !disposed && !retiring &&
+            role==EmployeeRole.Barista && handleId>0 && binding!=null && binding.LayoutRevision==layoutRevision &&
+            environment.IsProgressAllowed && state==EmployeeState.WaitingToDeliver && checkpoint.Stage==CafeWorkStage.Prepared &&
+            // Validate the current accepted task; ValidContext admits a later retry attempt.
+            // 当前 seal 校验真实身份；下一次 attempt 的 admission guard 保持原样。
+            !string.IsNullOrWhiteSpace(taskToken.SessionId) && taskToken.SessionId==taskToken.SessionId.Trim() &&
+            taskToken.Epoch>0 && taskToken.Sequence>0 && taskToken.Attempt>0 && checkpoint.Role==role &&
+            !string.IsNullOrWhiteSpace(checkpoint.VisitId) && checkpoint.VisitId==checkpoint.VisitId.Trim() &&
+            Finite(checkpoint.RemainingWorkSeconds) && checkpoint.RemainingWorkSeconds==0 && checkpoint.RemainingWorkSeconds<=workDuration &&
+            checkpoint.Order.HasValue && checkpoint.Order.Value.OrderId>0 &&
+            checkpoint.Order.Value.SessionId==taskToken.SessionId && checkpoint.Order.Value.Epoch==taskToken.Epoch &&
+            moveLeg==null && !suspendedMove.HasValue && !pendingArrival.HasValue &&
+            !selectedDeliveryTarget.HasValue && deliveryRoute==null && returnRoute==null;
+        internal bool TryCapturePreparedPickupStamp(out PreparedPickupStamp stamp)
+        {
+            stamp=null;
+            try { return PreparedPickupStamp.TryCapture(this,out stamp); }
+            catch(Exception) { stamp=null;return false; }
+        }
+
+        internal string PickupTrafficContext => taskToken.SessionId+"/"+taskToken.Epoch+"/"+taskToken.Sequence+"/"+taskToken.Attempt+"/handle/"+handleId;
+        internal bool HasIndependentNativeTraffic => HasCurrentPickupRoute && moveLeg!=null && !moveLeg.Completed && moveLeg.RequestId!=0;
+        internal bool HasLivePickupJourney => HasCurrentPickupRoute && returnRoute!=null &&
+            (state==EmployeeState.CarryingToPickUp || state==EmployeeState.WaitingToDeliver || state==EmployeeState.Returning);
+        internal bool TryPreparePickupRoutes(NavigationTarget target,IReadOnlyList<NavigationTarget> outward,IReadOnlyList<NavigationTarget> home,
+            out IPreparedTrafficMutation prepared)
+        {
+            prepared=null;
+            if(!integrated || disposed || retiring || handleId==0 || moveLeg!=null || state!=EmployeeState.WaitingToDeliver ||
+                checkpoint.Stage!=CafeWorkStage.Prepared || !ValidReturnRoute(home) || outward==null || outward.Count==0 ||
+                outward.Count+home.Count>24 || outward[outward.Count-1].Position!=target.Position || outward[outward.Count-1].Facing!=target.Facing) return false;
+            prepared=new PreparedPickupRoutes(this,target,outward.ToArray(),home.ToArray());return true;
+        }
+        private sealed class PreparedPickupRoutes : IPreparedTrafficMutation
+        {
+            private readonly EmployeeTaskRunner owner;
+            private readonly NavigationTarget target;
+            private readonly NavigationTarget[] outward,home;
+            private readonly string context;
+            private readonly long version;
+            private readonly int revision,generation;
+            private bool consumed;
+            internal PreparedPickupRoutes(EmployeeTaskRunner owner,NavigationTarget target,NavigationTarget[] outward,NavigationTarget[] home)
+            {this.owner=owner;this.target=target;this.outward=outward;this.home=home;context=owner.PickupTrafficContext;
+                version=owner.trafficSelectionVersion;revision=owner.layoutRevision;generation=owner.generation;}
+            public bool IsCurrent => !consumed && !owner.disposed && !owner.retiring && owner.PickupTrafficContext==context &&
+                owner.trafficSelectionVersion==version && owner.layoutRevision==revision && owner.generation==generation &&
+                owner.state==EmployeeState.WaitingToDeliver && owner.moveLeg==null;
+            public bool TryApply(out ITrafficMutationReceipt receipt)
+            {
+                receipt=null;if(!IsCurrent)return false;consumed=true;
+                var undo=new PickupRouteReceipt(owner);
+                if(!owner.TrySelectPickupRoutes(target,outward,home))return false;
+                undo.Applied();receipt=undo;return true;
+            }
+        }
+        private sealed class PickupRouteReceipt : ITrafficMutationReceipt
+        {
+            private readonly EmployeeTaskRunner owner;
+            private readonly string context;
+            private readonly NavigationTarget? target;
+            private readonly NavigationTarget[] outward,home;
+            private readonly int outwardIndex,homeIndex;
+            private long version;
+            private bool retired;
+            internal PickupRouteReceipt(EmployeeTaskRunner owner)
+            {this.owner=owner;context=owner.PickupTrafficContext;target=owner.selectedDeliveryTarget;outward=owner.deliveryRoute;home=owner.returnRoute;
+                outwardIndex=owner.deliveryRouteIndex;homeIndex=owner.returnRouteIndex;}
+            internal void Applied(){version=owner.trafficSelectionVersion;}
+            public bool IsCurrent => !retired && owner.PickupTrafficContext==context && owner.trafficSelectionVersion==version && owner.moveLeg==null;
+            public void RollbackOwnMutation()
+            {
+                if(retired)return;if(!IsCurrent)throw new InvalidOperationException("Employee route selection is no longer owned.");
+                retired=true;owner.selectedDeliveryTarget=target;owner.deliveryRoute=outward;owner.returnRoute=home;
+                owner.deliveryRouteIndex=outwardIndex;owner.returnRouteIndex=homeIndex;owner.trafficSelectionVersion++;
+            }
+        }
         private Func<NavigationTarget,bool> pickupReturnTrafficWait;
         private NavigationTarget? pendingReturnTraffic;
         internal void SetPickupReturnTrafficWait(Func<NavigationTarget,bool> query) => pickupReturnTrafficWait=query;
+        private Func<NavigationTarget,bool> pickupDeliveryTrafficWait;
+        private NavigationTarget? pendingDeliveryTraffic;
+        internal void SetPickupDeliveryTrafficWait(Func<NavigationTarget,bool> query) => pickupDeliveryTrafficWait=query;
         public bool HasSelectedDeliveryRoute => integrated && handleId!=0 && deliveryRoute!=null;
         internal bool HasSelectedReturnRoute => integrated && handleId!=0 && returnRoute!=null;
-        internal IReadOnlyList<NavigationTarget> RemainingPickupReturnRoute => !HasSelectedReturnRoute?null:
+        // Read stored indices only: querying traffic must never advance a leg.
+        // 只读当前task的真实suffix；取消、布局失效和旧generation均不再提供路线。
+        private bool HasCurrentPickupRoute => integrated && !disposed && !retiring && handleId!=0 &&
+            binding!=null && binding.LayoutRevision==layoutRevision && !suspendedMove.HasValue &&
+            (moveLeg==null || moveLeg.Generation==generation && moveLeg.LayoutRevision==layoutRevision);
+        internal IReadOnlyList<NavigationTarget> RemainingPickupDeliveryRoute => HasCurrentPickupRoute &&
+            HasSelectedDeliveryRoute && (state==EmployeeState.CarryingToPickUp || state==EmployeeState.WaitingToDeliver) &&
+            checkpoint.Stage==CafeWorkStage.Prepared?deliveryRoute.Skip(deliveryRouteIndex).ToArray():null;
+        internal IReadOnlyList<NavigationTarget> RemainingPickupReturnRoute => !HasCurrentPickupRoute || !HasSelectedReturnRoute?null:
             state==EmployeeState.Returning?returnRoute.Skip(returnRouteIndex).ToArray():
             state==EmployeeState.CarryingToPickUp || state==EmployeeState.WaitingToDeliver
                 ?new[]{DeliveryTarget.Value}.Concat(returnRoute).ToArray():null;
@@ -56,7 +262,7 @@ namespace AnimalCafe.Employees
         {
             if(!ValidReturnRoute(home) || outward==null || outward.Count+home.Count>24) return false;
             if(!TrySelectDeliveryTarget(target,outward)) return false;
-            if(returnRoute==null) { returnRoute=home.ToArray();returnRouteIndex=0; }
+            if(returnRoute==null) { returnRoute=home.ToArray();returnRouteIndex=0;trafficSelectionVersion++; }
             return true;
         }
         internal bool ConfigurePickupReturnRoute(IReadOnlyList<NavigationTarget> home)
@@ -77,7 +283,7 @@ namespace AnimalCafe.Employees
                 return selectedDeliveryTarget.Value.Position==target.Position && selectedDeliveryTarget.Value.Facing==target.Facing;
             if(route==null || route.Count==0 || route.Count>24 || route[route.Count-1].Position!=target.Position ||
                 route[route.Count-1].Facing!=target.Facing) return false;
-            selectedDeliveryTarget=target; deliveryRoute=route.ToArray(); deliveryRouteIndex=0; return true;
+            selectedDeliveryTarget=target; deliveryRoute=route.ToArray(); deliveryRouteIndex=0;trafficSelectionVersion++; return true;
         }
 
         public EmployeeTaskRunner(string actorId, EmployeeRole role, IEmployeeTaskEnvironment environment,
@@ -206,6 +412,9 @@ namespace AnimalCafe.Employees
                 return; // 不把到达前的帧时间算作新工作的时间。
             }
             if (returnPending) { TryReturnToWork(); return; }
+            if (moveLeg!=null && moveLeg.AwaitingTraffic) { TryIssueMove(moveLeg); return; }
+            if(pendingDeliveryTraffic.HasValue)
+            {var target=pendingDeliveryTraffic.Value;pendingDeliveryTraffic=null;BeginMove(target,EmployeeState.CarryingToPickUp);return;}
             if(pendingReturnTraffic.HasValue)
             {var target=pendingReturnTraffic.Value;pendingReturnTraffic=null;BeginMove(target,EmployeeState.Returning);return;}
             if (integrated && state == EmployeeState.WaitingToDeliver && handleId != 0)
@@ -289,7 +498,18 @@ namespace AnimalCafe.Employees
 
         private void BeginMove(NavigationTarget target, EmployeeState nextState)
         {
-            if(integrated && HasSelectedReturnRoute && nextState==EmployeeState.Returning && pickupReturnTrafficWait!=null)
+            var coordinated=environment is IEmployeeTrafficEnvironment trafficPort && trafficPort.TrafficEnabled;
+            if(!coordinated && integrated && HasSelectedDeliveryRoute && nextState==EmployeeState.CarryingToPickUp && pickupDeliveryTrafficWait!=null)
+            {
+                var currentHandle=handleId;var currentGeneration=generation;var currentRevision=layoutRevision;
+                var wait=pickupDeliveryTrafficWait(target);
+                if(!LiveTask(currentHandle) || generation!=currentGeneration || layoutRevision!=currentRevision) return;
+                // Keep the same unissued leg/cup/lease; clearance still belongs to the original MoveTo guard.
+                // 保留原任务，不重复制作/acquire，也不在traffic期间创建Navigation request。
+                if(wait || !environment.IsProgressAllowed)
+                {state=EmployeeState.CarryingToPickUp;pendingDeliveryTraffic=target;return;}
+            }
+            if(!coordinated && integrated && HasSelectedReturnRoute && nextState==EmployeeState.Returning && pickupReturnTrafficWait!=null)
             {
                 var currentHandle=handleId;var currentGeneration=generation;var currentRevision=layoutRevision;
                 var wait=pickupReturnTrafficWait(target);
@@ -298,13 +518,36 @@ namespace AnimalCafe.Employees
                 {state=EmployeeState.Returning;pendingReturnTraffic=target;return;}
             }
             // 必须先建立 leg；MoveTo 允许在返回 request ID 前同步完成。
-            var leg = new MoveLeg { Generation = generation, LayoutRevision = layoutRevision, State = nextState };
+            var leg = new MoveLeg { Generation = generation, LayoutRevision = layoutRevision, State = nextState,
+                NativeLegGeneration = ++nextNativeLegGeneration, Target = target, AwaitingTraffic = coordinated };
             moveLeg = leg;
             state = nextState;
             environment.SetVisualMode(nextState == EmployeeState.CarryingToPickUp
                 ? EmployeeVisualMode.Carrying : EmployeeVisualMode.Walking);
             if (!IsLive(leg)) return;
-            var start = environment.MoveTo(target, result => OnMoveCompleted(leg, result));
+            TryIssueMove(leg);
+        }
+        private void TryIssueMove(MoveLeg leg)
+        {
+            if (!IsLive(leg) || leg.Completed || !environment.IsProgressAllowed) return;
+            if (environment is IEmployeeTrafficEnvironment port && port.TrafficEnabled)
+            {
+                var decision=port.PrepareMove(leg.Target,leg.NativeLegGeneration);
+                if (!IsLive(leg) || leg.Completed) return;
+                if (decision.Kind==TrafficDecisionKind.DeferredByBudget || decision.Kind==TrafficDecisionKind.WaitingForTraffic)
+                { leg.AwaitingTraffic=true; return; }
+                if (decision.Kind!=TrafficDecisionKind.Granted)
+                {
+                    moveLeg=null;
+                    // A traffic terminal keeps the real checkpoint, without inventing a recovery Native move.
+                    // 普通等待不会走到这里；真正拒绝也不能自动发返岗请求掩盖错误。
+                    FailTask(decision.Kind+": "+decision.Reason,false);return;
+                }
+                leg.TrafficIntermediate=decision.Route.Count==1 && decision.Route[0]!=leg.Target.Position;
+            }
+            if (!IsLive(leg) || !environment.IsProgressAllowed) { leg.AwaitingTraffic=true; return; }
+            leg.AwaitingTraffic=false;
+            var start = environment.MoveTo(leg.Target, result => OnMoveCompleted(leg, result));
             if (!IsLive(leg))
             {
                 // 若外部在 MoveTo 内取消、尚未给出 ID，返回后仍停止这条 owned request。
@@ -349,9 +592,16 @@ namespace AnimalCafe.Employees
             moveLeg = null;
             if (result.Status != MovementStatus.Arrived)
             {
-                OnMoveFailed(leg.State, result.Status + ": " + result.Reason);
+                // Recovered means only the safe anchor was reached, not the service target.
+                // 导航安全返回仍是未完成服务；不能显示成无错误的恢复成功。
+                var reason = result.Status == MovementStatus.Recovered
+                    ? "已返回安全位置，原服务目标未到达，请修复后重试 / Original service target not reached: " + result.OriginalFailure
+                    : result.Status + ": " + result.Reason;
+                OnMoveFailed(leg.State, reason);
                 return;
             }
+            if(leg.TrafficIntermediate)
+            { BeginMove(leg.Target,leg.State);return; } // Real intermediate Arrived is never a business arrival.
             if (leg.State == EmployeeState.CarryingToPickUp)
             {
                 if (integrated)
@@ -414,6 +664,7 @@ namespace AnimalCafe.Employees
             pendingArrival = null;
             suspendedMove = null;
             pendingReturnTraffic=null;
+            pendingDeliveryTraffic=null;
             deliveryArrival = null;
             deliveryRoute=null; deliveryRouteIndex=0;
             returnRoute=pendingReturnRoute=null;returnRouteIndex=0;

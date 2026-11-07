@@ -265,7 +265,7 @@ namespace AnimalCafe.Tests.EditMode.Phase7
             finally
             {
                 Phase7Validator.HashOverrideForTests=null;
-                if(mutatedFile!=null&&originalBytes!=null){File.WriteAllBytes(mutatedFile,originalBytes);AssetDatabase.ImportAsset(mutatedFile,ImportAssetOptions.ForceSynchronousImport);}
+                if(mutatedFile!=null&&originalBytes!=null){TestAssetBytes.Restore(mutatedFile,originalBytes);AssetDatabase.ImportAsset(mutatedFile,ImportAssetOptions.ForceSynchronousImport);}
                 if(temporaryMesh!=null)AssetDatabase.DeleteAsset(temporaryMesh);
                 Phase7SurfaceAssetBuilder.BuildOrUpdateAssets();
             }

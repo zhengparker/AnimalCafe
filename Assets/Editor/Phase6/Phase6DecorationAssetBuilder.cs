@@ -2419,7 +2419,7 @@ namespace AnimalCafe.EditorTools.Phase6
 
                 foreach (var item in backups)
                 {
-                    File.Copy(item.Value, GetAbsoluteProjectPath(item.Key), overwrite: true);
+                    RestoreBytes(GetAbsoluteProjectPath(item.Key), File.ReadAllBytes(item.Value));
                 }
 
                 foreach (var assetPath in backups.Keys
@@ -2440,6 +2440,37 @@ namespace AnimalCafe.EditorTools.Phase6
                 }
 
                 AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            }
+
+            private static void RestoreBytes(string target, byte[] bytes)
+            {
+                var existed = File.Exists(target);
+                if (existed && File.ReadAllBytes(target).SequenceEqual(bytes))
+                {
+                    return;
+                }
+
+                // Never truncate a mapped asset. 完整写入并关闭独有临时文件后，再发布恢复 bytes。
+                var temporary = Path.Combine(Path.GetDirectoryName(target),
+                    "." + Path.GetFileName(target) + ".p6restore-" + Guid.NewGuid().ToString("N") + ".tmp");
+                var ownsTemporary = false;
+                try
+                {
+                    using (var stream = new FileStream(temporary, FileMode.CreateNew,
+                        FileAccess.Write, FileShare.None))
+                    {
+                        ownsTemporary = true;
+                        stream.Write(bytes, 0, bytes.Length);
+                    }
+
+                    if (existed) File.Replace(temporary, target, null);
+                    else File.Move(temporary, target);
+                }
+                finally
+                {
+                    // CreateNew failure grants no ownership. 只清理本次调用实际创建的 temp。
+                    if (ownsTemporary && File.Exists(temporary)) File.Delete(temporary);
+                }
             }
 
             public void Dispose()

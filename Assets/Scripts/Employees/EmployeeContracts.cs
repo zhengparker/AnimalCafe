@@ -46,6 +46,13 @@ namespace AnimalCafe.Employees
         bool TryCommitDelivery(CafeTaskEvent arrival, SurfaceSlotAddress address, out string reason);
         void HideHeldCup();
     }
+    // Optional traffic gate; Deferred/Waiting is not a rejected or accepted Native MoveTo.
+    // P13 ports 不必实现；业务 generation 与每条 Native 腿的 generation 分开保存。
+    public interface IEmployeeTrafficEnvironment
+    {
+        bool TrafficEnabled { get; }
+        TrafficDecision PrepareMove(NavigationTarget target, int nativeLegGeneration);
+    }
     public sealed class EmployeeStationBinding
     {
         public EmployeeRole Role { get; }
