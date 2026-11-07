@@ -1,6 +1,6 @@
 # Phase 15 自动营业周期：Beginner Guide
 
-> **当前 P15 开发验收已通过，等待 PR。** Main 自动营业、真实闭店排空、Pause／2x 与现实周期分离，以及停止自动来客时释放未出生申请，已纳入最新精简 regression。EditMode 1388/1388 PASS，PlayMode 90/90 PASS，P15 自身 77 项 PlayMode 全通过。客观通过记录与 Owner 观感／移动设备验收分别保存，具体范围见[Validation Report](Phase15_Validation_Report.md)。下方旧状态保留各自时点。
+> **当前 P15 开发验收已通过，PR #15 为 Open、未合并。** Main 自动营业、真实闭店排空、Pause／2x 与现实周期分离，以及停止自动来客时释放未出生申请，已纳入最新精简 regression。EditMode 1388/1388 PASS，PlayMode 90/90 PASS，P15 自身 77 项 PlayMode 全通过。客观通过记录与 Owner 观感／移动设备验收分别保存，具体范围见[Validation Report](Phase15_Validation_Report.md)。下方旧状态保留各自时点。
 
 ## 0. 合并后按顺序测试（8 项）
 

@@ -1,7 +1,7 @@
 # Phase 15 — Business Day Lifecycle Validation Report
 
 <!-- P15_STOPPED_ARRIVAL_CLOSEOUT_20261107_BEGIN -->
-> **P15 开发验收已通过，进入 PR 准备。** Owner 授权继续修复并跑新一轮精简回归，沿用上一轮 selectors，并由原 P15 namespace 纳入 1 条新增 regression。最终 EditMode **1388/1388 PASS**，其中 P15 68 项。PlayMode **90/90 PASS**，其中 P15 77 项。全部预期用例各执行一次，FAIL／SKIP／缺失／重复均为 0。对应 XML SHA256 为 `E8E25E3B5B9294378983AE34C2298909D763383946C324992E481543FED54E4B` 和 `189B7FC7E2B3BD9B9F6750D5D751487E7594B426AB8138B1AAB1946F167661E4`。
+> **P15 开发验收已通过，PR #15 已创建并保持 Open。** Owner 授权继续修复并跑新一轮精简回归，沿用上一轮 selectors，并由原 P15 namespace 纳入 1 条新增 regression。最终 EditMode **1388/1388 PASS**，其中 P15 68 项。PlayMode **90/90 PASS**，其中 P15 77 项。全部预期用例各执行一次，FAIL／SKIP／缺失／重复均为 0。对应 XML SHA256 为 `E8E25E3B5B9294378983AE34C2298909D763383946C324992E481543FED54E4B` 和 `189B7FC7E2B3BD9B9F6750D5D751487E7594B426AB8138B1AAB1946F167661E4`。
 >
 > **已修复停止自动来客后的残留预留。** 原 Main 失败时第 9 位尚未出生，AutoSpawn 已关闭，但其 Counter admission 继续准备并挡住第 8 单的送杯路线。新增 Native 测试先在旧产品源码得到准确 RED，关闭自动接客后仍保留原 anchor，XML `5FA5586C`。产品增量仅为 CustomerFlowController 的自动申请来源识别和生命周期处理，显式停止时复用既有未出生退休检查，准备回调之后重验当前来源，在安全 finally／refresh 边界重试清理。手动申请保留原对象、年龄与预算，继续经过真实准备和出生。
 >
@@ -9,7 +9,7 @@
 >
 > 当前冻结源码为 Core `FBF884E94E77C7CD882229630506C5A1154DC291FBAB117699241FF9EBCA720A`、CustomerFlowController `E1F89C0C6C87C6291BE9B25F371074C41A58F3D5A1E3B77BEDFEEB8B96A61933`、Admission tests `29A013C24DF22360CF8395D26E852F6EE0ECC19014CCB6C3E0FB0D95D6DB252D`。独立限定 review 无剩余 Critical／Important。定向、Edit、Play 的 3192 Assets、469 source、3 inputs、28 Scenes 哈希逐项一致，收尾均无未知变化，Editor／worker 为 0。
 >
-> 开发收尾采用 Owner 批准的精简门槛。旧 distinct actual-exit 交接继续保留 NOT_REPRODUCED／NOT_PROVEN。全量 suite、真实八小时、移动真机、Owner 观感、CI、merge 与 merged-main 仍各有独立状态，正式阶段 Completed 等待后续 gates。GitHub Desktop 仍由 Owner commit／push，PR 当前待发布分支，CI 保持手动 workflow_dispatch。证据见[本轮结果](../outputs/phase15/p15-stopped-arrival-repair-20261107/results.json)。以下均为历史记录。
+> 开发收尾采用 Owner 批准的精简门槛。旧 distinct actual-exit 交接继续保留 NOT_REPRODUCED／NOT_PROVEN。全量 suite、真实八小时、移动真机、Owner 观感、CI、merge 与 merged-main 仍各有独立状态，正式阶段 Completed 等待后续 gates。Owner 本轮明确授权 Agent commit／push 并创建 PR，随后要求保持未合并。[PR #15](https://github.com/zhengparker/AnimalCafe/pull/15) 已创建，CI 保持手动 workflow_dispatch。证据见[本轮结果](../outputs/phase15/p15-stopped-arrival-repair-20261107/results.json)。以下均为历史记录。
 <!-- P15_STOPPED_ARRIVAL_CLOSEOUT_20261107_END -->
 
 <!-- P15_COUNTER_REPAIR_REGRESSION_20261107_BEGIN -->

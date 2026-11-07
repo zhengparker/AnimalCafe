@@ -1,6 +1,6 @@
 # AnimalCafe Development Roadmap
 
-> **当前 P15 已达到开发收尾门槛，等待 PR。** 最新精简 EditMode 1388/1388 PASS，PlayMode 90/90 PASS，其中 P15 为 68 项 EditMode 和 77 项 PlayMode。原 20 单压力用例及本轮停止自动来客后残留预留的故障均已通过 regression。旧 distinct actual-exit 保留 NOT_REPRODUCED／NOT_PROVEN。正式 Completed、CI／merge 和 merged-main 状态由后续流程记录，当前等待 Owner 用 GitHub Desktop commit／push。见[最新验证报告](Phase15_Validation_Report.md)。
+> **当前 P15 为 In Review，PR #15 已创建并保持 Open。** 最新精简 EditMode 1388/1388 PASS，PlayMode 90/90 PASS，其中 P15 为 68 项 EditMode 和 77 项 PlayMode。原 20 单压力用例及本轮停止自动来客后残留预留的故障均已通过 regression。旧 distinct actual-exit 保留 NOT_REPRODUCED／NOT_PROVEN。正式 Completed、CI／merge 和 merged-main 状态由后续流程记录，Owner 本轮授权 Agent 提交／发布分支，最新要求保持 PR 未合并。PR 为 [#15](https://github.com/zhengparker/AnimalCafe/pull/15)。见[最新验证报告](Phase15_Validation_Report.md)。
 
 > **历史 P15（2026-11-07 UTC，修复前）：IN_PROGRESS。** 原固定 1 秒来客、2x 的 20 单用例已修复并在精简回归通过；EditMode 1388/1388 PASS，PlayMode 88/89 PASS（P15 自身 76/76 PASS）。唯一新失败是 MainCafe：第 9 位尚未进店的收银站位预留挡住送杯规划路线，第 8 位未完成，已停止；不关闭 P15、不进入 PR。见[本轮验证](Phase15_Validation_Report.md)。
 
