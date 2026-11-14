@@ -1680,6 +1680,240 @@ namespace AnimalCafe.Tests.EditMode.Phase14
         }
 
         // Analytic Core inputs + real CounterQueueService checkpoints; Native owns real Cashier/Actor proof.
+        // Public Core/Counter/PQS lifecycle model; the producer observation is analytic input, not a Native task receipt.
+        private sealed class CounterOriginalPaidTraversalModel
+        {
+            internal readonly TrafficIntentKey Follower=Key("counter-paid-follower","counter-advance",181),Old=Key("counter-paid-original-owner","counter-advance",180);
+            internal readonly TrafficIntentKey HeadBody=Key("counter-paid-head","counter-arrival",182),Parking=Key("counter-paid-head","pickup-wait",183),Paid=Key("counter-paid-head","pickup-paid-movement",184);
+            internal readonly object Life=new object(),FollowerLife=new object(),Business=new object(),Admission=new object(),FollowerBusiness=new object(),FollowerAdmission=new object(),PillarOneLife=new object(),PillarTwoLife=new object();
+            internal readonly CounterQueueService Counter=new CounterQueueService(new[]{Origin,P(1),P(1,-3)});
+            internal readonly PickupQueueService Pickup=new PickupQueueService(new[]{P(2)},new[]{P(4)});
+            internal readonly ServiceTrafficCoordinator Core;internal TrafficWorldSnapshot Snapshot;internal TrafficRequest FollowerRequest;
+            internal TrafficDecision ParkingSource,PaidSource;internal TrafficRouteProof Proof;internal object Seal=new object();
+            internal readonly object Entry,Frozen,Resources,Stored;internal readonly int Age;internal readonly long Sequence;
+            internal readonly float Debt;internal int Frame=1,Calls,Index;internal long Version=1;internal bool Working,ThrowReader,NullReader,ReplaceLife,WrongIntent,CopySource;
+            internal bool FollowerFinite,SawOriginalCycle,CounterHeadReleased;internal Vector3 Pose=Origin,OldPose=P(1,.79f),FollowerGoal=P(1);internal TrafficBodyFact Extra;
+            internal TrafficParkingFact ExtraParking;internal Action<Vector3,Vector3> QueryObservation;
+            internal TrafficNativeStamp Stamp=new TrafficNativeStamp(8100,61);internal object Descriptor;
+            internal CounterOriginalPaidTraversalModel(bool optIn=true,bool bindFirst=true,bool followerFinite=false)
+            {
+                FollowerFinite=followerFinite;
+                foreach(var id in new[]{Parking.ActorId,"removed-paid-middle",Follower.ActorId}){Assert.That(Counter.TryJoin(id),Is.True);Assert.That(Counter.Complete(id,1),Is.True);}
+                Assert.That(Counter.Remove("removed-paid-middle"),Is.True);Snapshot=BuildWorld();
+                Core=Coordinator(Snapshot,waitSeconds:30,query:(from,to)=>{Calls++;QueryObservation?.Invoke(from,to);return new[]{from,to};});
+                FollowerRequest=RequestNow();Core.EvaluateParking(FollowerRequest);Attach(optIn);
+                Core.ProcessReady(Frame++);var waiting=Core.GetDecision(Follower);
+                Assert.That(waiting.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),"PREMISE: public original finite WAIT");
+                Assert.That(waiting.Blockers.All(b=>b.Owner.Equals(Old)),Is.True);Core.Tick(.5f,false);
+                Entry=((System.Collections.IDictionary)D3ReadField(Core,"entries"))[Follower];Age=(int)D1Read(Core,Follower,"FirstFrame");Sequence=waiting.RequestSequence;
+                Frozen=D1Read(Core,Follower,"FrozenOwners");Resources=D1Read(Core,Follower,"FrozenResources");Stored=D1Read(Core,Follower,"WaitingBlockers");Debt=(float)D1Read(Core,Follower,"WaitRemaining");
+                // Keep the original independent blocker until the actual PQS commit and Working authentication.
+                // Public planner must find its own safe detour; this geometry is a premise to verify, not a claimed result.
+                Assert.That(Vector3.Distance(OldPose,P(1)),Is.LessThan(.8f));
+                Assert.That(Vector3.Distance(OldPose,P(.5f,.4f)),Is.GreaterThan(.5f));
+                Assert.That(Vector3.Distance(OldPose,P(1.5f,.4f)),Is.GreaterThan(.5f));
+                Core.EvaluateParking(new TrafficRequest(Parking,Frame,Snapshot,Origin,P(2),.4f,"pickup/"+Parking.ActorId,finiteSeconds:30,planPrimaryRoute:true));
+                ParkingSource=Pump(Parking);Assert.That(Pickup.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,Parking.ActorId,Pickup.Version,out var reserve),Is.True);
+                Assert.That(Core.TryCommit(ParkingSource,reserve),Is.True);Working=true;OldPose=P(8,8);Publish();Core.NotifyChanged(Old,"body");RefreshFollower();
+                Assert.That(Step().Reason,Is.EqualTo("counter-advance-working-readiness-held"),"PREMISE: original typed Working hold keeps old Frozen");AssertLedger(Debt);
+                Core.EvaluateMovement(new TrafficRequest(Paid,Frame,Snapshot,Origin,P(2),.4f,"pickup/"+Paid.ActorId,finiteSeconds:30));
+                PaidSource=Pump(Paid);Proof=PaidSource.ProofRoutes.Single(p=>p.ResourceId=="pickup/"+Paid.ActorId);
+                Assert.That(Proof.Waypoints.Count,Is.GreaterThanOrEqualTo(3),"PREMISE: two real analytic body obstacles force multiple Native-proved waypoints");
+                Assert.That(CustomerRoutePlanner.IsClear(Proof.ExpandedPath,new[]{P(1)},.8f),Is.False,"PREMISE: actual paid path crosses follower endpoint");
+                Assert.That(Pickup.TryPrepareMutation(PickupQueueService.MutationKind.Transfer,Paid.ActorId,Pickup.Version,out var transfer),Is.True);
+                Assert.That(Core.TryCommit(PaidSource,transfer),Is.True);Publish();
+                Core.PrepareLeg(PaidSource,"pickup/"+Paid.ActorId,0,Life,61,Snapshot,Pose,.08f,Frame);
+                Assert.That(Core.TryCommit(Pump(Paid)),Is.True);Core.Retire(Parking);
+                if(bindFirst)Assert.That(Core.BindLeg(Paid,Life,Stamp),Is.True);
+                Working=false;Publish();
+            }
+            private TrafficWorldSnapshot BuildWorld()
+            {
+                var hasHead=Counter.TryCaptureAssignment(Parking.ActorId,out var head);Assert.That(hasHead || CounterHeadReleased,Is.True);
+                Assert.That(Counter.TryCaptureAssignment(Follower.ActorId,out var follower),Is.True);
+                var bodyOwner=PaidSource!=null && PaidSource.AcquiredSequence>0?Paid:HeadBody;
+                var bodies=new List<TrafficBodyFact>{new TrafficBodyFact(bodyOwner,Pose,.4f,actorLife:Life),
+                    new TrafficBodyFact(Follower,P(1,-3),.4f,independentlyProgressing:FollowerFinite,remainingSeconds:FollowerFinite?30:0,actorLife:FollowerLife),
+                    new TrafficBodyFact(Old,OldPose,.4f,independentlyProgressing:true,remainingSeconds:30,actorLife:Admission),
+                    new TrafficBodyFact(Key("counter-paid-pillar-one"),P(1.5f,.4f),.1f,actorLife:PillarOneLife),
+                    new TrafficBodyFact(Key("counter-paid-pillar-two"),P(.5f,.4f),.1f,actorLife:PillarTwoLife)};
+                if(Extra!=null)bodies.Add(Extra);
+                var claims=new List<TrafficParkingFact>();
+                if(hasHead)claims.Add(new TrafficParkingFact(HeadBody,Counter,Counter.Version,"counter/"+Parking.ActorId,Origin,.4f,businessOwner:Business,releaseObligation:Admission,semanticCheckpoint:head));
+                claims.Add(new TrafficParkingFact(Follower,Counter,Counter.Version,"counter/"+Follower.ActorId,P(1,-3),.4f,businessOwner:FollowerBusiness,releaseObligation:FollowerAdmission,semanticCheckpoint:follower));
+                if(ExtraParking!=null)claims.Add(ExtraParking);
+                if(Pickup.TryCaptureReservation(Parking.ActorId,out var pickup))claims.Add(new TrafficParkingFact(bodyOwner,Pickup,Pickup.Version,"pickup/"+Parking.ActorId,pickup.Assignment.Position,.4f,businessOwner:Business,releaseObligation:Admission,semanticCheckpoint:pickup));
+                return World(Version,Version,bodies.ToArray(),claims.ToArray());
+            }
+            internal void Publish(){Version++;Snapshot=BuildWorld();Core.SetSnapshot(Snapshot);RefreshFollower();}
+            private TrafficRequest RequestNow()=>new TrafficRequest(Follower,1,Snapshot,P(1,-3),FollowerGoal,.4f,"counter/"+Follower.ActorId,finiteSeconds:30,planPrimaryRoute:true);
+            private void RefreshFollower()
+            {
+                var expected=Core.GetDecision(Follower);if(expected.FailureDisposition!=TrafficFailureDisposition.None || expected.AcquiredSequence!=0)return;
+                FollowerRequest=RequestNow();Assert.That(CfcReprepare(Core,expected,FollowerRequest,out _),Is.True,"PREMISE: ordinary current producer refresh");
+            }
+            private void Attach(bool optIn)
+            {
+                var type=typeof(ServiceTrafficCoordinator).Assembly.GetType("AnimalCafe.Navigation.TrafficCounterAdvanceReadiness",true);
+                Func<TrafficIntentKey,float> working=key=>Working && (key.Equals(Parking)||key.Equals(Paid))?1:0;
+                Func<TrafficIntentKey,TrafficDecision,TrafficCounterPaidTraversalObservation> read=(key,source)=>
+                {
+                    if(ThrowReader)throw new InvalidOperationException("analytic original producer failure");if(NullReader)return null;
+                    Assert.That(Pickup.TryCaptureReservation(Parking.ActorId,out var claim),Is.True);
+                    return (TrafficCounterPaidTraversalObservation)Activator.CreateInstance(typeof(TrafficCounterPaidTraversalObservation),
+                        System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,null,
+                        new object[]{ReplaceLife?new object():Life,Seal,ParkingSource,PaidSource==null?default(TrafficIntentKey):WrongIntent?Key(Paid.ActorId,"other-paid",199):Paid,CopySource?CopyDecision(PaidSource):PaidSource,claim},null);
+                };
+                Func<bool> current=()=>{var old=Core.GetDecision(Old);
+                    if(old.Kind==TrafficDecisionKind.WaitingForTraffic && old.Blockers.Any(blocker=>blocker.Owner.Equals(Follower)))SawOriginalCycle=true;
+                    return true;}; // Read-only receipt before failure/notification can reschedule the original owner.
+                Descriptor=Activator.CreateInstance(type,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,
+                    null,optIn?new object[]{Follower,current,working,read}:new object[]{Follower,current,working},null);
+                Assert.That(D3InvokeBool(Core,"TrySetCounterAdvanceReadiness",Core.GetDecision(Follower),Descriptor),Is.True);
+                if(!optIn)Assert.That(D3ReadField(Descriptor,"OriginalPaidTraversal"),Is.Null,"Old three-argument reflection contract remains intact");
+            }
+            internal TrafficDecision Pump(TrafficIntentKey key)
+            {
+                TrafficDecision result=null;for(var i=0;i<256;i++){Core.ProcessReady(Frame++);result=Core.GetDecision(key);if(result.Kind!=TrafficDecisionKind.DeferredByBudget)break;}
+                Assert.That(result.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"PREMISE: original public route proof completes: "+result?.Reason);return result;
+            }
+            internal TrafficDecision Step(){Core.ProcessReady(Frame++);return Core.GetDecision(Follower);}
+            internal void AssertLedger(float debt)
+            {
+                var d=Core.GetDecision(Follower);Assert.That(((System.Collections.IDictionary)D3ReadField(Core,"entries"))[Follower],Is.SameAs(Entry));
+                Assert.That(D1Read(Core,Follower,"FirstFrame"),Is.EqualTo(Age));Assert.That(d.RequestSequence,Is.EqualTo(Sequence));Assert.That(Core.QueriesConsumed(Follower),Is.Zero);
+                Assert.That((float)D1Read(Core,Follower,"WaitRemaining"),Is.EqualTo(debt).Within(.0001));
+                Assert.That(D1Read(Core,Follower,"FrozenOwners"),Is.SameAs(Frozen));Assert.That((IEnumerable<TrafficIntentKey>)Frozen,Is.EquivalentTo(new[]{Old}));
+                Assert.That(D1Read(Core,Follower,"FrozenResources"),Is.SameAs(Resources));Assert.That(D1Read(Core,Follower,"WaitingBlockers"),Is.SameAs(Stored));
+                Assert.That(d.AcquiredSequence,Is.Zero);Assert.That(Core.HasActiveGrant(Follower),Is.False);Assert.That(Core.TryCommit(d),Is.False);
+            }
+            internal void ArriveAndPrepareNext(bool offProof=false)
+            {
+                Pose=Proof.Waypoints[Index]+Vector3.up*.02f;Publish();Assert.That(Core.CompleteLeg(Paid,Life,Stamp,Pose),Is.True);
+                Index++;if(Index==Proof.Waypoints.Count)return;
+                if(offProof){Pose+=Vector3.forward*.2f;Publish();}
+                Stamp=new TrafficNativeStamp(8100+Index,61+Index);
+                var next=Core.PrepareLeg(PaidSource,"pickup/"+Paid.ActorId,Index,Life,61+Index,Snapshot,Pose,.08f,Frame);
+                Assert.That(next.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));Assert.That(next.Reason,Is.EqualTo("retained-leg-ready-batch-pending"));
+            }
+            internal void CommitPreparedLeg(){Assert.That(Core.TryCommit(Pump(Paid)),Is.True);Assert.That(Core.BindLeg(Paid,Life,Stamp),Is.True);}
+            internal void PreparePublicPrimaryCrossingPreview()
+            {
+                CounterHeadReleased=true;Assert.That(Counter.Remove(Parking.ActorId),Is.True);
+                Counter.UpdateSlots(new[]{P(-1,1),P(1),P(1,-3)});
+                Assert.That(Counter.TryCaptureAssignment(Follower.ActorId,out var own),Is.True);Assert.That(own.Assignment.Position,Is.EqualTo(P(1,-3)));
+                Assert.That(Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,Follower.ActorId,Counter.Version,out var preview),Is.True);
+                FollowerGoal=preview.Assignment.Position;Assert.That(FollowerGoal,Is.EqualTo(P(-1,1)));
+                Assert.That(CustomerRoutePlanner.IsClear(Proof.ExpandedPath,new[]{FollowerGoal},.8f),Is.True,
+                    "PREMISE: new real Counter endpoint is outside the original paid journey");
+                Publish();
+            }
+        }
+        [Test] public void CounterOriginalPaidTraversalHoldsPrimaryCurrentConflictOnSameBoundSourceWithoutNewFrozen()
+        {
+            var f=new CounterOriginalPaidTraversalModel();var ledger=D3CaptureAccounting(f.Core,f.Follower);
+            var entry=((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Follower];
+            f.PreparePublicPrimaryCrossingPreview();
+            var current=(Vector3[])D1Read(f.Core,f.Paid,"CurrentPath");Assert.That(current.Length,Is.GreaterThan(1));
+            Assert.That(current[0],Is.EqualTo(Origin));Assert.That(f.Pose,Is.EqualTo(Origin));
+            Assert.That(f.Core.TryGetCommittedLegProvenance(f.Paid,f.Life,f.Stamp.LegGeneration,out var issued,out _),Is.True);
+            Assert.That(issued,Is.SameAs(f.PaidSource));Vector3[] queried=null;
+            f.QueryObservation=(from,to)=>{if(from==P(1,-3) && to==f.FollowerGoal)queried=new[]{from,to};};
+            var result=f.Step();
+            Assert.That(queried,Is.Not.Null,"PREMISE: original primary reached the normal Native provider");
+            Assert.That(CustomerRoutePlanner.IsClear(queried,new[]{current[0]},.8f),Is.False,
+                "PREMISE: actual primary proof crosses the same real Bound current path and body, not merely its endpoint");
+            if(result.FailureDisposition==TrafficFailureDisposition.Terminal)
+            {
+                Assert.That(result.Blockers.Any(b=>b.Owner.Equals(f.Paid) && b.ResourceId=="pickup/"+f.Paid.ActorId && b.Proof=="current-conflict-segment"),Is.True,
+                    "PREMISE: baseline failure must be the actual current-segment branch");
+                Assert.That(result.Blockers.All(b=>b.Owner.Equals(f.Paid)),Is.True,"PREMISE: no unrelated owner explains this RED");
+            }
+            Assert.That(result.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),"RED: same sealed paid primary crossing retains preparation debt");
+            Assert.That(result.Reason,Is.EqualTo("counter-advance-original-paid-traversal-held"));
+            D3AssertAccounting(f.Core,f.Follower,ledger.Where(pair=>pair.Key!="Queries").ToDictionary(pair=>pair.Key,pair=>pair.Value));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Follower],Is.SameAs(entry));
+            var queries=f.Core.QueriesConsumed(f.Follower);Assert.That(queries,Is.GreaterThan(0));var calls=f.Calls;
+            f.Step();Assert.That(f.Core.QueriesConsumed(f.Follower),Is.EqualTo(queries));Assert.That(f.Calls,Is.EqualTo(calls));
+            f.Core.Tick(.25f,false);Assert.That((float)D1Read(f.Core,f.Follower,"WaitRemaining"),Is.EqualTo(f.Debt-.25f).Within(.0001));
+            Assert.That(D1Read(f.Core,f.Follower,"FrozenOwners"),Is.SameAs(f.Frozen));Assert.That(D1Read(f.Core,f.Follower,"FrozenResources"),Is.SameAs(f.Resources));
+            Assert.That(D1Read(f.Core,f.Follower,"WaitingBlockers"),Is.SameAs(f.Stored));Assert.That(f.Core.TryCommit(f.Core.GetDecision(f.Follower)),Is.False);
+        }
+        [TestCase(false)][TestCase(true)] public void CounterOriginalPaidPrimaryCrossingRejectsUnrelatedBodyOrOtherCanonicalResource(bool canonical)
+        {
+            var f=new CounterOriginalPaidTraversalModel();f.PreparePublicPrimaryCrossingPreview();
+            if(canonical)
+            {
+                var other=new CounterQueueService(new[]{f.FollowerGoal});Assert.That(other.TryJoin(f.Paid.ActorId),Is.True);Assert.That(other.Complete(f.Paid.ActorId,1),Is.True);
+                Assert.That(other.TryCaptureAssignment(f.Paid.ActorId,out var claim),Is.True);
+                f.ExtraParking=new TrafficParkingFact(f.Paid,other,other.Version,"counter/"+f.Paid.ActorId,f.FollowerGoal,.4f,
+                    businessOwner:f.Business,releaseObligation:f.Admission,semanticCheckpoint:claim);
+            }
+            else f.Extra=new TrafficBodyFact(Key("unrelated-primary-finite-body"),P(0,-1),.4f,independentlyProgressing:true,remainingSeconds:10,actorLife:new object());
+            f.Publish();var failed=f.Step();Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            Assert.That(failed.Blockers.Any(b=>canonical?b.Owner.Equals(f.Paid) && b.ResourceId=="counter/"+f.Paid.ActorId && b.Proof.StartsWith("canonical-parking-version:"):
+                b.Owner.ActorId=="unrelated-primary-finite-body"),Is.True,"PREMISE: the real disallowed resource/proof or owner caused refusal");
+            Assert.That(f.Core.HasActiveGrant(f.Follower),Is.False);
+        }
+
+        [Test] public void CounterOriginalPaidTraversalDefaultNullKeepsOriginalNewFrozenPolicy()
+        {
+            var f=new CounterOriginalPaidTraversalModel(optIn:false);var failed=f.Step();
+            Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(failed.Reason,Is.EqualTo("no-independent-finite-release-or-cycle"));
+            Assert.That(f.Core.QueriesConsumed(f.Follower),Is.Zero);Assert.That(f.Core.HasActiveGrant(f.Follower),Is.False);
+        }
+        [Test] public void CounterOriginalPaidTraversalRetainsFrozenDebtAcrossBoundBodyAndOwnedNextLegUntilActualClear()
+        {
+            var f=new CounterOriginalPaidTraversalModel();var held=f.Step();Assert.That(held.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),"RED: exact original paid traversal only withholds preparation");f.AssertLedger(f.Debt);
+            f.ArriveAndPrepareNext();Assert.That(Vector3.Distance(f.Pose,P(1)),Is.LessThan(.8f),"PREMISE: actual completed first leg projects its body onto target");
+            Assert.That(f.Step().Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));f.AssertLedger(f.Debt);f.CommitPreparedLeg();
+            Assert.That(f.Step().Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));f.AssertLedger(f.Debt);
+            // Finish only owned public legs. No direct body removal or fabricated proof/cursor state.
+            while(f.Index<f.Proof.Waypoints.Count)
+            {
+                f.ArriveAndPrepareNext();if(f.Index==f.Proof.Waypoints.Count)break;
+                var d=f.Step();Assert.That(d.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));f.CommitPreparedLeg();
+            }
+            var granted=f.Step();Assert.That(granted.Kind,Is.EqualTo(TrafficDecisionKind.Granted),granted.Reason);
+            Assert.That(f.Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,f.Follower.ActorId,f.Counter.Version,out var advance),Is.True);
+            Assert.That(advance.Assignment.Position,Is.EqualTo(P(1)));Assert.That(f.Core.TryCommit(granted,advance),Is.True);
+        }
+        [Test] public void CounterOriginalPaidTraversalPauseZeroAndExpiryNeverRenewOriginalDebt()
+        {
+            var f=new CounterOriginalPaidTraversalModel();Assert.That(f.Step().Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));
+            f.Core.Tick(100,true);f.Core.Tick(0,false);f.AssertLedger(f.Debt);f.Core.Tick(1,false);f.Step();f.AssertLedger(f.Debt-1);
+            f.Core.Tick(f.Debt-1,false);var failed=f.Core.GetDecision(f.Follower);Assert.That(failed.Reason,Is.EqualTo("wait-budget-exhausted"));
+            Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(f.Step(),Is.SameAs(failed));Assert.That(f.Core.QueriesConsumed(f.Follower),Is.Zero);
+        }
+        [Test] public void CounterOriginalPaidTraversalRejectsForeignLifeIntentCopiedSourceAndFailedProducer()
+        {
+            foreach(var fault in new[]{"life","intent","source","null","throw","reservation"})
+            {
+                var f=new CounterOriginalPaidTraversalModel();f.ReplaceLife=fault=="life";f.WrongIntent=fault=="intent";f.CopySource=fault=="source";f.NullReader=fault=="null";f.ThrowReader=fault=="throw";
+                if(fault=="reservation"){Assert.That(f.Pickup.Remove(f.Paid.ActorId),Is.True);Assert.That(f.Pickup.TryReserve(f.Paid.ActorId,out _),Is.True);f.Publish();}
+                var failed=f.Step();Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),fault);Assert.That(f.Core.TryCommit(failed),Is.False);Assert.That(f.Core.QueriesConsumed(f.Follower),Is.Zero);
+            }
+            var changedSeal=new CounterOriginalPaidTraversalModel();Assert.That(changedSeal.Step().Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));
+            changedSeal.Seal=new object();Assert.That(changedSeal.Step().FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),"A later callback cannot replace the first sealed Work identity");
+        }
+        [Test] public void CounterOriginalPaidTraversalRejectsUnissuedFirstLegAndOffProofStationaryProjection()
+        {
+            var unissued=new CounterOriginalPaidTraversalModel(bindFirst:false);Assert.That(unissued.Step().FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            var offProof=new CounterOriginalPaidTraversalModel();offProof.ArriveAndPrepareNext(offProof:true);
+            Assert.That(offProof.Step().FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(offProof.Core.HasActiveGrant(offProof.Follower),Is.False);
+        }
+        [Test] public void CounterOriginalPaidTraversalCannotHideAnotherBodyOrAnActualPublicDependencyCycle()
+        {
+            var extra=new CounterOriginalPaidTraversalModel();extra.Extra=new TrafficBodyFact(Key("unrelated-paid-body"),P(1),.4f,actorLife:new object());extra.Publish();
+            Assert.That(extra.Step().FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            var cycle=new CounterOriginalPaidTraversalModel(followerFinite:true);cycle.OldPose=P(1,-2);cycle.Publish();
+            cycle.Core.EvaluateMovement(new TrafficRequest(cycle.Old,0,cycle.Snapshot,P(1,-2),P(1,-3),.4f,"cycle-owner",finiteSeconds:30));
+            var failed=cycle.Step();var owner=cycle.Core.GetDecision(cycle.Old);
+            Assert.That(cycle.SawOriginalCycle,Is.True,"PREMISE: original producer observed the real public owner WAIT on follower before terminal fanout; finalOwner="+owner.Kind+"/"+owner.Reason+
+                " blockers="+string.Join(";",owner.Blockers.Select(blocker=>blocker.Owner.ActorId+"/"+blocker.Owner.IntentId+"/"+blocker.ResourceId+"/"+blocker.Proof)));
+            Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(cycle.Core.TryCommit(failed),Is.False);
+        }
+
         private sealed class CounterAdvanceReadinessModel
         {
             internal readonly TrafficIntentKey Incoming=new TrafficIntentKey("scene",1,"counter-follower","counter-advance",1,7,"counter-follower/assignment/1");
@@ -1694,11 +1928,17 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             internal readonly TrafficRequest Request;
             internal object Descriptor;internal bool Current=true;internal float WorkingSeconds=1;
             internal int Calls;
-            internal CounterAdvanceReadinessModel(bool ownerBeforeIncoming=true,Vector3? candidate=null)
+            internal readonly bool PreviewPriority;internal Func<bool> ReadCurrent;
+            internal readonly TrafficIntentKey Earlier=Key("counter-earlier","counter-advance",201);
+            internal readonly object EarlierLife=new object(),EarlierBusiness=new object(),EarlierAdmission=new object();
+            internal Vector3 HeadPose;internal long PreviewVersion=1;
+            internal CounterAdvanceReadinessModel(bool ownerBeforeIncoming=true,Vector3? candidate=null,bool previewPriority=false)
             {
                 // Head already at slot0; a removed middle reservation leaves follower's real Advance gap.
-                Queue=new CounterQueueService(new[]{P(0,1),candidate??P(0,0),P(0,-1)});
+                PreviewPriority=previewPriority;HeadPose=previewPriority?P(-1,1):P(0,1);
+                Queue=new CounterQueueService(previewPriority?new[]{HeadPose,P(-3,3),candidate??Origin,P(0,-1)}:new[]{P(0,1),candidate??Origin,P(0,-1)});
                 Assert.That(Queue.TryJoin("counter-head"),Is.True);Assert.That(Queue.Complete("counter-head",1),Is.True);
+                if(previewPriority){Assert.That(Queue.TryJoin(Earlier.ActorId),Is.True);Assert.That(Queue.Complete(Earlier.ActorId,1),Is.True);}
                 Assert.That(Queue.TryJoin("removed"),Is.True);Assert.That(Queue.Complete("removed",1),Is.True);
                 Assert.That(Queue.TryJoin("counter-follower"),Is.True);Assert.That(Queue.Complete("counter-follower",1),Is.True);
                 Assert.That(Queue.Remove("removed"),Is.True);
@@ -1709,6 +1949,7 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                     new TrafficBodyFact(FollowerBody,P(0,-1),.45f,actorLife:FollowerLife)},parking:new[]{
                     new TrafficParkingFact(HeadBody,Queue,Queue.Version,"counter/counter-head",P(0,1),.45f,.011f,HeadBusiness,HeadAdmission,head),
                     new TrafficParkingFact(FollowerBody,Queue,Queue.Version,"counter/counter-follower",P(0,-1),.45f,.011f,FollowerBusiness,FollowerAdmission,follower)});
+                if(previewPriority)Snapshot=PriorityWorld();
                 Core=Coordinator(Snapshot,query:(a,b)=>{Calls++;return new[]{a,b};},waitSeconds:10);
                 if(ownerBeforeIncoming)CommitHeadParking();
                 Request=new TrafficRequest(Incoming,1,Snapshot,P(0,-1),candidate??P(0,0),.45f,"counter/counter-follower",safetyMargin:.011f,planPrimaryRoute:true);
@@ -1717,7 +1958,7 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             internal void CommitHeadParking()
             {
                 // Exact future route intersects follower target; its physical Counter body remains elsewhere.
-                var request=new TrafficRequest(HeadPickup,0,Snapshot,P(0,1),P(2,0),.45f,"pickup/counter-head",safetyMargin:.011f,planPrimaryRoute:true);
+                var request=new TrafficRequest(HeadPickup,0,Snapshot,HeadPose,P(2,0),.45f,"pickup/counter-head",safetyMargin:.011f,planPrimaryRoute:true);
                 Core.EvaluateParking(request);Core.ProcessReady(0);
                 var prepared=Core.GetDecision(HeadPickup);Assert.That(prepared.Kind,Is.EqualTo(TrafficDecisionKind.Granted));
                 Assert.That(Core.TryCommit(prepared),Is.True);Assert.That(Core.HasActiveGrant(HeadPickup),Is.True);
@@ -1728,7 +1969,7 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 var type=typeof(ServiceTrafficCoordinator).Assembly.GetType("AnimalCafe.Navigation.TrafficCounterAdvanceReadiness");
                 Assert.That(type,Is.Not.Null,"FEATURE: typed existing-Counter readiness is missing; unborn admission identity cannot substitute");
                 return Activator.CreateInstance(type,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,
-                    null,new object[]{key??Incoming,(Func<bool>)(()=>Current),(Func<TrafficIntentKey,float>)(owner=>owner.Equals(HeadPickup)?WorkingSeconds:0)},null);
+                    null,new object[]{key??Incoming,(Func<bool>)(()=>ReadCurrent?.Invoke()??Current),(Func<TrafficIntentKey,float>)(owner=>owner.Equals(HeadPickup)?WorkingSeconds:0)},null);
             }
             internal bool Attach(object descriptor=null)
             {
@@ -1747,8 +1988,108 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 Assert.That(D1Read(Core,Incoming,"FrozenOwners"),Is.Null,"Readiness creates no finite-WAIT dependency or authority");
                 Assert.That((Vector3[])D1Read(Core,Incoming,"CurrentPath"),Is.Empty);Assert.That(Core.HasPendingWork,Is.True);
             }
+            // Optional real FIFO priority variant; default fixture geometry and callers are unchanged.
+            internal TrafficWorldSnapshot PriorityWorld(object life=null,bool omitClaim=false)
+            {
+                var claims=new List<TrafficParkingFact>();
+                foreach(var id in new[]{HeadBody.ActorId,Earlier.ActorId,FollowerBody.ActorId})
+                    if(Queue.TryCaptureAssignment(id,out var claim) && !(omitClaim && id==FollowerBody.ActorId))
+                        claims.Add(new TrafficParkingFact(id==HeadBody.ActorId?HeadBody:id==Earlier.ActorId?Earlier:FollowerBody,
+                            Queue,Queue.Version,"counter/"+id,claim.Assignment.Position,.45f,.011f,
+                            id==HeadBody.ActorId?HeadBusiness:id==Earlier.ActorId?EarlierBusiness:FollowerBusiness,
+                            id==HeadBody.ActorId?HeadAdmission:id==Earlier.ActorId?EarlierAdmission:FollowerAdmission,claim));
+                return World(PreviewVersion,PreviewVersion,new[]{new TrafficBodyFact(HeadBody,HeadPose,.45f,actorLife:HeadLife),
+                    new TrafficBodyFact(FollowerBody,P(0,-1),.45f,actorLife:life??FollowerLife),
+                    new TrafficBodyFact(Earlier,P(-3,3),.45f,actorLife:EarlierLife)},claims.ToArray());
+            }
+            internal void PublishPriority(object life=null,bool omitClaim=false)
+            {PreviewVersion++;Snapshot=PriorityWorld(life,omitClaim);Core.SetSnapshot(Snapshot);}
+            internal void LosePriorityPreview()
+            {
+                Assert.That(Queue.TryPrepareMutation(CounterQueueService.MutationKind.Advance,Incoming.ActorId,Queue.Version,out _),Is.True);
+                Assert.That(Queue.Remove(HeadBody.ActorId),Is.True);PublishPriority();
+                Assert.That(Queue.Snapshot[0].VisitId,Is.EqualTo(Earlier.ActorId));Assert.That(Queue.Snapshot[0].SlotIndex,Is.EqualTo(1));
+                Assert.That(Queue.TryPrepareMutation(CounterQueueService.MutationKind.Advance,Incoming.ActorId,Queue.Version,out _),Is.False,
+                    "PREMISE: the real earlier FIFO row owns the next Advance opportunity");
+            }
             internal void CancelUnusedParking()
             {WorkingSeconds=0;Core.Retire(HeadPickup);} // Does not remove/move the real declared Counter body or claim.
+        }
+
+        [Test] public void CounterDeferredMissingFifoPreviewRetainsOriginalEntryAndResumesAfterEarlierJointAdvance()
+        {
+            var f=new CounterAdvanceReadinessModel(previewPriority:true);Assert.That(f.Attach(),Is.True);f.Run();f.AssertHeld();
+            var original=f.Core.GetDecision(f.Incoming);var ledger=D3CaptureAccounting(f.Core,f.Incoming);var calls=f.Calls;
+            var entry=((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Incoming];
+            f.LosePriorityPreview();
+            Assert.That(HoldProducerPreview(f.Core,original),Is.True,"RED: original finite Counter Deferred must await its real FIFO preview");
+            f.PublishPriority();f.Core.NotifyChanged(f.HeadPickup,"pickup/counter-head");f.Core.ProcessReady(2);
+            D3AssertAccounting(f.Core,f.Incoming,ledger);Assert.That(f.Core.GetDecision(f.Incoming),Is.SameAs(original));
+            Assert.That(D1Read(f.Core,f.Incoming,"ProducerPreviewHeld"),Is.True);Assert.That(D1Read(f.Core,f.Incoming,"Queued"),Is.False);
+            Assert.That(f.Calls,Is.EqualTo(calls));Assert.That(f.Core.TryCommit(original),Is.False);
+            f.Core.Tick(.25f,false);Assert.That((float)D1Read(f.Core,f.Incoming,"WaitRemaining"),Is.EqualTo(9.75f).Within(.0001));
+            // The earlier owner receives a real Core route proof and public Counter joint commit; no private queue edits.
+            f.HeadPose=P(8,8);f.CancelUnusedParking();f.PublishPriority();
+            Assert.That(f.Queue.TryPrepareMutation(CounterQueueService.MutationKind.Advance,f.Earlier.ActorId,f.Queue.Version,out var earlier),Is.True);
+            f.Core.EvaluateParking(new TrafficRequest(f.Earlier,3,f.Snapshot,P(-3,3),earlier.Assignment.Position,.45f,
+                "counter/"+f.Earlier.ActorId,safetyMargin:.011f,planPrimaryRoute:true));
+            f.Core.ProcessReady(3);var source=f.Core.GetDecision(f.Earlier);
+            Assert.That(source.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"PREMISE: earlier actual complete route proof: "+source.Reason);
+            Assert.That(f.Core.TryCommit(source,earlier),Is.True);f.PublishPriority();
+            Assert.That(f.Queue.TryPrepareMutation(CounterQueueService.MutationKind.Advance,f.Incoming.ActorId,f.Queue.Version,out var restored),Is.True);
+            var request=new TrafficRequest(f.Incoming,1,f.Snapshot,f.Request.Start,restored.Assignment.Position,.45f,f.Request.ResourceId,
+                safetyMargin:.011f,planPrimaryRoute:true);
+            Assert.That(CfcReprepare(f.Core,original,request,out var ready),Is.True,"RED: same original finite Deferred may resume through existing canonical port");
+            Assert.That(D1Read(f.Core,f.Incoming,"ProducerPreviewHeld"),Is.False);Assert.That(D1Read(f.Core,f.Incoming,"Queued"),Is.True);
+            Assert.That(((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Incoming],Is.SameAs(entry));
+            Assert.That(ready.RequestSequence,Is.EqualTo(original.RequestSequence));Assert.That(D1Read(f.Core,f.Incoming,"FirstFrame"),Is.EqualTo(1));
+            Assert.That(f.Core.QueriesConsumed(f.Incoming),Is.Zero);Assert.That(D1Read(f.Core,f.Incoming,"FrozenOwners"),Is.Null);
+            Assert.That((float)D1Read(f.Core,f.Incoming,"WaitRemaining"),Is.EqualTo(9.75f).Within(.0001));
+            Assert.That(f.Core.HasActiveGrant(f.Incoming),Is.False);Assert.That(f.Core.TryCommit(ready),Is.False,
+                "Restored preview only queues current spatial proof; earlier body has not moved and no follower permission is fabricated");
+        }
+        [Test] public void CounterDeferredPreviewHoldConsumesOriginalDeadlineWhileNotQueuedAndHonorsPause()
+        {
+            var f=new CounterAdvanceReadinessModel(previewPriority:true);Assert.That(f.Attach(),Is.True);f.Run();f.LosePriorityPreview();
+            var original=f.Core.GetDecision(f.Incoming);Assert.That(HoldProducerPreview(f.Core,original),Is.True,"RED: establish finite preview hold");
+            Assert.That(D1Read(f.Core,f.Incoming,"Queued"),Is.False);Assert.That(f.Core.HasPendingWork,Is.True);
+            var calls=f.Calls;f.Core.Tick(100,true);f.Core.Tick(0,false);Assert.That(D1Read(f.Core,f.Incoming,"WaitRemaining"),Is.EqualTo(10f));
+            f.Core.Tick(1,false);Assert.That(D1Read(f.Core,f.Incoming,"WaitRemaining"),Is.EqualTo(9f),"Held Deferred must remain in Tick membership");
+            f.Core.Tick(9,false);var failed=f.Core.GetDecision(f.Incoming);Assert.That(failed.Reason,Is.EqualTo("wait-budget-exhausted"));
+            Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(HoldProducerPreview(f.Core,failed),Is.False);
+            Assert.That(CfcReprepare(f.Core,failed,f.Request,out _),Is.False);Assert.That(f.Calls,Is.EqualTo(calls));
+        }
+        [Test] public void CounterDeferredPreviewHoldRejectsDefaultAndUnstartedDescriptors()
+        {
+            foreach(var attach in new[]{false,true})
+            {
+                var f=new CounterAdvanceReadinessModel(previewPriority:true);if(attach)Assert.That(f.Attach(),Is.True);
+                var original=f.Core.GetDecision(f.Incoming);var ledger=D3CaptureAccounting(f.Core,f.Incoming);
+                Assert.That(HoldProducerPreview(f.Core,original),Is.False,"Ordinary Deferred or unstarted readiness cannot borrow a deadline");
+                D3AssertAccounting(f.Core,f.Incoming,ledger);Assert.That(f.Core.GetDecision(f.Incoming),Is.SameAs(original));
+            }
+        }
+        [Test] public void CounterDeferredPreviewHoldRejectsChangedIdentityOrProducerWithoutChangingLedger()
+        {
+            foreach(var change in new[]{"foreign","life","claim","producer","throw"})
+            {
+                var f=new CounterAdvanceReadinessModel(previewPriority:true);Assert.That(f.Attach(),Is.True);f.Run();f.LosePriorityPreview();
+                if(change=="life" || change=="claim")f.PublishPriority(change=="life"?new object():null,change=="claim");
+                if(change=="producer")f.Current=false;
+                if(change=="throw")f.ReadCurrent=()=>throw new InvalidOperationException("readonly producer unavailable");
+                var original=f.Core.GetDecision(f.Incoming);var supplied=change=="foreign"?new TrafficDecision(original.Intent,original.Kind,original.Reason):original;
+                var ledger=D3CaptureAccounting(f.Core,f.Incoming);Assert.That(HoldProducerPreview(f.Core,supplied),Is.False,change);
+                D3AssertAccounting(f.Core,f.Incoming,ledger);Assert.That(D1Read(f.Core,f.Incoming,"ProducerPreviewHeld"),Is.False);
+            }
+        }
+        [Test] public void CounterDeferredPreviewHoldRejectsSameReceiverReentryWithoutRenewingDebt()
+        {
+            var f=new CounterAdvanceReadinessModel(previewPriority:true);Assert.That(f.Attach(),Is.True);f.Run();f.LosePriorityPreview();
+            var original=f.Core.GetDecision(f.Incoming);var reads=0;var nested=true;
+            f.ReadCurrent=()=>{reads++;if(reads==1)nested=HoldProducerPreview(f.Core,original);return true;};
+            Assert.That(HoldProducerPreview(f.Core,original),Is.True,"RED: outer authentic finite hold");
+            Assert.That(nested,Is.False);Assert.That(reads,Is.EqualTo(1),"Same receiver must reject before reentering the producer reader");
+            Assert.That(D1Read(f.Core,f.Incoming,"WaitRemaining"),Is.EqualTo(10f));Assert.That(f.Core.QueriesConsumed(f.Incoming),Is.Zero);
         }
 
         [TestCase(true)][TestCase(false)]
@@ -2851,35 +3192,67 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             private bool gatePresent,exitPresent,latePresent,paidMoving,gateMoving,lateMoving;
             private long version;private int frame=10,paidLeg;
             private TrafficNativeStamp paidStamp;private readonly TrafficNativeStamp gateStamp=new TrafficNativeStamp(8201,1);
-            internal string PaidResource=>"pickup/"+Paid.ActorId;
+            internal readonly CounterQueueService CanonicalCounter;
+            private readonly object counterBusiness=new object(),counterAdmission=new object();
+            internal string PaidResource=>(CanonicalCounter==null?"pickup/":"counter/")+Paid.ActorId;
 
-            internal OriginalExitSelectedSuffixFixture(bool throwingDiagnostic=false)
+            internal OriginalExitSelectedSuffixFixture(bool throwingDiagnostic=false,bool counterEndpointFreeze=false,bool counterFirstLegUnboundAtFreeze=false)
             {
+                if(counterEndpointFreeze)
+                {
+                    Paid=Key("original-suffix-counter","counter-advance",30);
+                    CanonicalCounter=new CounterQueueService(new[]{P(6),Origin});
+                    foreach(var id in new[]{"original-counter-front",Paid.ActorId})
+                    {Assert.That(CanonicalCounter.TryJoin(id),Is.True);Assert.That(CanonicalCounter.Complete(id,1),Is.True);}
+                    Assert.That(CanonicalCounter.Remove("original-counter-front"),Is.True);
+                }
                 Snapshot=MakeWorld();
                 Core=Coordinator(Snapshot,frameBudget:4000,intentBudget:16384,waitSeconds:30);
-                PaidSource=Grant(Core,Request(Paid,Origin,P(6),Snapshot,resource:PaidResource,seconds:30));
+                if(CanonicalCounter==null)PaidSource=Grant(Core,Request(Paid,Origin,P(6),Snapshot,resource:PaidResource,seconds:30));
+                else
+                {
+                    Core.EvaluateParking(new TrafficRequest(Paid,1,Snapshot,Origin,P(6),.4f,PaidResource,finiteSeconds:30,planPrimaryRoute:true));
+                    Core.ProcessReady(1);PaidSource=Core.GetDecision(Paid);Assert.That(PaidSource.Kind,Is.EqualTo(TrafficDecisionKind.Granted),PaidSource.Reason);
+                    Assert.That(CanonicalCounter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,Paid.ActorId,CanonicalCounter.Version,out var advance),Is.True);
+                    Assert.That(advance.Assignment.Position,Is.EqualTo(P(6)));Assert.That(Core.TryCommit(PaidSource,advance),Is.True);
+                    Refresh();
+                }
                 PaidProof=PaidSource.ProofRoutes.Single();
                 Assert.That(PaidProof.Waypoints.Count,Is.GreaterThan(1),"FIXTURE: the real analytic planner must split around the static pillar");
                 var lastStart=PaidProof.Waypoints[PaidProof.Waypoints.Count-2];
                 Crossing=(lastStart+PaidProof.Waypoints.Last())*.5f;
                 ExitStart=Crossing+Vector3.back*4;ExitGoal=Crossing+Vector3.forward*4;
-                gatePosition=Crossing+Vector3.forward*3;GateEnd=gatePosition+Vector3.right*3;
-                Core.PrepareLeg(PaidSource,PaidResource,0,paidLife,1,Snapshot,paidPosition,.05f,2);Core.ProcessReady(2);
-                Assert.That(Core.GetDecision(Paid).Kind,Is.EqualTo(TrafficDecisionKind.Granted));
-                Assert.That(D1Read(Core,Paid,"Prepared"),Is.EqualTo(true));
-                Assert.That(D3ReadField(D1Read(Core,Paid,"Leg"),"Bound"),Is.EqualTo(false));
-                Assert.That(((Vector3[])D1Read(Core,Paid,"CurrentPath")).Max(p=>p.x),Is.LessThan(Crossing.x-.8f),
-                    "FIXTURE: initial current paid leg is entirely clear of the exit path, while its owned suffix crosses it");
-                Assert.That(CustomerRoutePlanner.IsClear(new[]{ExitStart,ExitGoal},new[]{Crossing},.8f),Is.False);
+                gatePosition=counterEndpointFreeze?ExitGoal:Crossing+Vector3.forward*3;GateEnd=gatePosition+Vector3.right*3;
+                if(counterEndpointFreeze)Assert.That(CustomerRoutePlanner.IsClear(new[]{ExitStart,ExitGoal},new[]{P(6)},.8f),Is.True,
+                    "PREMISE: Counter canonical final goal itself is clear; the owned original moving route crosses the Exit");
+                if(!counterFirstLegUnboundAtFreeze)
+                {
+                    Core.PrepareLeg(PaidSource,PaidResource,0,paidLife,1,Snapshot,paidPosition,.05f,2);Core.ProcessReady(2);
+                    Assert.That(Core.GetDecision(Paid).Kind,Is.EqualTo(TrafficDecisionKind.Granted));
+                    Assert.That(D1Read(Core,Paid,"Prepared"),Is.EqualTo(true));
+                    Assert.That(D3ReadField(D1Read(Core,Paid,"Leg"),"Bound"),Is.EqualTo(false));
+                    Assert.That(((Vector3[])D1Read(Core,Paid,"CurrentPath")).Max(p=>p.x),Is.LessThan(Crossing.x-.8f),
+                        "FIXTURE: initial current paid leg is entirely clear of the exit path, while its owned suffix crosses it");
+                    Assert.That(CustomerRoutePlanner.IsClear(new[]{ExitStart,ExitGoal},new[]{Crossing},.8f),Is.False);
+                }
+                if(CanonicalCounter!=null&&!counterFirstLegUnboundAtFreeze)
+                {
+                    Assert.That(Core.TryCommit(Core.GetDecision(Paid)),Is.True);paidStamp=new TrafficNativeStamp(8301,1);
+                    Assert.That(Core.BindLeg(Paid,paidLife,paidStamp),Is.True);paidMoving=true;Refresh();
+                }
                 gatePresent=true;gateMoving=true;Refresh();
                 var gateSource=Grant(Core,Request(Gate,gatePosition,GateEnd,Snapshot,frame:3,resource:"counter/"+Gate.ActorId,seconds:30));
                 Core.PrepareLeg(gateSource,"counter/"+Gate.ActorId,0,gateLife,1,Snapshot,gatePosition,.05f,4);Core.ProcessReady(4);
                 Assert.That(Core.TryCommit(Core.GetDecision(Gate)),Is.True);Assert.That(Core.BindLeg(Gate,gateLife,gateStamp),Is.True);
                 exitPresent=true;Refresh();
-                Assert.That(RequeuePreparedLeg(Core,PaidSource,PaidResource,0,paidLife,1,Snapshot,paidPosition,out _),Is.EqualTo("Requeued"));
-                Core.ProcessReady(frame++);
-                Assert.That(Core.GetDecision(Paid).Kind,Is.EqualTo(TrafficDecisionKind.Granted));
-                Assert.That(D1Read(Core,Paid,"Prepared"),Is.EqualTo(true));
+                if(CanonicalCounter==null)
+                {
+                    Assert.That(RequeuePreparedLeg(Core,PaidSource,PaidResource,0,paidLife,1,Snapshot,paidPosition,out _),Is.EqualTo("Requeued"));
+                    Core.ProcessReady(frame++);
+                    Assert.That(Core.GetDecision(Paid).Kind,Is.EqualTo(TrafficDecisionKind.Granted));
+                    Assert.That(D1Read(Core,Paid,"Prepared"),Is.EqualTo(true));
+                }
+                else Assert.That(Core.HasActiveGrant(Paid),Is.True);
                 if(throwingDiagnostic)
                 {
                     var observer=typeof(ServiceTrafficCoordinator).GetField("WaitFailureObserver",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
@@ -2888,6 +3261,16 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                         ThrownDiagnosticPrefixes.Add(message.Split(' ')[0]);
                         throw new InvalidOperationException("TEST diagnostic observer failure");
                     }));
+                }
+                if(counterFirstLegUnboundAtFreeze)
+                {
+                    // 首次 freeze 前只准备原 first leg；此模式不提前 Commit/Bind。
+                    Assert.That(CanonicalCounter,Is.Not.Null);
+                    Core.PrepareLeg(PaidSource,PaidResource,0,paidLife,1,Snapshot,paidPosition,.05f,frame++);Core.ProcessReady(frame++);
+                    Assert.That(Core.GetDecision(Paid).Kind,Is.EqualTo(TrafficDecisionKind.Granted));
+                    Assert.That(D1Read(Core,Paid,"Prepared"),Is.EqualTo(true));
+                    Assert.That(D3ReadField(D1Read(Core,Paid,"Leg"),"Bound"),Is.EqualTo(false));
+                    Assert.That(((Vector3[])D1Read(Core,Paid,"CurrentPath")).Max(p=>p.x),Is.LessThan(Crossing.x-.8f));
                 }
                 Core.EvaluateMovement(Request(Exit,ExitStart,ExitGoal,Snapshot,frame:frame++,resource:"pickup/"+Exit.ActorId,seconds:30));
                 Core.ProcessReady(frame++);InitialWait=Core.GetDecision(Exit);
@@ -2906,11 +3289,27 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 if(gatePresent)bodies.Add(new TrafficBodyFact(Gate,gatePosition,.4f,true,gateMoving,gateMoving?30:0,actorLife:gateLife));
                 if(exitPresent)bodies.Add(new TrafficBodyFact(Exit,ExitStart,.4f,actorLife:exitLife));
                 if(latePresent)bodies.Add(new TrafficBodyFact(Late,latePosition,.4f,true,lateMoving,lateMoving?30:0,actorLife:lateLife));
-                return World(++version,version,bodies.ToArray());
+                TrafficParkingFact[] claims=null;
+                if(CanonicalCounter!=null)
+                {
+                    Assert.That(CanonicalCounter.TryCaptureAssignment(Paid.ActorId,out var claim),Is.True);Assert.That(claim.IsCurrent,Is.True);
+                    claims=new[]{new TrafficParkingFact(Paid,CanonicalCounter,CanonicalCounter.Version,PaidResource,claim.Assignment.Position,.4f,
+                        businessOwner:counterBusiness,releaseObligation:counterAdmission,semanticCheckpoint:claim)};
+                }
+                return World(++version,version,bodies.ToArray(),claims);
             }
             private void Refresh(){Snapshot=MakeWorld();Core.SetSnapshot(Snapshot);}
             internal void BindFirstPaidLeg()
             {
+                if(CanonicalCounter!=null)
+                {
+                    if(!(bool)D3ReadField(D1Read(Core,Paid,"Leg"),"Bound"))
+                    {
+                        Assert.That(Core.TryCommit(Core.GetDecision(Paid)),Is.True);paidStamp=new TrafficNativeStamp(8301,1);
+                        Assert.That(Core.BindLeg(Paid,paidLife,paidStamp),Is.True);paidMoving=true;Refresh();
+                    }
+                    Assert.That(Core.HasActiveGrant(Paid),Is.True);Assert.That(D3ReadField(D1Read(Core,Paid,"Leg"),"Bound"),Is.EqualTo(true));return;
+                }
                 var requeued=RequeuePreparedLeg(Core,PaidSource,PaidResource,0,paidLife,1,Snapshot,paidPosition,out _);
                 Assert.That(requeued,Is.EqualTo("NoOp").Or.EqualTo("Requeued"));
                 if(requeued=="Requeued")Core.ProcessReady(frame++);
@@ -2943,13 +3342,13 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 paidPosition=PaidProof.Waypoints.Last();paidMoving=false;Refresh();
                 Assert.That(Core.CompleteLeg(Paid,paidLife,paidStamp,paidPosition),Is.True);Core.ProcessReady(frame++);
             }
-            internal void MovePaidBodyOntoOriginalCrossing(bool progressing)
+            internal void MovePaidBodyOntoOriginalCrossing(bool progressing,bool notifyOwnedRoute=false)
             {
                 Assert.That(CustomerRoutePlanner.IsClear((Vector3[])D1Read(Core,Paid,"CurrentPath"),new[]{Crossing},.8f),Is.False,
                     "FIXTURE: the checkpoint is on the actual original Bound final leg");
                 paidPosition=Crossing;paidMoving=progressing;
                 gatePosition+=Vector3.right*.05f;Refresh();
-                Core.NotifyChanged(Gate,"body");Core.ProcessReady(frame++);
+                Core.NotifyChanged(notifyOwnedRoute?Paid:Gate,notifyOwnedRoute?PaidResource:"body");Core.ProcessReady(frame++);
             }
             internal void AddActuallyBoundLateOwner()
             {
@@ -2960,6 +3359,76 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 Assert.That(Core.TryCommit(Core.GetDecision(Late)),Is.True);
                 Assert.That(Core.BindLeg(Late,lateLife,new TrafficNativeStamp(8401,1)),Is.True);lateMoving=true;Refresh();
             }
+        }
+        [Test]
+        public void ActualExitEndpointFirstFreezeCapturesAlreadyBoundCanonicalCounterBeforePrimaryProof()
+        {
+            var f=new OriginalExitSelectedSuffixFixture(counterEndpointFreeze:true);
+            var entry=D1Read(f.Core,f.Exit,"Request");var first=D1Read(f.Core,f.Exit,"FirstFrame");
+            var frozen=D1Read(f.Core,f.Exit,"FrozenOwners");var resources=D1Read(f.Core,f.Exit,"FrozenResources");
+            var sequence=f.InitialWait.RequestSequence;var debt=(float)D1Read(f.Core,f.Exit,"WaitRemaining");
+            Assert.That(f.Core.QueriesConsumed(f.Exit),Is.Zero,"PREMISE: endpoint body installs the first WAIT before any primary query");
+            Assert.That(((System.Collections.ICollection)D1Read(f.Core,f.Exit,"Jobs")).Count,Is.Zero);
+            Assert.That(f.InitialWait.Blockers.All(b=>b.Owner.Equals(f.Gate)&&b.ResourceId=="body"),Is.True);
+            CollectionAssert.AreEquivalent(new[]{f.Gate},(IEnumerable<TrafficIntentKey>)frozen);
+            var ownerLeg=D1Read(f.Core,f.Paid,"Leg");var originalLife=D3ReadField(ownerLeg,"ActorLife");
+            Assert.That(f.Paid.IntentId,Is.EqualTo("counter-advance"));Assert.That(f.PaidSource.AcquiredSequence,Is.GreaterThan(0));
+            Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));Assert.That(D1Read(f.Core,f.Paid,"Active"),Is.EqualTo(true));
+            Assert.That(D3ReadField(ownerLeg,"Committed"),Is.EqualTo(true));Assert.That(D3ReadField(ownerLeg,"Bound"),Is.EqualTo(true));
+            Assert.That(D3ReadField(ownerLeg,"Completed"),Is.EqualTo(false));
+            var originalStamp=(TrafficNativeStamp)D3ReadField(ownerLeg,"Stamp");Assert.That(originalStamp.RequestId,Is.GreaterThan(0));
+            var canonical=f.Snapshot.Parking.Single(p=>p.Owner.Equals(f.Paid));
+            Assert.That(canonical.CanonicalOwner,Is.SameAs(f.CanonicalCounter));Assert.That(canonical.ResourceId,Is.EqualTo(f.PaidResource));
+            Assert.That(canonical.Position,Is.EqualTo(f.PaidProof.Waypoints.Last()));Assert.That(canonical.BusinessOwner,Is.Not.Null);Assert.That(canonical.ReleaseObligation,Is.Not.Null);
+            Assert.That(canonical.SemanticCheckpoint,Is.TypeOf<CounterQueueService.AssignmentClaim>());
+            Assert.That(((CounterQueueService.AssignmentClaim)canonical.SemanticCheckpoint).IsCurrent,Is.True);
+            f.Core.Tick(.25f,false);debt-=.25f;f.AdvancePaidToLastLeg();f.FinishGate();
+            var waiting=f.Core.GetDecision(f.Exit);
+            Assert.That(waiting.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),
+                "FEATURE: completing the original primary discovers an already-Bound original Counter source, not a later owner: "+waiting.Reason);
+            Assert.That(waiting.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));Assert.That(waiting.AcquiredSequence,Is.Zero);
+            Assert.That(waiting.Blockers.Any(b=>b.Owner.Equals(f.Paid)&&b.ResourceId==f.PaidResource&&b.Proof=="current-conflict-segment"),Is.True);
+            Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));Assert.That(D3ReadField(D1Read(f.Core,f.Paid,"Leg"),"ActorLife"),Is.SameAs(originalLife));
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(resources));
+            CollectionAssert.AreEquivalent(new[]{f.Gate},(IEnumerable<TrafficIntentKey>)frozen);
+            Assert.That(waiting.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(f.Core,f.Exit,"FirstFrame"),Is.EqualTo(first));
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.EqualTo(debt).Within(.0001));Assert.That(f.Core.QueriesConsumed(f.Exit),Is.GreaterThan(0));
+            f.MovePaidBodyOntoOriginalCrossing(true,notifyOwnedRoute:true);waiting=f.Core.GetDecision(f.Exit);
+            Assert.That(waiting.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),waiting.Reason);
+            Assert.That(waiting.Blockers.Any(b=>b.Owner.Equals(f.Paid)&&b.ResourceId=="body"),Is.True);
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(f.Core.TryCommit(waiting),Is.False);
+            f.FinishPaid();var clear=f.Core.GetDecision(f.Exit);Assert.That(clear.Kind,Is.EqualTo(TrafficDecisionKind.Granted),clear.Reason);
+            Assert.That(clear.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo(debt));Assert.That(f.Core.TryCommit(clear),Is.True);
+        }
+        [Test]
+        public void ActualExitEndpointFreezeCannotAdoptCounterFirstLegBoundOnlyAfterFreeze()
+        {
+            var f=new OriginalExitSelectedSuffixFixture(counterEndpointFreeze:true,counterFirstLegUnboundAtFreeze:true);
+            var frozen=D1Read(f.Core,f.Exit,"FrozenOwners");var resources=D1Read(f.Core,f.Exit,"FrozenResources");
+            var first=D1Read(f.Core,f.Exit,"FirstFrame");var sequence=f.InitialWait.RequestSequence;
+            Assert.That(f.Core.QueriesConsumed(f.Exit),Is.Zero);
+            Assert.That(f.InitialWait.Blockers.All(b=>b.Owner.Equals(f.Gate)&&b.ResourceId=="body"),Is.True);
+            CollectionAssert.AreEquivalent(new[]{f.Gate},(IEnumerable<TrafficIntentKey>)frozen);
+            Assert.That(f.PaidSource.AcquiredSequence,Is.GreaterThan(0),"PREMISE: canonical Counter source really committed before freeze");
+            Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));
+            Assert.That(D1Read(f.Core,f.Paid,"Prepared"),Is.EqualTo(true));
+            var leg=D1Read(f.Core,f.Paid,"Leg");
+            Assert.That(D3ReadField(leg,"Committed"),Is.EqualTo(false));Assert.That(D3ReadField(leg,"Bound"),Is.EqualTo(false));
+            var claim=(CounterQueueService.AssignmentClaim)f.Snapshot.Parking.Single(p=>p.Owner.Equals(f.Paid)).SemanticCheckpoint;
+            Assert.That(claim.IsCurrent,Is.True);
+            f.Core.Tick(.25f,false);var remaining=(float)D1Read(f.Core,f.Exit,"WaitRemaining");
+            f.AdvancePaidToLastLeg();
+            Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));
+            Assert.That(D3ReadField(D1Read(f.Core,f.Paid,"Leg"),"Bound"),Is.EqualTo(true));
+            f.FinishGate();var refused=f.Core.GetDecision(f.Exit);
+            Assert.That(refused.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed),refused.Reason);
+            Assert.That(refused.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            Assert.That(refused.AcquiredSequence,Is.Zero);Assert.That(f.Core.TryCommit(refused),Is.False);
+            Assert.That(refused.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(f.Core,f.Exit,"FirstFrame"),Is.EqualTo(first));
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(resources));
+            CollectionAssert.AreEquivalent(new[]{f.Gate},(IEnumerable<TrafficIntentKey>)frozen);
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo(remaining));
         }
         [TestCase(false)]
         [TestCase(true)]
@@ -11208,6 +11677,203 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             Assert.That(f.Core.TryCommit(f.Core.GetDecision(key)),Is.False,"The original finite gap is never an infinite wait or automatic terminal recovery");
         }
 
+        // Adapter for the existing real PQS collection/handoff fixture; no private Entry writes.
+        // 先公开建立更早 Counter WAIT，再取得真实 collection source，绝不倒填 FirstFrame。
+        private sealed class CounterCollectedCanonicalOrderModel
+        {
+            internal readonly TrafficIntentKey CounterKey=Key("older-counter-preparation","counter-advance",201),Old=Key("original-counter-blocker","pickup-wait",202);
+            internal readonly object Life=new object(),OldLife=new object(),Business=new object(),Admission=new object();
+            internal readonly CounterQueueService Counter=new CounterQueueService(new[]{P(3,2),P(3,-2)});
+            internal readonly PickupQueueService OldPickup=new PickupQueueService(new[]{P(3,4)},new[]{P(6,4)});
+            internal CanonicalSuccessorPreparationFixture F;internal TrafficPhaseHandoff Handle;
+            internal object Entry,Frozen,Resources;internal long Sequence;internal float Debt;internal int Frame=20;
+            internal bool OldPresent=true,Working,Current=true,ThrowCurrent;internal TrafficBodyFact Extra;internal Vector3 OldPose=P(3,2);
+            internal Action ReadCurrent;internal TrafficRequest CounterRequest;
+            internal CounterCollectedCanonicalOrderModel(bool bind=true,bool detour=false)
+            {
+                F=new CanonicalSuccessorPreparationFixture(extraBody:detour?new TrafficBodyFact(Key("canonical-exit-detour-pillar"),P(2,.4f),.1f,actorLife:new object()):null,
+                    beforeService:Setup,capabilityObstacles:detour?new[]{P(2,.4f)}:null);
+                Assert.That(F.ServiceSource.AcquiredSequence,Is.GreaterThan(0));
+                if(detour)Assert.That(F.ServiceSource.ProofRoutes.Single(p=>p.ResourceId=="collection-exit-capability").Waypoints.Count,
+                    Is.GreaterThanOrEqualTo(2),"PREMISE: original public capability actually traverses multiple native-proved waypoints");
+                Assert.That((int)D1Read(F.Core,CounterKey,"FirstFrame"),Is.LessThan((int)D1Read(F.Core,F.Owner,"FirstFrame")));
+                Handle=F.Begin();F.StartCrossing();F.Collect();
+                Working=false;OldPresent=false;F.Core.Retire(Old);Assert.That(OldPickup.Remove(Old.ActorId),Is.True);F.CounterModelPublish();
+                var initial=F.SubmitExit(); // The unbound control also starts with the real current snapshot.
+                if(bind)Assert.That(F.Bind(Handle,initial),Is.True,"PREMISE: actual collected successor binding");
+                Assert.That((int)D1Read(F.Core,CounterKey,"FirstFrame"),Is.LessThan((int)D1Read(F.Core,F.Exit,"FirstFrame")));
+            }
+            private void Setup(CanonicalSuccessorPreparationFixture f)
+            {
+                F=f;
+                Assert.That(f.Core.GetDecision(f.Later).Reason,Is.EqualTo("missing-intent"),"PREMISE: original Later is only an unissued fixture placeholder");
+                f.CounterModelReplacesLaterBody=true; // Real Counter actor occupies this adapter's input slot; default fixture still uses Later.
+                foreach(var id in new[]{"removed-counter-front",CounterKey.ActorId})
+                {Assert.That(Counter.TryJoin(id),Is.True);Assert.That(Counter.Complete(id,1),Is.True);}
+                Assert.That(Counter.Remove("removed-counter-front"),Is.True);
+                f.CounterModelBodies=()=>new[]{new TrafficBodyFact(CounterKey,P(3,-2),.4f,actorLife:Life)}
+                    .Concat(OldPresent?new[]{new TrafficBodyFact(Old,OldPose,.4f,independentlyProgressing:true,remainingSeconds:30,actorLife:OldLife)}:Array.Empty<TrafficBodyFact>())
+                    .Concat(Extra==null?Array.Empty<TrafficBodyFact>():new[]{Extra});
+                f.CounterModelClaims=()=>
+                {
+                    Assert.That(Counter.TryCaptureAssignment(CounterKey.ActorId,out var claim),Is.True);
+                    return new[]{new TrafficParkingFact(CounterKey,Counter,Counter.Version,"counter/"+CounterKey.ActorId,claim.Assignment.Position,.4f,
+                        businessOwner:Business,releaseObligation:Admission,semanticCheckpoint:claim)};
+                };
+                f.CounterModelPublish();Assert.That(Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,CounterKey.ActorId,Counter.Version,out var preview),Is.True);
+                Assert.That(preview.Assignment.Position,Is.EqualTo(P(3,2)));CounterRequest=RequestNow();f.Core.EvaluateParking(CounterRequest);
+                var type=typeof(ServiceTrafficCoordinator).Assembly.GetType("AnimalCafe.Navigation.TrafficCounterAdvanceReadiness",true);
+                Func<bool> current=()=>{ReadCurrent?.Invoke();if(ThrowCurrent)throw new InvalidOperationException("model current-reader failure");return Current;};
+                Func<TrafficIntentKey,float> working=key=>Working && key.Equals(Old)?1:0;
+                var descriptor=Activator.CreateInstance(type,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,
+                    null,new object[]{CounterKey,current,working},null);
+                Assert.That(D3InvokeBool(f.Core,"TrySetCounterAdvanceReadiness",f.Core.GetDecision(CounterKey),descriptor),Is.True);
+                f.Core.ProcessReady(0);Assert.That(f.Core.GetDecision(CounterKey).Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),"PREMISE: original finite body WAIT");
+                f.Core.Tick(.5f,false);Entry=((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[CounterKey];
+                Frozen=D1Read(f.Core,CounterKey,"FrozenOwners");Resources=D1Read(f.Core,CounterKey,"FrozenResources");
+                Sequence=f.Core.GetDecision(CounterKey).RequestSequence;Debt=(float)D1Read(f.Core,CounterKey,"WaitRemaining");
+                f.Core.EvaluateParking(new TrafficRequest(Old,1,f.World,P(3,2),P(3,4),.4f,"pickup/"+Old.ActorId,finiteSeconds:30,planPrimaryRoute:true));
+                f.Core.ProcessReady(1);var parking=f.Core.GetDecision(Old);Assert.That(parking.Kind,Is.EqualTo(TrafficDecisionKind.Granted),parking.Reason);
+                Assert.That(OldPickup.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,Old.ActorId,OldPickup.Version,out var reserve),Is.True);
+                Assert.That(f.Core.TryCommit(parking,reserve),Is.True);Working=true;OldPose=P(3,3);
+                // Analytic world sample clears the old body while the same owned primary still crosses the target.
+                // 不把该样本当成 Native完成；旧独立身体和原parking路线是不同的只读空间事实。
+                f.CounterModelAfterRefresh=Refresh;f.CounterModelPublish();f.Core.NotifyChanged(Old,"body");f.Core.ProcessReady(1);
+                Assert.That(f.Core.GetDecision(CounterKey).Reason,Is.EqualTo("counter-advance-working-readiness-held"),"PREMISE: genuine typed Working starts existing finite readiness debt");
+                Assert.That(D1Read(f.Core,CounterKey,"CounterAdvanceReadinessWaitStarted"),Is.EqualTo(true));
+            }
+            private TrafficRequest RequestNow()=>new TrafficRequest(CounterKey,0,F.World,P(3,-2),P(3,2),.4f,"counter/"+CounterKey.ActorId,finiteSeconds:30,planPrimaryRoute:true);
+            internal void Refresh()
+            {
+                var d=F.Core.GetDecision(CounterKey);if(d.FailureDisposition!=TrafficFailureDisposition.None || d.AcquiredSequence>0)return;
+                CounterRequest=RequestNow();Assert.That(CfcReprepare(F.Core,d,CounterRequest,out _),Is.True,"PREMISE: same canonical producer metadata refresh");
+            }
+            internal TrafficDecision Step(){F.Core.ProcessReady(Frame++);return F.Core.GetDecision(CounterKey);}
+            internal TrafficDecision RequireHeld()
+            {
+                var d=Step();Assert.That(d.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),"FEATURE: acquired collected obligation precedes an older unacquired Counter request: "+d.Reason);
+                Assert.That(d.AcquiredSequence,Is.Zero);Assert.That(F.Core.HasActiveGrant(CounterKey),Is.False);
+                Assert.That(((System.Collections.IDictionary)D3ReadField(F.Core,"entries"))[CounterKey],Is.SameAs(Entry));
+                Assert.That(D1Read(F.Core,CounterKey,"FirstFrame"),Is.EqualTo(0));Assert.That(d.RequestSequence,Is.EqualTo(Sequence));
+                Assert.That(D1Read(F.Core,CounterKey,"FrozenOwners"),Is.SameAs(Frozen));Assert.That((IEnumerable<TrafficIntentKey>)Frozen,Is.EquivalentTo(new[]{Old}));
+                Assert.That(D1Read(F.Core,CounterKey,"FrozenResources"),Is.SameAs(Resources));
+                Assert.That((float)D1Read(F.Core,CounterKey,"WaitRemaining"),Is.EqualTo(Debt).Within(.0001));return d;
+            }
+        }
+        [TestCase(false)] [TestCase(true)]
+        public void CounterCollectedCanonicalOrderKeepsOriginalFrozenThroughActualHandoffAndBoundBodyUntilClear(bool bindAfterGrant)
+        {
+            {
+                var m=new CounterCollectedCanonicalOrderModel(bind:!bindAfterGrant,detour:true);var f=m.F;
+                if(bindAfterGrant)
+                {
+                    var prepared=m.Step();Assert.That(prepared.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"PREMISE: Counter actually prepared before collection binding");
+                    // Capture the current public source and producer descriptor, without modifying the Core Entry.
+                    var currentExit=f.Core.GetDecision(f.Exit);f.Candidate=Request(f.Exit,f.ActualPosition,f.Goal,f.World,frame:20,resource:f.PickupResource,seconds:30);
+                    f.Milestone=new CanonicalPreparationMilestone(f,f.Candidate,currentExit);Assert.That(f.Bind(m.Handle,currentExit),Is.True);
+                    Assert.That(m.Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,m.CounterKey.ActorId,m.Counter.Version,out var preview),Is.True);
+                    var version=m.Counter.Version;var queries=f.Core.QueriesConsumed(m.CounterKey);var consumed=D3ReadField(preview,"Consumed");
+                    Assert.That(f.Core.TryCommit(prepared,preview),Is.False,"FEATURE: original Granted cannot overtake a now-bound real canonical continuation");
+                    Assert.That(prepared.AcquiredSequence,Is.Zero);Assert.That(m.Counter.Version,Is.EqualTo(version));Assert.That(preview.IsCurrent,Is.True);
+                    Assert.That(D3ReadField(preview,"Consumed"),Is.EqualTo(consumed));Assert.That(f.Core.QueriesConsumed(m.CounterKey),Is.EqualTo(queries));
+                }
+                m.RequireHeld();
+                // Same parent/next and real current source, but new immutable producer DTOs are legitimate.
+                // 同一原义务的合法 DTO 刷新不能被误判为重新绑定另一来源。
+                var refreshedExit=f.Core.GetDecision(f.Exit);
+                f.Candidate=Request(f.Exit,f.ActualPosition,f.Goal,f.World,frame:20,resource:f.PickupResource,seconds:30);
+                f.Milestone=new CanonicalPreparationMilestone(f,f.Candidate,refreshedExit);Assert.That(f.Bind(m.Handle,refreshedExit),Is.True);
+                m.RequireHeld(); // early: frame21; late: frame22; both precede the original frame23/24 helpers.
+                f.CompleteCrossing();f.Core.ProcessReady(23);var exit=f.Core.GetDecision(f.Exit);
+                Assert.That(exit.Kind,Is.EqualTo(TrafficDecisionKind.Granted),exit.Reason);
+                var proof=exit.ProofRoutes.Single(p=>p.ResourceId==f.PickupResource);
+                Assert.That(proof.Waypoints.Count,Is.GreaterThanOrEqualTo(2),"PREMISE: public static obstacle causes an actual multi-leg route");
+                // Actual public joint commit is the only transfer receipt; retired + acquired is not substituted.
+                f.CommitExit(m.Handle,exit);Assert.That(exit.AcquiredSequence,Is.GreaterThan(0));m.Frame=25;m.RequireHeld();
+                var stamp=f.ExitStamp;var witnessedGap=false;var witnessedBody=false;
+                for(var index=0;index<proof.Waypoints.Count;index++)
+                {
+                    var from=index==0?f.End:proof.Waypoints[index-1];var to=proof.Waypoints[index];
+                    if(from.x<3 && to.x>=3)
+                    {
+                        var fraction=(3-from.x)/(to.x-from.x);var pose=Vector3.Lerp(from,to,fraction);
+                        Assert.That(Mathf.Abs(pose.z),Is.LessThan(2),"PREMISE: actual same-leg body crosses the Counter primary");
+                        f.SetActualPosition(pose);m.RequireHeld();witnessedBody=true;
+                    }
+                    if(index==proof.Waypoints.Count-1){f.FinishExit(stamp);break;}
+                    f.SetActualPosition(to);Assert.That(f.Core.CompleteLeg(f.Exit,f.Actor,stamp,to),Is.True);
+                    var next=f.Core.PrepareLeg(exit,f.PickupResource,index+1,f.Actor,9+index,f.World,to,.05f,m.Frame);
+                    Assert.That(next.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));Assert.That(next.Reason,Is.EqualTo("retained-leg-ready-batch-pending"));
+                    m.ReadCurrent=()=>
+                    {
+                        var leg=D1Read(f.Core,f.Exit,"Leg");
+                        if((int)D3ReadField(leg,"Index")>0 && !(bool)D3ReadField(leg,"Committed") && !(bool)D3ReadField(leg,"Bound"))witnessedGap=true;
+                    };
+                    m.RequireHeld();m.ReadCurrent=null;var ready=f.Core.GetDecision(f.Exit);
+                    Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);Assert.That(f.Core.TryCommit(ready),Is.True);
+                    stamp=new TrafficNativeStamp(305+index,9+index);Assert.That(f.Core.BindLeg(f.Exit,f.Actor,stamp),Is.True);
+                }
+                Assert.That(witnessedGap,Is.True,"PREMISE: actual Counter read observed this same-source next-leg gap");Assert.That(witnessedBody,Is.True);
+                m.Refresh();var granted=m.Step();Assert.That(granted.Kind,Is.EqualTo(TrafficDecisionKind.Granted),granted.Reason);
+                Assert.That(granted.RequestSequence,Is.EqualTo(m.Sequence));Assert.That(D1Read(f.Core,m.CounterKey,"FrozenOwners"),Is.SameAs(m.Frozen));
+                Assert.That(m.Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,m.CounterKey.ActorId,m.Counter.Version,out var advance),Is.True);
+                Assert.That(f.Core.TryCommit(granted,advance),Is.True);
+            }
+        }
+        [Test] public void CounterCollectedCanonicalOrderConsumesOriginalDeadlineButNotZeroOrPause()
+        {
+            var m=new CounterCollectedCanonicalOrderModel();m.RequireHeld();var queries=m.F.Core.QueriesConsumed(m.CounterKey);
+            m.F.Core.Tick(0,false);m.F.Core.Tick(3,true);m.F.Core.Tick(0,false);m.RequireHeld();
+            Assert.That(m.F.Core.QueriesConsumed(m.CounterKey),Is.EqualTo(queries));m.F.Core.Tick(.25f,false);m.Debt-=.25f;
+            m.F.CounterModelPublish();m.RequireHeld();m.F.Core.Tick(m.Debt+.01f,false);
+            var failed=m.F.Core.GetDecision(m.CounterKey);Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            Assert.That(failed.Reason,Is.EqualTo("wait-budget-exhausted"));Assert.That(failed.AcquiredSequence,Is.Zero);
+        }
+        [Test] public void CounterCollectedCanonicalOrderCannotPinUnboundCapabilityOrDefaultMovement()
+        {
+            var unbound=new CounterCollectedCanonicalOrderModel(bind:false);var d=unbound.Step();
+            Assert.That(d.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"No real bound collected successor: capability alone gives no ordering right: "+d.Reason);
+            Assert.That(unbound.Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,unbound.CounterKey.ActorId,unbound.Counter.Version,out var acquiredPreview),Is.True);
+            Assert.That(unbound.F.Core.TryCommit(d,acquiredPreview),Is.True);var acquired=d.AcquiredSequence;Assert.That(acquired,Is.GreaterThan(0));
+            unbound.F.CounterModelPublish();var actual=unbound.F.SubmitExit();Assert.That(unbound.F.Bind(unbound.Handle,actual),Is.True);
+            unbound.Step();Assert.That(d.AcquiredSequence,Is.EqualTo(acquired));Assert.That(unbound.F.Core.HasActiveGrant(unbound.CounterKey),Is.True,"A later binding cannot roll back the actual acquired Counter");
+            var f=new CanonicalSuccessorPreparationFixture();var handle=f.Begin();f.StartCrossing();f.Collect();var initial=f.SubmitExit();
+            Assert.That(f.Bind(handle,initial),Is.True);f.Core.ProcessReady(20);f.SubmitLater();
+            Assert.That(f.Core.GetDecision(f.Later).Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),"Default existing movement ordering is unchanged");
+        }
+        [Test] public void CounterCollectedCanonicalOrderDoesNotRebindAfterAbortOrChangedLifeOrClaim()
+        {
+            foreach(var fault in new[]{"abort","life","claim","producer","throw","issued-off-path","issued-radius","issued-safety"})
+            {
+                var m=new CounterCollectedCanonicalOrderModel();m.RequireHeld();
+                if(fault.StartsWith("issued-",StringComparison.Ordinal))
+                {
+                    m.F.CompleteCrossing();m.F.Core.ProcessReady(23);var exit=m.F.Core.GetDecision(m.F.Exit);
+                    Assert.That(exit.Kind,Is.EqualTo(TrafficDecisionKind.Granted),exit.Reason);m.F.CommitExit(m.Handle,exit);m.Frame=25;m.RequireHeld();
+                    if(fault=="issued-off-path")m.F.SetActualPosition(P(0,4));
+                    if(fault=="issued-radius")m.F.CounterModelBodyRadius=.5f;
+                    if(fault=="issued-safety")m.F.CounterModelBodySafety=.02f;
+                }
+                if(fault=="abort")m.F.Core.AbortPhaseHandoff(m.Handle,"model-original-aborted");
+                if(fault=="life")m.F.CounterModelActorLife=new object();
+                if(fault=="claim")m.F.ReplaceClaim(true);
+                if(fault=="producer")m.Current=false;if(fault=="throw")m.ThrowCurrent=true;
+                m.F.CounterModelPublish();var failed=m.Step();
+                Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),"Invalid captured obligation must not repin/renew: "+fault+"/"+failed.Reason);
+                Assert.That(failed.AcquiredSequence,Is.Zero);Assert.That(D1Read(m.F.Core,m.CounterKey,"FrozenOwners"),Is.SameAs(m.Frozen));
+                Assert.That((float)D1Read(m.F.Core,m.CounterKey,"WaitRemaining"),Is.LessThanOrEqualTo(m.Debt));
+            }
+        }
+        [Test] public void CounterCollectedCanonicalOrderCannotHideUnknownBlockerOrReaderReentry()
+        {
+            var m=new CounterCollectedCanonicalOrderModel();m.RequireHeld();m.Extra=new TrafficBodyFact(Key("unrelated-canonical-order-body"),P(3,2),.4f,actorLife:new object());
+            m.F.CounterModelPublish();var failed=m.Step();Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(failed.AcquiredSequence,Is.Zero);
+            var reentry=new CounterCollectedCanonicalOrderModel();reentry.RequireHeld();var seen=false;
+            reentry.F.CounterModelBeforeMilestoneRead=()=>{if(seen)return;seen=true;reentry.F.Core.ProcessReady(reentry.Frame++);};
+            var nested=reentry.Step();Assert.That(seen,Is.True,"PREMISE: original typed milestone reader was reached");
+            Assert.That(nested.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(nested.AcquiredSequence,Is.Zero);
+        }
+
         private sealed class CanonicalSuccessorPreparationFixture
         {
             internal readonly TrafficIntentKey Owner=Key("canonical-exit-owner","pickup-service",10);
@@ -11247,12 +11913,13 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                     {Assert.That(Pickup.TryGetReservation(Owner.ActorId,out var assignment),Is.True);Assert.That(Pickup.MarkArrived(Owner.ActorId,assignment.Generation),Is.True);Arrived=true;return new PaidWaitArrivalModelMilestone(this);},out var handle),Is.True);
                 Assert.That(handle,Is.Not.Null);Refresh();return handle;
             }
-            internal CanonicalSuccessorPreparationFixture(string capability="valid",TrafficBodyFact extraBody=null)
+            internal CanonicalSuccessorPreparationFixture(string capability="valid",TrafficBodyFact extraBody=null,Action<CanonicalSuccessorPreparationFixture> beforeService=null,IEnumerable<Vector3> capabilityObstacles=null)
             {
                 this.extraBody=extraBody;bodyOwner=Owner;
                 World=ServiceTrafficCoordinatorTests.World(1,1,extraBody==null?new[]{Body()}:new[]{Body(),extraBody});Core=Coordinator(World,waitSeconds:30);
+                beforeService?.Invoke(this);
                 var requirements=capability=="none"?Array.Empty<TrafficRouteRequirement>():new[]{new TrafficRouteRequirement("collection-exit-capability",
-                    capability=="wrong-start"?End+P(0,.25f):End,capability=="wrong-goal"?Goal+P(0,1):Goal,.8f,avoidProposedParking:false)};
+                    capability=="wrong-start"?End+P(0,.25f):End,capability=="wrong-goal"?Goal+P(0,1):Goal,.8f,obstacles:capabilityObstacles,avoidProposedParking:false)};
                 ServiceSource=Grant(Core,Request(Owner,Start,End,World,resource:PickupResource,seconds:30,requirements:requirements));
                 Assert.That(Pickup.TryReserve(Owner.ActorId,out _),Is.True);Assert.That(Pickup.TryBeginTransfer(Owner.ActorId,out var wait),Is.True);
                 Assert.That(Pickup.MarkArrived(Owner.ActorId,wait.Generation),Is.True);Assert.That(Pickup.TryAcquireCollection(Owner.ActorId,End),Is.True);
@@ -11262,7 +11929,15 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 Core.ProcessReady(2);Assert.That(Core.TryCommit(Core.GetDecision(Owner)),Is.True);Assert.That(Core.BindLeg(Owner,Actor,Stamp),Is.True);
             }
             internal string PickupResource=>"pickup/"+Owner.ActorId;internal string ServiceResource=>"service/"+Owner.ActorId;
-            private TrafficBodyFact Body()=>new TrafficBodyFact(bodyOwner,position,.4f,true,!Arrived,Arrived?0:30,actorLife:Actor);
+            // Optional model-only producer facts; null preserves every existing fixture path.
+            internal Func<IEnumerable<TrafficBodyFact>> CounterModelBodies;
+            internal Func<IEnumerable<TrafficParkingFact>> CounterModelClaims;
+            internal Action CounterModelAfterRefresh,CounterModelBeforeMilestoneRead;
+            internal object CounterModelActorLife;
+            internal float CounterModelBodyRadius=.4f,CounterModelBodySafety;
+            internal bool CounterModelReplacesLaterBody;
+            internal void CounterModelPublish()=>Refresh();
+            private TrafficBodyFact Body()=>new TrafficBodyFact(bodyOwner,position,CounterModelBodyRadius,true,!Arrived,Arrived?0:30,safetyMargin:CounterModelBodySafety,actorLife:CounterModelActorLife??Actor);
             private TrafficParkingFact Fact(TrafficIntentKey owner,string resource,Vector3 point,object checkpoint=null)
             {var fact=new TrafficParkingFact(owner,Pickup,Pickup.Version,resource,point,.4f,businessOwner:Business,releaseObligation:Obligation,semanticCheckpoint:checkpoint);known.Add(fact);return fact;}
             private IEnumerable<TrafficParkingFact> Facts(TrafficIntentKey owner)
@@ -11275,8 +11950,10 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 var bodies=new List<TrafficBodyFact>();if(!Gone)bodies.Add(Body());
                 if(extraBody!=null)bodies.Add(extraBody);
                 if(crossingPresent)bodies.Add(new TrafficBodyFact(Crossing,crossingPosition,.4f,true,crossingMoving,crossingMoving?8:0,actorLife:CrossingLife));
-                if(laterPresent)bodies.Add(new TrafficBodyFact(Later,P(3,-2),.4f,true,laterMoving,laterMoving?8:0,actorLife:LaterLife));
-                World=ServiceTrafficCoordinatorTests.World(++version,version,bodies.ToArray(),facts??Facts(bodyOwner).ToArray());Core.SetSnapshot(World);
+                if(laterPresent && !CounterModelReplacesLaterBody)bodies.Add(new TrafficBodyFact(Later,P(3,-2),.4f,true,laterMoving,laterMoving?8:0,actorLife:LaterLife));
+                if(CounterModelBodies!=null)bodies.AddRange(CounterModelBodies());
+                var allFacts=facts??Facts(bodyOwner).ToArray();if(CounterModelClaims!=null)allFacts=allFacts.Concat(CounterModelClaims()).ToArray();
+                World=ServiceTrafficCoordinatorTests.World(++version,version,bodies.ToArray(),allFacts);Core.SetSnapshot(World);CounterModelAfterRefresh?.Invoke();
             }
             internal ITrafficPhaseMilestone Confirm()
             {Assert.That(Pickup.TryGetReservation(Owner.ActorId,out var a),Is.True);Assert.That(Pickup.MarkArrived(Owner.ActorId,a.Generation),Is.True);Arrived=true;return new CanonicalPreparationMilestone(this);}
@@ -11361,9 +12038,9 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 Assert.That(Core.TryCommitPhaseHandoff(handle,ready,Milestone,publish:()=>{bodyOwner=Exit;Refresh();}),Is.True);
                 Assert.That(Core.BindLeg(Exit,Actor,ExitStamp),Is.True);
             }
-            internal void FinishExit()
+            internal void FinishExit(TrafficNativeStamp? finalStamp=null)
             {
-                position=Goal;Refresh();Assert.That(Core.CompleteLeg(Exit,Actor,ExitStamp,Goal),Is.True);
+                position=Goal;Refresh();Assert.That(Core.CompleteLeg(Exit,Actor,finalStamp??ExitStamp,Goal),Is.True);
                 Pickup.ReleaseServicePosition(Owner.ActorId);Assert.That(Pickup.Remove(Owner.ActorId),Is.True);Gone=true;Refresh();
                 Core.Retire(Exit);Core.NotifyChanged(Exit,PickupResource);Core.NotifyChanged(Exit,ServiceResource);Core.NotifyChanged(Exit,"body");
             }
@@ -11419,7 +12096,7 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             public TrafficParkingFact CurrentClaim=>ReadClaim(OriginalClaim,out var current)==TrafficPhaseClaimState.Held?current:null;
             public object ActorLife=>f.Actor;public object BusinessOwner=>f.Business;public object ReleaseObligation=>f.Obligation;
             public TrafficPhaseMilestoneKind Kind=>f.Collected?TrafficPhaseMilestoneKind.Collected:TrafficPhaseMilestoneKind.Arrived;
-            public bool IsCurrent=>f.Arrived && !f.Gone && (candidate==null || f.Collected && f.CollectionSequence==collection);
+            public bool IsCurrent {get{f.CounterModelBeforeMilestoneRead?.Invoke();return f.Arrived && !f.Gone && (candidate==null || f.Collected && f.CollectionSequence==collection);}}
             public TrafficPhaseClaimState ReadClaim(TrafficParkingFact captured,out TrafficParkingFact current)=>f.ReadClaim(captured,out current);
             public bool AuthorizesSuccessor(TrafficIntentKey key,TrafficDecision source,int firstFrame)=>IsCurrent && f.Collected && collection==1 &&
                 candidate!=null && key.Equals(f.Exit) && candidate.Intent.Equals(key) && candidate.RequestedFrame==20 && firstFrame==20 &&

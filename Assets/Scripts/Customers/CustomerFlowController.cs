@@ -989,7 +989,9 @@ namespace AnimalCafe.Customers
             }
             var rows=a.Counter.Snapshot;var index=-1;
             for(var i=0;i<rows.Count;i++)if(rows[i].VisitId==a.Visit.Id){index=i;break;}
-            if(index<=0 || !visits.TryGetValue(rows[index-1].VisitId,out var predecessor) ||
+            // Only the actual accepted Working head owns this finite business predecessor.
+            // Capture once; later paid refresh keeps this same task and reservation lineage.
+            if(index<=0 || rows[0].SlotIndex!=0 || !visits.TryGetValue(rows[0].VisitId,out var predecessor) ||
                 predecessor.State!=CustomerVisitState.Queued || !predecessor.CounterArrived || predecessor.QueueLeft || predecessor.HasCollected ||
                 predecessor.RequestId!=0 || predecessor.PickupInTransit || predecessor.PaidPickup!=null || !TrafficActorReady(predecessor.Actor) ||
                 !a.Counter.TryCaptureAssignment(predecessor.Id,out var claim) || !claim.IsCurrent || !claim.Assignment.Arrived ||
@@ -1065,6 +1067,29 @@ namespace AnimalCafe.Customers
                 !TrafficSelectionCurrent(predecessor,predecessor.TrafficSelection) ||
                 coordinator.GetDecision(work.PaidIntent).FailureDisposition!=TrafficFailureDisposition.None || parkingOwner && work.Parking.Retired)return CounterWorkingPredecessorResult.Invalid;
             return CounterWorkingPredecessorResult.Pending;
+        }
+        // Readonly producer evidence; Core independently verifies the exact active seed and paid leg.
+        // 仅读取原任务和真实预留，不规划、不续期、不把未发腿声明为独立运动。
+        private TrafficCounterPaidTraversalObservation ReadCounterOriginalPaidTraversal(CounterAdvanceAnchor a,
+            TrafficIntentKey owner,TrafficDecision source)
+        {
+            var work=a?.WorkingPredecessor;
+            if(work==null || !CounterAdvanceAnchorCurrent(a) || source==null)return null;
+            var result=ReadCounterWorkingPredecessor(work,owner,a.Coordinator);
+            if(result==CounterWorkingPredecessorResult.Invalid || work.Parking.Owner==null ||
+                !ReferenceEquals(work.Parking.Owner,work.ParkingFact.CanonicalOwner) ||
+                !work.Parking.Owner.TryCaptureReservation(work.Visit.Id,out var claim) || !claim.IsCurrent ||
+                work.Parking.Claim==null || !work.Parking.Claim.IsSameReservation(claim))return null;
+            if(owner.Equals(work.ParkingSource.Intent))
+            {
+                if(result!=CounterWorkingPredecessorResult.Pending || !ReferenceEquals(source,work.ParkingSource))return null;
+                return new TrafficCounterPaidTraversalObservation(work.Actor,work,work.ParkingSource,
+                    default(TrafficIntentKey),null,claim);
+            }
+            var move=work.Visit.TrafficMove;
+            if(result!=CounterWorkingPredecessorResult.NativeAccepted || work.Paid==null ||
+                !owner.Equals(work.PaidIntent) || move==null || !ReferenceEquals(move.Source,source))return null;
+            return new TrafficCounterPaidTraversalObservation(work.Actor,work,work.ParkingSource,work.PaidIntent,source,claim);
         }
         // Read only the same actual Counter owner/Arrived receipt/current canonical successor.
         // 原captured dependency由Core核验；这里只认证真实FIFO前客、旧receipt和当前g100原source，不签新权限。
@@ -1152,7 +1177,7 @@ namespace AnimalCafe.Customers
             {
                 var working=CounterAdvanceWorkingPredecessorSeconds(a,owner);
                 return working>0?working:CounterAdvanceHandoffPredecessorSeconds(a,owner);
-            });
+            },(owner,source)=>ReadCounterOriginalPaidTraversal(a,owner,source));
             return a.Coordinator.TrySetCounterAdvanceReadiness(expected,a.Readiness);
         }
         private bool CounterAdvanceAnchorCurrent(CounterAdvanceAnchor a)
@@ -2686,7 +2711,14 @@ namespace AnimalCafe.Customers
                 return false;
             }
             if(expected.FailureDisposition!=TrafficFailureDisposition.None || expected.AcquiredSequence!=0 || a.Coordinator.HasActiveGrant(a.Key))return false;
-            if(preview==null && !a.Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,a.Visit.Id,a.Counter.Version,out preview))return false;
+            if(preview==null && !a.Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,a.Visit.Id,a.Counter.Version,out preview))
+            {
+                // An earlier real FIFO row owns this preview; retain only the original finite preparation.
+                // 没有当前preview时不新建source；Core继续扣原债务，普通帧恢复后仍须完整空间证明。
+                if(CounterAdvanceAnchorCurrent(a) && ReferenceEquals(a.Coordinator.GetDecision(a.Key),expected))
+                    a.Coordinator.TryHoldCanonicalAnchorPreparation(expected);
+                return false;
+            }
             if(!CounterAdvancePreviewCanReprepare(a,preview))return false;
             if(!a.Coordinator.TryReprepareCanonicalAnchor(expected,CounterAdvanceRequest(a,snapshot,preview.Assignment),out next))return false;
             // Publish only after the original Core accepts and the same producer/preview still owns this result.

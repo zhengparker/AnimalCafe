@@ -179,8 +179,111 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                             "/path=["+PhotoPath((Vector3[])MovementRead(leg,"Path"))+"]"));
                 }
             }
+            var captureCollectedCounter=Environment.GetCommandLineArgs().Contains("-photoCollectedExitBeforeCounterCommit");
+            var collectedCounterCaptured=false;var collectedCounterPostCaptured=false;object capturedCounterEntry=null;TrafficDecision capturedCounterDecision=null;
+            TrafficIntentKey capturedCounterKey=default;var collectedCounterErrors=new List<string>();
+            void CaptureCollectedCounter(string operation,string id)
+            {
+                if(!captureCollectedCounter || collectedCounterCaptured || operation!="traffic.counter-advance-preflight" ||
+                    id==null || !id.EndsWith("-00000011",StringComparison.Ordinal))return;
+                object Read(object value,string name)=>value==null?null:value.GetType().GetField(name,BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic)?.GetValue(value);
+                string Ref(object value)=>value==null?"NULL":value.GetType().Name+"#"+System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value);
+                string Key(TrafficIntentKey k)=>k.Session+"/e"+k.Epoch+"/"+k.ActorId+"/"+k.IntentId+"/g"+k.Generation+"/r"+k.LayoutRevision+"/"+k.Context;
+                string Points(IEnumerable<Vector3> points)=>points==null?"NULL":"["+string.Join(";",points.Select(v=>v.ToString("F9")))+"]";
+                string Fields(object value,params string[] names)=>value==null?"NULL":Ref(value)+"{"+string.Join(";",names.Select(n=>n+"="+(Read(value,n)??"NULL")))+"}";
+                var lines=new List<string>();
+                try
+                {
+                    if(!ReferenceEquals(CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic"),photoCore))return;
+                    var visits=CafeLoopRuntimeProof.Field<IDictionary>(customers,"visits");var visit=visits[id];var anchor=Read(visit,"PendingCounterAdvance");
+                    if(!(Read(anchor,"Key") is TrafficIntentKey key) || key.ActorId!=id || key.IntentId!="counter-advance")return;
+                    var entries=CafeLoopRuntimeProof.Field<IDictionary>(photoCore,"entries");var entry=entries[key];var decision=Read(entry,"Decision") as TrafficDecision;
+                    if(decision==null || !decision.Intent.Equals(key) || decision.Kind!=TrafficDecisionKind.Granted || decision.AcquiredSequence!=0 ||
+                        !(Read(entry,"Prepared") is bool prepared) || !prepared || !(Read(entry,"Active") is bool active) || active)return;
+                    var request=Read(entry,"Request") as TrafficRequest;
+                    if(request==null || !request.Intent.Equals(key) || !decision.ProofRoutes.Any(proof=>proof.ResourceId==request.ResourceId && proof.ExpandedPath.Count>1))return;
+                    collectedCounterCaptured=true;capturedCounterEntry=entry;capturedCounterDecision=decision;capturedCounterKey=key;
+                    lines.Add("PHOTO_COLLECTED_COUNTER_PRE ordinal=1 frame="+Time.frameCount+" key="+Key(key)+" core="+Ref(photoCore)+" entry="+Ref(entry)+" source="+Ref(decision));
+                    void DumpRequest(string label,TrafficRequest r)
+                    {
+                        if(r==null){lines.Add(label+"=NULL");return;}
+                        lines.Add(label+"="+Ref(r)+" key="+Key(r.Intent)+" first="+r.RequestedFrame+" snapshot="+r.Snapshot?.Version+"/"+r.Snapshot?.BodyVersion+
+                            " start="+r.Start.ToString("F9")+" target="+r.Target.ToString("F9")+" radius="+r.Radius+" safety="+r.SafetyMargin+
+                            " primary="+r.PlanPrimaryRoute+" native="+r.NativeStamp+" finite="+r.IndependentlyProgressing+" seconds="+r.FiniteSeconds+" selected="+Points(r.SelectedJourney));
+                        foreach(var requirement in r.Requirements)lines.Add(label+".requirement="+requirement.ResourceId+" start="+requirement.Start.ToString("F9")+
+                            " goal="+requirement.Goal.ToString("F9")+" clearance="+requirement.Clearance+" selected="+requirement.SelectedJourney+" avoidParking="+requirement.AvoidProposedParking);
+                    }
+                    void DumpSource(string label,TrafficDecision source)
+                    {
+                        if(source==null){lines.Add(label+"=NULL");return;}
+                        lines.Add(label+"="+Ref(source)+" key="+Key(source.Intent)+" kind="+source.Kind+" reason="+source.Reason+" seq="+source.RequestSequence+" acq="+source.AcquiredSequence);
+                        foreach(var proof in source.ProofRoutes)lines.Add(label+".proof="+Ref(proof)+" resource="+proof.ResourceId+" path="+Points(proof.ExpandedPath)+" waypoints="+Points(proof.Waypoints));
+                    }
+                    void DumpFact(string label,TrafficParkingFact fact)
+                    {
+                        if(fact==null){lines.Add(label+"=NULL");return;}
+                        lines.Add(label+" key="+Key(fact.Owner)+" resource="+fact.ResourceId+" position="+fact.Position.ToString("F9")+" radius="+fact.Radius+" safety="+fact.SafetyMargin+
+                            " canonical="+Ref(fact.CanonicalOwner)+" version="+fact.OwnerVersion+" business="+Ref(fact.BusinessOwner)+" release="+Ref(fact.ReleaseObligation)+" semantic="+Ref(fact.SemanticCheckpoint));
+                    }
+                    void DumpEntry(string label,object e)
+                    {
+                        lines.Add(label+"="+Fields(e,"FirstFrame","BirthOrder","RequestSequence","AcquiredSequence","Queries","WaitRemaining","Queued","Prepared","Active","Retired","ProducerPreviewHeld"));
+                        DumpRequest(label+".request",Read(e,"Request") as TrafficRequest);DumpRequest(label+".journeyRequest",Read(e,"JourneyRequest") as TrafficRequest);
+                        DumpSource(label+".decision",Read(e,"Decision") as TrafficDecision);DumpSource(label+".permit",Read(e,"JourneyPermit") as TrafficDecision);
+                        lines.Add(label+".current="+Points(Read(e,"CurrentPath") as Vector3[])+" journey="+Points(Read(e,"Journey") as Vector3[]));
+                        var frozen=Read(e,"FrozenOwners") as IEnumerable;var stored=Read(e,"WaitingBlockers") as IEnumerable;
+                        lines.Add(label+".frozen="+(frozen==null?"NULL":string.Join(";",frozen.Cast<TrafficIntentKey>().Select(Key)))+
+                            " stored="+(stored==null?"NULL":string.Join(";",stored.Cast<TrafficBlocker>().Select(b=>Key(b.Owner)+"/"+b.ResourceId+"/"+b.Proof))));
+                        var resources=Read(e,"FrozenResources") as IDictionary;
+                        if(resources!=null)foreach(var ownerKey in resources.Keys.Cast<TrafficIntentKey>())lines.Add(label+".resources="+Key(ownerKey)+"={"+string.Join(",",((IEnumerable)resources[ownerKey]).Cast<string>())+"}");
+                        var jobs=Read(e,"Jobs") as IList;if(jobs!=null && jobs.Count>0)lines.Add(label+".job0="+Points(Read(jobs[0],"<ExpandedPath>k__BackingField") as Vector3[])+" jobIndex="+Read(e,"JobIndex"));
+                        var leg=Read(e,"Leg");lines.Add(label+".leg="+Fields(leg,"Index","Generation","Stamp","Committed","Bound","Completed","Suspended","ReprepareAllowed","ArrivalTolerance")+
+                            " proof="+Ref(Read(leg,"Proof"))+" life="+Ref(Read(leg,"ActorLife"))+" path="+Points(Read(leg,"Path") as Vector3[])+" suffix="+Points(Read(leg,"Suffix") as Vector3[]));
+                    }
+                    DumpEntry("counter",entry);lines.Add("counter.anchor="+Fields(anchor,"Retired","Phase","Generation","PhaseSequence","FirstFrame")+" source="+Ref(Read(anchor,"Source")));
+                    var matches=0;
+                    foreach(var sourceKey in entries.Keys.Cast<TrafficIntentKey>())
+                    {
+                        var old=entries[sourceKey];var state=Read(old,"PendingHandoff");var next=Read(state,"PreparedSuccessor");
+                        if(!(Read(next,"Key") is TrafficIntentKey nextKey) || nextKey.IntentId!="actual-exit")continue;
+                        var label="handoff"+(++matches);lines.Add(label+" keys="+Key(sourceKey)+" -> "+Key(nextKey)+" nextRegistered="+ReferenceEquals(entries[nextKey],next));
+                        DumpEntry(label+".previous",old);DumpEntry(label+".next",next);
+                        var source=Read(state,"Source") as TrafficDecision;DumpSource(label+".source",source);
+                        lines.Add(label+".state="+Fields(state,"Remaining","CheckpointKind","InspectingPreparation","CommittingPreparedSuccessor")+
+                            " actorLife="+Ref(Read(state,"ActorLife"))+" handle="+Ref(Read(state,"Handle"))+" sourceSamePermit="+ReferenceEquals(source,Read(old,"JourneyPermit"))+
+                            " preparedSuccessor="+Ref(next)+" preparationSource="+Ref(Read(state,"PreparationSource"))+" milestone="+Ref(Read(state,"PreparationMilestone")));
+                        DumpRequest(label+".preparationRequest",Read(state,"PreparationRequest") as TrafficRequest);
+                        var claims=Read(state,"OriginalClaims") as IEnumerable;if(claims!=null)foreach(var fact in claims.Cast<TrafficParkingFact>())DumpFact(label+".originalClaim",fact);
+                        var ownerVisit=visits[nextKey.ActorId];var pending=Read(ownerVisit,"PendingTraffic");
+                        lines.Add(label+".visit="+Fields(ownerVisit,"State","HasCollected","ServiceArrived","PickupAssigned","PickupDeparted","CollectedOrder","CollectionFrame","ExitSequence","Generation")+
+                            " pending="+Ref(pending)+" pendingSource="+Ref(Read(pending,"Source"))+" pendingHandle="+Ref(Read(pending,"Handle"))+
+                            " pendingSourceSame="+ReferenceEquals(Read(pending,"Source"),source)+" pendingHandleSame="+ReferenceEquals(Read(pending,"Handle"),Read(state,"Handle")));
+                    }
+                    lines.Add("actualExitBoundStoredCount="+matches+" originalReadBound=NOT_EVALUATED originalPolicyConflict=NOT_EVALUATED");
+                    var snapshot=CafeLoopRuntimeProof.Field<TrafficWorldSnapshot>(photoCore,"snapshot");
+                    foreach(var body in snapshot.Bodies)lines.Add("body="+Key(body.Owner)+" life="+Ref(body.ActorLife)+" pos="+body.Position.ToString("F9")+" radius="+body.Radius+" safety="+body.SafetyMargin+" enabled="+body.Enabled+" active="+body.ActorActive+" finite="+body.IndependentlyProgressing+" seconds="+body.RemainingSeconds);
+                    foreach(var fact in snapshot.Parking)DumpFact("currentParking",fact);
+                }
+                catch(Exception error){collectedCounterCaptured=true;collectedCounterErrors.Add(error.ToString());lines.Add("capture=UNKNOWN_ERROR "+error);}
+                if(lines.Count>0)TestContext.WriteLine(string.Join("\n",lines));
+            }
+            void FinishCollectedCounterCapture()
+            {
+                if(!captureCollectedCounter || collectedCounterPostCaptured)return;
+                collectedCounterPostCaptured=true;
+                try
+                {
+                    if(!collectedCounterCaptured){TestContext.WriteLine("PHOTO_COLLECTED_COUNTER_POST NOT_CAPTURED");return;}
+                    var entries=CafeLoopRuntimeProof.Field<IDictionary>(photoCore,"entries");var actual=entries[capturedCounterKey];
+                    TestContext.WriteLine("PHOTO_COLLECTED_COUNTER_POST ordinal=2 frame="+Time.frameCount+" sampledSourceAcquired="+capturedCounterDecision?.AcquiredSequence+
+                        " sameEntry="+ReferenceEquals(actual,capturedCounterEntry)+" sameDecision="+ReferenceEquals(actual==null?null:MovementRead(actual,"Decision"),capturedCounterDecision)+
+                        " sameJourneyPermit="+ReferenceEquals(actual==null?null:MovementRead(actual,"JourneyPermit"),capturedCounterDecision)+" errors="+string.Join(";",collectedCounterErrors));
+                }
+                catch(Exception error){TestContext.WriteLine("PHOTO_COLLECTED_COUNTER_POST UNKNOWN_ERROR "+error);}
+            }
             Action<string,string,string,Vector3,IReadOnlyList<Vector3>,Vector3[],string> photoObserver=(operation,id,other,target,path,obstacles,result)=>
             {
+                CaptureCollectedCounter(operation,id);
                 if(operation=="segment.submitted")PhotoEntries("native-bind");
                 if(photoEvents.Count<1024 && (operation=="route.blocked" || operation=="segment.callback-result" || operation=="segment.submitted"))
                     photoEvents.Add("PHOTO_ORIGINAL frame="+Time.frameCount+" op="+operation+" id="+id+" target="+target+" result="+result);
@@ -282,8 +385,32 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 catch(Exception error){lines.Add("capture=UNKNOWN_ERROR "+error);}
                 TestContext.WriteLine(string.Join("\n",lines));
             }
-            Action<string> failureCapture=text=>{CaptureCounterWorkingSource(text);if(text.StartsWith("EXIT_INITIAL_FREEZE"))TestContext.WriteLine(text);if(text.StartsWith("WAIT_ORIGINAL")){TestContext.WriteLine("PHOTO_ORIGINAL_WAIT "+text);PhotoEntries("original-refusal",true);}};
+            Action<string> failureCapture=text=>{if(text.StartsWith("WAIT_ORIGINAL") && capturedCounterDecision!=null && capturedCounterDecision.AcquiredSequence>0)FinishCollectedCounterCapture();CaptureCounterWorkingSource(text);if(text.StartsWith("EXIT_INITIAL_FREEZE"))TestContext.WriteLine(text);if(text.StartsWith("WAIT_ORIGINAL")){TestContext.WriteLine("PHOTO_ORIGINAL_WAIT "+text);PhotoEntries("original-refusal",true);}};
             failureHook.SetValue(photoCore,Delegate.Combine(previousFailure,failureCapture));
+            var photoSnapshotHook=typeof(ServiceTrafficCoordinator).GetField("SnapshotChangedObserver",BindingFlags.Instance|BindingFlags.NonPublic);
+            var previousPhotoSnapshot=photoSnapshotHook.GetValue(photoCore) as Action<TrafficRequest,TrafficWorldSnapshot>;
+            var capturePhotoSnapshot=Environment.GetCommandLineArgs().Contains("-photoCounterSnapshotChanged");var photoSnapshotCaptured=false;
+            Action<TrafficRequest,TrafficWorldSnapshot> photoSnapshot=(request,current)=>
+            {
+                previousPhotoSnapshot?.Invoke(request,current);
+                if(!capturePhotoSnapshot || photoSnapshotCaptured || request.Intent.IntentId!="counter-advance")return;
+                photoSnapshotCaptured=true;
+                try
+                {
+                    object Read(object value,string field)=>value==null?null:value.GetType().GetField(field,BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic)?.GetValue(value);
+                    string Fields(object value,params string[] names)=>value==null?"NULL":string.Join(";",names.Select(n=>n+"="+Read(value,n)));
+                    var visit=((IDictionary)Read(customers,"visits"))[request.Intent.ActorId];var anchor=Read(visit,"PendingCounterAdvance");
+                    var entry=((IDictionary)Read(photoCore,"entries"))[request.Intent];
+                    TestContext.WriteLine("PHOTO_COUNTER_SNAPSHOT_CHANGED frame="+Time.frameCount+" actor="+request.Intent.ActorId+
+                        " old="+request.Snapshot.Version+"/"+request.Snapshot.BodyVersion+" current="+current.Version+"/"+current.BodyVersion+
+                        " core="+Fields(entry,"Queued","Prepared","Active","ProducerPreviewHeld","CounterAdvanceReadinessWaitStarted","WaitRemaining","CounterPaidTraversal")+
+                        " anchor="+Fields(anchor,"Retired","Phase","Target","Assignment","Source","Readiness","WorkingPredecessor")+
+                        " visit="+Fields(visit,"State","CounterArrived","QueueLeft","RequestId","Generation")+
+                        " counter="+string.Join("|",customers.CounterAssignments.Select(a=>a.VisitId+"/"+a.SlotIndex+"/"+a.Generation+"/"+a.Arrived))+"\n"+Environment.StackTrace);
+                }
+                catch(Exception error){TestContext.WriteLine("PHOTO_COUNTER_SNAPSHOT_CHANGED UNKNOWN "+error);}
+            };
+            if(capturePhotoSnapshot)photoSnapshotHook.SetValue(photoCore,photoSnapshot);
             owner.SnapshotChanged+=WatchPhoto;
             try
             {
@@ -546,10 +673,12 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             }
             finally
             {
+                FinishCollectedCounterCapture();
                 trackExits=false;owner.SnapshotChanged-=WatchPhoto;customers.AutoSpawn=false;
                 foreach(var observer in exitObservers)if(observer!=null)observer.Receipt=null;
                 photoHook.SetValue(customers,previousPhoto);
                 failureHook.SetValue(photoCore,previousFailure);
+                if(capturePhotoSnapshot)photoSnapshotHook.SetValue(photoCore,previousPhotoSnapshot);
                 photoWaitTrace.Dispose();
                 foreach(var photoEvent in photoEvents)TestContext.WriteLine(photoEvent);
             }

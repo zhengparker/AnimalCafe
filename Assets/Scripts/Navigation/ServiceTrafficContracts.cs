@@ -35,9 +35,28 @@ namespace AnimalCafe.Navigation
         internal readonly TrafficIntentKey Intent;
         internal readonly Func<bool> IsCurrent;
         internal readonly Func<TrafficIntentKey,float> FiniteWorkingPredecessorSeconds;
+        internal readonly Func<TrafficIntentKey,TrafficDecision,TrafficCounterPaidTraversalObservation> OriginalPaidTraversal;
         internal TrafficCounterAdvanceReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<TrafficIntentKey,float> finiteWorkingPredecessorSeconds)
+            :this(intent,isCurrent,finiteWorkingPredecessorSeconds,null) { }
+        internal TrafficCounterAdvanceReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<TrafficIntentKey,float> finiteWorkingPredecessorSeconds,
+            Func<TrafficIntentKey,TrafficDecision,TrafficCounterPaidTraversalObservation> originalPaidTraversal)
         { Intent=intent;IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));
-            FiniteWorkingPredecessorSeconds=finiteWorkingPredecessorSeconds??throw new ArgumentNullException(nameof(finiteWorkingPredecessorSeconds)); }
+            FiniteWorkingPredecessorSeconds=finiteWorkingPredecessorSeconds??throw new ArgumentNullException(nameof(finiteWorkingPredecessorSeconds));
+            OriginalPaidTraversal=originalPaidTraversal; }
+    }
+    // Optional original business provenance only. Core must independently authenticate the owned paid traversal.
+    // No selected path, body independence, permission or WAIT edge is granted by this readonly observation.
+    public sealed class TrafficCounterPaidTraversalObservation
+    {
+        public object ActorLife { get; }
+        public object WorkingSeal { get; }
+        public TrafficDecision ParkingSource { get; }
+        public TrafficDecision PaidSource { get; }
+        public TrafficIntentKey PaidIntent { get; }
+        public AnimalCafe.Customers.PickupQueueService.ReservationClaim Reservation { get; }
+        internal TrafficCounterPaidTraversalObservation(object actorLife,object workingSeal,TrafficDecision parkingSource,
+            TrafficIntentKey paidIntent,TrafficDecision paidSource,AnimalCafe.Customers.PickupQueueService.ReservationClaim reservation)
+        {ActorLife=actorLife;WorkingSeal=workingSeal;ParkingSource=parkingSource;PaidIntent=paidIntent;PaidSource=paidSource;Reservation=reservation;}
     }
 
     // Internal producer observation only; no movement, canonical or parking authority.

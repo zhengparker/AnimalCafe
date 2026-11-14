@@ -56,6 +56,11 @@ namespace AnimalCafe.Navigation
             internal int DeliveryPreparationFrame,DeliveryPreparationLastFrame;
             internal TrafficCounterAdvanceReadiness CounterAdvanceReadiness;
             internal bool CounterAdvanceReadinessWaitStarted;
+            internal TrafficCounterPaidTraversalObservation CounterPaidTraversal;
+            internal TrafficParkingFact CounterPaidTraversalFact;
+            internal bool CounterPaidTraversalInspecting;
+            internal CounterCanonicalOrder CounterCanonicalOrdering;
+            internal bool CounterCanonicalOrderingSpent,CounterCanonicalOrderingInvalid,CounterCanonicalOrderingInspecting;
 #if UNITY_EDITOR
             internal string CounterHandoffReadinessRefusal,CounterHandoffProducerRefusal;
 #endif
@@ -81,6 +86,25 @@ namespace AnimalCafe.Navigation
             internal LegState Leg;
             internal HandoffState PendingHandoff;
         }
+        // One real collected transaction, retained only as preparation ordering evidence. No owner alias or WAIT edge.
+        // 只绑定一次真实交接；不把旧capability转成选中路线，也不新增Frozen/许可或预算。
+        private sealed class CounterCanonicalOrder
+        {
+            internal readonly Entry Previous,Next;
+            internal readonly HandoffState State;
+            internal readonly TrafficPhaseHandoff Handle;
+            internal readonly TrafficDecision OldSource;
+            internal readonly TrafficRequest Descriptor;
+            internal readonly object ActorLife;
+            internal TrafficDecision TransferredSource;
+            internal TrafficRequest TransferredJourney;
+            internal int TransferredLegGeneration;
+            internal CounterCanonicalOrder(Entry previous,HandoffState state,Entry next)
+            {
+                Previous=previous;State=state;Next=next;Handle=state.Handle;OldSource=state.Source;
+                Descriptor=state.PreparationRequest;ActorLife=state.ActorLife;
+            }
+        }
         // One first-freeze capability. Actual WAIT still requires a current strict leg and normal progress checks.
         // 首次冻结仅保存原路线资格；真实等待边仍须当前已发腿、无环与原有限进展核验。
         private sealed class OriginalExitSelectedRoute
@@ -96,12 +120,13 @@ namespace AnimalCafe.Navigation
             internal readonly float FiniteLimit;
             internal readonly Vector3 ExitStart,ExitTarget;
             internal readonly Vector3[] SelectedRemainder;
-            internal OriginalExitSelectedRoute(Entry exit,Entry owner,Vector3[] selectedRemainder)
+            internal readonly TrafficParkingFact CounterClaim;
+            internal OriginalExitSelectedRoute(Entry exit,Entry owner,Vector3[] selectedRemainder,TrafficParkingFact counterClaim=null)
             {
                 Owner=owner;Source=owner.JourneyPermit;Journey=owner.JourneyRequest;Proof=owner.Leg.Proof;
                 ActorLife=owner.Leg.ActorLife;Resource=owner.Request.ResourceId;AcquiredSequence=owner.AcquiredSequence;
                 Index=owner.Leg.Index;Generation=owner.Leg.Generation;FiniteLimit=owner.FiniteLimit;
-                ExitStart=exit.Request.Start;ExitTarget=exit.Request.Target;SelectedRemainder=selectedRemainder;
+                ExitStart=exit.Request.Start;ExitTarget=exit.Request.Target;SelectedRemainder=selectedRemainder;CounterClaim=counterClaim;
             }
         }
         // Scheduling provenance only. This record grants no WAIT, release promise, route or parking right.
@@ -921,7 +946,20 @@ namespace AnimalCafe.Navigation
 
         private bool CheckCounterAdvanceReadiness(Entry entry,List<TrafficBlocker> originalBlockers=null)
         {
+            if(entry.CounterCanonicalOrderingInspecting)
+            {Fail(entry,TrafficDecisionKind.StaleContext,"counter-canonical-ordering-reentered");return false;}
+            var ordering=entry.CounterCanonicalOrdering!=null || entry.CounterCanonicalOrderingInvalid ||
+                entry.CounterAdvanceReadiness!=null && entry.CounterAdvanceReadinessWaitStarted &&
+                Positive(entry.WaitRemaining) && entry.Jobs.Count>0 && entry.JobIndex==entry.Jobs.Count;
+            if(!ordering)return CheckCounterAdvanceReadinessCore(entry,originalBlockers);
+            entry.CounterCanonicalOrderingInspecting=true;
+            try{return CheckCounterAdvanceReadinessCore(entry,originalBlockers);}
+            finally{entry.CounterCanonicalOrderingInspecting=false;}
+        }
+        private bool CheckCounterAdvanceReadinessCore(Entry entry,List<TrafficBlocker> originalBlockers)
+        {
             var readiness=entry.CounterAdvanceReadiness;
+            if(entry.CounterPaidTraversalInspecting){Fail(entry,TrafficDecisionKind.StaleContext,"counter-paid-traversal-reentered");return false;}
             if(readiness==null || entry.AcquiredSequence!=0 || entry.Leg!=null)return true;
             if(!CounterAdvancePreparationCurrent(entry))
             {Fail(entry,TrafficDecisionKind.StaleContext,"counter-advance-readiness-identity-changed");return false;}
@@ -932,11 +970,14 @@ namespace AnimalCafe.Navigation
             if(!current){Fail(entry,TrafficDecisionKind.StaleContext,"counter-advance-readiness-source-changed");return false;}
             var blockers=originalBlockers;
             if(blockers==null){blockers=EndpointBlockers(entry);AddParkingEndpointRouteBlockers(entry.Request,blockers);}
+            if(!CheckCounterCanonicalOrdering(entry,readiness,blockers))return false;
             if(blockers.Count==0)return true;
             if(!CheckCounterAdvanceHandoffReadiness(entry,readiness,blockers,out var handoffHeld))return false;
             if(handoffHeld)return HoldCounterAdvanceReadiness(entry,"counter-advance-handoff-readiness-held");
             if(!CheckCounterAdvanceContinuationReadiness(entry,readiness,blockers,out var continuationHeld))return false;
             if(continuationHeld)return HoldCounterAdvanceReadiness(entry,"counter-advance-continuation-readiness-held");
+            if(!CheckCounterOriginalPaidTraversal(entry,readiness,blockers,out var paidHeld))return false;
+            if(paidHeld)return HoldCounterAdvanceReadiness(entry,"counter-advance-original-paid-traversal-held");
             foreach(var blocker in blockers)
             {
                 // Only the observed earlier selected route, authenticated by its own producer.
@@ -953,9 +994,277 @@ namespace AnimalCafe.Navigation
                 if(float.IsNaN(seconds) || float.IsInfinity(seconds))
                 {Fail(entry,TrafficDecisionKind.StaleContext,"counter-advance-work-invalid");return false;}
                 if(seconds<=0)return true; // No actual finite task proof: keep the original policy.
+                if(readiness.OriginalPaidTraversal!=null && blocker.Owner.IntentId=="pickup-wait" &&
+                    !SeedCounterOriginalPaidTraversal(entry,readiness,owner))return false;
             }
             return HoldCounterAdvanceReadiness(entry,"counter-advance-working-readiness-held");
         }
+        // The complete original primary survives a hold in Jobs; CurrentPath is deliberately cleared by that hold.
+        // 原primary账本不重建；在最终Prepared及真实TryCommit前都认证同一已收杯义务。
+        private bool CheckCounterCanonicalOrdering(Entry entry,TrafficCounterAdvanceReadiness readiness,IReadOnlyList<TrafficBlocker> endpoints)
+        {
+            bool Invalid(string reason)
+            {
+                entry.CounterCanonicalOrdering=null;entry.CounterCanonicalOrderingSpent=true;entry.CounterCanonicalOrderingInvalid=true;
+                Fail(entry,TrafficDecisionKind.StaleContext,"counter-canonical-ordering-"+reason);return false;
+            }
+            if(entry.CounterCanonicalOrderingInvalid)return Invalid("source-changed");
+            if(!entry.CounterAdvanceReadinessWaitStarted || !Positive(entry.WaitRemaining) || entry.Jobs.Count==0 ||
+                entry.JobIndex!=entry.Jobs.Count || entry.Jobs[0].ExpandedPath.Length<2)return true;
+            var path=entry.Jobs[0].ExpandedPath;var inspect=ClaimInspectionGuard(entry);var debt=entry.WaitRemaining;
+            bool Same()=>inspect() && ReferenceEquals(entry.CounterAdvanceReadiness,readiness) &&
+                entry.CounterAdvanceReadinessWaitStarted && entry.WaitRemaining==debt;
+            var blockers=endpoints.Concat(SelectedPathBlockers(entry,path)).ToArray();
+            if(!Same())return false;
+            var order=entry.CounterCanonicalOrdering;
+            if(order==null)
+            {
+                if(entry.CounterCanonicalOrderingSpent)return true;
+                foreach(var previous in OrderedWorkEntries.Where(e=>e.PendingHandoff?.PreparedSuccessor!=null).ToArray())
+                {
+                    var state=previous.PendingHandoff;var next=state?.PreparedSuccessor;
+                    if(state==null || next==null || !LiveEntry(previous) || !Current(previous.Key) || !LiveEntry(next) ||
+                        !Current(next.Key) || ReferenceEquals(next,entry) || previous.Key.IntentId!="pickup-service" || next.Key.IntentId!="actual-exit" ||
+                        previous.Key.ActorId==entry.Key.ActorId || !ReferenceEquals(state.Source,previous.JourneyPermit) ||
+                        state.Source==null || state.Source.Kind!=TrafficDecisionKind.Granted || state.Source.AcquiredSequence<=0 ||
+                        state.Source.AcquiredSequence!=previous.AcquiredSequence || state.ActorLife==null ||
+                        state.OriginalClaims==null || !state.OriginalClaims.Any(c=>c.CanonicalOwner is AnimalCafe.Customers.PickupQueueService))continue;
+                    var owned=CanonicalSuccessorOrderingPath(previous,state,next);
+                    if(owned==null || owned.Count<2 || !PathsConflict(path,owned,PairClearance(entry.Request,next.Request)))continue;
+                    var original=ClaimInspectionGuard(previous);var successor=ClaimInspectionGuard(next);
+                    var valid=ReadBoundSuccessor(previous,state,out _);
+                    if(!Same() || !original() || !successor())return false;
+                    if(!valid)continue;
+                    order=new CounterCanonicalOrder(previous,state,next);
+                    entry.CounterCanonicalOrdering=order;entry.CounterCanonicalOrderingSpent=true;break;
+                }
+                if(order==null)return true;
+            }
+            var owner=order.Next;var currentOrder=entry.CounterCanonicalOrdering;
+            if(!ReferenceEquals(order,currentOrder) || !ReferenceEquals(order.State.Handle,order.Handle) || order.ActorLife==null)return Invalid("binding-changed");
+            if(DependsOn(owner.Key,entry.Key,new HashSet<TrafficIntentKey>()) ||
+                DependsOn(order.Previous.Key,entry.Key,new HashSet<TrafficIntentKey>()) ||
+                entry.FrozenOwners!=null && entry.FrozenOwners.Any(key=>DependsOn(key,entry.Key,new HashSet<TrafficIntentKey>())))
+            {Fail(entry,TrafficDecisionKind.PlanningFailed,"counter-canonical-ordering-cycle",blockers,preparation:true);return false;}
+            IReadOnlyList<Vector3> ownedPath;
+            if(order.TransferredSource==null)
+            {
+                var state=order.State;var previous=order.Previous;
+                if(!LiveEntry(previous) || !LiveEntry(owner) || !ReferenceEquals(previous.PendingHandoff,state) ||
+                    !ReferenceEquals(state.Source,order.OldSource) || !ReferenceEquals(state.ActorLife,order.ActorLife) ||
+                    !ReferenceEquals(state.PreparedSuccessor,owner) || !SameSuccessorDescriptor(state.PreparationRequest,order.Descriptor))return Invalid("handoff-changed");
+                var inspectPrevious=ClaimInspectionGuard(previous);var inspectNext=ClaimInspectionGuard(owner);
+                var valid=ReadBoundSuccessor(previous,state,out _);
+                if(!Same() || !inspectPrevious() || !inspectNext())return false;
+                if(!valid)return Invalid("handoff-invalid");
+                ownedPath=CanonicalSuccessorOrderingPath(previous,state,owner);
+                if(ownedPath==null || ownedPath.Count<2)return Invalid("ordering-proof-unavailable");
+            }
+            else
+            {
+                var inspectOwner=ClaimInspectionGuard(owner);var valid=CounterCanonicalTransferredCurrent(order);
+                if(!Same() || !inspectOwner())return false;
+                if(!valid)return Invalid("transferred-source-changed");
+                // Only actual selected current/future protection remains; the old capability is never carried forward.
+                ownedPath=owner.Journey;
+            }
+            var body=snapshot.Bodies.Where(b=>b.Owner.ActorId==owner.Key.ActorId).ToArray();
+            if(body.Length==0 && order.TransferredSource!=null && CounterCanonicalExitCompleted(order))
+            {entry.CounterCanonicalOrdering=null;return true;}
+            if(body.Length!=1 || !body[0].ActorActive || !body[0].Enabled || !ReferenceEquals(body[0].ActorLife,order.ActorLife) ||
+                body[0].Radius!=owner.Request.Radius || body[0].SafetyMargin!=owner.Request.SafetyMargin ||
+                !Finite(body[0].Position) || !body[0].Owner.Equals(order.TransferredSource==null?order.Previous.Key:owner.Key))return Invalid("body-changed");
+            var clearance=PairClearance(entry.Request,owner.Request);
+            var conflict=PathsConflict(path,ownedPath,clearance) || order.TransferredSource!=null &&
+                (PathsConflict(path,owner.CurrentPath,clearance) || PathsConflict(path,owner.Leg.Suffix,clearance)) ||
+                NearPath(body[0].Position,path,entry.Request.Radius+body[0].Radius+Mathf.Max(entry.Request.SafetyMargin,body[0].SafetyMargin));
+            if(!Same())return false;
+            if(!conflict){entry.CounterCanonicalOrdering=null;return true;}
+            bool Related(TrafficBlocker b)=>b.Owner.Equals(owner.Key) &&
+                (b.ResourceId=="body" && b.Proof=="live-body-checkpoint" || b.ResourceId==owner.Request.ResourceId &&
+                    (b.Proof=="current-conflict-segment" || b.Proof=="selected-journey-parking-protection")) ||
+                order.TransferredSource==null && b.Owner.Equals(order.Previous.Key) &&
+                (b.ResourceId=="body" && b.Proof=="live-body-checkpoint" || order.State.OriginalClaims.Any(c=>c.ResourceId==b.ResourceId));
+            if(blockers.Any(b=>!Related(b)))
+            {
+                // A late binding can arise after Prepared in the same snapshot; do not bypass another real route at commit.
+                // 非本来源blocker仍由原WAIT/失败策略处理，不能借新ordering分支隐藏。
+                if(entry.Prepared){WaitOrFail(entry,blockers,preparation:true);return false;}
+                return true;
+            }
+            return HoldCounterAdvanceReadiness(entry,"counter-advance-collected-canonical-ordering-held");
+        }
+        private bool CounterCanonicalTransferredCurrent(CounterCanonicalOrder order)
+        {
+            var next=order.Next;var source=order.TransferredSource;var journey=order.TransferredJourney;var leg=next.Leg;
+            if(!LiveEntry(next) || !Current(next.Key) || next.Discarded || next.Parking || next.JourneyParking || next.PendingHandoff!=null ||
+                next.ExplicitRecoveryUsed || next.Suspensions!=0 || next.LegacyLegCompleted || next.ContinuationAttempted ||
+                next.Decision.FailureDisposition!=TrafficFailureDisposition.None || source==null || journey==null ||
+                !ReferenceEquals(next.JourneyPermit,source) || !ReferenceEquals(next.JourneyRequest,journey) ||
+                source.Kind!=TrafficDecisionKind.Granted || source.AcquiredSequence<=0 || source.AcquiredSequence!=next.AcquiredSequence ||
+                !source.Intent.Equals(next.Key) || !journey.NativeStamp.Equals(default(TrafficNativeStamp)) ||
+                leg==null || leg.Generation<=0 || leg.Suspended || leg.ReprepareAllowed || leg.Proof==null ||
+                !ReferenceEquals(leg.ActorLife,order.ActorLife) || !SelectedProofs(next).Any(p=>ReferenceEquals(p,leg.Proof)) ||
+                leg.Index<0 || leg.Index>=leg.Proof.Waypoints.Count || next.Request.ResourceId!=leg.Proof.ResourceId ||
+                next.Request.Target!=leg.Proof.Waypoints[leg.Index] || next.Request.NativeStamp.RequestId!=0 ||
+                next.Request.NativeStamp.LegGeneration!=leg.Generation || leg.Suffix==null)return false;
+            if(!next.Request.IndependentlyProgressing || !Positive(next.FiniteLimit) || next.Request.FiniteSeconds!=next.FiniteLimit ||
+                journey.FiniteSeconds!=next.FiniteLimit || next.Request.Radius!=journey.Radius || next.Request.SafetyMargin!=journey.SafetyMargin ||
+                leg.Generation<order.TransferredLegGeneration || leg.Index==0 && leg.Generation!=order.TransferredLegGeneration)return false;
+            var bodies=snapshot.Bodies.Where(body=>body.Owner.ActorId==next.Key.ActorId).ToArray();
+            var issued=leg.Committed && leg.Bound && leg.Stamp.RequestId>0 && leg.Stamp.LegGeneration==leg.Generation;
+            if(bodies.Length==0)return issued && leg.Completed && leg.Index==leg.Proof.Waypoints.Count-1 &&
+                ReferenceEquals(SelectedProofs(next).Last(),leg.Proof);
+            if(bodies.Length!=1)return false;
+            var body=bodies[0];
+            if(!body.Owner.Equals(next.Key) || !body.ActorActive || !body.Enabled || !ReferenceEquals(body.ActorLife,order.ActorLife) ||
+                body.Radius!=next.Request.Radius || body.SafetyMargin!=next.Request.SafetyMargin || !Finite(body.Position))return false;
+            if(issued)
+                return leg.Completed?Vector3.Distance(body.Position,next.Request.Target)<=leg.ArrivalTolerance:
+                    next.Active && !next.Prepared && next.Decision.Kind==TrafficDecisionKind.Granted &&
+                    NearPath(body.Position,leg.Path,body.Radius+leg.ArrivalTolerance);
+            if(leg.Bound || leg.Completed || !leg.Stamp.Equals(default(TrafficNativeStamp)) || body.IndependentlyProgressing ||
+                body.RemainingSeconds!=0 || body.Position!=next.Request.Start)return false;
+            var start=leg.Index==0?journey.Start:leg.Proof.Waypoints[leg.Index-1];
+            if(Vector3.Distance(next.Request.Start,start)>leg.ArrivalTolerance)return false;
+            // Initial post-transaction publication precedes snapshot rebind/Native Bind in the same synchronous call.
+            // 仅exact成功交接的首Gen可桥接该瞬间；不从未commit的first leg推导权限。
+            if(leg.Index==0)return leg.Committed && next.Active && !next.Prepared &&
+                next.Decision.Kind==TrafficDecisionKind.Granted && leg.Generation==order.TransferredLegGeneration;
+            var nextGap=!leg.Committed && (next.Queued && next.Decision.Kind==TrafficDecisionKind.DeferredByBudget &&
+                    (next.Decision.Reason=="retained-leg-ready-batch-pending" || next.Decision.Reason=="native-query-frame-budget") ||
+                next.Prepared && next.Decision.Kind==TrafficDecisionKind.Granted) ||
+                leg.Committed && next.Active && next.Decision.Kind==TrafficDecisionKind.Granted;
+            return nextGap && StrictLegOwnFactsCurrent(next); // Same real previous completion; never Native independence.
+        }
+        private bool CounterCanonicalExitCompleted(CounterCanonicalOrder order)
+            =>order.Next.Leg!=null && order.Next.Leg.Completed && CounterCanonicalTransferredCurrent(order) &&
+                order.Next.Leg.Index==order.Next.Leg.Proof.Waypoints.Count-1 &&
+                ReferenceEquals(SelectedProofs(order.Next).Last(),order.Next.Leg.Proof);
+        private void ReleaseCounterCanonicalOrdersForRetiring(Entry owner)
+        {
+            foreach(var waiter in OrderedWorkEntries.Where(e=>e.CounterCanonicalOrdering!=null && ReferenceEquals(e.CounterCanonicalOrdering.Next,owner)).ToArray())
+            {
+                var order=waiter.CounterCanonicalOrdering;
+                // Real final Bound completion ends this ordering obligation, independently of the follower's proof frontier.
+                // 真实末腿完成只解除ordering；身体/停车事实仍由原完整空间检查保护，不据此宣称空间clear。
+                var completed=order.TransferredSource!=null && CounterCanonicalExitCompleted(order);
+                waiter.CounterCanonicalOrdering=null;waiter.CounterCanonicalOrderingSpent=true;waiter.CounterCanonicalOrderingInvalid=!completed;
+            }
+        }
+        // Pin the exact active canonical source while the original accepted Working task still owns it.
+        // A retired source is history only; it can never establish this seed for the first time.
+        private bool SeedCounterOriginalPaidTraversal(Entry entry,TrafficCounterAdvanceReadiness readiness,Entry parking)
+        {
+            if(entry.CounterPaidTraversal!=null)return true;
+            var source=parking.JourneyPermit;
+            if(!parking.Active || !parking.Parking || parking.Prepared || parking.AcquiredSequence<=0 ||
+                !ReferenceEquals(parking.Decision,source) || source==null || !parking.EverCanonicalAttempt)
+            {Fail(entry,TrafficDecisionKind.StaleContext,"counter-working-source-uncommitted");return false;}
+            var inspect=ClaimInspectionGuard(entry);var inspectOwner=ClaimInspectionGuard(parking);var debt=entry.WaitRemaining;
+            bool Same()=>inspect() && inspectOwner() && entry.WaitRemaining==debt && ReferenceEquals(entry.CounterAdvanceReadiness,readiness);
+            entry.CounterPaidTraversalInspecting=true;
+            try
+            {
+                TrafficCounterPaidTraversalObservation observed;
+                try{observed=readiness.OriginalPaidTraversal(parking.Key,source);}
+                catch(Exception){if(Same())Fail(entry,TrafficDecisionKind.StaleContext,"counter-working-source-read-failed");return false;}
+                if(!Same())return false;
+                if(observed==null || observed.WorkingSeal==null || observed.ActorLife==null || observed.PaidSource!=null ||
+                    !ReferenceEquals(observed.ParkingSource,source) || !ReferenceEquals(parking.PreparationBody?.ActorLife,observed.ActorLife) ||
+                    !CounterTraversalReservationCurrent(observed,null,out var fact) ||
+                    source.ProofRoutes.Count(p=>p.ResourceId==fact.ResourceId && p.Waypoints.Count>0 && p.Waypoints.Last()==fact.Position)!=1)
+                {Fail(entry,TrafficDecisionKind.StaleContext,"counter-working-source-invalid");return false;}
+                if(!Same())return false;
+                entry.CounterPaidTraversal=observed;entry.CounterPaidTraversalFact=fact;return true;
+            }
+            finally{entry.CounterPaidTraversalInspecting=false;}
+        }
+        private bool CounterTraversalReservationCurrent(TrafficCounterPaidTraversalObservation observed,
+            TrafficParkingFact original,out TrafficParkingFact fact)
+        {
+            fact=null;var claim=observed?.Reservation;var source=observed?.ParkingSource;
+            if(claim==null || source==null || !claim.IsCurrent || source.Intent.IntentId!="pickup-wait" ||
+                source.AcquiredSequence<=0 || claim.Assignment.VisitId!=source.Intent.ActorId ||
+                !(claim.CanonicalOwner is AnimalCafe.Customers.PickupQueueService))return false;
+            var facts=snapshot.Parking.Where(p=>p.ResourceId==claim.ResourceId && p.Owner.ActorId==source.Intent.ActorId).ToArray();
+            var bodies=snapshot.Bodies.Where(b=>b.Owner.ActorId==source.Intent.ActorId).ToArray();
+            if(facts.Length!=1 || bodies.Length!=1 || !bodies[0].Enabled || !bodies[0].ActorActive ||
+                !ReferenceEquals(bodies[0].ActorLife,observed.ActorLife) || !ReferenceEquals(facts[0].CanonicalOwner,claim.CanonicalOwner) ||
+                facts[0].Position!=claim.Assignment.Position || facts[0].BusinessOwner==null || facts[0].ReleaseObligation==null ||
+                !(facts[0].SemanticCheckpoint is AnimalCafe.Customers.PickupQueueService.ReservationClaim actual) ||
+                !claim.IsSameCurrentClaim(actual) || original!=null &&
+                    (!ReferenceEquals(original.BusinessOwner,facts[0].BusinessOwner) || !ReferenceEquals(original.ReleaseObligation,facts[0].ReleaseObligation)))return false;
+            fact=facts[0];return true;
+        }
+        // Preparation only, across the same sealed paid traversal. Original frozen dependencies and deadline remain unchanged.
+        private bool CheckCounterOriginalPaidTraversal(Entry entry,TrafficCounterAdvanceReadiness readiness,
+            IReadOnlyList<TrafficBlocker> blockers,out bool held)
+        {
+            held=false;var seed=entry.CounterPaidTraversal;
+            if(readiness.OriginalPaidTraversal==null || seed==null || entry.CounterPaidTraversalFact==null || blockers.Count==0 ||
+                !entry.CounterAdvanceReadinessWaitStarted || !Positive(entry.WaitRemaining) || entry.ExplicitRecoveryUsed || entry.Suspensions!=0 ||
+                entry.FrozenOwners!=null && entry.FrozenOwners.Any(owner=>owner.Equals(entry.Key) || DependsOn(owner,entry.Key,new HashSet<TrafficIntentKey>())))return true;
+            var keys=blockers.Select(b=>b.Owner).Distinct().ToArray();if(keys.Length!=1)return true;
+            var key=keys[0];var resource="pickup/"+key.ActorId;
+            if(key.IntentId!="pickup-paid-movement" || key.ActorId!=seed.ParkingSource.Intent.ActorId || key.ActorId==entry.Key.ActorId ||
+                !Current(key) || DependsOn(key,entry.Key,new HashSet<TrafficIntentKey>()) ||
+                blockers.Any(b=>b.ResourceId==resource?(b.Proof!="selected-journey-parking-protection" && b.Proof!="current-conflict-segment"):
+                    b.ResourceId!="body" || b.Proof!="live-body-checkpoint") ||
+                !entries.TryGetValue(key,out var paid) || !LiveEntry(paid))return true;
+            var source=paid.JourneyPermit;var request=paid.Request;var journey=paid.JourneyRequest;var leg=paid.Leg;
+            if(source==null || !source.Intent.Equals(key) || source.AcquiredSequence<=0 || source.AcquiredSequence!=paid.AcquiredSequence ||
+                paid.Parking || paid.Discarded || !paid.EverCanonicalAttempt || paid.ExplicitRecoveryUsed || paid.ContinuationAttempted ||
+                paid.Suspensions!=0 || paid.LegacyLegCompleted || paid.PendingHandoff!=null || paid.WaitingBlockers.Count!=0 ||
+                paid.Decision.FailureDisposition!=TrafficFailureDisposition.None ||
+                (paid.Decision.Kind!=TrafficDecisionKind.Granted && paid.Decision.Kind!=TrafficDecisionKind.DeferredByBudget) ||
+                journey==null || journey.ResourceId!=resource || request.ResourceId!=resource || !request.IndependentlyProgressing ||
+                !Positive(paid.FiniteLimit) || request.FiniteSeconds!=paid.FiniteLimit || journey.FiniteSeconds!=paid.FiniteLimit ||
+                leg==null || leg.Suspended || leg.ReprepareAllowed || leg.Completed || leg.Index<0 || leg.Generation<1 ||
+                leg.Proof==null || leg.Proof.ResourceId!=resource || !source.ProofRoutes.Any(p=>ReferenceEquals(p,leg.Proof)) ||
+                !SelectedProofs(paid).Any(p=>ReferenceEquals(p,leg.Proof)) || leg.Index>=leg.Proof.Waypoints.Count ||
+                leg.Proof.Waypoints[leg.Index]!=request.Target || leg.Proof.Waypoints.Last()!=journey.Target ||
+                request.NativeStamp.LegGeneration!=leg.Generation || !ReferenceEquals(leg.ActorLife,seed.ActorLife))return true;
+            var bodies=snapshot.Bodies.Where(b=>b.Owner.ActorId==key.ActorId).ToArray();
+            if(bodies.Length!=1 || !bodies[0].Owner.Equals(key) || !bodies[0].Enabled || !bodies[0].ActorActive ||
+                !ReferenceEquals(bodies[0].ActorLife,seed.ActorLife) || bodies[0].Radius!=request.Radius || bodies[0].SafetyMargin!=request.SafetyMargin)return true;
+            var bound=leg.Committed && leg.Bound && paid.Active && paid.Decision.Kind==TrafficDecisionKind.Granted &&
+                leg.Stamp.RequestId>0 && leg.Stamp.LegGeneration==leg.Generation &&
+                NearPath(bodies[0].Position,leg.Path,bodies[0].Radius+leg.ArrivalTolerance);
+            var next=leg.Index>0 && !leg.Bound && leg.Stamp.Equals(default(TrafficNativeStamp)) &&
+                request.NativeStamp.RequestId==0 && !bodies[0].IndependentlyProgressing && bodies[0].RemainingSeconds==0 &&
+                bodies[0].Position==request.Start && Vector3.Distance(request.Start,leg.Proof.Waypoints[leg.Index-1])<=leg.ArrivalTolerance &&
+                (paid.Queued && !leg.Committed && paid.Decision.Kind==TrafficDecisionKind.DeferredByBudget &&
+                    (paid.Decision.Reason=="retained-leg-ready-batch-pending" || paid.Decision.Reason=="native-query-frame-budget") ||
+                 paid.Decision.Kind==TrafficDecisionKind.Granted && (paid.Prepared || paid.Active && leg.Committed));
+            if(!bound && !next)return true;
+            var inspect=ClaimInspectionGuard(entry);var inspectOwner=ClaimInspectionGuard(paid);var debt=entry.WaitRemaining;
+            var frozen=entry.FrozenOwners;var resources=entry.FrozenResources;var stored=entry.WaitingBlockers;
+            bool Same()=>inspect() && inspectOwner() && entry.WaitRemaining==debt && ReferenceEquals(entry.CounterAdvanceReadiness,readiness) &&
+                ReferenceEquals(entry.CounterPaidTraversal,seed) && ReferenceEquals(entry.FrozenOwners,frozen) &&
+                ReferenceEquals(entry.FrozenResources,resources) && ReferenceEquals(entry.WaitingBlockers,stored);
+            entry.CounterPaidTraversalInspecting=true;
+            try
+            {
+                if(next){var exact=StrictLegOwnFactsCurrent(paid);if(!Same())return false;if(!exact)return true;}
+                TrafficCounterPaidTraversalObservation observed;
+                try{observed=readiness.OriginalPaidTraversal(key,source);}
+                catch(Exception){if(Same())Fail(entry,TrafficDecisionKind.StaleContext,"counter-paid-traversal-read-failed");return false;}
+                if(!Same())return false;
+                if(observed==null || !ReferenceEquals(observed.WorkingSeal,seed.WorkingSeal) || !ReferenceEquals(observed.ActorLife,seed.ActorLife) ||
+                    !ReferenceEquals(observed.ParkingSource,seed.ParkingSource) || !observed.PaidIntent.Equals(key) || !ReferenceEquals(observed.PaidSource,source) ||
+                    seed.PaidSource!=null && (!ReferenceEquals(seed.PaidSource,source) || !seed.PaidIntent.Equals(key)) ||
+                    observed.Reservation==null || !seed.Reservation.IsSameReservation(observed.Reservation) ||
+                    !CounterTraversalReservationCurrent(observed,entry.CounterPaidTraversalFact,out var fact) || fact.Position!=journey.Target)return true;
+                if(!Same())return false;
+                // The callback cannot hide a newly established dependency on this same waiting preparation.
+                if(DependsOn(key,entry.Key,new HashSet<TrafficIntentKey>()) ||
+                    entry.FrozenOwners!=null && entry.FrozenOwners.Any(owner=>DependsOn(owner,entry.Key,new HashSet<TrafficIntentKey>())))return true;
+                entry.CounterPaidTraversal=observed;held=true;return true;
+            }
+            finally{entry.CounterPaidTraversalInspecting=false;}
+        }
+
         // An authenticated same-journey next leg may be queued behind its existing follower's recheck.
         // 只保留已开始的原有限等待；不把未发腿算成独立运动、不添加新依赖或许可。
         private bool CheckCounterAdvanceContinuationReadiness(Entry entry,TrafficCounterAdvanceReadiness readiness,
@@ -1247,12 +1556,33 @@ namespace AnimalCafe.Navigation
                 !entry.Request.NativeStamp.Equals(default(TrafficNativeStamp)))return false;
             var unpaidDeferred=expected.Kind==TrafficDecisionKind.DeferredByBudget && !entry.UnpaidEligibilityQueryFault &&
                 UnpaidEligibilityCurrent(entry);
-            if(!unpaidDeferred && (expected.Kind!=TrafficDecisionKind.WaitingForTraffic || !Positive(entry.WaitRemaining) ||
+            var counterDeferred=!unpaidDeferred && CounterDeferredPreviewHoldCurrent(entry);
+            if(!unpaidDeferred && !counterDeferred && (expected.Kind!=TrafficDecisionKind.WaitingForTraffic || !Positive(entry.WaitRemaining) ||
                 entry.FrozenOwners==null || entry.FrozenOwners.Count==0 || entry.FrozenResources==null || entry.WaitingBlockers.Count==0 ||
                 entry.FrozenOwners.Any(owner=>!entry.FrozenResources.TryGetValue(owner,out var resources) || resources.Count==0)))return false;
             var inspect=ClaimInspectionGuard(entry);
             if(!ProducerHoldIdentityCurrent(entry,inspect))return false;
             entry.ProducerPreviewHeld=true;entry.Queued=false;wakeups.Remove(entry.Key);SyncWork(entry);return true;
+        }
+        // Only an already running finite Counter preparation may await its real FIFO preview.
+        // 只延续原准备债务；不重读Working秒数、不新增WAIT，也不刷新预算。
+        private bool CounterDeferredPreviewHoldCurrent(Entry entry)
+        {
+            var readiness=entry.CounterAdvanceReadiness;
+            if(entry.CounterPaidTraversalInspecting || readiness==null || !readiness.Intent.Equals(entry.Key) ||
+                entry.Decision.Kind!=TrafficDecisionKind.DeferredByBudget || !entry.CounterAdvanceReadinessWaitStarted ||
+                !Positive(entry.WaitRemaining))return false;
+            var inspect=ClaimInspectionGuard(entry);var debt=entry.WaitRemaining;
+            bool Same()=>inspect() && entry.WaitRemaining==debt && entry.CounterAdvanceReadinessWaitStarted &&
+                ReferenceEquals(entry.CounterAdvanceReadiness,readiness);
+            entry.CounterPaidTraversalInspecting=true;
+            try
+            {
+                if(!CounterAdvancePreparationCurrent(entry) || !Same())return false;
+                bool current;try{current=readiness.IsCurrent();}catch(Exception){return false;}
+                return current && Same();
+            }
+            finally{entry.CounterPaidTraversalInspecting=false;}
         }
         private bool ProducerHoldIdentityCurrent(Entry entry,Func<bool> inspect)
         {
@@ -1347,8 +1677,9 @@ namespace AnimalCafe.Navigation
                 entry.Jobs.Clear();entry.JobIndex=0;entry.CurrentPath=Array.Empty<Vector3>();entry.Prepared=false;entry.Queued=true;
                 next=Decide(entry,TrafficDecisionKind.DeferredByBudget,entry.UnpaidEligibility==null?"admission-eligibility/spatial-change":"unpaid-eligibility/spatial-change");return true;
             }
-            if(resumeProducer && (expected.Kind!=TrafficDecisionKind.WaitingForTraffic || !Positive(entry.WaitRemaining) ||
-                entry.FrozenOwners==null || entry.FrozenOwners.Count==0 || !ProducerHoldIdentityCurrent(entry,inspectProducer)))return false;
+            if(resumeProducer && !CounterDeferredPreviewHoldCurrent(entry) &&
+                (expected.Kind!=TrafficDecisionKind.WaitingForTraffic || !Positive(entry.WaitRemaining) ||
+                 entry.FrozenOwners==null || entry.FrozenOwners.Count==0 || !ProducerHoldIdentityCurrent(entry,inspectProducer)))return false;
             var moved=original.Target!=refreshedRequest.Target;
             var sameRequirements=!moved && SameRequirements(original.Requirements,refreshedRequest.Requirements);
             // Walking changes require current full-proof validation, not automatic loss of an otherwise safe prepared source.
@@ -1974,12 +2305,22 @@ namespace AnimalCafe.Navigation
             {
                 entry.CurrentPath = entry.Jobs[0].ExpandedPath;
                 blockers=SelectedPathBlockers(entry,entry.CurrentPath);
+                if(entry.CounterAdvanceReadiness!=null && !CheckCounterAdvanceReadiness(entry,blockers))return;
                 if (blockers.Count > 0)
                 {
                     if(WaitForPreparedCanonicalSuccessor(entry,blockers))return;
                     // Only the original body-only wait may try one bounded physical detour, after all rights checks.
                     // 已有canonical/路线优先检查不变；不提交、不提前转移原权利。
                     if(TryStartSelectedDetour(entry,request,0,blockers)) { Evaluate(entry,frame);return; }
+                    // This completed primary proof may meet the same sealed paid source along its route, not at its endpoint.
+                    // 只保留同原paid准备债务；不扩大Frozen、不改WAIT/CanProgress，也不处理secondary capability。
+                    var readiness=entry.CounterAdvanceReadiness;
+                    if(readiness?.OriginalPaidTraversal!=null && entry.CounterPaidTraversal!=null &&
+                        blockers.Any(blocker=>blocker.Proof=="current-conflict-segment"))
+                    {
+                        if(!CheckCounterOriginalPaidTraversal(entry,readiness,blockers,out var held))return;
+                        if(held){HoldCounterAdvanceReadiness(entry,"counter-advance-original-paid-traversal-held");return;}
+                    }
                     WaitOrFail(entry, blockers,preparation:true);return;
                 }
             }
@@ -2199,7 +2540,57 @@ namespace AnimalCafe.Navigation
                         captured.Add(owner.Key,new OriginalExitSelectedRoute(exit,owner,remainder));
                 }
             }
+            CaptureOriginalCounterExitRoutes(exit,captured);
             return new System.Collections.ObjectModel.ReadOnlyDictionary<TrafficIntentKey,OriginalExitSelectedRoute>(captured);
+        }
+        // Endpoint-first WAIT has no primary yet. Preserve only a Counter source already genuinely Bound at this freeze.
+        // 仅冻结首次已发Counter的只读资格；旧paid的完整primary门槛不变，不新增Frozen/WAIT/预算。
+        private void CaptureOriginalCounterExitRoutes(Entry exit,Dictionary<TrafficIntentKey,OriginalExitSelectedRoute> captured)
+        {
+            if(!LiveEntry(exit) || !Current(exit.Key) || exit.Key.IntentId!="actual-exit" || exit.Parking || !exit.Queued ||
+                exit.Prepared || exit.Active || exit.Discarded || exit.AcquiredSequence!=0 || exit.Leg!=null || exit.JourneyPermit!=null ||
+                exit.JourneyRequest!=null || exit.PendingHandoff!=null || exit.EverCanonicalAttempt || exit.ExplicitRecoveryUsed ||
+                exit.LegacyLegCompleted || exit.ContinuationAttempted || exit.FrozenOwners!=null ||
+                exit.Request.ResourceId!="pickup/"+exit.Key.ActorId || !exit.Request.NativeStamp.Equals(default(TrafficNativeStamp)) ||
+                !SnapshotCurrent(exit.Request) || !PreparationIdentityCurrent(exit))return;
+            foreach(var owner in Rights(exit).Where(e=>e.Key.IntentId=="counter-advance").ToArray())
+            {
+                if(owner.Queued || owner.Discarded || owner.ExplicitRecoveryUsed || owner.Suspensions!=0 || owner.LegacyLegCompleted ||
+                    owner.ContinuationAttempted || !owner.JourneyParking || owner.JourneyRequest==null || !owner.JourneyRequest.PlanPrimaryRoute ||
+                    owner.JourneyPermit==null || owner.JourneyPermit.Kind!=TrafficDecisionKind.Granted ||
+                    owner.JourneyPermit.AcquiredSequence!=owner.AcquiredSequence || owner.CurrentPath.Length<2 || owner.Journey.Length<2 ||
+                    !TryReadUnpaidNativeActivity(owner.Key.ActorId,out var activity) || !ReferenceEquals(activity.Owner,owner) ||
+                    !ReferenceEquals(SelectedProofs(owner).FirstOrDefault(),activity.Leg.Proof))continue;
+                var body=snapshot.Bodies.Single(b=>b.Owner.Equals(owner.Key));
+                if(!body.IndependentlyProgressing || !Positive(body.RemainingSeconds))continue;
+                var inspect=ClaimInspectionGuard(owner);var claim=OriginalCounterExitClaim(owner);
+                if(!inspect() || claim==null)continue;
+                captured.Add(owner.Key,new OriginalExitSelectedRoute(exit,owner,owner.Journey.ToArray(),claim));
+            }
+        }
+        private TrafficParkingFact OriginalCounterExitClaim(Entry owner,TrafficParkingFact original=null)
+        {
+            var resource="counter/"+owner.Key.ActorId;
+            if(!LiveEntry(owner) || !Current(owner.Key) || owner.Key.IntentId!="counter-advance" || owner.JourneyRequest==null ||
+                owner.Request.ResourceId!=resource || owner.JourneyRequest.ResourceId!=resource)return null;
+            var current=snapshot.Parking.Where(p=>p.Owner.ActorId==owner.Key.ActorId).ToArray();
+            var prepared=owner.Request.Snapshot.Parking.Where(p=>p.Owner.ActorId==owner.Key.ActorId).ToArray();
+            if(current.Length!=1 || prepared.Length!=1)return null;
+            var fact=current[0];var inspect=ClaimInspectionGuard(owner);
+            bool Geometry(TrafficParkingFact before)=>SameOwnedClaim(before,fact) && before.Position==fact.Position &&
+                before.Radius==fact.Radius && before.SafetyMargin==fact.SafetyMargin;
+            try
+            {
+                return fact.Owner.Equals(owner.Key) && fact.ResourceId==resource && fact.BusinessOwner!=null && fact.ReleaseObligation!=null &&
+                    fact.CanonicalOwner is AnimalCafe.Customers.CounterQueueService &&
+                    fact.SemanticCheckpoint is AnimalCafe.Customers.CounterQueueService.AssignmentClaim claim &&
+                    ReferenceEquals(fact.CanonicalOwner,claim.CanonicalOwner) && claim.IsCurrent && !claim.Assignment.Arrived &&
+                    claim.Assignment.VisitId==owner.Key.ActorId && claim.Assignment.Position==fact.Position && fact.Position==owner.JourneyRequest.Target &&
+                    fact.Radius==owner.Request.Radius && fact.SafetyMargin==owner.Request.SafetyMargin && Geometry(prepared[0]) &&
+                    TrafficClaimCheckpoints.AreSame(prepared[0],fact) && inspect() &&
+                    (original==null || Geometry(original) && TrafficClaimCheckpoints.AreSame(original,fact) && inspect())?fact:null;
+            }
+            catch{return null;}
         }
         private bool HasOriginalExitSelectedRouteEligibility(Entry exit,TrafficBlocker blocker)
         {
@@ -2221,6 +2612,12 @@ namespace AnimalCafe.Navigation
                 owner.Request.ResourceId==original.Resource && leg.Index>=original.Index && leg.Generation>=original.Generation &&
                 PathsConflict(exit.CurrentPath,original.SelectedRemainder,PairClearance(exit.Request,original.Journey));
             if(!sameSource)return false;
+            if(original.CounterClaim!=null)
+            {
+                var inspectExit=ClaimInspectionGuard(exit);var claim=OriginalCounterExitClaim(owner,original.CounterClaim);
+                if(!inspectExit() || claim==null || exit.Jobs.Count==0 || exit.JobIndex!=exit.Jobs.Count ||
+                    !ReferenceEquals(exit.CurrentPath,exit.Jobs[0].ExpandedPath) || exit.CurrentPath.Length<2)return false;
+            }
             if(route)return true;
             // Only this original Bound source's finite moving body projects its captured selected route.
             // 仅接续原已发路线的真实有限移动身体；停留身体或同Actor别名仍走原拒绝策略。
@@ -2328,9 +2725,12 @@ namespace AnimalCafe.Navigation
                     {
                             WaitFailureObserver("EXIT_INITIAL_FREEZE seq="+entry.RequestSequence+" snapshot="+snapshot.Version+"/"+snapshot.BodyVersion+
                                 " target="+entry.Request.Target+" path=["+string.Join(";",entry.Jobs.FirstOrDefault()?.ExpandedPath??Array.Empty<Vector3>())+"]"+
-                                " peers=["+string.Join(";",entries.Values.Where(p=>!p.Retired && p.Key.IntentId=="pickup-paid-movement").Select(p=>
-                                    p.Key.ActorId+"/"+p.Key.Generation+"/seq"+p.RequestSequence+"/acq"+p.AcquiredSequence+"/active"+p.Active+
+                                " peers=["+string.Join(";",entries.Values.Where(p=>!p.Retired && (p.Key.IntentId=="pickup-paid-movement" || p.Key.IntentId=="counter-advance")).Select(p=>
+                                    p.Key.ActorId+"/"+p.Key.IntentId+"/"+p.Key.Generation+"/seq"+p.RequestSequence+"/acq"+p.AcquiredSequence+"/active"+p.Active+
                                     "/prepared"+p.Prepared+"/leg"+p.Leg?.Index+"/bound"+p.Leg?.Bound+"/request"+p.Leg?.Stamp.RequestId+
+                                    "/committed"+p.Leg?.Committed+"/completed"+p.Leg?.Completed+"/generation"+p.Leg?.Generation+
+                                    "/sourceAcq"+p.JourneyPermit?.AcquiredSequence+"/sourceKind"+p.JourneyPermit?.Kind+
+                                    "/resource"+p.Request.ResourceId+"/finite"+p.FiniteLimit+"/life"+(p.Leg?.ActorLife==null?"NULL":System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(p.Leg.ActorLife).ToString())+
                                     "/current=["+string.Join(";",p.CurrentPath)+"]/journey=["+string.Join(";",p.Journey)+"]"))+"]");
                     }
                     catch(Exception) { } // Diagnostic failure leaves the original WAIT transition to run.
@@ -2976,6 +3376,7 @@ namespace AnimalCafe.Navigation
             if(!LiveEntry(entry) || entry.Decision.FailureDisposition!=TrafficFailureDisposition.None)return false;
             entry.ProducerPreviewHeld=false;entry.Queued = false; entry.Prepared = false; entry.Discarded = true; entry.Jobs.Clear(); entry.JobIndex = 0;
             entry.FrozenSelectedRouteEligibility=null;
+            entry.CounterCanonicalOrdering=null;entry.CounterCanonicalOrderingSpent=true;entry.CounterCanonicalOrderingInvalid=false;
             entry.CurrentPath = Array.Empty<Vector3>();
             if (entry.Leg == null) entry.Journey = Array.Empty<Vector3>();
             Decide(entry, TrafficDecisionKind.Cancelled, "proposal-discarded"); NotifyChanged(intent, entry.Request.ResourceId); return true;
@@ -4104,6 +4505,19 @@ namespace AnimalCafe.Navigation
                     waiter.FrozenResources.Add(successor.Intent,nextResources=new HashSet<string>());
                 nextResources.UnionWith(resources);waiter.FrozenOwners.Add(successor.Intent);SyncWork(waiter);
             }
+            // Only this successful strict transaction can connect the captured predecessor to its actual selected source.
+            // 真实joint-commit receipt；不能用Retired+acquired倒推交接，也不替换原Frozen集合。
+            foreach(var waiter in OrderedWorkEntries.Where(e=>e.CounterCanonicalOrdering!=null).ToArray())
+            {
+                var order=waiter.CounterCanonicalOrdering;
+                if(ReferenceEquals(order.Previous,previous) && ReferenceEquals(order.State,state) && ReferenceEquals(order.Next,next) &&
+                    ReferenceEquals(state.Handle,order.Handle) && ReferenceEquals(state.Source,order.OldSource) &&
+                    ReferenceEquals(state.PreparedSuccessor,next) && ReferenceEquals(state.ActorLife,order.ActorLife) &&
+                    SameSuccessorDescriptor(state.PreparationRequest,order.Descriptor) && ReferenceEquals(next.Leg.ActorLife,order.ActorLife) &&
+                    next.Leg.Committed && !next.Leg.Bound && next.JourneyPermit!=null && next.JourneyRequest!=null &&
+                    next.JourneyPermit.AcquiredSequence==next.AcquiredSequence && next.AcquiredSequence>0)
+                {order.TransferredSource=next.JourneyPermit;order.TransferredJourney=next.JourneyRequest;order.TransferredLegGeneration=next.Leg.Generation;}
+            }
             ClearSuccessorPreparation(state);previous.PendingHandoff=null;RetireEntry(previous,false);
             var committedRequest=next.Request;var committedLeg=next.Leg;
             LastPublicationException=null;try{publish?.Invoke();}catch(Exception error){LastPublicationException=error;}
@@ -4314,6 +4728,8 @@ namespace AnimalCafe.Navigation
         {
             if(!LiveEntry(entry))return;
             var intent=entry.Key;var resource=entry.Request.ResourceId;
+            ReleaseCounterCanonicalOrdersForRetiring(entry);
+            entry.CounterCanonicalOrdering=null;entry.CounterCanonicalOrderingSpent=true;entry.CounterCanonicalOrderingInvalid=false;
             StopYieldOwnerWait(entry);
             AbortPreparationsUsing(entry,"successor-retired");if(!LiveEntry(entry))return;
             // Only a live movement owner's loss changes that same registered body's finite-progress proof.
@@ -4340,6 +4756,7 @@ namespace AnimalCafe.Navigation
             entry.UnpaidEligibilityNativeActivity=Array.Empty<UnpaidNativeActivity>();
             entry.AdmissionReadiness=null;entry.AdmissionHeld=false;entry.AdmissionFirstLeg=Array.Empty<Vector3>();
             entry.CounterAdvanceReadiness=null;entry.CounterAdvanceReadinessWaitStarted=false;
+            entry.CounterPaidTraversal=null;entry.CounterPaidTraversalFact=null;entry.CounterPaidTraversalInspecting=false;
             entry.DeliveryPreparationReadiness=null;entry.DeliveryPreparationOwner=null;entry.DeliveryPreparationSource=null;
             entry.DeliveryPreparationUnpaid=null;entry.DeliveryPreparationReservation=null;
             entry.DeliveryPreparationWorkingSeal=null;entry.DeliveryPreparationPaidSource=null;
@@ -4459,6 +4876,7 @@ namespace AnimalCafe.Navigation
             foreach (var entry in OrderedWorkEntries.Where(e => !e.Retired && (e.YieldOwnerWaitActive ||
                 (e.FrozenOwners != null || e.AdmissionWaitStarted || e.CounterAdvanceReadinessWaitStarted || e.DeliveryPreparationStarted) &&
                 (e.AdmissionHeld || e.Queued || e.DeliveryAlternateDebtGap ||
+                    e.ProducerPreviewHeld && e.CounterAdvanceReadinessWaitStarted ||
                     e.UnpaidEligibilityHeld && e.AdmissionWaitStarted && e.FrozenOwners==null ||
                     e.Decision.Kind == TrafficDecisionKind.WaitingForTraffic))).ToArray())
             {
@@ -4527,6 +4945,7 @@ namespace AnimalCafe.Navigation
             if(disposition==TrafficFailureDisposition.Terminal)
             {
                 entry.FrozenSelectedRouteEligibility=null;
+                entry.CounterCanonicalOrdering=null;entry.CounterCanonicalOrderingSpent=true;entry.CounterCanonicalOrderingInvalid=false;
                 entry.DeliveryPreparationReadiness=null;entry.DeliveryPreparationOwner=null;entry.DeliveryPreparationSource=null;
             entry.DeliveryPreparationUnpaid=null;entry.DeliveryPreparationReservation=null;
             entry.DeliveryPreparationWorkingSeal=null;entry.DeliveryPreparationPaidSource=null;
@@ -4593,7 +5012,7 @@ namespace AnimalCafe.Navigation
         {
             if(entry==null)return;
             if(LiveEntry(entry) &&
-                (ReferenceEquals(entry,completingHandoff) ||
+                (ReferenceEquals(entry,completingHandoff) || entry.ProducerPreviewHeld && entry.CounterAdvanceReadinessWaitStarted ||
                 entry.PendingHandoff!=null || entry.UnpaidEligibilityHeld || entry.AdmissionHeld || entry.YieldOwnerWaitActive || entry.DeliveryAlternateDebtGap || entry.Queued || entry.Prepared || entry.Active || entry.Decision.Kind == TrafficDecisionKind.WaitingForTraffic || entry.Journey.Length > 1 ||
                 entry.Leg!=null && !entry.Leg.Completed && entry.Decision.FailureDisposition!=TrafficFailureDisposition.Terminal &&
                 (entry.Leg.Suspended || entry.Leg.ReprepareAllowed)))workEntries.Add(entry);

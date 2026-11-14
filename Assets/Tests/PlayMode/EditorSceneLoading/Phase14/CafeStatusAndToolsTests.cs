@@ -34,6 +34,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         private Action cashierDiagnosticCleanup;
         private bool originalUnpaidFailureSnapshotWritten;
         private Action originalUnpaidFailureObserverCleanup,originalUnpaidFailureFinalSnapshot;
+        private Action<string> fiveCachedQueueSnapshot;
         private void StopOriginalUnpaidFailureObserver()
         {var cleanup=originalUnpaidFailureObserverCleanup;originalUnpaidFailureObserverCleanup=null;originalUnpaidFailureFinalSnapshot=null;cleanup?.Invoke();}
         private void StopCashierOriginalDecisionTrace()
@@ -49,7 +50,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         private const string ValidationPath="Assets/Scenes/Validation/Phase14CafeLoop.unity";
         [UnitySetUp] public IEnumerator Setup()
         {
-            StopOriginalUnpaidFailureObserver();originalUnpaidFailureSnapshotWritten=false;
+            fiveCachedQueueSnapshot=null;StopOriginalUnpaidFailureObserver();originalUnpaidFailureSnapshotWritten=false;
             capture=Time.captureDeltaTime; scale=Time.timeScale;
             Time.captureDeltaTime=TestContext.CurrentContext.Test.Name==nameof(ContinuedArrivalsFillThenResumeCollectionAndDrain)?0:1f/60;
             Assert.That(File.Exists(ValidationPath),Is.True,"Build actual P14 validation Scene before Play tests");
@@ -67,6 +68,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         {
             // Timeout may bypass the nested iterator finally; disarm before any Scene unload.
             // timeout可能跳过内部finally；先注销观察者，再卸载Scene。
+            fiveCachedQueueSnapshot=null;
             StopHighLoadTrace();
             StopCashierOriginalDecisionTrace();
             StopOriginalUnpaidFailureObserver();
@@ -580,6 +582,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             owner.SnapshotChanged+=value=> { if(!traced && (value.Status=="Blocked" || customers.Snapshot.Any(v=>v.State==CustomerVisitState.Blocked))) { traced=true; tools.PrintSnapshot(); DumpRoutes(); } };
             tools.HoldCollection(); tools.ResumeArrivals();
             yield return Until(()=>customers.Snapshot.Count>=5,12000); tools.HoldArrivals();
+            InstallFiveCachedQueueSnapshot();fiveCachedQueueSnapshot?.Invoke("five-visits-held");
             var admitted=customers.Snapshot.Select(v=>v.VisitId).ToArray();
             yield return Until(()=>owner.Snapshot.Delivery.Count>=5,12000);
             Assert.That(owner.Snapshot.Delivery.Count,Is.EqualTo(5));
@@ -1160,9 +1163,73 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 TestContext.WriteLine("CASHIER_ORIGINAL_END samples="+samples+" calls="+calls+" dropped="+dropped+" errors=["+string.Join(";",errors)+"]");
             };
         }
+        // Two bounded stored-state receipts only; no Reserve/IsCurrent/planner or additional business step.
+        // 仅记录真实五客窗口与原失败分支；未知字段明确保留 UNKNOWN。
+        private void InstallFiveCachedQueueSnapshot()
+        {
+            if(!Environment.GetCommandLineArgs().Contains("-p15FiveCachedQueueSnapshot") ||
+                TestContext.CurrentContext.Test.Name!=nameof(HeldCollectionAllowsFiveRealDeliveriesAndFifoDrain))return;
+            var initial=false;var failed=false;var ordinal=0;
+            fiveCachedQueueSnapshot=stage=>
+            {
+                if(stage=="five-visits-held"){if(initial)return;initial=true;}else{if(failed)return;failed=true;}
+                var text=new System.Text.StringBuilder("P15_FIVE_CACHED_QUEUE ordinal="+(++ordinal)+" stage="+stage+" frame="+Time.frameCount);
+                try
+                {
+                    if(customers==null || owner==null){TestContext.WriteLine(text+" UNKNOWN destroyed scene dependency");return;}
+                    const System.Reflection.BindingFlags flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+                    object Read(object v,string n)=>v==null?null:(v.GetType().GetField(n,flags)??v.GetType().GetField("<"+n+">k__BackingField",flags))?.GetValue(v);
+                    string Ref(object v)=>v==null?"NULL":v.GetType().Name+"#"+System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(v);
+                    string Points(object v)=>v is IEnumerable points?string.Join(";",points.Cast<Vector3>().Select(point=>point.ToString("F9"))):"UNKNOWN";
+                    string Fields(object v,params string[] names)=>v==null?"NULL":Ref(v)+"{"+string.Join(";",names.Select(n=>n+"="+(Read(v,n)??"NULL")))+"}";
+                    string Key(TrafficIntentKey k)=>k.Session+"/e"+k.Epoch+"/"+k.ActorId+"/"+k.IntentId+"/g"+k.Generation+"/r"+k.LayoutRevision+"/"+k.Context;
+                    var pickup=Read(customers,"pickupQueue");var slots=Read(pickup,"waitSlots") as Vector3[];
+                    var reservations=Read(pickup,"reservations") as IDictionary;var paid=Read(pickup,"paidQueue") as IList;
+                    var counter=Read(customers,"queue") as CounterQueueService;var rows=counter?.Snapshot;
+                    var visits=Read(customers,"visits") as IDictionary;var core=Read(customers,"traffic");var entries=Read(core,"entries") as IDictionary;
+                    text.Append(" visits=").Append(customers.Snapshot.Count).Append(" actualDelivery=").Append(owner.Snapshot.Delivery.Count)
+                        .Append(" completed=").Append(owner.Snapshot.Orders.Values.Count(order=>order.State==OrderState.Completed))
+                        .Append(" queue=").Append(Ref(pickup)).Append(" version=").Append(Read(pickup,"Version"))
+                        .Append(" slotCount=").Append(slots==null?"UNKNOWN":slots.Length.ToString()).Append(" reservationCount=").Append(reservations==null?"UNKNOWN":reservations.Count.ToString())
+                        .Append(" paidCount=").Append(paid==null?"UNKNOWN":paid.Count.ToString()).Append(" countFullDerived=")
+                        .Append(slots==null||reservations==null?"UNKNOWN":(reservations.Count>=slots.Length).ToString())
+                        .Append(" slots=[").Append(Points(slots)).Append("] storedControllerSlots=[").Append(Points(Read(customers,"pickupWaitSlots"))).Append("]")
+                        .Append(" selectedSide=").Append(Read(customers,"pickupCustomer")).Append(" outward=").Append(Read(customers,"pickupOutward"))
+                        .Append(" pickupId=").Append(Read(customers,"selectedPickupId")).Append(" core=").Append(Ref(core));
+                    if(reservations!=null)foreach(var value in reservations.Values.Cast<object>().Take(32))text.Append("\nreservation=").Append(Fields(value,"Id","Slot","Generation","Target","Paid","Arrived","Advancing","Yielding"));
+                    if(paid!=null)foreach(var value in paid.Cast<object>().Take(32))text.Append("\npaidQueue=").Append(Fields(value,"Id","Slot","Generation","Target","Paid","Arrived","Advancing","Yielding"));
+                    if(reservations!=null && reservations.Count>32 || paid!=null && paid.Count>32)text.Append("\nrowsTruncated=True limit=32");
+                    if(rows!=null && rows.Count>0)
+                    {
+                        var head=rows[0];var visit=visits!=null && visits.Contains(head.VisitId)?visits[head.VisitId]:null;var anchor=Read(visit,"PendingReservationAnchor");
+                        text.Append("\nhead=").Append(head.VisitId).Append("/slot=").Append(head.SlotIndex).Append("/gen=").Append(head.Generation).Append("/arrived=").Append(head.Arrived)
+                            .Append("/position=").Append(head.Position.ToString("F9")).Append(" visit=").Append(Fields(visit,"State","CounterArrived","PickupAssigned","HasCollected"))
+                            .Append(" pendingAnchor=").Append(Fields(anchor,"Submitted","Retired","FirstFrame","SideIndex")).Append(" anchorOwnerSameCached=").Append(anchor==null?"UNKNOWN":ReferenceEquals(Read(anchor,"Owner"),pickup).ToString());
+                        var key=Read(anchor,"Key");if(key is TrafficIntentKey typed)text.Append(" anchorKey=").Append(Key(typed));
+                        var entry=key!=null && entries!=null && entries.Contains(key)?entries[key]:null;
+                        text.Append(" entry=").Append(Fields(entry,"RequestSequence","AcquiredSequence","Queries","JobIndex","Queued","Prepared","Retired"));
+                        if(Read(entry,"Decision") is TrafficDecision decision)text.Append(" decision=").Append(decision.Kind).Append("/").Append(decision.Reason);
+                        if(entries!=null)
+                        {
+                            var keys=entries.Keys.Cast<TrafficIntentKey>().Where(k=>k.ActorId==head.VisitId && k.IntentId=="pickup-wait").ToArray();
+                            text.Append(" headStoredPickupIntentCount=").Append(keys.Length);
+                            foreach(var stored in keys.Take(8))text.Append("\nheadStoredIntent=").Append(Key(stored)).Append(" ").Append(Fields(entries[stored],"Retired","Queries","RequestSequence","AcquiredSequence"));
+                            if(keys.Length>8)text.Append("\nheadStoredIntentsTruncated=True limit=8");
+                        }
+                    }
+                    else text.Append("\nhead=UNKNOWN_OR_EMPTY");
+                    var rejected=Read(customers,"pickupPlanningRejections") as IList;text.Append("\nrejectedForwardCount=").Append(rejected==null?"UNKNOWN":rejected.Count.ToString());
+                    if(rejected!=null)foreach(var value in rejected.Cast<object>().Take(32))text.Append("\nrejectedForward=").Append(Fields(value,"Point","Previous","Direction","Reason")).Append(" prefix=[").Append(Points(Read(value,"Prefix"))).Append("]");
+                    if(rejected!=null && rejected.Count>32)text.Append("\nrejectionsTruncated=True limit=32");
+                    text.Append("\noriginalReserveResult=NOT_REPLAYED plannerQueriesAdded=0 businessStepsAdded=0");
+                }
+                catch(Exception error){text.Append("\nUNKNOWN_CAPTURE_ERROR ").Append(error.GetType().FullName).Append(":").Append(error.Message);}
+                TestContext.WriteLine(text.ToString());
+            };
+        }
         private T Find<T>() where T:Component => scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<T>(true)).Single();
         private IEnumerator Until(Func<bool> done,int max=2400)
-        { for(var f=0;f<max && !done();f++) { if(owner!=null && (owner.Snapshot.Status=="Blocked" && !string.IsNullOrEmpty(owner.Snapshot.Failure) || customers.Snapshot.Any(v=>v.State==CustomerVisitState.Blocked))) break; yield return null; } if(!done() && tools!=null) { if(Environment.GetCommandLineArgs().Contains("-p15OriginalUnpaidFailureSnapshot")) { if(originalUnpaidFailureFinalSnapshot!=null)originalUnpaidFailureFinalSnapshot();else DumpOriginalUnpaidFailureSnapshot(); } tools.PrintSnapshot(); DumpRoutes(); }
+        { for(var f=0;f<max && !done();f++) { if(owner!=null && (owner.Snapshot.Status=="Blocked" && !string.IsNullOrEmpty(owner.Snapshot.Failure) || customers.Snapshot.Any(v=>v.State==CustomerVisitState.Blocked))) break; yield return null; } if(!done() && tools!=null) { fiveCachedQueueSnapshot?.Invoke("original-until-failed"); if(Environment.GetCommandLineArgs().Contains("-p15OriginalUnpaidFailureSnapshot")) { if(originalUnpaidFailureFinalSnapshot!=null)originalUnpaidFailureFinalSnapshot();else DumpOriginalUnpaidFailureSnapshot(); } tools.PrintSnapshot(); DumpRoutes(); }
           Assert.That(done(),Is.True,(owner==null?"No owner":owner.Snapshot.Status+" / "+owner.Snapshot.Failure)+" / "+(customers==null?"":customers.Status)); }
         // Capture the original stored Job before the existing Core observer's caller clears it.
         // Default-off; forward the existing observer chain and never replay a producer/guard/query.
