@@ -1,5 +1,34 @@
 # Phase 15 — Business Day Lifecycle Validation Report
 
+<!-- P15_CI_CURRENT_LOCAL_20261114_BEGIN -->
+> **2026-11-14 最新本地 checkpoint：继续修复，未声明 full CI / P15 关闭。** 已完成两条有真实 RED 的小修复：
+>
+> 1. 同一 unborn admission 在真实 source 交接空档只保留原有限 debt，不新增 Frozen 或权限；Tick在 business hold 状态仍扣原deadline。完整 Core+Navigation **899/899 PASS**，XML `CC72E3CD07D15A74E9C16E816FBDA9C87053A45104CA8CEAB5900D16C4484BB0`。Core `2A8B55E27FBA9DCF72C469157A5EF22A9659552E12D33D4719A0A332A3591DC9`。独立增量review C0/I0。
+> 2. 缓存PQS NEXT与真实当前Counter front冲突时，只暂缓未提交的原入店机会。原候位几何保留，不排除整条未来Counter lane。Native **2/2 PASS**（新3客缓存反例＋Configured Photo12实际Exit），XML `3FF23FDD6028DA7F07911FABFA477B3DB71603C8172A488D835C5FC4A3DAF12C`；CFC `E9CDB1FFAC424AD29F634CA1A754FDFDAB790337C75E228443165E00ED9D8E5A`。新反例确认sameanchor/noCore-before-reserve、实际Join变slot0后birthBeforeFrontExit=True、3单/3真Exit/Total0。原两客同时付款/交付＋真离店测试也 **1/1 PASS**，XML `59461C89F36CB330F9F2098805DE22FF833C649DD365066579106ABC819130DE`；Status tests `38C3A1A9AEC970732572FBDAF33F206E24F35263E669616CB0550DE75AAAA2CD`。仅替换未提交的实验性全未来lane断言，保留两单业务、token、时限与Five断言。
+>
+> 同期 P15 EditMode+portable IO **80/80 PASS**（68 P15 /12 IO），XML `58921E59AAFC83F661CC75B5113D2C7792030E9430E2EBC44BCD85A2108428F2`，保持该批Core84C4/CFC E452源码范围；并不当作后来所有源码的全套验收。
+>
+> **仍未关闭：** 普通Photo第11客Counter前移的new-frozen-owner、Five4,4第5能力、continuous Counter envelope Geometry、其它旧controlled fixtures/完整CI。普通Photo已7人取餐/6完成；一次默认off原拒绝快照明确g8真实已取得route经过g11目标附近（.046<.911），g8同时为accepted Cashier Working，而现producer只认证直接前客g10。原Frozen仍只g10；没有扩展它或把g8设Independent。原快照XML `BF9C4E52801BD18B584F05254A363A95D0AA8F7A39AB1643D8ED22DA7212E314`（2项expected FAIL：准确缓存RED＋已知Photo故障），补充paid-traversal生命周期仍在设计，未实施。FIFO/PQS新接口和initial geometry family草稿继续冻结、未应用。
+>
+> 各上述Native批次 Assets/Scene未知差异0、Editor workers0；OS handles UNKNOWN。PR #15不merge，remote full-only gate未关闭；历史部分PASS不能外推本checkpoint全绿。
+<!-- P15_CI_CURRENT_LOCAL_20261114_END -->
+
+
+<!-- P15_CI_LOCAL_CAPABILITY_20261114_BEGIN -->
+> **2026-11-14 本地修复 checkpoint：完整 CI / P15 正式关闭仍未完成。** 当前 PR head 仍为 `cddc703`；下列新增修改尚在 worktree，不能当作该远端 head 的 CI 结果。
+>
+> - 单一路径的局部 clearance：先真实模型 RED（11 = 9 FAIL / 2 PASS），再完整 Core + NavigationService **896/896 PASS**，零 SKIP。GREEN XML `2475FB170409F24A4FAEA430365717936DFDEF88D8B619B04F41A9B46ABA5500`；Core `84C4CD08354363945D2BDC3DA2F7F462E68B6E02F743AE510169DECB6E1AD978`。该数据约束已被 planner / proof 复用消费，尚不代表 CFC 已生成完整 queue head→service→exit 联合能力。
+> - 两项旧 canonical 测试明确迁移为 Legacy compatibility probe，保留预算 UNKNOWN、原 baseline、所有原断言及真实 PQS owner。同步只读作用域 finally 恢复同一个 Core，不推进业务或发布 Native movement；它们不再冒充 Main typed 权利测试。与三个 Main 真实 goal/arrival/FIFO 控制同批 **5/5 PASS**，XML `691D4A50DF29BCBB935EFAF5F108DF9AF090D34DCCE4F5D4AC63142DD083AFFD`，Exit tests `57B016AC80C6C7046EEE2C6E585F1CD9F05F95ACE5BBBE0112F646C5937166D6`。
+> - 原缓存 pickup 复用的 Counter-tail endpoint 互锁已有真实两客排空 PASS（原整批 1 PASS / 1 FAIL；不是整批通过），XML `AE52EFD799F82C2EC708A515CAEC4056F2A03B1C0B2203498F8C2AB148F213E3`。实际 unreserved source / untransferred reproof 分别 PASS，XML `4BD521FA90F64F0FB3BC805D1BD8336C6B10A6A17CF8CC8FB3AA5521054BF7FE` / `C488F6E4132D12B92ECB17A2953DB7667E3E6507CFCA364B30270F4021A143AE`。
+> - **仍未关闭：** 原 continuous Counter envelope 联合通路、原 Five 4,4 和其它旧 Native fixture families。Five 6,1 专用布局尝试正式 Decor 接受，但实际只完成4次交付，第5 source在 existing guest2 exit-capability 耗尽原16384 query；原五杯断言 FAIL（XML `64202B1F3ED13EFE0209C69F3668FD73CB9FE70A92A2CD0CB80C185C71583FAE`），布局改动已完整撤回。FIFO 条件未来能力仍属设计，未实施/未验证；实际碰撞、权利与预算没有放宽。
+> - 误启动的完整本地 EditMode 已主动停止，**NOT_COMPLETED / NO_XML**，不计任何全量通过。测试改写5项已知资源已恢复；3192 Assets / 469 source / 3 inputs / 28 scenes 全匹配、未知差异0、Editor workers0，OS handles UNKNOWN。后续专项首次启动被已退出 PID 的临时 Editor metadata 拒绝（NOT_RUN），归档该临时记录后使用唯一新批次获得上述5/5结果。
+>
+> 原 full CI [43529787560](https://github.com/zhengparker/AnimalCafe/actions/runs/43529787560) 的失败不能被局部 PASS 覆盖；远端 scoped CI [43554672557](https://github.com/zhengparker/AnimalCafe/actions/runs/43554672557) 的824 Edit /4 Play PASS同样不含当前未提交源码，required full-only gate仍按设计FAIL。
+> **本 checkpoint 后续对照（仍未提交）：** Core/Navigation896与Legacy/Main5项PASS保持其source范围。Native四项为2 PASS（Three、Center Normal）/2 FAIL（Photo），XML `802E28DE88F111A6B7E428B11C31CA49286909A53173E5607AE3129D911849C7`。先只撤max-chain后Photo仍2 FAIL；再撤全future Counter-lane exclusion恢复原assignedCounter/first-candidate逻辑后，Photo已经恢复付款与多个真实Exit，但旧assert不接受合法有限WAIT，另一个unborn source在Counter phase handoff中Terminal；Five可4delivery但仍5th capability FAIL。最后3项XML `40BF8C4B16515E61292597B8DAD499F8DFB6E8164839310CD025E6BC25DA88CD`，CFC `E452D19047B01626281D73133FFAF6D5436F9843B0F1229F57F1A28514E0DCF9`。这两条候位策略已撤回，缓存重复使用缺口重新OPEN；窄pre-submit修复与有限admission-debt模型待验证。FIFO新接口/模型仅冻结在outputs，未写入产品；不能当已完成设计或Runtime结果。
+>
+<!-- P15_CI_LOCAL_CAPABILITY_20261114_END -->
+
+
 > **完整 Unity CI 当前 FAIL，P15 处于 CI 修复中。** PR #15 保持 Open、未合并。运行 [43529787560](https://github.com/zhengparker/AnimalCafe/actions/runs/43529787560) 绑定 head bde0da0，EditMode 3857 PASS／3 FAIL／3 SKIP，PlayMode 1578 PASS／60 FAIL／15 SKIP。两套均生成完整 NUnit XML，运行失败来自测试结果。产物 SHA256 为 bc483d6e0b75d4302473cdd2b8b6d15f1dcc0e2f1acbf46ff5dea8a85f4f54ba。
 >
 > 初步分类含 Linux 文件共享语义、旧 reflection optional 参数、未提交的开发机诊断依赖、旧同步准备前提与经营场景失败。修复和定向验证正在进行，全部 63 个失败尚未关闭。下方精简 PASS 保持其原 selectors 与 source 范围。原始报告保存于本地 outputs/phase15/p15-unity-ci-20261113/。

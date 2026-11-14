@@ -215,6 +215,23 @@ namespace AnimalCafe.Navigation
             return NavigationFailure.None;
         }
 
+        internal IReadOnlyList<Vector3> ReadCurrentRemainder(int expectedGeneration,int expectedRevision,Vector3 position,Vector3 businessTarget)
+        {
+            if(!actor.SteadyPathMotion || !actor.isActiveAndEnabled || !moving || !Bound || failure!=NavigationFailure.None ||
+                generation!=expectedGeneration || revision!=expectedRevision || !Position.Equals(position) || !target.Position.Equals(businessTarget) ||
+                actor.Agent.pathPending || actor.Agent.isOnOffMeshLink || actor.Agent.pathStatus!=NavMeshPathStatus.PathComplete ||
+                corner<0 || corner>=corners.Length || rawCorners.Length!=corners.Length || adjustedCorners.Length!=corners.Length ||
+                !NavigationCollisionGuard.Finite(position) || !NavigationCollisionGuard.Finite(destination) || !NavigationCollisionGuard.Finite(businessTarget))return null;
+            var remaining=new List<Vector3>{position};
+            for(var index=corner;index<corners.Length;index++)
+            {
+                if(!NavigationCollisionGuard.Finite(corners[index]))return null;
+                remaining.Add(corners[index]); // Every future corrected corner, including self-near/looping points.
+            }
+            if(!remaining[remaining.Count-1].Equals(destination))remaining.Add(destination);
+            if(!remaining[remaining.Count-1].Equals(businessTarget))remaining.Add(businessTarget);
+            return System.Array.AsReadOnly(remaining.ToArray());
+        }
         public NavigationObservation Observe()
         {
             var state = NavigationPathState.Complete;

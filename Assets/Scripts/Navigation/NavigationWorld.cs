@@ -88,6 +88,15 @@ namespace AnimalCafe.Navigation
             Service.SetActorAvailable(actor.ActorId, available);
         }
 
+        internal IReadOnlyList<Vector3> ReadCurrentNativeRemainder(TrafficRequest issued,TrafficNativeStamp coreStamp,object life,Vector3 position)
+        {
+            var actor=life as NavigationActor;
+            if(issued==null || !LayoutAvailable || currentRevision!=issued.Intent.LayoutRevision || coreStamp.RequestId<=0 || coreStamp.LegGeneration<=0 ||
+                actor==null || actor.ActorId!=issued.Intent.ActorId || !ReferenceEquals(actor.World,this) || !actors.Contains(actor) ||
+                !actor.transform.position.Equals(position) || !drivers.TryGetValue(actor,out var driver) || service==null ||
+                !service.TryReadOriginalActiveGeneration(actor.ActorId,coreStamp.RequestId,currentRevision,driver,issued.Target,out var generation))return null;
+            return driver.ReadCurrentRemainder(generation,currentRevision,position,issued.Target);
+        }
         internal bool CanStartActor(NavigationActor actor)
         {
             Physics.SyncTransforms();

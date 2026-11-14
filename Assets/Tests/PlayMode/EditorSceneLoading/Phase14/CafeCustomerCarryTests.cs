@@ -69,6 +69,67 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             Time.captureDeltaTime=capture; Time.timeScale=scale;
         }
 
+        // Default-off stored-fact witness. Never calls a planner, Observe, AdvanceCorner or Core policy guard.
+        // 只读原字段并给出拒绝层，不改变Native路径、预算、身体、source或测试业务断言。
+        private static void ObserveCarryStraightNativeEligibility(ServiceTrafficCoordinator core,NavigationWorld world,NavigationActor actor)
+        {
+            try
+            {
+                const BindingFlags flags=BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic;
+                object Read(object value,string name)=>value==null?null:value.GetType().GetField(name,flags)?.GetValue(value);
+                string Ref(object value)=>value==null?"NULL":System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(value).ToString();
+                string Points(Vector3[] points)=>points==null?"UNKNOWN":"["+string.Join(";",points.Take(12).Select(p=>p.ToString("F9")))+"]count="+points.Length+" overflow="+Math.Max(0,points.Length-12);
+                bool SameXZ(Vector3 a,Vector3 b)=>a.x.Equals(b.x)&&a.z.Equals(b.z);
+                Vector3[] CollapseVerticalBridges(Vector3[] points)=>points==null?null:points.Where((point,index)=>index==points.Length-1 || !SameXZ(point,points[index+1])).ToArray();
+                var queryBefore=core.QueriesThisFrame;
+                var entries=Read(core,"entries") as System.Collections.IDictionary;
+                var drivers=Read(world,"drivers") as System.Collections.IDictionary;
+                var service=Read(world,"service");var byActor=Read(service,"byActor") as System.Collections.IDictionary;
+                if(entries==null || drivers==null || byActor==null || !drivers.Contains(actor) || !byActor.Contains(actor.ActorId))
+                {TestContext.WriteLine("CARRY_STRAIGHT_ELIGIBILITY UNKNOWN missing-owned-entry-driver-active-request");return;}
+                var keys=entries.Keys.Cast<TrafficIntentKey>().Where(key=>key.ActorId==actor.ActorId && Read(entries[key],"Leg")!=null && Equals(Read(entries[key],"Active"),true)).ToArray();
+                if(keys.Length!=1){TestContext.WriteLine("CARRY_STRAIGHT_ELIGIBILITY UNKNOWN active-count="+keys.Length);return;}
+                var key=keys[0];var entry=entries[key];var leg=Read(entry,"Leg");var request=Read(entry,"Request") as TrafficRequest;
+                var driver=drivers[actor];var native=byActor[actor.ActorId];var stampValue=Read(leg,"Stamp");
+                if(request==null || !(stampValue is TrafficNativeStamp stamp))
+                {TestContext.WriteLine("CARRY_STRAIGHT_ELIGIBILITY UNKNOWN request-or-stamp");return;}
+                var path=Read(leg,"Path") as Vector3[];var raw=Read(driver,"rawCorners") as Vector3[];var corrected=Read(driver,"corners") as Vector3[];
+                var facts=Read(core,"snapshot") as TrafficWorldSnapshot;var bodies=facts?.Bodies.Where(b=>b.Owner.ActorId==actor.ActorId).ToArray();
+                var collapsed=CollapseVerticalBridges(path);var pose=actor.transform.position;var epsilon=actor.Settings.Epsilon;
+                var shape=collapsed!=null && collapsed.Length==2 && raw!=null && raw.Length==2;
+                var delta=shape?raw[1]-raw[0]:Vector3.zero;delta.y=0;var offset=shape?pose-raw[0]:Vector3.zero;offset.y=0;
+                var length=delta.sqrMagnitude;var t=length>0?Vector3.Dot(offset,delta)/length:float.NaN;
+                var projection=shape?raw[0]+delta*Mathf.Clamp01(t):Vector3.zero;
+                var perpendicular=shape?new Vector2(pose.x-projection.x,pose.z-projection.z).magnitude:float.NaN;
+                float Horizontal(Vector3 a,Vector3 b)=>new Vector2(a.x-b.x,a.z-b.z).magnitude;
+                string reject=!(Read(leg,"Bound") is bool bound) || !bound?"core-not-bound":
+                    !Equals(Read(native,"Id"),stamp.RequestId)?"native-request-id":
+                    !Equals(Read(native,"RetryCount"),0) || !Equals(Read(native,"Recovering"),false)?"native-retry-or-recovery":
+                    !Equals(Read(native,"Generation"),Read(driver,"generation"))?"native-driver-generation":
+                    !Equals(Read(native,"LayoutRevision"),key.LayoutRevision) || !Equals(Read(driver,"revision"),key.LayoutRevision)?"layout":
+                    !actor.SteadyPathMotion || !Equals(Read(driver,"moving"),true)?"driver-not-steady-moving":
+                    !shape?"not-two-corners-after-exact-vertical-bridge-collapse":
+                    corrected==null || corrected.Length!=2 || !corrected.SequenceEqual(raw)?"driver-adjusted-or-multicorner":
+                    !Equals(Read(driver,"corner"),1)?"driver-corner-not-one":
+                    Horizontal(collapsed[0],raw[0])>epsilon || Horizontal(collapsed[1],raw[1])>epsilon?"core-driver-endpoint-metadata":
+                    Horizontal(request.Start,raw[0])>epsilon || Horizontal(request.Target,raw[1])>epsilon?"business-native-endpoint-metadata":
+                    !(t>0 && t<=1) || perpendicular>epsilon?"body-off-current-native-line":"CANDIDATE_ONLY_NOT_PERMISSION";
+                TestContext.WriteLine("CARRY_STRAIGHT_ELIGIBILITY frame="+Time.frameCount+" key="+key.ActorId+"/"+key.IntentId+"/g"+key.Generation+
+                    " source="+Ref(entry)+" coreStamp="+stamp.RequestId+"/"+stamp.LegGeneration+" actorLife="+Ref(Read(leg,"ActorLife"))+" actualLife="+Ref(actor)+
+                    " coreState=active"+Read(entry,"Active")+"/prepared"+Read(entry,"Prepared")+"/committed"+Read(leg,"Committed")+"/bound"+Read(leg,"Bound")+"/completed"+Read(leg,"Completed")+"/suspended"+Read(leg,"Suspended")+"/reprepare"+Read(leg,"ReprepareAllowed")+"/needsQuery"+Read(leg,"NeedsQuery")+
+                    " bodyFacts="+(bodies==null?"UNKNOWN":string.Join(";",bodies.Select(b=>b.Owner.IntentId+"/g"+b.Owner.Generation+"/sameSource"+b.Owner.Equals(key)+"/sameLife"+ReferenceEquals(b.ActorLife,actor)+"/enabled"+b.Enabled+"/active"+b.ActorActive+"/finite"+b.IndependentlyProgressing+"/remaining"+b.RemainingSeconds)))+
+                    " reject="+reject+" epsilon="+epsilon.ToString("R")+" pose="+pose.ToString("F9")+" businessStart="+request.Start.ToString("F9")+" businessTarget="+request.Target.ToString("F9")+
+                    " rawCore="+Points(path)+" collapsed="+Points(collapsed)+" current="+Points(Read(entry,"CurrentPath") as Vector3[])+" suffix="+Points(Read(leg,"Suffix") as Vector3[])+
+                    " driverRaw="+Points(raw)+" driverCurrent="+Points(corrected)+" corner="+Read(driver,"corner")+" adjusted=["+string.Join(",",Read(driver,"adjustedCorners") as bool[]??Array.Empty<bool>())+"]"+
+                    " native="+Read(native,"Id")+"/gen"+Read(native,"Generation")+"/retry"+Read(native,"RetryCount")+"/recovering"+Read(native,"Recovering")+
+                    " driverGen="+Read(driver,"generation")+" resolved="+Read(driver,"destination")+" along="+t.ToString("R")+" perpendicular="+perpendicular.ToString("R")+
+                    " exactCross="+(offset.x*delta.z-offset.z*delta.x).ToString("R")+" rawGoalExact="+(shape&&collapsed[1].Equals(raw[1]))+
+                    " rawStartExact="+(shape&&collapsed[0].Equals(raw[0]))+" originalTargetExact="+(Read(native,"Original") is NavigationTarget original&&original.Position.Equals(request.Target))+
+                    " addedCoreQueries="+(core.QueriesThisFrame-queryBefore)+" derivedCandidateNotProductDecision=True");
+            }
+            catch(Exception error){TestContext.WriteLine("CARRY_STRAIGHT_ELIGIBILITY UNKNOWN "+error.GetType().Name);}
+        }
+
         [UnityTest] public IEnumerator SuccessfulCreateMovesActualCustomerBeforeBaristaFinishesWorking()
         {
             yield return CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,6000);
@@ -294,6 +355,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             var barista=world.RegisteredActors.Single(a=>a.ActorId==employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista).ActorId);
             var ready=Time.frameCount;
             var previous=customers.Snapshot.Single().State;
+            var carryTrace=System.Environment.GetCommandLineArgs().Contains("-carryReturnTrace");var carryTraceSamples=0;
             TestContext.WriteLine("P14_COLLECT_READY separate frame="+ready+" customer="+previous+" barista="+employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista).State+
                 " pose="+barista.transform.position+" home="+binding.WorkTarget.Position+" lease="+CafeLoopRuntimeProof.Field<string>(owner,"leaseActor"));
             for(var frame=0;frame<6000 && !owner.Snapshot.Orders.Values.Any(o=>o.CustomerId==id && o.State==OrderState.Completed);frame++)
@@ -301,6 +363,27 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 yield return null;
                 Assert.That(customers.Snapshot.All(v=>v.State!=CustomerVisitState.Blocked),Is.True,owner.Snapshot.Failure);
                 var current=customers.Snapshot.Single().State;
+                if(carryTrace && frame%60==0 && carryTraceSamples++<16)
+                try
+                {
+                    const BindingFlags readFlags=BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic;
+                    object Read(object value,string name)=>value==null?null:value.GetType().GetField(name,readFlags)?.GetValue(value);
+                    var core=CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(owner,"traffic");
+                    var entries=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(core,"entries");
+                    var rows=entries.Keys.Cast<TrafficIntentKey>().Where(key=>key.ActorId==id || key.ActorId==barista.ActorId)
+                        .Select(key=>{var entry=entries[key];var decision=Read(entry,"Decision") as TrafficDecision;var leg=Read(entry,"Leg");
+                            return key.ActorId+"/"+key.IntentId+"/g"+key.Generation+"="+decision?.Kind+"/"+decision?.Reason+
+                                "/acq"+decision?.AcquiredSequence+"/queued"+Read(entry,"Queued")+"/prepared"+Read(entry,"Prepared")+"/active"+Read(entry,"Active")+
+                                "/leg"+Read(leg,"Index")+"/bound"+Read(leg,"Bound")+"/completed"+Read(leg,"Completed")+
+                                "/blockers["+string.Join(";",decision?.Blockers.Select(x=>x.Owner.ActorId+"/"+x.Owner.IntentId+"/"+x.ResourceId+"/"+x.Proof)??System.Array.Empty<string>())+"]";});
+                    if(carryTraceSamples<=8 && System.Environment.GetCommandLineArgs().Contains("-carryStraightLegEligibility"))
+                        ObserveCarryStraightNativeEligibility(core,world,barista);
+                    TestContext.WriteLine("CARRY_RETURN_TRACE frames="+(Time.frameCount-ready)+" customer="+current+
+                        " barista="+employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista).State+" pose="+barista.transform.position.ToString("F6")+
+                        " lease="+CafeLoopRuntimeProof.Field<string>(owner,"leaseActor")+" leaseArrived="+CafeLoopRuntimeProof.Field<bool>(owner,"leaseArrived")+
+                        " sources=["+string.Join(" | ",rows)+"] addedQueries=0");
+                }
+                catch(System.Exception error){TestContext.WriteLine("CARRY_RETURN_TRACE UNKNOWN "+error.GetType().Name);}
                 if(current!=previous)
                 {
                     TestContext.WriteLine("P14_COLLECT_TRANSITION separate frames="+(Time.frameCount-ready)+" customer="+current+

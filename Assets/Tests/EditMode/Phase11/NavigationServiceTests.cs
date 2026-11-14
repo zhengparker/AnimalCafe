@@ -26,6 +26,30 @@ namespace AnimalCafe.Tests.EditMode.Phase11
             => service.MoveTo("A", new NavigationTarget(new Vector3(1, 0, 0)),
                 r => { result = r; callbackCount++; }, recovery);
 
+        [TestCase("retry")][TestCase("recovery")]
+        public void OriginalNativeRemainderReaderCannotBorrowSameRequestAfterRetryOrRecovery(string phase)
+        {
+            var method=typeof(NavigationService).GetMethod("TryReadOriginalActiveGeneration",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+            Assert.That(method,Is.Not.Null,"Run only with the read-only API patch; a missing API is not the intended feature RED");
+            bool Read(long id,int revision,INavigationDriver expected,Vector3 target,out int generation)
+            {
+                var args=new object[]{"A",id,revision,expected,target,0};var ok=(bool)method.Invoke(service,args);generation=(int)args[5];return ok;
+            }
+            var start=Start(phase=="recovery"?new NavigationTarget(-Vector3.right):(NavigationTarget?)null);
+            Assert.That(Read(start.RequestId,0,driver,Vector3.right,out var first),Is.True);Assert.That(first,Is.EqualTo(1));
+            Assert.That(Read(start.RequestId+1,0,driver,Vector3.right,out _),Is.False);
+            Assert.That(Read(start.RequestId,1,driver,Vector3.right,out _),Is.False);
+            Assert.That(Read(start.RequestId,0,new FakeNavigationDriver(),Vector3.right,out _),Is.False);
+            Assert.That(Read(start.RequestId,0,driver,Vector3.up,out _),Is.False);
+            service.Tick(3.1f);if(phase=="recovery")service.Tick(3.1f);
+            Assert.That(driver.BeginPositions.Count,Is.EqualTo(phase=="recovery"?3:2));Assert.That(result,Is.Null);
+            var begins=driver.BeginPositions.Count;var targets=driver.Targets.Count;var stops=driver.StopCount;var callbacks=callbackCount;
+            Assert.That(Read(start.RequestId,0,driver,Vector3.right,out var rejected),Is.False);Assert.That(rejected,Is.Zero);
+            Assert.That(Read(start.RequestId,0,driver,phase=="recovery"?-Vector3.right:Vector3.right,out _),Is.False);
+            Assert.That(driver.BeginPositions.Count,Is.EqualTo(begins));Assert.That(driver.Targets.Count,Is.EqualTo(targets));Assert.That(driver.StopCount,Is.EqualTo(stops));Assert.That(callbackCount,Is.EqualTo(callbacks));
+            Assert.That(service.Cancel(start.RequestId),Is.True);Assert.That(Read(start.RequestId,0,driver,Vector3.right,out _),Is.False);
+        }
+
         [Test]
         public void TerminalFailureStopsDriverOnceBeforeCallback()
         {

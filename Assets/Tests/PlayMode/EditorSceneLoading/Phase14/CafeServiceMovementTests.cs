@@ -207,7 +207,82 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             var photoWaitTrace=new TrafficWaitFailureTrace(CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic"));
             var failureHook=typeof(ServiceTrafficCoordinator).GetField("WaitFailureObserver",BindingFlags.Instance|BindingFlags.NonPublic);
             var previousFailure=failureHook.GetValue(photoCore) as Delegate;
-            Action<string> failureCapture=text=>{if(text.StartsWith("EXIT_INITIAL_FREEZE"))TestContext.WriteLine(text);if(text.StartsWith("WAIT_ORIGINAL")){TestContext.WriteLine("PHOTO_ORIGINAL_WAIT "+text);PhotoEntries("original-refusal",true);}};
+            var captureCounterWorkingSource=Environment.GetCommandLineArgs().Contains("-photoCounterWorkingSourceSnapshot");
+            var counterWorkingSourceCaptured=false;
+            void CaptureCounterWorkingSource(string original)
+            {
+                if(!captureCounterWorkingSource || counterWorkingSourceCaptured ||
+                    !original.StartsWith("WAIT_ORIGINAL condition=new-frozen-owner "))return;
+                string Word(string name){var at=original.IndexOf(" "+name+"=",StringComparison.Ordinal);if(at<0)return null;
+                    at+=name.Length+2;var end=original.IndexOf(' ',at);return end<0?original.Substring(at):original.Substring(at,end-at);}
+                string FullKey(TrafficIntentKey k)=>k.Session+"/e"+k.Epoch+"/"+k.ActorId+"/"+k.IntentId+"/g"+k.Generation+"/r"+k.LayoutRevision+"/"+k.Context;
+                var intentText=Word("intent");if(intentText==null || !intentText.Contains("/counter-advance/"))return;
+                counterWorkingSourceCaptured=true; // One payload even if a missing field prevents a complete read.
+                var lines=new List<string>{"PHOTO_COUNTER_WORKING_SOURCE frame="+Time.frameCount+" original="+original};
+                try
+                {
+                    object Read(object o,string n)=>o==null?null:o.GetType().GetField(n,BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic)?.GetValue(o);
+                    string Ref(object o)=>ReferenceEquals(o,null)?"UNKNOWN_NULL":o.GetType().Name+"#"+System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(o);
+                    string Value(object o)=>o==null?"UNKNOWN_NULL":o is TrafficIntentKey k?FullKey(k):
+                        o is Vector3 v?v.ToString("F9"):o is CafeTaskToken t?t.SessionId+"/e"+t.Epoch+"/seq"+t.Sequence+"/attempt"+t.Attempt:
+                        o is CafeWorkCheckpoint c?c.Role+"/visit="+c.VisitId+"/order="+c.Order+"/stage="+c.Stage+"/remaining="+c.RemainingWorkSeconds:
+                        o is string || o.GetType().IsPrimitive || o.GetType().IsEnum?o.ToString():Ref(o);
+                    string Fields(object o,params string[] names)=>Ref(o)+"{"+string.Join(";",names.Select(n=>n+"="+Value(Read(o,n))))+"}";
+                    string Path(object o)=>o is IEnumerable<Vector3> points?string.Join(";",points.Select(v=>v.ToString("F9"))):"UNKNOWN_NULL";
+                    string Keys(object o)=>o is IEnumerable keys?string.Join(";",keys.Cast<TrafficIntentKey>().Select(FullKey)):"UNKNOWN_NULL";
+                    string Source(TrafficDecision d)=>d==null?"UNKNOWN_NULL":Ref(d)+"/"+FullKey(d.Intent)+"/"+d.Kind+"/"+d.Reason+"/seq="+d.RequestSequence+"/acq="+d.AcquiredSequence;
+                    void Request(string label,TrafficRequest r)
+                    {lines.Add(label+"="+(r==null?"UNKNOWN_NULL":Ref(r)+" key="+FullKey(r.Intent)+" first="+r.RequestedFrame+" start="+r.Start.ToString("F9")+
+                        " target="+r.Target.ToString("F9")+" radius="+r.Radius+" safety="+r.SafetyMargin+" finite="+r.FiniteSeconds+" resource="+r.ResourceId+
+                        " snapshot="+r.Snapshot?.Version+"/"+r.Snapshot?.BodyVersion+" selected=["+Path(r.SelectedJourney)+"]"));}
+                    void Proofs(string label,TrafficDecision d)
+                    {lines.Add(label+"="+Source(d));if(d!=null)foreach(var proof in d.ProofRoutes)lines.Add(label+".proof="+Ref(proof)+" resource="+proof.ResourceId+
+                        " waypoints=["+Path(proof.Waypoints)+"] expanded=["+Path(proof.ExpandedPath)+"] legEnds=["+string.Join(";",proof.LegEnds)+"]");}
+                    var entries=(IDictionary)Read(photoCore,"entries");var keys=entries.Keys.Cast<TrafficIntentKey>().ToArray();
+                    var senderKeys=keys.Where(k=>FullKey(k)==intentText).ToArray();var ownerKeys=keys.Where(k=>FullKey(k)==Word("owner")).ToArray();
+                    lines.Add("exactMatches sender="+senderKeys.Length+" owner="+ownerKeys.Length);
+                    if(senderKeys.Length!=1 || ownerKeys.Length!=1)lines.Add("identity=UNKNOWN_NONUNIQUE_OR_MISSING");
+                    else
+                    {
+                        var sender=entries[senderKeys[0]];var blocker=entries[ownerKeys[0]];
+                        foreach(var pair in new[]{("sender",sender),("owner",blocker)})
+                        {
+                            lines.Add(pair.Item1+"="+Fields(pair.Item2,"Key","FirstFrame","RequestSequence","AcquiredSequence","Queries","WaitRemaining","FiniteLimit","Queued","Prepared","Active","Retired","CounterAdvanceReadinessWaitStarted","CounterAdvanceReadiness"));
+                            Request(pair.Item1+".request",Read(pair.Item2,"Request") as TrafficRequest);
+                            Request(pair.Item1+".journeyRequest",Read(pair.Item2,"JourneyRequest") as TrafficRequest);
+                            lines.Add(pair.Item1+".frozen=["+Keys(Read(pair.Item2,"FrozenOwners"))+"] current=["+Path(Read(pair.Item2,"CurrentPath"))+"] journey=["+Path(Read(pair.Item2,"Journey"))+"]");
+                            var resources=Read(pair.Item2,"FrozenResources") as IDictionary;
+                            if(resources!=null)foreach(var key in resources.Keys.Cast<TrafficIntentKey>())lines.Add(pair.Item1+".resource="+FullKey(key)+"=["+string.Join(";",((IEnumerable)resources[key]).Cast<string>())+"]");
+                            lines.Add(pair.Item1+".leg="+Fields(Read(pair.Item2,"Leg"),"Index","Generation","Committed","Bound","Completed","Stamp","ActorLife","Proof"));
+                        }
+                        Proofs("owner.committedSource",Read(blocker,"JourneyPermit") as TrafficDecision);
+                        Proofs("owner.storedDecision",Read(blocker,"Decision") as TrafficDecision);
+                        var visits=(IDictionary)Read(customers,"visits");var visit=visits[senderKeys[0].ActorId];var anchor=Read(visit,"PendingCounterAdvance");var work=Read(anchor,"WorkingPredecessor");
+                        lines.Add("sender.visit="+Fields(visit,"Id","State","Generation","RequestId","Actor","Admission","CounterArrived","QueueLeft","PickupAssigned","HasCollected"));
+                        lines.Add("sender.anchor="+Fields(anchor,"Key","Source","Claim","Preview","Visit","Actor","Admission","WorkingPredecessor","Recovery","Retired"));
+                        lines.Add("sender.working="+Fields(work,"Visit","Actor","Admission","CounterClaim","CounterAssignment","Parking","ParkingSource","ParkingProof","ParkingFact","ParkingToken","Total","Origin","Generation","Paid","PaidIntent"));
+                        lines.Add("sender.working.visit="+Fields(Read(work,"Visit"),"Id","State","RequestId","Generation"));
+                        var seal=Read(work,"OriginalTask") as Delegate;
+                        lines.Add("sender.working.seal="+Ref(seal)+" method="+seal?.Method.Name+" target="+Ref(seal?.Target));
+                        if(seal?.Target!=null)lines.Add("sender.working.sealFields="+string.Join(";",seal.Target.GetType().GetFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).Select(f=>f.Name+"="+Value(f.GetValue(seal.Target)))));
+                    }
+                    var snapshot=Read(photoCore,"snapshot") as TrafficWorldSnapshot;lines.Add("snapshot="+snapshot?.Version+"/"+snapshot?.BodyVersion);
+                    if(snapshot!=null)
+                    {
+                        foreach(var body in snapshot.Bodies)lines.Add("body="+FullKey(body.Owner)+" life="+Ref(body.ActorLife)+" pos="+body.Position.ToString("F9")+" radius="+body.Radius+" safety="+body.SafetyMargin+" enabled="+body.Enabled+" active="+body.ActorActive+" finite="+body.IndependentlyProgressing+" seconds="+body.RemainingSeconds);
+                        foreach(var claim in snapshot.Parking)lines.Add("parking="+FullKey(claim.Owner)+" resource="+claim.ResourceId+" pos="+claim.Position.ToString("F9")+" radius="+claim.Radius+" safety="+claim.SafetyMargin+" canonical="+Ref(claim.CanonicalOwner)+" version="+claim.OwnerVersion+" business="+Ref(claim.BusinessOwner)+" release="+Ref(claim.ReleaseObligation)+" checkpoint="+Ref(claim.SemanticCheckpoint));
+                    }
+                    var service=Read(owner,"service");var cashier=Read(service,"cashier");
+                    lines.Add("cashier.actualWork="+Fields(cashier,"Token","Checkpoint","ActorId","Handle","Generation","LayoutRevision","Starting","Accepted","Blocked","Observed","SubmissionPending"));
+                    var staff=((IEnumerable)Read(employees,"employees")).Cast<object>().Where(e=>Read(e,"Role") is EmployeeRole role && role==EmployeeRole.Cashier).ToArray();
+                    lines.Add("cashier.employeeCount="+staff.Length);
+                    if(staff.Length==1){lines.Add("cashier.employee="+Fields(staff[0],"Id","Actor","AcceptedToken","Checkpoint","Runner"));
+                        lines.Add("cashier.runner="+Fields(Read(staff[0],"Runner"),"taskToken","checkpoint","handleId","state","remaining","generation","layoutRevision","disposed","retiring","hasCheckpoint"));}
+                }
+                catch(Exception error){lines.Add("capture=UNKNOWN_ERROR "+error);}
+                TestContext.WriteLine(string.Join("\n",lines));
+            }
+            Action<string> failureCapture=text=>{CaptureCounterWorkingSource(text);if(text.StartsWith("EXIT_INITIAL_FREEZE"))TestContext.WriteLine(text);if(text.StartsWith("WAIT_ORIGINAL")){TestContext.WriteLine("PHOTO_ORIGINAL_WAIT "+text);PhotoEntries("original-refusal",true);}};
             failureHook.SetValue(photoCore,Delegate.Combine(previousFailure,failureCapture));
             owner.SnapshotChanged+=WatchPhoto;
             try
@@ -256,7 +331,10 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             }
             var first="";var reached=false;var last="";var records=0;var pickupVisits=new HashSet<string>();
             var heldAdmissions=new HashSet<string>();var resumedAdmissions=new HashSet<string>();
-            var heldSources=new Dictionary<TrafficIntentKey,(object Entry,int FirstFrame,int Queries,float Wait)>();
+            var heldSources=new Dictionary<TrafficIntentKey,(object Entry,int FirstFrame,int Queries,float Wait,long Sequence,object Readiness)>();
+            var lastHeldDebt=new Dictionary<TrafficIntentKey,float>();
+            var originalFrozen=new Dictionary<TrafficIntentKey,(TrafficIntentKey[] Owners,Dictionary<TrafficIntentKey,string[]> Resources,
+                Dictionary<TrafficIntentKey,(object Entry,TrafficDecision Source,object Life)> Dependencies)>();
             var resumedSources=new HashSet<TrafficIntentKey>();
             for(var frame=0;frame<7200 && actualPhotoExits.Count<12;frame++)
             {
@@ -274,23 +352,78 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                         // AdmissionHeld 可跨正常重证保留；普通 budget 状态不能首次充当 readiness 证据。
                         if(!actualReadinessHold)continue;
                         heldAdmissions.Add(key.ActorId);
-                        saved=(heldEntry,(int)MovementRead(heldEntry,"FirstFrame"),(int)MovementRead(heldEntry,"Queries"),(float)MovementRead(heldEntry,"WaitRemaining"));
+                        saved=(heldEntry,(int)MovementRead(heldEntry,"FirstFrame"),(int)MovementRead(heldEntry,"Queries"),(float)MovementRead(heldEntry,"WaitRemaining"),
+                            (long)MovementRead(heldEntry,"RequestSequence"),MovementRead(heldEntry,"AdmissionReadiness"));
                         heldSources.Add(key,saved);
+                        Assert.That(saved.Readiness,Is.Not.Null);Assert.That(saved.Wait,Is.GreaterThan(0));lastHeldDebt.Add(key,saved.Wait);
                     }
                     if(resumedSources.Contains(key) || customers.Snapshot.Any(v=>v.VisitId==key.ActorId))continue;
                     Assert.That(heldEntry,Is.SameAs(saved.Entry));
                     Assert.That(MovementRead(heldEntry,"FirstFrame"),Is.EqualTo(saved.FirstFrame));
                     Assert.That((int)MovementRead(heldEntry,"Queries"),Is.GreaterThanOrEqualTo(saved.Queries),"The original query accounting cannot reset across a held source");
                     Assert.That((float)MovementRead(heldEntry,"WaitRemaining"),Is.LessThanOrEqualTo(saved.Wait));
+                    Assert.That(MovementRead(heldEntry,"AdmissionReadiness"),Is.SameAs(saved.Readiness));
+                    Assert.That(MovementRead(heldEntry,"RequestSequence"),Is.EqualTo(saved.Sequence));
+                    var debt=(float)MovementRead(heldEntry,"WaitRemaining");
+                    Assert.That(debt,Is.GreaterThan(0));Assert.That(debt,Is.LessThanOrEqualTo(lastHeldDebt[key]),"Original debt cannot refill between observations");
+                    lastHeldDebt[key]=debt;
                     Assert.That(heldDecision.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));
-                    Assert.That(heldDecision.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget).Or.EqualTo(TrafficDecisionKind.Granted),
+                    Assert.That(heldDecision.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget).Or.EqualTo(TrafficDecisionKind.Granted).Or.EqualTo(TrafficDecisionKind.WaitingForTraffic),
                         "An observed original hold can pass through normal bounded reproof and uncommitted preparation before birth");
                     Assert.That(heldDecision.AcquiredSequence,Is.Zero);
                     Assert.That(MovementRead(heldEntry,"Active"),Is.EqualTo(false));
-                    if(heldDecision.Kind==TrafficDecisionKind.DeferredByBudget)
+                    if(heldDecision.Kind!=TrafficDecisionKind.Granted)
                         Assert.That(MovementRead(heldEntry,"Prepared"),Is.EqualTo(false));
                     if(actualReadinessHold)Assert.That(heldDecision.Reason,Is.EqualTo("admission-exit-readiness-held"));
-                    Assert.That(MovementRead(heldEntry,"FrozenOwners"),Is.Null);Assert.That(MovementRead(heldEntry,"FrozenResources"),Is.Null);
+                    var frozen=(HashSet<TrafficIntentKey>)MovementRead(heldEntry,"FrozenOwners");
+                    var resources=(Dictionary<TrafficIntentKey,HashSet<string>>)MovementRead(heldEntry,"FrozenResources");
+                    if(frozen==null)
+                    {
+                        Assert.That(resources,Is.Null);Assert.That(originalFrozen.ContainsKey(key),Is.False,"Original Frozen evidence cannot silently reset");
+                        Assert.That(heldDecision.Kind,Is.Not.EqualTo(TrafficDecisionKind.WaitingForTraffic));
+                    }
+                    else
+                    {
+                        Assert.That(frozen,Is.Not.Empty);Assert.That(resources,Is.Not.Null);
+                        CollectionAssert.AreEquivalent(frozen,resources.Keys);
+                        var allEntries=CafeLoopRuntimeProof.Field<IDictionary>(photoCore,"entries");
+                        if(!originalFrozen.TryGetValue(key,out var frozenReceipt))
+                        {
+                            Assert.That(heldDecision.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),"Capture only a real first WAIT with current owner evidence");
+                            var dependencies=new Dictionary<TrafficIntentKey,(object Entry,TrafficDecision Source,object Life)>();
+                            foreach(var ownerKey in frozen)
+                            {
+                                Assert.That(ownerKey,Is.Not.EqualTo(key));var existing=allEntries[ownerKey];Assert.That(existing,Is.Not.Null);
+                                var source=(TrafficDecision)MovementRead(existing,"JourneyPermit");
+                                var existingLeg=MovementRead(existing,"Leg");var preparationBody=MovementRead(existing,"PreparationBody");
+                                var life=existingLeg!=null?MovementRead(existingLeg,"ActorLife"):
+                                    preparationBody!=null?MovementRead(preparationBody,"ActorLife"):null;
+                                Assert.That(source,Is.Not.Null);Assert.That(source.Intent,Is.EqualTo(ownerKey));Assert.That(source.AcquiredSequence,Is.GreaterThan(0));
+                                Assert.That(life,Is.Not.Null);Assert.That(resources[ownerKey],Is.Not.Empty);
+                                Assert.That(MovementRead(existing,"Retired"),Is.EqualTo(false));
+                                var snapshot=CafeLoopRuntimeProof.Field<TrafficWorldSnapshot>(photoCore,"snapshot");
+                                var bodies=snapshot.Bodies.Where(body=>body.Owner.Equals(ownerKey)).ToArray();Assert.That(bodies.Length,Is.EqualTo(1));
+                                Assert.That(bodies[0].Enabled&&bodies[0].ActorActive,Is.True);Assert.That(bodies[0].ActorLife,Is.SameAs(life));
+                                dependencies.Add(ownerKey,(existing,source,life));
+                            }
+                            Assert.That(heldDecision.Blockers,Is.Not.Empty);
+                            Assert.That(heldDecision.Blockers.All(blocker=>frozen.Contains(blocker.Owner)&&resources[blocker.Owner].Contains(blocker.ResourceId)),Is.True);
+                            frozenReceipt=(frozen.ToArray(),resources.ToDictionary(pair=>pair.Key,pair=>pair.Value.ToArray()),dependencies);
+                            originalFrozen.Add(key,frozenReceipt);
+                        }
+                        CollectionAssert.AreEquivalent(frozenReceipt.Owners,frozen);
+                        foreach(var ownerKey in frozenReceipt.Owners)
+                        {
+                            CollectionAssert.AreEquivalent(frozenReceipt.Resources[ownerKey],resources[ownerKey]);
+                            var dependency=frozenReceipt.Dependencies[ownerKey];Assert.That(allEntries[ownerKey],Is.SameAs(dependency.Entry));
+                            // This is the original historical receipt, never a rebound ActorId/Life alias.
+                            // Core may authenticate a real handoff while the old Frozen key/Entry remain historical.
+                            Assert.That(dependency.Source.Intent,Is.EqualTo(ownerKey));Assert.That(dependency.Source.AcquiredSequence,Is.GreaterThan(0));
+                            Assert.That(dependency.Life,Is.Not.Null);
+                        }
+                        if(heldDecision.Kind==TrafficDecisionKind.WaitingForTraffic)
+                            Assert.That(heldDecision.Blockers,Is.Not.Empty); // Current successor validity remains the original Core's authority.
+                    }
                     if(actualReadinessHold && requireConflict && controlledAdmission.HasValue && key.Equals(controlledAdmission.Value))
                     {
                         var heldRequest=(TrafficRequest)MovementRead(heldEntry,"Request");
@@ -303,6 +436,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     Assert.That(world.RegisteredActors.Any(v=>v.ActorId==key.ActorId),Is.False);
                     Assert.That(customers.CounterAssignments.Any(v=>v.VisitId==key.ActorId),Is.False);
                     Assert.That(customers.Capacity.GetReservations().Any(v=>v.OwnerId==key.ActorId),Is.False);
+                    Assert.That(owner.Snapshot.Orders.Values.Any(order=>order.CustomerId==key.ActorId),Is.False,"Held source cannot allocate an order before actual birth");
                 }
                 foreach(var v in customers.Snapshot.Where(v=>heldAdmissions.Contains(v.VisitId)))
                 {
@@ -316,6 +450,8 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                         Assert.That(primary,Is.Not.Null);Assert.That(primary.Intent,Is.EqualTo(saved.Key));
                         Assert.That(primary.RequestedFrame,Is.EqualTo(saved.Value.FirstFrame));
                         Assert.That((float)MovementRead(resumed,"WaitRemaining"),Is.LessThanOrEqualTo(saved.Value.Wait));
+                        Assert.That((float)MovementRead(resumed,"WaitRemaining"),Is.LessThanOrEqualTo(lastHeldDebt[saved.Key]));
+                        Assert.That(MovementRead(resumed,"RequestSequence"),Is.EqualTo(saved.Value.Sequence));
                         resumedSources.Add(saved.Key);
                     }
                 }
@@ -1728,7 +1864,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             var coordinator=CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(owner,"traffic");
             var hook=typeof(CustomerFlowController).GetField("CorridorObserver",BindingFlags.Instance|BindingFlags.NonPublic);
             var previous=hook.GetValue(customers);var witnessed=false;var immediateIssue=false;var actualArrival=false;
-            var callbackFrame=-1;string id=null;NavigationActor body=null;QueueAssignment assignment=default;TrafficIntentKey intent=default;
+            var callbackFrame=-1;string id=null,controlledActor=null;NavigationActor body=null;QueueAssignment assignment=default;TrafficIntentKey intent=default;
             CapacityToken[] tokens=null;long nextVisit=0,sequence=0,acquired=0;var queries=0;var seen=new HashSet<string>();
             try
             {
@@ -1741,14 +1877,41 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                         return;
                     }
                     if(operation!=(advance?"owned.retire":"admission.published") || actorId==null)return;
-                    var keys=CafeLoopRuntimeProof.Field<Dictionary<string,TrafficIntentKey>>(customers,"trafficActorKeys");
-                    if(!keys.TryGetValue(actorId,out var key) || key.IntentId!=(advance?"counter-advance":"counter-admission") ||
-                        !coordinator.HasActiveGrant(key))return;
                     var owned=queue.Snapshot.SingleOrDefault(a=>a.VisitId==actorId);
                     if(owned.VisitId==null || owned.Arrived || queue.Snapshot.Count>=originalSlots.Length)return;
                     var visit=CafeLoopRuntimeProof.Field<IDictionary>(customers,"visits")[actorId];
                     if((long)MovementRead(visit,"RequestId")!=0)return;
-                    var decision=coordinator.GetDecision(key);if(decision.AcquiredSequence<=0)return;
+                    TrafficIntentKey key;TrafficDecision decision;
+                    if(advance)
+                    {
+                        // Canonical Advance publishes before the strict handoff replaces trafficActorKeys.
+                        // 只认刚joint commit的真实source；旧body owner标签在PendingTraffic期间合法保留。
+                        var current=(QueueAssignment)MovementRead(visit,"Assignment");
+                        if(actorId!=controlledActor || (CustomerVisitState)MovementRead(visit,"State")!=CustomerVisitState.Queued ||
+                            current.VisitId!=owned.VisitId || current.Generation!=owned.Generation || current.SlotIndex!=owned.SlotIndex ||
+                            current.Position!=owned.Position || current.Arrived!=owned.Arrived)return;
+                        var sources=new List<TrafficDecision>();
+                        foreach(var candidate in CafeLoopRuntimeProof.Field<Dictionary<string,TrafficIntentKey>>(customers,"trafficKeys").Values
+                            .Where(k=>k.ActorId==actorId && k.IntentId=="counter-advance").Distinct())
+                        {
+                            if(candidate.Context!=actorId+"/assignment/"+(owned.Generation-1) || !coordinator.HasActiveGrant(candidate) ||
+                                !coordinator.TryGetCommittedJourney(candidate,out var source) || source==null ||
+                                !source.Intent.Equals(candidate) || source.Kind!=TrafficDecisionKind.Granted || source.AcquiredSequence<=0 ||
+                                !ReferenceEquals(coordinator.GetDecision(candidate),source))continue;
+                            var primary=source.ProofRoutes.Where(proof=>proof.ResourceId=="counter/"+actorId).ToArray();
+                            if(primary.Length!=1 || primary[0].Waypoints.Count==0 || primary[0].Waypoints.Last()!=owned.Position)continue;
+                            sources.Add(source);
+                        }
+                        if(sources.Count!=1)return;
+                        decision=sources[0];key=decision.Intent;
+                    }
+                    else
+                    {
+                        var keys=CafeLoopRuntimeProof.Field<Dictionary<string,TrafficIntentKey>>(customers,"trafficActorKeys");
+                        if(!keys.TryGetValue(actorId,out key) || key.IntentId!="counter-admission" || !coordinator.HasActiveGrant(key))return;
+                        decision=coordinator.GetDecision(key);
+                    }
+                    if(decision.AcquiredSequence<=0)return;
                     witnessed=true;id=actorId;intent=key;assignment=owned;callbackFrame=Time.frameCount;
                     body=world.RegisteredActors.Single(a=>a.ActorId==id);
                     tokens=customers.Capacity.GetReservations().Where(r=>r.OwnerId==id).Select(r=>r.Token).ToArray();
@@ -1765,7 +1928,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     // Approved fallback after the natural two-visitor run never produced an advance.
                     // 已真实到站的同一顾客，换合法候选目标后仍由正常Step/Native执行前移。
                     yield return AwaitTrafficAdmission();
-                    var existing=customers.Snapshot.Single().VisitId;
+                    var existing=customers.Snapshot.Single().VisitId;controlledActor=existing;
                     yield return Until(()=>queue.Snapshot.Any(a=>a.VisitId==existing && a.Arrived));
                     var actualBody=world.RegisteredActors.Single(a=>a.ActorId==existing);
                     Assert.That(originalSlots.Length,Is.GreaterThan(2),"FIXTURE: need a distinct next target plus an unused tail");
@@ -1789,6 +1952,22 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 customers.AutoSpawn=false;
                 TestContext.WriteLine("COUNTER_PUBLICATION_VERSION advance="+advance+" witnessed="+witnessed+" seen="+seen.Count+
                     " id="+id+" phase="+intent.IntentId+" requestSequence="+sequence+" acquired="+acquired+" queries="+queries+" immediateIssue="+immediateIssue);
+                if(advance && !witnessed)
+                {
+                    var rows=CafeLoopRuntimeProof.Field<IDictionary>(customers,"visits");var live=controlledActor!=null && rows.Contains(controlledActor)?rows[controlledActor]:null;
+                    var mapped=CafeLoopRuntimeProof.Field<Dictionary<string,TrafficIntentKey>>(customers,"trafficActorKeys");
+                    var entries=(IDictionary)MovementRead(coordinator,"entries");
+                    var keys=CafeLoopRuntimeProof.Field<Dictionary<string,TrafficIntentKey>>(customers,"trafficKeys").Values
+                        .Where(k=>k.ActorId==controlledActor && k.IntentId=="counter-advance").Distinct().ToArray();
+                    TestContext.WriteLine("COUNTER_PUBLICATION_UNWITNESSED actor="+controlledActor+" visit="+(live==null?"MISSING":
+                        "state="+MovementRead(live,"State")+" request="+MovementRead(live,"RequestId")+" pending="+(MovementRead(live,"PendingTraffic")!=null)+
+                        " anchor="+(MovementRead(live,"PendingCounterAdvance")!=null)+" pickupAssigned="+MovementRead(live,"PickupAssigned"))+
+                        " actorKey="+(controlledActor!=null && mapped.TryGetValue(controlledActor,out var bodyKey)?bodyKey.IntentId:"NONE")+
+                        " queue=["+string.Join(";",queue.Snapshot.Select(row=>row.VisitId+"/g"+row.Generation+"/arrived="+row.Arrived+"/"+row.Position))+ "]"+
+                        " advance=["+string.Join(";",keys.Select(k=>k.Context+"/"+(entries.Contains(k)?
+                            ((TrafficDecision)MovementRead(entries[k],"Decision")).Kind+"/"+((TrafficDecision)MovementRead(entries[k],"Decision")).Reason+"/acq"+
+                            ((TrafficDecision)MovementRead(entries[k],"Decision")).AcquiredSequence:"NO_ENTRY")))+"]");
+                }
                 Assert.That(witnessed,Is.True,"FIXTURE: real joint Counter publication with an unused tail must reach the original callback");
                 Assert.That(immediateIssue,Is.False,"PRODUCT: stale publication must not immediately issue Native movement");
                 Assert.That(world.RegisteredActors.Single(a=>a.ActorId==id),Is.SameAs(body));

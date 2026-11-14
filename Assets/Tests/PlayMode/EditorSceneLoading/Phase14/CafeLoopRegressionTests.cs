@@ -491,6 +491,112 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         }
     }
 
+    // Read-only test witness: original facts only; never refresh, prepare, query or replay admission.
+    // 只观察helper Granted与原一次TrySpawn；不刷新snapshot、不pump、不额外TrySpawn。
+    internal sealed class AdmissionPreparedSnapshotTrace : IDisposable
+    {
+        internal static bool Enabled=>Environment.GetCommandLineArgs().Contains("-admissionPreparedSnapshotTrace");
+        private const BindingFlags Flags=BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic;
+        private readonly CustomerFlowController customers;
+        private readonly NavigationWorld world;
+        private readonly object originalAnchor,originalEntry;
+        private readonly TrafficRequest originalRequest;
+        private readonly FieldInfo hook;
+        private readonly Action<string,string,string,Vector3,IReadOnlyList<Vector3>,Vector3[],string> prior,observer;
+        private bool active;
+        private static object R(object o,string name)=>o==null?null:o.GetType().GetField(name,Flags)?.GetValue(o);
+        private static string Ref(object o)=>o==null?"NULL":System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(o).ToString();
+        private static string Key(object value)=>value is TrafficIntentKey k?k.Session+"/e"+k.Epoch+"/"+k.ActorId+"/"+k.IntentId+"/g"+k.Generation+"/r"+k.LayoutRevision+"/"+k.Context:"NULL";
+        private static object Entry(CustomerFlowController c,object anchor)
+        {
+            var entries=R(R(c,"traffic"),"entries") as IDictionary;var key=R(anchor,"Key");
+            return key!=null && entries!=null && entries.Contains(key)?entries[key]:null;
+        }
+        internal AdmissionPreparedSnapshotTrace(CustomerFlowController c,NavigationWorld w)
+        {
+            if(!Enabled)return;
+            customers=c;world=w;originalAnchor=R(c,"pendingAdmissionAnchor");originalEntry=Entry(c,originalAnchor);
+            originalRequest=R(originalEntry,"Request") as TrafficRequest;
+            hook=typeof(CustomerFlowController).GetField("CorridorObserver",Flags);
+            prior=(Action<string,string,string,Vector3,IReadOnlyList<Vector3>,Vector3[],string>)hook.GetValue(c);
+            observer=(op,id,related,target,path,obstacles,result)=>
+            {
+                prior?.Invoke(op,id,related,target,path,obstacles,result);
+                if(active && (op=="admission.original-refusal" || op=="admission.unreserved-front-held"))
+                    Sample("original-refusal/"+op+"/"+result,c,w,originalAnchor,originalEntry,originalRequest);
+            };
+            active=true;hook.SetValue(c,observer);
+            Sample("before-original-TrySpawn",c,w,originalAnchor,originalEntry,originalRequest);
+        }
+        public void Dispose()
+        {
+            if(!active)return;active=false;
+            Sample("after-original-TrySpawn",customers,world,originalAnchor,originalEntry,originalRequest);
+            if(customers!=null && ReferenceEquals(hook.GetValue(customers),observer))hook.SetValue(customers,prior);
+            else TestContext.WriteLine("ADMISSION_PREP_SNAPSHOT cleanup=UNKNOWN observer ownership changed");
+        }
+        internal static void Sample(string stage,CustomerFlowController customers,NavigationWorld world,
+            object originalAnchor=null,object originalEntry=null,TrafficRequest originalRequest=null)
+        {
+            if(!Enabled)return;
+            try
+            {
+                var anchor=R(customers,"pendingAdmissionAnchor");var core=R(customers,"traffic");
+                var entry=Entry(customers,anchor)??originalEntry;
+                var request=R(entry,"Request") as TrafficRequest;var decision=R(entry,"Decision") as TrafficDecision;
+                var preview=R(anchor??originalAnchor,"Preview") as CounterQueueService.PreparedMutation;
+                var queue=R(customers,"queue") as CounterQueueService;
+                var actorKeys=R(customers,"trafficActorKeys") as IDictionary;
+                var actors=world.RegisteredActors.Where(a=>a!=null).OrderBy(a=>a.ActorId,StringComparer.Ordinal).ToArray();
+                var lines=new List<string>{"ADMISSION_PREP_SNAPSHOT stage="+stage+" frame="+Time.frameCount+
+                    " sceneTime="+Time.timeSinceLevelLoadAsDouble.ToString("R")+" status="+customers.Status+
+                    " key="+Key(R(anchor??originalAnchor,"Key"))+" anchor="+Ref(anchor)+" originalAnchor="+Ref(originalAnchor)+
+                    " sameAnchor="+ReferenceEquals(anchor,originalAnchor)+" entry="+Ref(entry)+" originalEntry="+Ref(originalEntry)+
+                    " request="+Ref(request)+" originalRequest="+Ref(originalRequest)+" decision="+decision?.Kind+"/"+decision?.Reason+
+                    " prepared="+R(entry,"Prepared")+" queued="+R(entry,"Queued")+" active="+R(entry,"Active")+
+                    " first="+R(entry,"FirstFrame")+" seq="+R(entry,"RequestSequence")+" acq="+R(entry,"AcquiredSequence")+" queries="+R(entry,"Queries")+
+                    " preview="+Ref(preview)+" previewCurrent="+(preview!=null && preview.IsCurrent)+" previewExpected="+R(preview,"ExpectedVersion")+
+                    " queueVersion="+queue?.Version+" previewTarget="+(preview==null?"NULL":preview.Assignment.Position.ToString("F9"))+
+                    " requestTarget="+request?.Target.ToString("F9")+" nextVisit="+R(customers,"nextVisit")+
+                    " refusedFront="+Ref(R(customers,"refusedPickupFront"))+" integratedAdmission="+R(customers,"integratedAdmissionAllowed")+
+                    " actors="+actors.Length+" bodyOutputTruncated="+(actors.Length>64)};
+                var snapshots=new[]{("request",request?.Snapshot),("originalRequest",originalRequest?.Snapshot),
+                    ("customer",R(customers,"trafficSnapshot") as TrafficWorldSnapshot),("core",R(core,"snapshot") as TrafficWorldSnapshot)};
+                foreach(var row in snapshots)
+                {
+                    var snapshot=row.Item2;
+                    lines.Add("ADMISSION_SNAPSHOT kind="+row.Item1+" ref="+Ref(snapshot)+" version="+snapshot?.Version+
+                        " bodyVersion="+snapshot?.BodyVersion+" bodyCount="+snapshot?.Bodies.Count+" parkingCount="+snapshot?.Parking.Count);
+                    if(snapshot==null)continue;
+                    foreach(var b in snapshot.Bodies.Take(64))
+                    {
+                        var matches=actors.Where(a=>a.ActorId==b.Owner.ActorId).ToArray();var actor=matches.Length==1?matches[0]:null;
+                        var key=actor!=null && actorKeys!=null && actorKeys.Contains(actor.ActorId)?actorKeys[actor.ActorId]:null;
+                        lines.Add("ADMISSION_BODY kind="+row.Item1+" owner="+Key(b.Owner)+" life="+Ref(b.ActorLife)+" factPose="+b.Position.ToString("F9")+
+                            " factEnabled="+b.Enabled+" factActive="+b.ActorActive+" finite="+b.IndependentlyProgressing+" seconds="+b.RemainingSeconds.ToString("R")+
+                            " radius="+b.Radius+" safety="+b.SafetyMargin+" actualCount="+matches.Length+" actualLife="+Ref(actor)+
+                            " actualPose="+(actor==null?"UNKNOWN":actor.transform.position.ToString("F9"))+
+                            " exactPose="+(actor!=null && actor.transform.position.Equals(b.Position))+" actualActive="+(actor!=null && actor.isActiveAndEnabled)+
+                            " actualNavEnabled="+(actor!=null && actor.Agent!=null && actor.Agent.enabled && actor.Agent.isOnNavMesh)+
+                            " currentMappedOwner="+Key(key));
+                    }
+                    foreach(var p in snapshot.Parking.Take(64))lines.Add("ADMISSION_PARKING kind="+row.Item1+" owner="+Key(p.Owner)+
+                        " resource="+p.ResourceId+" version="+p.OwnerVersion+" pose="+p.Position.ToString("F9")+
+                        " canonical="+Ref(p.CanonicalOwner)+" checkpoint="+Ref(p.SemanticCheckpoint));
+                }
+                foreach(var actor in actors.Take(64))lines.Add("ADMISSION_ACTUAL actor="+actor.ActorId+" life="+Ref(actor)+" pose="+actor.transform.position.ToString("F9")+
+                    " mappedOwner="+Key(actorKeys!=null && actorKeys.Contains(actor.ActorId)?actorKeys[actor.ActorId]:null));
+                foreach(var row in new[]{("request",request),("originalRequest",originalRequest)})
+                    if(row.Item2!=null)foreach(var role in row.Item2.Requirements.Take(64))lines.Add("ADMISSION_ROLE kind="+row.Item1+" resource="+role.ResourceId+
+                        " start="+role.Start.ToString("F9")+" goal="+role.Goal.ToString("F9")+" clearance="+role.Clearance+
+                        " selected="+role.SelectedJourney+" avoidParking="+role.AvoidProposedParking+" obstacles=["+
+                        string.Join(";",role.Obstacles.Take(64).Select(p=>p.ToString("F9")))+"]");
+                foreach(var line in lines)TestContext.WriteLine(line);
+            }
+            catch(Exception error){TestContext.WriteLine("ADMISSION_PREP_SNAPSHOT UNKNOWN stage="+stage+" error="+error.GetType().Name+":"+error.Message);}
+        }
+    }
+
     internal static class CafeLoopRuntimeProof
     {
         internal const BindingFlags Flags=BindingFlags.Instance|BindingFlags.NonPublic;
@@ -499,7 +605,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         // Prepare only this actual unborn proposal; older customers keep normal progress and release.
         // 只等待当前 unborn id 的真实通行准备；不冻结旧顾客、全局账本或其他 Native requests。
         internal static IEnumerator PreparePositiveAdmission(CafeLoopController owner,CustomerFlowController customers,
-            NavigationWorld world,int maxFrames)
+            NavigationWorld world,int maxFrames,Action observe=null,bool requireCurrentSnapshot=false)
         {
             const string premise="ADMISSION_PREPARATION_NOT_PROVEN: ";
             Assert.That(maxFrames,Is.InRange(1,6000),premise+"use the caller's existing bounded frame window");
@@ -517,6 +623,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 Assert.That(Field<ServiceTrafficCoordinator>(owner,"traffic"),Is.SameAs(coordinator));
                 Assert.That(Field<ServiceTrafficCoordinator>(customers,"traffic"),Is.SameAs(coordinator));
                 Assert.That(Field<bool>(coordinator,"closed"),Is.False,premise+"original Core was closed");
+                observe?.Invoke(); // Read-only caller premise on each normal preparation frame.
             }
             CurrentDriver();
             var before=Field<long>(customers,"nextVisit");var anchor=Field<object>(customers,"pendingAdmissionAnchor");
@@ -534,6 +641,27 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             var entry=entries[key];var previousQueries=Field<int>(entry,"Queries");var initialSequence=Field<long>(entry,"RequestSequence");
             if(fresh)Assert.That(initialSequence,Is.Zero,premise+"new original source must precede the normal ready-batch sequence");
             var positiveSequence=initialSequence;var sequenceTransitions=0;
+            bool CurrentPreparedFacts(TrafficRequest request)
+            {
+                if(!requireCurrentSnapshot)return true;
+                var current=Field<TrafficWorldSnapshot>(coordinator,"snapshot");
+                var preview=Field<CounterQueueService.PreparedMutation>(anchor,"Preview");
+                if(request.Snapshot==null || current==null || request.Snapshot.Version!=current.Version ||
+                    request.Snapshot.BodyVersion!=current.BodyVersion || preview==null || !preview.IsCurrent)return false;
+                // A cached snapshot can precede the final normal World.Step in the same frame.
+                // 只读核对当前body，不刷新snapshot或替原入口执行安全判定。
+                var actors=world.RegisteredActors.Where(actor=>actor!=null).ToArray();
+                if(actors.Length!=request.Snapshot.Bodies.Count)return false;
+                foreach(var fact in request.Snapshot.Bodies)
+                {
+                    var matches=actors.Where(actor=>actor.ActorId==fact.Owner.ActorId).ToArray();
+                    if(matches.Length!=1)return false;var actor=matches[0];
+                    var enabled=actor.isActiveAndEnabled && actor.Agent!=null && actor.Agent.enabled && actor.Agent.isOnNavMesh;
+                    if(!ReferenceEquals(fact.ActorLife,actor) || fact.Position!=actor.transform.position ||
+                        fact.ActorActive!=actor.isActiveAndEnabled || fact.Enabled!=enabled)return false;
+                }
+                return true;
+            }
             for(var waited=0;waited<=maxFrames;waited++)
             {
                 CurrentDriver();
@@ -579,17 +707,19 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 var snapshots=new[]{Field<TrafficWorldSnapshot>(customers,"trafficSnapshot"),Field<TrafficWorldSnapshot>(coordinator,"snapshot")};
                 foreach(var snapshot in snapshots)
                     if(snapshot!=null)Assert.That(snapshot.Bodies.Any(b=>b.Owner.ActorId==id) || snapshot.Parking.Any(p=>p.Owner.ActorId==id),Is.False);
-                if(decision.Kind==TrafficDecisionKind.Granted)
+                if(decision.Kind==TrafficDecisionKind.Granted && CurrentPreparedFacts(request))
                 {
                     Assert.That(positiveSequence,Is.GreaterThan(0));Assert.That(decision.RequestSequence,Is.EqualTo(positiveSequence));
                     Assert.That(sequenceTransitions,Is.LessThanOrEqualTo(1));
                     TestContext.WriteLine("NATIVE_ADMISSION_PREP sameAnchor=True sameEntry=True fullKey="+key.Session+"/e"+key.Epoch+"/"+id+"/"+key.IntentId+"/g"+key.Generation+"/r"+key.LayoutRevision+"/"+key.Context+
                         " firstFrame="+firstFrame+" waited="+waited+" initialSequence="+initialSequence+" firstPositiveSequence="+positiveSequence+
                         " sequenceTransitions="+sequenceTransitions+" queries="+queries+" acquired=0 unbornCanonicalAndNativeAbsent=True olderProgressAllowed=True");
+                    AdmissionPreparedSnapshotTrace.Sample("helper-Granted",customers,world,anchor,entry,request);
                     yield break;
                 }
-                Assert.That(decision.Kind==TrafficDecisionKind.DeferredByBudget || decision.Kind==TrafficDecisionKind.WaitingForTraffic,Is.True,premise+decision.Kind+": "+decision.Reason);
-                Assert.That(waited,Is.LessThan(maxFrames),premise+"normal-frame preparation exceeded the original caller bound");
+                Assert.That(decision.Kind==TrafficDecisionKind.DeferredByBudget || decision.Kind==TrafficDecisionKind.WaitingForTraffic ||
+                    requireCurrentSnapshot && decision.Kind==TrafficDecisionKind.Granted,Is.True,premise+decision.Kind+": "+decision.Reason);
+                Assert.That(waited,Is.LessThan(maxFrames),premise+"normal-frame preparation exceeded the original caller bound; key="+key.ActorId+"/"+key.IntentId+" decision="+decision.Kind+"/"+decision.Reason+" queries="+queries+" remaining="+Field<float>(entry,"WaitRemaining")+" blockers=["+string.Join(";",decision.Blockers.Select(blocker=>blocker.Owner.ActorId+"/"+blocker.Owner.IntentId+"/"+blocker.ResourceId+"/"+blocker.Proof))+"] spatial="+Field<TrafficDecision>(entry,"UnpaidEligibilitySpatialRefusal")?.Reason);
                 yield return null;
             }
         }

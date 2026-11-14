@@ -40,6 +40,33 @@ namespace AnimalCafe.Navigation
             FiniteWorkingPredecessorSeconds=finiteWorkingPredecessorSeconds??throw new ArgumentNullException(nameof(finiteWorkingPredecessorSeconds)); }
     }
 
+    // Internal producer observation only; no movement, canonical or parking authority.
+    // 内部只读准备资格；不能授予移动、业务提交或占位权限。
+    internal enum TrafficDeliveryPreparationStage { Invalid,PublicationPending,WorkingOrPaidPending,NativeAccepted }
+    // One readonly observation; the producer does not issue a permit. Core authenticates the actual lineage.
+    // 同次只读结果；业务seal不替代Core的真实canonical/strict-leg证明。
+    internal readonly struct TrafficDeliveryPreparationObservation
+    {
+        internal readonly TrafficDeliveryPreparationStage Stage;
+        internal readonly object ActorLife,WorkingSeal;
+        internal readonly AnimalCafe.Customers.PickupQueueService.ReservationClaim Reservation;
+        internal readonly TrafficIntentKey? PaidIntent;
+        internal readonly TrafficDecision PaidSource;
+        internal TrafficDeliveryPreparationObservation(TrafficDeliveryPreparationStage stage,object actorLife=null,object workingSeal=null,
+            AnimalCafe.Customers.PickupQueueService.ReservationClaim reservation=null,TrafficIntentKey? paidIntent=null,TrafficDecision paidSource=null)
+        {Stage=stage;ActorLife=actorLife;WorkingSeal=workingSeal;Reservation=reservation;PaidIntent=paidIntent;PaidSource=paidSource;}
+    }
+
+    internal sealed class TrafficDeliveryPreparationReadiness
+    {
+        internal readonly TrafficIntentKey Intent;
+        internal readonly Func<bool> IsCurrent;
+        internal readonly Func<TrafficIntentKey,TrafficDecision,TrafficDeliveryPreparationObservation> Read;
+        internal TrafficDeliveryPreparationReadiness(TrafficIntentKey intent,Func<bool> isCurrent,
+            Func<TrafficIntentKey,TrafficDecision,TrafficDeliveryPreparationObservation> read)
+        {Intent=intent;IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));Read=read??throw new ArgumentNullException(nameof(read));}
+    }
+
     public enum TrafficDecisionKind
     {
         Granted, WaitingForTraffic, DeferredByBudget, Unreachable, InvalidConfiguration,
@@ -193,6 +220,16 @@ namespace AnimalCafe.Navigation
 
     // Each requirement is a real route proof, e.g. delivery+return or existing customer goal.
     // 能力检查不登记未选定的未来路线；所有query共用同一意图预算。
+    // A local geometric condition for this proof only; never a body, reservation, or right.
+    // 仅约束本次能力路径的几何条件，不创建身体、预留或空间权利。
+    public readonly struct TrafficRouteObstacle
+    {
+        public Vector3 Position { get; }
+        public float Clearance { get; }
+        public TrafficRouteObstacle(Vector3 position,float clearance)
+        { Position=position;Clearance=clearance; }
+    }
+
     public sealed class TrafficRouteRequirement
     {
         public string ResourceId { get; }
@@ -202,13 +239,16 @@ namespace AnimalCafe.Navigation
         public IReadOnlyList<Vector3> Obstacles { get; }
         public bool SelectedJourney { get; }
         public bool AvoidProposedParking { get; }
+        public IReadOnlyList<TrafficRouteObstacle> LocalObstacles { get; }
         public TrafficRouteRequirement(string resourceId, Vector3 start, Vector3 goal, float clearance,
-            IEnumerable<Vector3> obstacles = null,bool selectedJourney=false,bool avoidProposedParking=true)
+            IEnumerable<Vector3> obstacles = null,bool selectedJourney=false,bool avoidProposedParking=true,
+            IEnumerable<TrafficRouteObstacle> localObstacles=null)
         {
             ResourceId = resourceId; Start = start; Goal = goal; Clearance = clearance;
             Obstacles = Array.AsReadOnly((obstacles ?? Enumerable.Empty<Vector3>()).ToArray());
             SelectedJourney=selectedJourney;
             AvoidProposedParking=avoidProposedParking;
+            LocalObstacles=Array.AsReadOnly((localObstacles??Enumerable.Empty<TrafficRouteObstacle>()).ToArray());
         }
     }
 

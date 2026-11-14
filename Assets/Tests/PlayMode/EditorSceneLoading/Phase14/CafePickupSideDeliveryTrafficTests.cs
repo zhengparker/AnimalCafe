@@ -20,6 +20,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         // Real selected route + body + accepted native request; no safety setting is changed.
         [UnityTest] public IEnumerator SingleSideSelectedUnissuedDeliverySegmentRecognizesFiniteMovingBodyAndKeepsOriginalWork()
         {
+            var captureOriginal=Environment.GetCommandLineArgs().Contains("-singleSideDeliveryOriginalTrace");
+            using var originalWaitTrace=captureOriginal?new TrafficWaitFailureTrace(
+                CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic")):null;
             Assert.That(employees.TryGetBinding(EmployeeRole.Barista,out var initialBinding),Is.True);
             var shaping=Blocker((initialBinding.WorkTarget.Position+initialBinding.PickUpTarget.Value.Position)/2,
                 "delivery-original-route-shaping-body");
@@ -70,6 +73,10 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             MovementResult? completed=null;
             var moving=world.Service.MoveTo(body.ActorId,new NavigationTarget(destinations[0]),r=>completed=r);
             Assert.That(moving.Accepted,Is.True);Assert.That(completed.HasValue,Is.False);
+            if(captureOriginal)TestContext.WriteLine("SINGLE_SIDE_BODY_PRODUCER actor="+body.ActorId+" nativeRequest="+moving.RequestId+
+                " customer="+customers.Snapshot.Any(v=>v.VisitId==body.ActorId)+" employee="+employees.Snapshot.Any(e=>e.ActorId==body.ActorId)+
+                " registered="+world.RegisteredActors.Any(a=>ReferenceEquals(a,body))+" shaping="+shaping.ActorId);
+
             Assert.That(body.Agent.hasPath,Is.True);Assert.That(body.Agent.isStopped,Is.False);
             Assert.That(Traffic(),Is.True,"Same real body now owns a finite relevant moving path");
             Assert.That(Wait(),Is.True,"Owned selected delivery must classify this exact finite obstruction");

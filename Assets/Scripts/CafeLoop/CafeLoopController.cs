@@ -202,7 +202,8 @@ namespace AnimalCafe.CafeLoop
             {
                 traffic?.Close();trafficEpoch=state.Epoch;trafficRevision=adapter.Revision;
                 traffic=new ServiceTrafficCoordinator(state.SessionId,state.Epoch,adapter.Revision,new TrafficWorldSnapshot(0,0,null,null),adapter.GetCompletePath,
-                    getNativePathContext:()=>adapter.NativePathQueryContext);
+                    getNativePathContext:()=>adapter.NativePathQueryContext,
+                    getCurrentNativeRemainder:adapter.World.ReadCurrentNativeRemainder);
                 customers.BindTraffic(traffic,state.SessionId,state.Epoch,employees.IndependentTrafficSeconds,
                     id=>IsExpectedCounterDeparture(id)?Math.Max(.001f,employees.Snapshot.First(e=>e.Role==EmployeeRole.Cashier).RemainingWorkSeconds)+1:0,
                     employees.IsPickupJourneyCurrent);
