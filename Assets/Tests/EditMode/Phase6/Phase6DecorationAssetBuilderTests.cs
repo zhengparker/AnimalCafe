@@ -74,7 +74,7 @@ namespace AnimalCafe.Tests.EditMode.Phase6
         }
 
         [Test]
-        public void UiPublishBackup_RestoreDeniedChangedReplacementPropagatesWithoutTempLeak()
+        public void UiPublishBackup_RestoreWithRestrictiveReaderRespectsPlatformSharingWithoutTempLeak()
         {
             using (var fixture = new UiBackupTextFixture())
             {
@@ -82,11 +82,59 @@ namespace AnimalCafe.Tests.EditMode.Phase6
                 TestAssetBytes.Restore(fixture.Path, changed);
                 using (var reader = new FileStream(fixture.Path, FileMode.Open,
                     FileAccess.Read, FileShare.Read))
-                    Assert.Throws<IOException>(() => fixture.Restore());
-                Assert.That(File.ReadAllBytes(fixture.Path), Is.EqualTo(changed));
+                {
+                    // Windows denies replacement without delete-sharing; Unix preserves the open file view.
+                    // Windows 检查真实 sharing error，Unix 检查原子替换及旧 reader 的完整内容。
+                    if (Application.platform == RuntimePlatform.WindowsEditor)
+                        Assert.Throws<IOException>(() => fixture.Restore());
+                    else
+                    {
+                        Assert.DoesNotThrow(() => fixture.Restore());
+                        fixture.AssertRestored();
+                    }
+                    using (var oldView = new BinaryReader(reader))
+                        Assert.That(oldView.ReadBytes(changed.Length), Is.EqualTo(changed));
+                }
+                Assert.That(File.ReadAllBytes(fixture.Path), Is.EqualTo(
+                    Application.platform == RuntimePlatform.WindowsEditor ? changed : fixture.Original));
                 Assert.That(File.ReadAllBytes(fixture.Path + ".meta"), Is.EqualTo(fixture.Meta));
                 Assert.That(AssetDatabase.AssetPathToGUID(fixture.AssetPath), Is.EqualTo(fixture.Guid));
                 fixture.AssertNoTemporaries();
+            }
+        }
+
+        [Test]
+        public void UiPublishBackup_RestoreDirectoryConflictPropagatesWithoutTempLeak()
+        {
+            using (var fixture = new UiBackupTextFixture())
+            {
+                var marker = System.IO.Path.Combine(fixture.Path, "owned-marker.bin");
+                AssetDatabase.DisallowAutoRefresh();
+                try
+                {
+                    // A nonempty directory cannot be replaced by the restored asset file on either platform.
+                    // 目录冲突在各平台都真实拒绝发布，仍须传播 I/O error 并清理本次 temp。
+                    File.Delete(fixture.Path);
+                    Directory.CreateDirectory(fixture.Path);
+                    File.WriteAllBytes(marker, fixture.Original);
+                    Assert.Throws<IOException>(() => fixture.Restore());
+                    Assert.That(Directory.Exists(fixture.Path), Is.True);
+                    Assert.That(File.ReadAllBytes(marker), Is.EqualTo(fixture.Original));
+                    Assert.That(File.ReadAllBytes(fixture.Path + ".meta"), Is.EqualTo(fixture.Meta));
+                    Assert.That(AssetDatabase.AssetPathToGUID(fixture.AssetPath), Is.EqualTo(fixture.Guid));
+                    fixture.AssertNoTemporaries();
+                }
+                finally
+                {
+                    try
+                    {
+                        if (File.Exists(marker)) File.Delete(marker);
+                        if (Directory.Exists(fixture.Path)) Directory.Delete(fixture.Path);
+                        File.WriteAllBytes(fixture.Path, fixture.Original);
+                    }
+                    finally { AssetDatabase.AllowAutoRefresh(); }
+                }
+                fixture.AssertRestored();
             }
         }
 

@@ -2119,7 +2119,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     yield return PreparePositiveLongService(first);
                     Assert.That(customers.TryMoveToPickupService(first,out var earlyReason),Is.True,"FIXTURE: early real safe acquisition: "+earlyReason);
                     Assert.That(pickup.TryGetServiceLease(first,out heldLease),Is.True);
-                    heldAssignment=Read(waiter,"Assignment");Call("HoldVisit",waiter);Write(waiter,"State",CustomerVisitState.MovingToPickupService);
+                    heldAssignment=Read(waiter,"Assignment");Call("HoldVisit",waiter,false);Write(waiter,"State",CustomerVisitState.MovingToPickupService);
                     Assert.That(Read(waiter,"ServiceArrived"),Is.EqualTo(false));Assert.That(Read(waiter,"RequestId"),Is.EqualTo(0L));
                     Assert.That(Read(waiter,"PendingPickupSegment"),Is.EqualTo(false));Assert.That(Read(waiter,"PendingExitSegment"),Is.EqualTo(false));
                     Assert.That(Read(waiter,"PickupOwner"),Is.SameAs(pickup));Assert.That(Read(waiter,"Assignment"),Is.EqualTo(heldAssignment));
@@ -2149,7 +2149,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     Assert.That(actualOwner,Is.SameAs(pickup));Assert.That(pickup.TryGetServiceLease(first,out var lease),Is.True);
                     Assert.That(Read(waiter,"State"),Is.EqualTo(CustomerVisitState.MovingToPickupService));
                     Assert.That(Read(waiter,"RequestId"),Is.EqualTo(0L));
-                    if(!admission){Call("HoldVisit",waiter);Write(waiter,"State",CustomerVisitState.MovingToPickupService);}
+                    if(!admission){Call("HoldVisit",waiter,false);Write(waiter,"State",CustomerVisitState.MovingToPickupService);}
                     var route=new Queue<Vector3>(new[]{new Vector3(-3.5f,0,-3.5f),lease});Write(waiter,"Route",route);
                     var full=(IReadOnlyList<Vector3>)Call("ExpandRoute",actor.transform.position,route);
                     Assert.That(full,Is.Not.Null,"FIXTURE: fixed two-leg native service route");
@@ -2174,7 +2174,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     }
                     Assert.That(fullClear,Is.True,
                         "FIXTURE: fixed unissued route must be originally full-clear; no fixture geometry sweep");
-                    Call("RememberOwnedRoute",waiter,CustomerVisitState.MovingToPickupService);captured=true;
+                    Call("RememberOwnedRoute",waiter,CustomerVisitState.MovingToPickupService,null);captured=true;
                 }
                 if(admission)
                 {
@@ -2427,7 +2427,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 {
                     yield return Until(() => Read(entries[first], "State").Equals(CustomerVisitState.MovingToPickup) && (bool)Read(entries[first], "QueueLeft"));
                     CafeLoopRuntimeProof.Set(owner, "stepping", true);
-                    Call("HoldVisit", entries[first]); Write(entries[first], "State", CustomerVisitState.MovingToPickup);
+                    Call("HoldVisit", entries[first], false); Write(entries[first], "State", CustomerVisitState.MovingToPickup);
                     Write(entries[first], "PendingPickupSegment", true); pickupHeld = true;
                     Assert.That(customers.TrySpawn(), Is.True, "Public admission must accept a real Entry while the controlled unissued pickup leg stays at its actual pose");
                     second = customers.Snapshot.Single(v => v.VisitId != first).VisitId; Track(second); tools.ResumeCollection();
@@ -2439,7 +2439,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 var request = (long)Read(leader, "RequestId");
                 var accepted = CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(world.Service, "byId");
                 Assert.That(request, Is.GreaterThan(0)); Assert.That(accepted.Contains(request), Is.True);
-                if (!pickupHeld) Call("HoldVisit", waiter);
+                if (!pickupHeld) Call("HoldVisit", waiter, false);
                 Write(waiter, "State", phase);
                 Write(waiter, exiting ? "PendingExitSegment" : "PendingPickupSegment", true);
                 var goal = ((NavigationTarget)Read(waiter, "FinalTarget")).Position;
@@ -2518,7 +2518,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 TestContext.WriteLine(marker + "_BEFORE phase=" + phase + " acceptedLeader=" + request + " original=" + string.Join(";", initial) + " replacement=" + string.Join(";", expected));
                 if(observePending)
                 {
-                    Call("RememberOwnedRoute",waiter,phase);
+                    Call("RememberOwnedRoute",waiter,phase,null);
                     Assert.That(Read(waiter,"OwnedRoutePath"),Is.Not.Null,"Original full-clear acquisition before actual strict WAIT");
                 }
                 Call("SendRouteSegment", waiter, phase);
@@ -2804,7 +2804,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 CafeLoopRuntimeProof.Set(owner, "stepping", true);
                 var entries = CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(customers, "visits");
                 var front = entries[id];
-                Call("HoldVisit", front);
+                Call("HoldVisit", front, false);
                 Write(front, "State", CustomerVisitState.Exiting);
                 Write(front, "PendingExitSegment", true);
                 Write(front, "Route", null);

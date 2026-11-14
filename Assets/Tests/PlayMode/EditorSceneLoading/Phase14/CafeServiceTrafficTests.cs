@@ -3151,6 +3151,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
 
         [UnityTest] public IEnumerator ThreeNaturalCustomersReleasePickupDependenciesAndActuallyExit()
         {
+            var originalSpawnClock=CafeLoopRuntimeProof.Field<CustomerSpawnClock>(customers,"clock");
             var seen=new List<string>();var tokens=new Dictionary<string,CapacityToken>();var exits=new HashSet<string>();
             var errors=new List<string>();var observers=new List<CafeActualExitObserver>();var tracking=true;
             var departure=CafeLoopRuntimeProof.Field<Transform>(customers,"exit");
@@ -3498,9 +3499,8 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     var root=Directory.GetParent(Application.dataPath).FullName;
                     var sourceFiles=new[]{"Assets/Scripts/Navigation/ServiceTrafficCoordinator.cs","Assets/Scripts/Customers/CustomerFlowController.cs",
                         "Assets/Scripts/CafeLoop/CafeLoopController.cs","Assets/Scripts/Employees/EmployeeFlowController.cs","Assets/Scripts/Employees/EmployeeTaskRunner.cs",
-                        "Assets/Tests/PlayMode/EditorSceneLoading/Phase14/CafeServiceTrafficTests.cs",
-                        ".superpowers/sdd/2026-10-30-service-traffic-coordination/task5-d2-metadata-observation-source/manifest.json"};
-                    snapshotSource="baseline=A1D7B2C069B0FC7F58DA61F7415EFFB70014509E3BED8F765B42EAFEDAB3EBA0 "+string.Join(";",sourceFiles.Select(path=>{
+                        "Assets/Tests/PlayMode/EditorSceneLoading/Phase14/CafeServiceTrafficTests.cs"};
+                    snapshotSource="tracked-source "+string.Join(";",sourceFiles.Select(path=>{
                         using(var sha=System.Security.Cryptography.SHA256.Create())return path+"="+BitConverter.ToString(sha.ComputeHash(File.ReadAllBytes(Path.Combine(root,path)))).Replace("-","");
                     }));
                 }
@@ -3510,6 +3510,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 prepareHook.SetValue(coordinator,(Action<string>)CapturePrepare);
                 birthHook.SetValue(customers,previousBirth+(Action<string,string,string,Vector3,IReadOnlyList<Vector3>,Vector3[],string>)CaptureBirth);
                 if(commitEnabled)birthHook.SetValue(customers,(Action<string,string,string,Vector3,IReadOnlyList<Vector3>,Vector3[],string>)birthHook.GetValue(customers)+(Action<string,string,string,Vector3,IReadOnlyList<Vector3>,Vector3[],string>)CaptureCommitRefusal);
+                // One game-second arrivals establish overlapping real Counter phases through the normal clock.
+                // 仅固定合法抽样值；真实接客、付款、排队、source age 和离店断言仍走原入口。
+                CafeLoopRuntimeProof.Set(customers,"clock",new CustomerSpawnClock(()=>.1f));
                 tools.ResumeCollection();customers.AutoSpawn=true;
                 for(var frame=0;frame<6000 && exits.Count<3;frame++)
                 {
@@ -3567,6 +3570,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 prepareHook.SetValue(coordinator,previousPrepare);
                 birthHook.SetValue(customers,previousBirth);
                 tracking=false;customers.AutoSpawn=false;owner.SnapshotChanged-=Watch;
+                CafeLoopRuntimeProof.Set(customers,"clock",originalSpawnClock);
                 foreach(var observer in observers)if(observer!=null)observer.Receipt=null;
             }
         }

@@ -1042,7 +1042,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 var full=typeof(CustomerFlowController).GetMethod("PlanPickupExit",flags).Invoke(customers,new object[]{actor.transform.position,target.Position,occupied,actor.Settings});
                 if(ring!=null || full==null)continue;
                 var oldRequest=(long)type.GetField("RequestId").GetValue(entry);var oldGeneration=(int)type.GetField("Generation").GetValue(entry);var pose=actor.transform.position;
-                typeof(CustomerFlowController).GetMethod("HoldVisit",flags).Invoke(customers,new[]{entry});
+                typeof(CustomerFlowController).GetMethod("HoldVisit",flags).Invoke(customers,new object[]{entry,false});
                 Assert.That((long)type.GetField("RequestId").GetValue(entry),Is.Zero);
                 Assert.That((int)type.GetField("Generation").GetValue(entry),Is.EqualTo(oldGeneration+1));
                 type.GetField("State").SetValue(entry,CustomerVisitState.Exiting);type.GetField("PendingExitSegment").SetValue(entry,true);type.GetField("Route").SetValue(entry,null);
@@ -1075,7 +1075,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 // Controlled owner-step boundary: the independently accepted native pickup keeps moving.
                 CafeLoopRuntimeProof.Set(owner,"stepping",true);
                 var entries=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(customers,"visits");var front=entries[first];var type=front.GetType();
-                typeof(CustomerFlowController).GetMethod("HoldVisit",flags).Invoke(customers,new[]{front});
+                typeof(CustomerFlowController).GetMethod("HoldVisit",flags).Invoke(customers,new object[]{front,false});
                 type.GetField("State").SetValue(front,CustomerVisitState.Exiting);type.GetField("PendingExitSegment").SetValue(front,true);type.GetField("Route").SetValue(front,null);
                 var actor=world.RegisteredActors.Single(a=>a.ActorId==first);var goal=((NavigationTarget)type.GetField("FinalTarget").GetValue(front)).Position;
                 var other=entries[second];var otherType=other.GetType();var otherActor=world.RegisteredActors.Single(a=>a.ActorId==second);

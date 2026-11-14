@@ -235,7 +235,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             {
                 camera.targetTexture=render;camera.aspect=664f/855;camera.Render();RenderTexture.active=render;
                 image.ReadPixels(new Rect(0,0,664,855),0,0);image.Apply();
-                System.IO.File.WriteAllBytes(System.IO.Path.Combine(Application.dataPath,"../outputs/phase15/photo-pickup-wait-20261103/layout.png"),image.EncodeToPNG());
+                var screenshotPath=System.IO.Path.Combine(Application.dataPath,"../outputs/phase15/photo-pickup-wait-20261103/layout.png");
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(screenshotPath));
+                System.IO.File.WriteAllBytes(screenshotPath,image.EncodeToPNG());
             }
             finally{camera.targetTexture=oldTarget;camera.aspect=oldAspect;RenderTexture.active=oldActive;UnityEngine.Object.Destroy(render);UnityEngine.Object.Destroy(image);}
             TestContext.WriteLine("PHOTO_READINESS held="+string.Join(";",heldAdmissions)+" resumed="+string.Join(";",resumedAdmissions));

@@ -117,19 +117,45 @@ namespace AnimalCafe.Tests.EditMode.Phase7
         }
 
         [Test]
-        public void BytePublication_BlockedReplacePropagatesAndPreservesDestinationWithoutTemporaryLeak()
+        public void BytePublication_RestrictiveReaderRespectsPlatformSharingWithoutTemporaryLeak()
         {
             WithOwnedDirectory(folder =>
             {
                 var path = Path.Combine(folder, "blocked.bin");
                 var before = new byte[] { 11, 22, 33 };
                 File.WriteAllBytes(path, before);
-                // Deny delete-sharing deliberately: replacement must fail without a truncating fallback.
-                // 锁不允许 Replace 时，异常必须保留，原文件 bytes 不变。
+                var expected = new byte[] { 99 };
+                // Windows denies replacement without delete-sharing; Unix retains the open file view.
+                // 保留 Windows 的真实异常断言，同时验证 Unix 原子替换不截断旧 reader。
                 using (var blocker = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    Assert.Throws<IOException>(() => PublishBytes(path, new byte[] { 99 }));
-                Assert.That(File.ReadAllBytes(path), Is.EqualTo(before));
+                {
+                    if (Application.platform == RuntimePlatform.WindowsEditor)
+                        Assert.Throws<IOException>(() => PublishBytes(path, expected));
+                    else
+                        Assert.DoesNotThrow(() => PublishBytes(path, expected));
+                    using (var oldView = new BinaryReader(blocker))
+                        Assert.That(oldView.ReadBytes(before.Length), Is.EqualTo(before));
+                }
+                Assert.That(File.ReadAllBytes(path), Is.EqualTo(
+                    Application.platform == RuntimePlatform.WindowsEditor ? before : expected));
                 Assert.That(Directory.GetFiles(folder), Is.EqualTo(new[] { path }));
+            });
+        }
+
+        [Test]
+        public void BytePublication_DirectoryConflictPropagatesAndPreservesDestinationWithoutTemporaryLeak()
+        {
+            WithOwnedDirectory(folder =>
+            {
+                var path = Path.Combine(folder, "blocked.bin");
+                var marker = Path.Combine(path, "owned-marker.bin");
+                var before = new byte[] { 11, 22, 33 };
+                Directory.CreateDirectory(path);
+                File.WriteAllBytes(marker, before);
+                Assert.Throws<IOException>(() => PublishBytes(path, new byte[] { 99 }));
+                Assert.That(Directory.GetFileSystemEntries(folder), Is.EqualTo(new[] { path }));
+                Assert.That(Directory.GetFiles(path), Is.EqualTo(new[] { marker }));
+                Assert.That(File.ReadAllBytes(marker), Is.EqualTo(before));
             });
         }
 
@@ -146,7 +172,7 @@ namespace AnimalCafe.Tests.EditMode.Phase7
 
         [TestCase(false)]
         [TestCase(true)]
-        public void NormalizeSerializedWhitespace_RespectsNoOpAndPropagatesBlockedChangedWrite(bool changed)
+        public void NormalizeSerializedWhitespace_RespectsNoOpAndPlatformSharingForChangedWrite(bool changed)
         {
             WithOwnedDirectory(folder =>
             {
@@ -155,13 +181,29 @@ namespace AnimalCafe.Tests.EditMode.Phase7
                 var before = File.ReadAllBytes(path);
                 using (var blocker = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
                 {
-                    if (changed)
+                    if (changed && Application.platform == RuntimePlatform.WindowsEditor)
                         Assert.Throws<IOException>(() => InvokePrivate(typeof(Phase7DecorationSceneSetup), "NormalizeSerializedWhitespace", path));
                     else
                         Assert.DoesNotThrow(() => InvokePrivate(typeof(Phase7DecorationSceneSetup), "NormalizeSerializedWhitespace", path));
+                    using (var oldView = new BinaryReader(blocker))
+                        Assert.That(oldView.ReadBytes(before.Length), Is.EqualTo(before));
                 }
-                Assert.That(File.ReadAllBytes(path), Is.EqualTo(before), "Failure/no-op must preserve BOM, newlines and exact bytes.");
+                var expected = changed && Application.platform != RuntimePlatform.WindowsEditor
+                    ? new UTF8Encoding(false).GetBytes("old\r\n") : before;
+                Assert.That(File.ReadAllBytes(path), Is.EqualTo(expected), "Failure/no-op preserves exact bytes; a successful changed write normalizes UTF-8 without BOM.");
                 Assert.That(Directory.GetFiles(folder), Is.EqualTo(new[] { path }));
+            });
+        }
+
+        [Test]
+        public void NormalizeSerializedWhitespace_MissingParentPropagatesWithoutCreatingDestination()
+        {
+            WithOwnedDirectory(folder =>
+            {
+                var path = Path.Combine(folder, "missing", "normalize.txt");
+                Assert.Throws<DirectoryNotFoundException>(() =>
+                    InvokePrivate(typeof(Phase7DecorationSceneSetup), "NormalizeSerializedWhitespace", path));
+                Assert.That(Directory.GetFileSystemEntries(folder), Is.Empty);
             });
         }
 

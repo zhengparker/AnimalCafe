@@ -1,5 +1,10 @@
 # Phase 15 — Business Day Lifecycle Validation Report
 
+> **完整 Unity CI 当前 FAIL，P15 处于 CI 修复中。** PR #15 保持 Open、未合并。运行 [43529787560](https://github.com/zhengparker/AnimalCafe/actions/runs/43529787560) 绑定 head bde0da0，EditMode 3857 PASS／3 FAIL／3 SKIP，PlayMode 1578 PASS／60 FAIL／15 SKIP。两套均生成完整 NUnit XML，运行失败来自测试结果。产物 SHA256 为 bc483d6e0b75d4302473cdd2b8b6d15f1dcc0e2f1acbf46ff5dea8a85f4f54ba。
+>
+> 初步分类含 Linux 文件共享语义、旧 reflection optional 参数、未提交的开发机诊断依赖、旧同步准备前提与经营场景失败。修复和定向验证正在进行，全部 63 个失败尚未关闭。下方精简 PASS 保持其原 selectors 与 source 范围。原始报告保存于本地 outputs/phase15/p15-unity-ci-20261113/。
+
+
 <!-- P15_STOPPED_ARRIVAL_CLOSEOUT_20261107_BEGIN -->
 > **P15 开发验收已通过，PR #15 已创建并保持 Open。** Owner 授权继续修复并跑新一轮精简回归，沿用上一轮 selectors，并由原 P15 namespace 纳入 1 条新增 regression。最终 EditMode **1388/1388 PASS**，其中 P15 68 项。PlayMode **90/90 PASS**，其中 P15 77 项。全部预期用例各执行一次，FAIL／SKIP／缺失／重复均为 0。对应 XML SHA256 为 `E8E25E3B5B9294378983AE34C2298909D763383946C324992E481543FED54E4B` 和 `189B7FC7E2B3BD9B9F6750D5D751487E7594B426AB8138B1AAB1946F167661E4`。
 >

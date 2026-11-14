@@ -215,7 +215,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 var target=(NavigationTarget)Read(waiter,"FinalTarget");
                 // Existing controlled unissued-leg seam. Real payment, owner, goal and pose stay intact.
                 // 只重新选择未发waypoint；不写proof、HasCollected、Native请求、订单或位置。
-                Call("HoldVisit",waiter);Call("SetRouteContext",waiter,CustomerVisitState.MovingToPickup,target);
+                Call("HoldVisit",waiter,false);Call("SetRouteContext",waiter,CustomerVisitState.MovingToPickup,target);
                 string reservedId=null;PickupQueueService reservedOwner=null;QueueAssignment reserved=default;
                 if(invalidate==5)
                 {
@@ -1954,6 +1954,10 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             var seen = new HashSet<string>(); var exited = new HashSet<string>();
             var departure = CafeLoopRuntimeProof.Field<Transform>(customers, "exit");
             centerTrafficObserving = true; var paused = false; var done = false;
+            var waitCore=CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(owner,"traffic");
+            var waitTrace=Environment.GetCommandLineArgs().Contains("-serviceTrafficWaitTrace")?new TrafficWaitFailureTrace(waitCore):null;
+            var priorWaitIntent=CafeLoopRuntimeProof.Field<string>(waitCore,"WaitFailureDiagnosticIntent");
+            if(waitTrace!=null)CafeLoopRuntimeProof.Set(waitCore,"WaitFailureDiagnosticIntent","*");
             var history = new Queue<string>();
             const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
             var customerHook = typeof(CustomerFlowController).GetField("CorridorObserver", flags);
@@ -2029,6 +2033,11 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             }
             finally
             {
+                if(waitTrace!=null)
+                {
+                    TestContext.WriteLine("CENTER_ORIGINAL_WAIT "+CafeLoopRuntimeProof.Field<string>(waitCore,"WaitFailureDiagnostic"));
+                    CafeLoopRuntimeProof.Set(waitCore,"WaitFailureDiagnosticIntent",priorWaitIntent);waitTrace.Dispose();
+                }
                 centerTrafficObserving = false;
                 customerHook.SetValue(customers, null); employeeHook.SetValue(employees, null);
                 if (witness) TestContext.WriteLine(string.Join("\n", history));
