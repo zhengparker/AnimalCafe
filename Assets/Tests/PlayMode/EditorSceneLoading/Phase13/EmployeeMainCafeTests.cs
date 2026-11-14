@@ -227,7 +227,13 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
             var oldHandle=State(EmployeeRole.Barista).HandleId;
             var held=barista.GetComponentsInChildren<Transform>().Single(t=>t.name=="EmployeeHeldCup");
             var before=barista.transform.position; var version=decor.CompletedLayoutChangeVersion;
-            var display=Find<PickupCupDisplay>(); Assert.That(display.VisibleCount(oldBinding.CupAddress.Value),Is.Zero);
+            var display=Find<PickupCupDisplay>();
+            // Earlier Ready orders can coexist with this real carried order; bind the no-early-cup assertion to its key.
+            Assert.That(flow.TryCaptureOrderCheckpoint(EmployeeRole.Barista,out var carriedCheckpoint),Is.True);
+            Assert.That(carriedCheckpoint.Order.HasValue,Is.True);
+            Assert.That(display.VisibleOrders.ContainsKey(carriedCheckpoint.Order.Value),Is.False,"The actual carried order has not delivered its own cup");
+            Assert.That(display.VisibleOrders.Keys.All(key=>owner.Snapshot.Orders.TryGetValue(key,out var order) &&
+                order.State==OrderState.ReadyForPickup),Is.True,"Every earlier visible cup belongs to an actual already-delivered order");
             decor.EnterDecorationMode();
             Assert.That(decor.TryBeginExistingFunctionalSurfacePreview(FunctionalSurfacePreviewKind.MountedEquipment,"12000000000000000000000000000005"),Is.True);
             Assert.That(decor.TryRotateFunctionalSurfacePreview(),Is.True); Assert.That(decor.TryConfirmFunctionalSurfacePreview(),Is.True);

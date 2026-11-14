@@ -121,6 +121,20 @@ namespace AnimalCafe.Tests.EditMode.Phase13
         }
 
         [Test]
+        public void RecoveryArrivalExplainsThatOriginalServiceStillNeedsRepair()
+        {
+            var runner = EmployeeTaskEnvironmentFake.Ready(EmployeeRole.Barista, out var env);
+            runner.TryStart(); runner.Tick(3);
+            var move = env.Moves[1];
+            move.Callback(new MovementResult(move.Id, env.ActorId, MovementStatus.Recovered,
+                NavigationFailure.None, NavigationFailure.MovementTimeout, NavigationFailure.None, move.Target.Position, 1));
+            Assert.That(runner.Snapshot.Delivered, Is.False);
+            Assert.That(env.Placed, Is.Zero);
+            Assert.That(runner.Snapshot.Failure, Does.Contain("原服务目标未到达").And.Contain("MovementTimeout"));
+            Assert.That(runner.Snapshot.Failure, Does.Not.Contain("Recovered: None"));
+        }
+
+        [Test]
         public void StaleSessionCannotPlaceCup()
         {
             var runner = EmployeeTaskEnvironmentFake.Ready(EmployeeRole.Barista, out var env);

@@ -50,6 +50,22 @@ namespace AnimalCafe.Employees
         private CafeDeliveryCommit deliveryCommit;
         private Func<string, bool> deliveryGate;
 
+#if UNITY_EDITOR
+        internal Action<string,string,string> MovementObserver;
+#endif
+        [System.Diagnostics.Conditional("UNITY_EDITOR")]
+        private void ObserveMovement(Employee employee,string operation,NavigationTarget target,long request=0,
+            NavigationFailure reason=NavigationFailure.None,MovementStatus? status=null,bool? accepted=null)
+        {
+#if UNITY_EDITOR
+            if(MovementObserver==null) return;
+            var snapshot=employee.Runner?.Snapshot;
+            MovementObserver(employee.Id,operation,"phase="+snapshot?.State+" handle="+snapshot?.HandleId+
+                " layout="+employee.Binding.LayoutRevision+" request="+request+" reason="+reason+
+                " status="+status+" accepted="+accepted+" target="+target.Position.ToString("F9"));
+#endif
+        }
+
         public event Action<CafeTaskEvent> IntegratedTaskEvent;
         public void SetIntegratedMode(bool enabled) => integratedMode = enabled;
         // Done丢弃旧订单context；保留身体/身份，由正常Step真实回新岗位。
@@ -82,14 +98,208 @@ namespace AnimalCafe.Employees
         }
         public void SetDeliveryCommit(CafeDeliveryCommit commit) => deliveryCommit = commit;
         public void SetDeliveryGate(Func<string, bool> gate) => deliveryGate = gate;
+        // This owner seals the real roster/actor/binding around the Runner's original task stamp.
+        // 两层实际 owner 验证，不接受 ActorId/context 字符串作为身份凭证。
+        // The real roster/port owns this seal; availability is checked by the movement consumer.
+        // 原始员工身份只捕获一次，Pause/临时 Nav 不伪造新的 task 或 source。
+        internal sealed class PreparedMovementContext
+        {
+            private readonly EmployeeFlowController owner;
+            private readonly Employee employee;
+            private readonly Environment port;
+            private readonly EmployeeTaskRunner runner;
+            private readonly NavigationActor actor;
+            private readonly EmployeeStationBinding binding;
+            private readonly CustomerFlowController.TrafficMovement movement;
+            private readonly EmployeeTaskRunner.PreparedMovementStamp stamp;
+            private readonly NavigationWorld world;
+            private readonly NavigationLayoutAdapter adapter;
+            private readonly CustomerFlowController customers;
+            private readonly string session;
+            private readonly EmployeeRole role;
+            private readonly float skin,epsilon;
+            private PreparedMovementContext(EmployeeFlowController owner,Employee employee,
+                CustomerFlowController.TrafficMovement movement,EmployeeTaskRunner.PreparedMovementStamp stamp)
+            {
+                this.owner=owner;this.employee=employee;this.movement=movement;this.stamp=stamp;
+                port=employee.Port;runner=employee.Runner;actor=employee.Actor;binding=employee.Binding;role=employee.Role;
+                world=owner.world;adapter=owner.adapter;customers=owner.customers;session=owner.session;
+                Key=movement.Intent;Goal=movement.Goal;Resource=movement.Resource;FirstFrame=Time.frameCount;
+                Origin=actor.transform.position;Radius=actor.Settings.AgentRadius;skin=actor.Settings.CollisionSkin;epsilon=actor.Settings.Epsilon;
+            }
+            internal TrafficIntentKey Key { get; }
+            internal NavigationTarget Goal { get; }
+            internal string Resource { get; }
+            internal int FirstFrame { get; }
+            internal Vector3 Origin { get; }
+            internal float Radius { get; }
+            internal float SafetyMargin=>skin+epsilon;
+            internal object ActorLife=>actor;
+            internal bool BelongsTo(CustomerFlowController consumer,CustomerFlowController.TrafficMovement value)
+                =>ReferenceEquals(customers,consumer) && ReferenceEquals(movement,value);
+            internal static bool TryCapture(EmployeeFlowController owner,string actorId,CustomerFlowController.TrafficMovement movement,
+                int nativeGeneration,out PreparedMovementContext context)
+            {
+                context=null;
+                try
+                {
+                    var employee=owner?.employees.FirstOrDefault(e=>e.Id==actorId);
+                    if(owner==null || !owner.integratedMode || owner.disposed || employee?.Runner==null || employee.Port==null ||
+                        employee.Actor==null || employee.NeedsBinding || !owner.ValidBinding(employee.Binding) || movement==null ||
+                        movement.Source!=null || movement.PendingSource!=null || movement.PreparationContext!=null ||
+                        movement.Coordinator==null || movement.Coordinator.ContainsIntent(movement.Intent) ||
+                        !employee.Port.MatchesMovement(movement) || !employee.Runner.TryCapturePreparedMovementStamp(employee.AcceptedToken,employee.Checkpoint,out var stamp) ||
+                        stamp.NativeGeneration!=nativeGeneration || !stamp.Target.Equals(movement.Goal) ||
+                        !stamp.BelongsTo(employee.Runner,employee.Binding,employee.Port,employee.Role,employee.AcceptedToken,employee.Checkpoint))return false;
+                    var captured=new PreparedMovementContext(owner,employee,movement,stamp);
+                    if(!captured.IsCurrent)return false;context=captured;return true;
+                }
+                catch(Exception){context=null;return false;}
+            }
+            internal bool IsCurrent
+            {
+                get
+                {
+                    try
+                    {
+                        return owner!=null && !owner.disposed && owner.integratedMode && owner.session==session &&
+                            ReferenceEquals(owner.world,world) && ReferenceEquals(owner.adapter,adapter) && ReferenceEquals(owner.customers,customers) &&
+                            owner.employees.Any(e=>ReferenceEquals(e,employee)) && employee.Role==role && employee.Id==Key.ActorId && !employee.NeedsBinding &&
+                            ReferenceEquals(employee.Port,port) && port.MatchesMovement(movement) && ReferenceEquals(employee.Runner,runner) &&
+                            ReferenceEquals(employee.Actor,actor) && actor!=null && actor.ActorId==Key.ActorId && actor.isActiveAndEnabled &&
+                            world!=null && world.RegisteredActors.Any(a=>ReferenceEquals(a,actor)) &&
+                            actor.transform.position==Origin && actor.Settings.AgentRadius==Radius && actor.Settings.CollisionSkin==skin && actor.Settings.Epsilon==epsilon &&
+                            ReferenceEquals(employee.Binding,binding) && owner.ValidBinding(binding) && binding.Role==role &&
+                            movement.Intent.Equals(Key) && movement.Goal.Equals(Goal) && movement.Resource==Resource &&
+                            stamp.BelongsTo(runner,binding,port,role,employee.AcceptedToken,employee.Checkpoint) && stamp.IsCurrent;
+                    }
+                    catch(Exception){return false;}
+                }
+            }
+        }
+
+        internal void RefreshTrafficMovementPreparations(CustomerFlowController consumer,TrafficWorldSnapshot snapshot)
+        {
+            if(disposed || !integratedMode || !ReferenceEquals(customers,consumer) || snapshot==null)return;
+            foreach(var employee in employees)employee.Port?.RefreshMovementPreparation(consumer,snapshot);
+        }
+
+        internal sealed class PreparedDeliveryContext
+        {
+            private readonly EmployeeFlowController owner;
+            private readonly Employee employee;
+            private readonly NavigationActor actor;
+            private readonly EmployeeTaskRunner runner;
+            private readonly EmployeeStationBinding binding;
+            private readonly EmployeeTaskRunner.PreparedPickupStamp stamp;
+            private readonly CafeTaskToken token;
+            private readonly CafeWorkCheckpoint checkpoint;
+            private readonly NavigationWorld world;
+            private readonly NavigationLayoutAdapter adapter;
+            private readonly CustomerFlowController customers;
+            private readonly string session;
+            private readonly Vector3 pose;
+            private readonly float radius,skin,epsilon;
+            private PreparedDeliveryContext(EmployeeFlowController owner,Employee employee,EmployeeTaskRunner.PreparedPickupStamp stamp)
+            {
+                this.owner=owner;this.employee=employee;this.stamp=stamp;actor=employee.Actor;runner=employee.Runner;binding=employee.Binding;
+                token=employee.AcceptedToken.Value;checkpoint=employee.Checkpoint.Value;world=owner.world;adapter=owner.adapter;customers=owner.customers;
+                session=owner.session;pose=actor.transform.position;radius=actor.Settings.AgentRadius;skin=actor.Settings.CollisionSkin;epsilon=actor.Settings.Epsilon;
+                ActorId=employee.Id;Context=stamp.Context;WorkTarget=binding.WorkTarget;
+            }
+            internal string ActorId { get; }
+            internal string Context { get; }
+            internal object ActorLife => actor;
+            internal NavigationTarget WorkTarget { get; }
+            internal bool BelongsTo(CustomerFlowController flow)=>ReferenceEquals(customers,flow) && ReferenceEquals(owner.customers,flow);
+            internal bool IsCurrent => owner!=null && owner.IsCurrentPreparedDeliveryContext(this);
+            internal bool SameSource(PreparedDeliveryContext other)=>other!=null && ReferenceEquals(owner,other.owner) &&
+                ReferenceEquals(employee,other.employee) && ReferenceEquals(actor,other.actor) && ReferenceEquals(runner,other.runner) &&
+                ReferenceEquals(binding,other.binding) && token.Equals(other.token) && checkpoint.Equals(other.checkpoint) && Context==other.Context;
+            internal static bool TryCapture(EmployeeFlowController owner,string actorId,out PreparedDeliveryContext context)
+            {
+                context=null;
+                if(owner==null || !owner.integratedMode || !owner.ProgressAllowed)return false;
+                var employee=owner.employees.FirstOrDefault(e=>e.Id==actorId && e.Role==EmployeeRole.Barista);
+                if(employee?.Runner==null || employee.Actor==null || employee.NeedsBinding || !owner.ValidBinding(employee.Binding) ||
+                    !employee.AcceptedToken.HasValue || !employee.Checkpoint.HasValue ||
+                    !employee.Runner.TryCapturePreparedPickupStamp(out var stamp) ||
+                    !stamp.BelongsTo(employee.Runner,employee.Binding,employee.AcceptedToken.Value,employee.Checkpoint.Value))return false;
+                var captured=new PreparedDeliveryContext(owner,employee,stamp);
+                if(!captured.IsCurrentFor(owner))return false;context=captured;return true;
+            }
+            internal bool IsCurrentFor(EmployeeFlowController candidate)
+                =>ReferenceEquals(owner,candidate) && owner!=null && owner.integratedMode && owner.ProgressAllowed && owner.session==session &&
+                    ReferenceEquals(owner.world,world) && ReferenceEquals(owner.adapter,adapter) && ReferenceEquals(owner.customers,customers) &&
+                    owner.employees.Any(e=>ReferenceEquals(e,employee)) && employee.Id==ActorId && employee.Role==EmployeeRole.Barista &&
+                    !employee.NeedsBinding && ReferenceEquals(employee.Actor,actor) && actor!=null && actor.isActiveAndEnabled &&
+                    actor.Agent!=null && actor.Agent.enabled && actor.Agent.isOnNavMesh && world.RegisteredActors.Any(a=>ReferenceEquals(a,actor)) &&
+                    actor.transform.position==pose && actor.Settings.AgentRadius==radius && actor.Settings.CollisionSkin==skin && actor.Settings.Epsilon==epsilon &&
+                    ReferenceEquals(employee.Runner,runner) && ReferenceEquals(employee.Binding,binding) && owner.ValidBinding(binding) &&
+                    employee.AcceptedToken.HasValue && employee.AcceptedToken.Value.Equals(token) &&
+                    employee.Checkpoint.HasValue && employee.Checkpoint.Value.Equals(checkpoint) &&
+                    stamp.BelongsTo(runner,binding,token,checkpoint) && stamp.IsCurrent && stamp.Context==Context;
+        }
+        internal bool TryCapturePreparedDeliveryContext(string actorId,out PreparedDeliveryContext context)
+        {
+            context=null;
+            try { return PreparedDeliveryContext.TryCapture(this,actorId,out context); }
+            catch(Exception) { context=null;return false; }
+        }
+        internal bool IsCurrentPreparedDeliveryContext(PreparedDeliveryContext context)
+        {
+            try { return context!=null && context.IsCurrentFor(this); }
+            catch(Exception) { return false; }
+        }
+
+        internal string PickupTrafficContext(string actorId)
+        {
+            var employee=employees.FirstOrDefault(e=>e.Id==actorId);
+            return employee?.Runner!=null && ValidBinding(employee.Binding) && employee.Runner.Snapshot.State==EmployeeState.WaitingToDeliver &&
+                employee.Runner.Snapshot.HandleId!=0 && employee.Runner.CaptureCheckpoint().Stage==CafeWorkStage.Prepared?employee.Runner.PickupTrafficContext:null;
+        }
+        internal float IndependentTrafficSeconds(string actorId)
+        {
+            var employee=employees.FirstOrDefault(e=>e.Id==actorId);
+            if(disposed || employee?.Actor==null || !employee.Actor.isActiveAndEnabled || employee.NeedsBinding || !ValidBinding(employee.Binding) || employee.Runner==null)return 0;
+            if(employee.Runner.HasIndependentNativeTraffic)return employee.Actor.Settings.MinimumSegmentSeconds+employee.Actor.Settings.NoProgressSeconds;
+            var snapshot=employee.Runner.Snapshot;
+            return snapshot.State==EmployeeState.Working && snapshot.RemainingWorkSeconds>0?snapshot.RemainingWorkSeconds:0;
+        }
+        internal bool IsPickupJourneyCurrent(string actorId)
+        {
+            var employee=employees.FirstOrDefault(e=>e.Id==actorId);
+            return !disposed && employee?.Actor!=null && employee.Actor.isActiveAndEnabled && !employee.NeedsBinding &&
+                ValidBinding(employee.Binding) && employee.Runner!=null && employee.Runner.HasLivePickupJourney;
+        }
+        internal bool TryPreparePickupTrafficRoutes(string actorId,NavigationTarget target,IReadOnlyList<NavigationTarget> outward,
+            IReadOnlyList<NavigationTarget> home,out IPreparedTrafficMutation prepared)
+        {
+            prepared=null;var employee=employees.FirstOrDefault(e=>e.Id==actorId && e.Role==EmployeeRole.Barista);
+            return integratedMode && ProgressAllowed && employee?.Runner!=null && ValidBinding(employee.Binding) &&
+                customers.GetPickupServiceTargets(employee.Binding.PickUpId).Any(t=>t.Position==target.Position && t.Facing==target.Facing) &&
+                employee.Runner.TryPreparePickupRoutes(target,outward,home,out prepared);
+        }
         internal IReadOnlyList<NavigationTarget> GetPickupReturnTraffic(string actorId)
         {
             var employee=employees.FirstOrDefault(e=>e.Id==actorId);var runner=employee?.Runner;
-            var targets=runner?.RemainingPickupReturnRoute;if(targets==null || employee.Actor==null)return null;
-            // The first point is the corridor origin. During Carrying it is the
-            // selected delivery side; during Returning it is the real current pose.
-            return runner.Snapshot.State==EmployeeState.Returning
-                ?new[]{new NavigationTarget(employee.Actor.transform.position)}.Concat(targets).ToArray():targets;
+            if(!integratedMode || disposed || runner==null || employee.Actor==null || !employee.Actor.isActiveAndEnabled ||
+                employee.NeedsBinding || !ValidBinding(employee.Binding)) return null;
+            var targets=runner.RemainingPickupReturnRoute;if(targets==null)return null;
+            var outward=runner.RemainingPickupDeliveryRoute;
+            // The existing carrying return view begins at the delivery endpoint.
+            // 当前outward已经包含该endpoint，故只拼接其后已选return，保留真实pose。
+            if(outward!=null) targets=outward.Concat(targets.Skip(1)).ToArray();
+            else if(runner.Snapshot.State!=EmployeeState.Returning)
+            {
+                var stage=runner.CaptureCheckpoint().Stage;
+                if(runner.Snapshot.State!=EmployeeState.CarryingToPickUp ||
+                    stage!=CafeWorkStage.Delivered && stage!=CafeWorkStage.Returning) return null;
+                // Synchronous Delivered callbacks precede the Returning state update.
+                // 最后一腿已Arrived，仍保留当前身体到已选return的所有权。
+                targets=targets.Skip(1).ToArray();
+            }
+            return new[]{new NavigationTarget(employee.Actor.transform.position)}.Concat(targets).ToArray();
         }
         internal void BlockPreparedDelivery(string actorId,string reason)
         {
@@ -108,9 +318,11 @@ namespace AnimalCafe.Employees
         internal bool TrySelectPickupRoutes(string actorId,NavigationTarget target,IReadOnlyList<NavigationTarget> outward,IReadOnlyList<NavigationTarget> home)
         {
             var employee=employees.FirstOrDefault(e=>e.Id==actorId && e.Role==EmployeeRole.Barista);
-            return integratedMode && ProgressAllowed && employee?.Runner!=null && ValidBinding(employee.Binding) &&
+            var selected=integratedMode && ProgressAllowed && employee?.Runner!=null && ValidBinding(employee.Binding) &&
                 customers.GetPickupServiceTargets(employee.Binding.PickUpId).Any(t=>t.Position==target.Position && t.Facing==target.Facing) &&
                 employee.Runner.TrySelectPickupRoutes(target,outward,home);
+            if(selected) ObserveMovement(employee,"delivery.route-selected",target);
+            return selected;
         }
         public bool TryGetDeliveryTarget(out NavigationTarget target)
         {
@@ -131,7 +343,7 @@ namespace AnimalCafe.Employees
             }
             var oldToken = employee.AcceptedToken;
             if(checkpoint.Role==EmployeeRole.Barista && (checkpoint.Stage==CafeWorkStage.Returning || checkpoint.Stage==CafeWorkStage.Delivered) &&
-                customers.HasPickupDeliveryContext)
+                customers.HasPickupDeliveryContext && !customers.HasTrafficCoordinator)
             {
                 if(!customers.TryPlanPickupReturn(employee.Id,employee.Actor.transform.position,employee.Binding.WorkTarget,out var home) ||
                     !employee.Runner.ConfigurePickupReturnRoute(home))
@@ -157,6 +369,27 @@ namespace AnimalCafe.Employees
                 current.HandleId!=0 && checkpoint.Stage==CafeWorkStage.Working && checkpoint.VisitId==visitId &&
                 current.RemainingWorkSeconds>0 && !float.IsNaN(current.RemainingWorkSeconds) && !float.IsInfinity(current.RemainingWorkSeconds);
         }
+        internal Func<bool> CaptureCashierTaskLife(string visitId,CafeTaskToken token,string actorId,long handle)
+        {
+            if(!IsCurrentCashierWorkingFor(visitId,token.SessionId,token.Epoch))return null;
+            var employee=employees.FirstOrDefault(e=>e.Role==EmployeeRole.Cashier);
+            if(employee==null || employee.Id!=actorId || !employee.AcceptedToken.Value.Equals(token) || employee.Runner.Snapshot.HandleId!=handle)return null;
+            var actor=employee.Actor;var runner=employee.Runner;var binding=employee.Binding;var port=employee.Port;
+            return ()=>
+            {
+                if(disposed || !isActiveAndEnabled || !integratedMode || !employees.Any(e=>ReferenceEquals(e,employee)) ||
+                    !ReferenceEquals(employee.Actor,actor) || actor==null || !actor.isActiveAndEnabled ||
+                    !ReferenceEquals(employee.Runner,runner) || !ReferenceEquals(employee.Binding,binding) || !ReferenceEquals(employee.Port,port) ||
+                    !employee.AcceptedToken.HasValue || !employee.AcceptedToken.Value.Equals(token) || !employee.Checkpoint.HasValue ||
+                    employee.Checkpoint.Value.VisitId!=visitId || employee.Checkpoint.Value.Role!=EmployeeRole.Cashier)return false;
+                var current=runner.Snapshot;
+                return current.State==EmployeeState.Working && current.HandleId==handle && current.RemainingWorkSeconds>0 &&
+                        !float.IsNaN(current.RemainingWorkSeconds) && !float.IsInfinity(current.RemainingWorkSeconds) ||
+                    current.State==EmployeeState.Idle && current.HandleId==0 && current.Outcome==EmployeeTaskOutcome.Succeeded &&
+                        employee.Checkpoint.Value.Stage==CafeWorkStage.Finished;
+            };
+        }
+
         public void HoldIntegratedTasks()
         {
             if (!integratedMode) return;
@@ -268,6 +501,35 @@ namespace AnimalCafe.Employees
             binding = employees.FirstOrDefault(value => value.Role == role)?.Binding;
             return binding != null;
         }
+        public bool AreEmployeesAtWorkStations(out string reason)
+        {
+            reason="员工owner或工作站配置不可用 / Employee stations unavailable";
+            // 只读真实事实：Ready不含Pause；这里绝不Rebind或发出MoveTo。
+            if(!Ready || time.IsResumeBlocked || decoration!=null && decoration.IsOpen || employees.Count!=2) return false;
+            foreach(EmployeeRole role in Enum.GetValues(typeof(EmployeeRole)))
+            {
+                reason=role+" 员工或Binding不可用 / Employee or binding unavailable";
+                var matches=employees.Where(employee=>employee.Role==role).ToArray();
+                if(matches.Length!=1) return false;
+                var employee=matches[0]; var actor=employee.Actor;
+                if(actor==null || !actor.isActiveAndEnabled || employee.Runner==null || employee.NeedsBinding ||
+                    !ValidBinding(employee.Binding) || employee.Binding.Role!=role ||
+                    world.RegisteredActors.Count(value=>value!=null && value.ActorId==employee.Id)!=1 ||
+                    !world.RegisteredActors.Contains(actor) || actor.ActorId!=employee.Id || actor.World!=world) return false;
+                var state=employee.Runner.Snapshot;
+                if(state.State!=EmployeeState.Idle || state.HandleId!=0)
+                { reason=role+" 员工尚未返岗 / "+state.State+" "+state.Failure; return false; }
+                var motion=actor.GetComponent<NavigationWalkPresenter>(); var target=employee.Binding.WorkTarget;
+                var settings=actor.Settings;
+                reason=role+" 真实位置、速度或朝向未到岗 / Work station arrival pending";
+                if(settings==null || motion==null || !motion.isActiveAndEnabled || actor.Agent==null ||
+                    !actor.Agent.enabled || !actor.Agent.isOnNavMesh ||
+                    !(Vector3.Distance(actor.transform.position,target.Position)<=settings.ArrivalDistance) ||
+                    !(motion.ActualSpeed<=settings.ArrivalSpeed) ||
+                    target.Facing.HasValue && !(Vector3.Angle(actor.transform.forward,target.Facing.Value)<=settings.FacingToleranceDegrees)) return false;
+            }
+            reason=""; return true;
+        }
         public bool TryCancelTask(EmployeeRole role)
         {
             var employee = employees.FirstOrDefault(value => value.Role == role);
@@ -324,6 +586,8 @@ namespace AnimalCafe.Employees
                 workDurationSeconds:integratedMode && employee.Role==EmployeeRole.Cashier ? (float?)1f : null,
                 previousHandleId: employee.HighestHandle);
             var runner = employee.Runner;
+            runner.SetPickupDeliveryTrafficWait(target=>integratedMode && ReferenceEquals(employee.Runner,runner) &&
+                customers!=null && customers.ShouldWaitForPickupDelivery(employee.Id,target));
             runner.SetPickupReturnTrafficWait(target=>integratedMode && ReferenceEquals(employee.Runner,runner) &&
                 customers!=null && customers.ShouldWaitForPickupReturn(employee.Id,target));
             runner.IntegratedTaskEvent += value =>
@@ -448,39 +712,152 @@ namespace AnimalCafe.Employees
         private void OnDestroy() => CleanupSession();
 
         /// <summary>One employee's small runtime port; no shared task framework.</summary>
-        private sealed class Environment : IIntegratedEmployeeTaskEnvironment, IDisposable
+        private sealed class Environment : IIntegratedEmployeeTaskEnvironment, IEmployeeTrafficEnvironment, IDisposable
         {
             private readonly EmployeeFlowController owner;
             private readonly Employee employee;
             private readonly string session;
+            // New real Port only; pending/Terminal polls retain the same movement scope.
+            // 只有真实 Port 新建才产生 scope，同 Port 等待或 Terminal 不换 key。
+            private readonly string movementLife = Guid.NewGuid().ToString("N");
             private readonly HashSet<long> requests = new HashSet<long>();
+            private CustomerFlowController.TrafficMovement trafficMove;
+            private EmployeeState trafficState;
+            private int workMoveSequence;
             internal Environment(EmployeeFlowController owner, Employee employee, string session)
             { this.owner = owner; this.employee = employee; this.session = session; }
             private bool Live => owner != null && !owner.disposed && owner.session == session && ReferenceEquals(employee.Port, this) && employee.Actor != null;
+            internal bool MatchesMovement(CustomerFlowController.TrafficMovement movement)
+                =>Live && ReferenceEquals(trafficMove,movement) && requests.Count==0;
+            internal void RefreshMovementPreparation(CustomerFlowController consumer,TrafficWorldSnapshot snapshot)
+            {
+                var movement=trafficMove;
+                if(!ReferenceEquals(owner.customers,consumer) || movement?.PreparationContext==null || movement.Source!=null || movement.PendingSource==null)return;
+                consumer.RefreshEmployeeMovementPreparation(employee.Actor,movement,snapshot);
+            }
             public bool IsProgressAllowed => Live && employee.Actor.isActiveAndEnabled && owner.ProgressAllowed;
+            public bool TrafficEnabled => owner.integratedMode && owner.customers!=null && owner.customers.HasTrafficCoordinator;
+            public TrafficDecision PrepareMove(NavigationTarget target,int nativeLegGeneration)
+            {
+                if(!IsProgressAllowed)return new TrafficDecision(default,TrafficDecisionKind.StaleContext,"employee-lifecycle-unavailable");
+                var state=employee.Runner.Snapshot.State;var context=employee.Runner.PickupTrafficContext;
+                var selected=(state==EmployeeState.CarryingToPickUp && employee.Runner.HasSelectedDeliveryRoute) ||
+                    (state==EmployeeState.Returning && employee.Runner.HasSelectedReturnRoute);
+                if(selected)
+                {
+                    if(trafficMove==null || trafficMove.Intent.Context!=context)
+                        trafficMove=owner.customers.CreateEmployeeMovement(employee.Actor,context,state,target);
+                    if(trafficMove.Source==null)
+                        return new TrafficDecision(trafficMove.Intent,TrafficDecisionKind.Cancelled,"selected-journey-source-unavailable");
+                    var resource=state==EmployeeState.Returning?"selected-home":"pickup/"+employee.Id;
+                    trafficMove.Resource=resource;trafficMove.Index=employee.Runner.CurrentTrafficRouteIndex;trafficMove.Goal=target;
+                }
+                else if(trafficMove==null || state!=trafficState || trafficMove.Proof!=null && trafficMove.Index>=trafficMove.Proof.Waypoints.Count)
+                {
+                    owner.customers.RetireUnissuedMovement(trafficMove);
+                    trafficMove=owner.customers.CreateEmployeeMovement(employee.Actor,context+"/port/"+movementLife+"/"+state+"/move/"+(++workMoveSequence),state,target);
+                }
+                trafficState=state;
+                if(!selected && trafficMove.Source==null)
+                {
+                    if(trafficMove.PreparationContext==null)
+                    {
+                        if(!PreparedMovementContext.TryCapture(owner,employee.Id,trafficMove,nativeLegGeneration,out var prepared))
+                            return owner.customers.RefuseMovementPreparation(trafficMove,"employee-movement-source-unavailable");
+                        trafficMove.PreparationContext=prepared;trafficMove.PreparationFrame=prepared.FirstFrame;trafficMove.PreparationOrigin=prepared.Origin;
+                    }
+                    else if(!trafficMove.PreparationContext.IsCurrent)
+                        return owner.customers.RefuseMovementPreparation(trafficMove,"employee-movement-producer-changed");
+                }
+                var decision=owner.customers.PrepareMovement(employee.Actor,trafficMove,nativeLegGeneration);
+                if(decision.Kind!=TrafficDecisionKind.Granted)return decision;
+                if(owner.customers.CommitMovement(trafficMove,decision))return decision;
+                var failed=trafficMove.Coordinator.GetDecision(trafficMove.Intent);
+                return failed.Kind==TrafficDecisionKind.StaleContext && IsProgressAllowed
+                    ?new TrafficDecision(trafficMove.Intent,TrafficDecisionKind.DeferredByBudget,"employee-candidate-revalidation") : failed;
+            }
 
             public MoveStartResult MoveTo(NavigationTarget target, Action<MovementResult> completed)
             {
-                if (!IsProgressAllowed) return new MoveStartResult(false, 0, NavigationFailure.ActorUnavailable);
-                if(owner.integratedMode && employee.Runner.HasSelectedDeliveryRoute && employee.Runner.Snapshot.State==EmployeeState.CarryingToPickUp &&
-                    !owner.customers.IsPickupDeliverySegmentClear(employee.Id,target))
-                    return new MoveStartResult(false,0,NavigationFailure.IncompletePath);
-                if(owner.integratedMode && employee.Runner.HasSelectedReturnRoute && employee.Runner.Snapshot.State==EmployeeState.Returning &&
-                    !owner.customers.IsPickupReturnSegmentClear(employee.Id,target))
-                    return new MoveStartResult(false,0,NavigationFailure.IncompletePath);
-                bool finished = false;
+                owner.ObserveMovement(employee,"attempt",target);
+                if (!IsProgressAllowed)
+                { owner.ObserveMovement(employee,"precheck.progress-refused",target,reason:NavigationFailure.ActorUnavailable); return new MoveStartResult(false, 0, NavigationFailure.ActorUnavailable); }
+                if(!TrafficEnabled && owner.integratedMode && employee.Runner.HasSelectedDeliveryRoute && employee.Runner.Snapshot.State==EmployeeState.CarryingToPickUp)
+                {
+                    var clear=owner.customers.IsPickupDeliverySegmentClear(employee.Id,target);
+                    owner.ObserveMovement(employee,clear?"precheck.delivery-clear":"precheck.delivery-refused",target,
+                        reason:clear?NavigationFailure.None:NavigationFailure.IncompletePath);
+                    if(!clear) return new MoveStartResult(false,0,NavigationFailure.IncompletePath);
+                }
+                if(!TrafficEnabled && owner.integratedMode && employee.Runner.HasSelectedReturnRoute && employee.Runner.Snapshot.State==EmployeeState.Returning)
+                {
+                    var clear=owner.customers.IsPickupReturnSegmentClear(employee.Id,target);
+                    owner.ObserveMovement(employee,clear?"precheck.return-clear":"precheck.return-refused",target,
+                        reason:clear?NavigationFailure.None:NavigationFailure.IncompletePath);
+                    if(!clear) return new MoveStartResult(false,0,NavigationFailure.IncompletePath);
+                }
+                var issuedTraffic=TrafficEnabled?trafficMove:null;
+                var nativeGeneration=employee.Runner.CurrentNativeLegGeneration;
+                if(TrafficEnabled)
+                {
+                    owner.customers.RefreshTrafficSnapshot();
+                    if(issuedTraffic==null || issuedTraffic.NativeGeneration!=nativeGeneration || !owner.customers.CanIssueMovement(employee.Actor,issuedTraffic))
+                        return new MoveStartResult(false,0,NavigationFailure.ActorUnavailable);
+                    target=issuedTraffic.Target;
+                }
+                bool finished = false;long issuedRequest=0;var issuedActor=employee.Actor;
                 var result = owner.world.Service.MoveTo(employee.Id, target, movement =>
                 {
+                    if(issuedTraffic!=null)
+                    {
+                        if(finished || !Live || !ReferenceEquals(employee.Actor,issuedActor) ||
+                            employee.Runner.CurrentNativeLegGeneration!=nativeGeneration || movement.ActorId!=employee.Id ||
+                            issuedRequest!=0 && issuedRequest!=movement.RequestId)return;
+                        finished=true;
+                    }
+                    owner.ObserveMovement(employee,"callback",target,movement.RequestId,movement.Reason,movement.Status);
                     finished = true; requests.Remove(movement.RequestId);
-                    if (!Live) return;
+                    if (!Live || issuedTraffic!=null && employee.Runner.CurrentNativeLegGeneration!=nativeGeneration) return;
                     // Revision advances before synchronous LayoutChanged callbacks and before Decor Done.
                     if (owner.adapter == null || employee.Binding.LayoutRevision != owner.adapter.Revision)
                     { owner.ObserveLayoutChanges(); return; }
                     if (!employee.Actor.isActiveAndEnabled)
                     { employee.Runner.Dispose(); employee.NeedsBinding = true; return; }
+                    if(issuedTraffic!=null && movement.Status==MovementStatus.LayoutChanged && !IsProgressAllowed)
+                    {
+                        if(!owner.customers.SuspendMovement(issuedActor,issuedTraffic,movement,nativeGeneration,owner.adapter.Revision))
+                        { owner.customers.RetireMovement(issuedTraffic);employee.Runner.Cancel("Native suspension is not eligible for another recovery");return; }
+                        completed(movement);return; // Keep the original Runner's single navigationResumeUsed recovery.
+                    }
+                    if (movement.Status == MovementStatus.Arrived)
+                    {
+                        // Native has already stopped. Publish current stopped motion before business checks.
+                        // 真实Native已停下；不能把本帧较早的平均走路速度当作现在仍在移动。
+                        try { employee.Actor.SetMotion(0); }
+                        catch (Exception error) { Debug.LogException(error, employee.Actor); }
+                        // Motion listeners may disable/replace the current lifecycle.
+                        // 可选展示事件异常不吞terminal callback；重入停用/装修仍须退休旧回调。
+                        if (!Live || issuedTraffic!=null && employee.Runner.CurrentNativeLegGeneration!=nativeGeneration) return;
+                        if (owner.adapter == null || employee.Binding.LayoutRevision != owner.adapter.Revision)
+                        { owner.ObserveLayoutChanges(); return; }
+                        if (!employee.Actor.isActiveAndEnabled)
+                        { employee.Runner.Dispose(); employee.NeedsBinding = true; return; }
+                        if(issuedTraffic!=null && !owner.customers.CompleteMovement(employee.Actor,issuedTraffic,movement,nativeGeneration))
+                        { employee.Runner.Cancel("Actual Native arrival lost its committed traffic leg");return; }
+                    }
+                    else if(issuedTraffic!=null)owner.customers.RetireMovement(issuedTraffic);
                     completed(movement);
                 }, employee.Binding.WorkTarget);
+                if(result.Accepted && !finished)issuedRequest=result.RequestId;
+                if(result.Accepted && !finished && !Live)
+                { owner.world?.Service.Cancel(result.RequestId);return result; }
+                if(!result.Accepted && issuedTraffic!=null && issuedTraffic.NativeGeneration==nativeGeneration)
+                    owner.customers.RetireMovement(issuedTraffic);
+                if(result.Accepted && !finished && Live && issuedTraffic!=null && issuedTraffic.NativeGeneration==nativeGeneration &&
+                    !owner.customers.BindMovement(employee.Actor,issuedTraffic,result.RequestId))
+                { owner.world.Service.Cancel(result.RequestId);return new MoveStartResult(false,0,NavigationFailure.ActorUnavailable); }
                 if (result.Accepted && !finished) requests.Add(result.RequestId);
+                owner.ObserveMovement(employee,"submitted",target,result.RequestId,result.Reason,accepted:result.Accepted);
                 return result;
             }
             public bool CancelMove(long requestId)
@@ -513,11 +890,21 @@ namespace AnimalCafe.Employees
             }
             public void HideHeldCup() { if (employee.Visual != null) employee.Visual.HideHeldCup(); }
             public void SetVisualMode(EmployeeVisualMode mode)
-            { if (Live && employee.Visual != null) employee.Visual.SetMode(mode); }
+            {
+                // Only authenticated full initial arrival retires its complete permission, not the body.
+                // initial 完整到站后释放整个意图；保留原 movement 身份，途中/Return 不走这里。
+                if(Live && mode==EmployeeVisualMode.Idle && trafficState==EmployeeState.MovingToWork && employee.Runner!=null &&
+                    employee.Runner.Snapshot.State==EmployeeState.Idle && employee.Runner.Snapshot.HandleId==0 &&
+                    trafficMove?.Source!=null && trafficMove.Index>0 && trafficMove.NativeGeneration==0 && !trafficMove.Suspended &&
+                    employee.Binding!=null && trafficMove.Goal.Equals(employee.Binding.WorkTarget))
+                    owner.customers?.RetireMovement(trafficMove);
+                if (Live && employee.Visual != null) employee.Visual.SetMode(mode);
+            }
             public void CleanupTask(long handleId)
-            { if (employee.Visual != null) employee.Visual.HideHeldCup(); }
+            { owner.customers?.RetireMovement(trafficMove);trafficMove=null;if (employee.Visual != null) employee.Visual.HideHeldCup(); }
             public void Dispose()
             {
+                owner.customers?.RetireMovement(trafficMove);trafficMove=null;
                 foreach (var request in requests.ToArray()) CancelMove(request);
                 // Cancel stops the driver now; publish that stop before selecting Idle animation.
                 if (employee.Actor != null) employee.Actor.SetMotion(0);

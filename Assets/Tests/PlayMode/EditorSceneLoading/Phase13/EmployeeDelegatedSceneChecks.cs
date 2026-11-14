@@ -253,7 +253,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
             Enter(); var register = AddFurniture(new GridPosition(1, 6)); var machine = AddFurniture(new GridPosition(3, 6)); var pickup = AddFurniture(new GridPosition(5, 6));
             AddStation(DecorationCatalogueItemKind.CashRegister, "equipment.cash-register.01", register);
             AddStation(DecorationCatalogueItemKind.CoffeeMachine, "equipment.coffee-machine.01", machine);
-            AddStation(DecorationCatalogueItemKind.PickUpPoint, "", pickup); Exit(); yield return Ready();
+            AddStation(DecorationCatalogueItemKind.PickUpPoint, "", pickup); yield return ResumeAfterDecor();
             Assert.That(layout.CurrentReadiness.Stations.Count(value => value.IsValid), Is.EqualTo(6));
             Mark("M012", "complete second set CR(1,6)/CM(3,6)/Pickup(5,6)"); Pause(); yield return Capture("m012-second-set"); Speed(GameSpeed.Normal);
             var originalCR = "12000000000000000000000000000004";

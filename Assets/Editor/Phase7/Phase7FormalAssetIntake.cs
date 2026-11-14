@@ -90,8 +90,8 @@ namespace AnimalCafe.EditorTools.Phase7
                     if(!File.Exists(source)||!Hash(source).Equals(DerivedSha256[file],StringComparison.OrdinalIgnoreCase))
                         throw new InvalidOperationException("Missing or changed deterministic derived asset: "+file);
                 }
-                File.Copy("ArtSource/Phase7/Derived/"+item.Model,Path.GetFullPath(Phase7AssetPaths.ModelFolder+"/"+item.Model),true);
-                File.Copy("ArtSource/Phase7/Derived/"+item.BaseColor,Path.GetFullPath(BaseColorPath(item)),true);
+                Phase7BytePublication.Write(Phase7AssetPaths.ModelFolder+"/"+item.Model,File.ReadAllBytes("ArtSource/Phase7/Derived/"+item.Model));
+                Phase7BytePublication.Write(BaseColorPath(item),File.ReadAllBytes("ArtSource/Phase7/Derived/"+item.BaseColor));
             }
         }
         private static string BaseColorPath(Item item)=>Phase7AssetPaths.TextureFolder+"/T_"+Path.GetFileNameWithoutExtension(item.Model)+"_BaseColor.png";
@@ -131,5 +131,32 @@ namespace AnimalCafe.EditorTools.Phase7
         private static T EnsureAsset<T>(string path)where T:ScriptableObject{var a=AssetDatabase.LoadAssetAtPath<T>(path);if(a)return a;a=ScriptableObject.CreateInstance<T>();AssetDatabase.CreateAsset(a,path);return a;}
         private static void Set(UnityEngine.Object o,string n,object v){var so=new SerializedObject(o);var p=so.FindProperty(n);if(v is string s)p.stringValue=s;else if(v is int i)p.intValue=i;else if(v is float f)p.floatValue=f;else p.objectReferenceValue=v as UnityEngine.Object;so.ApplyModifiedPropertiesWithoutUndo();EditorUtility.SetDirty(o);}
         private static void SetArray(UnityEngine.Object o,string n,UnityEngine.Object[] vs){var so=new SerializedObject(o);var p=so.FindProperty(n);p.arraySize=vs.Length;for(var i=0;i<vs.Length;i++)p.GetArrayElementAtIndex(i).objectReferenceValue=vs[i];so.ApplyModifiedPropertiesWithoutUndo();EditorUtility.SetDirty(o);}
+    }
+
+    internal static class Phase7BytePublication
+    {
+        internal static void Write(string path, byte[] bytes)
+        {
+            // Publish complete bytes without truncating a file held by a read-only mapping.
+            // 点前缀 sibling 不作为 Unity asset 导入；只清理本次操作自己创建的 temp。
+            path = Path.GetFullPath(path);
+            var temporary = Path.Combine(Path.GetDirectoryName(path),
+                "." + Path.GetFileName(path) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+            var ownsTemporary = false;
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    ownsTemporary = true;
+                    stream.Write(bytes, 0, bytes.Length);
+                }
+                if (File.Exists(path)) File.Replace(temporary, path, null);
+                else File.Move(temporary, path);
+            }
+            finally
+            {
+                if (ownsTemporary && File.Exists(temporary)) File.Delete(temporary);
+            }
+        }
     }
 }

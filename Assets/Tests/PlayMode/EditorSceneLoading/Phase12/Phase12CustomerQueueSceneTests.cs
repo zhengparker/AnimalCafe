@@ -20,10 +20,21 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
         private bool requireCornerContinuity;
         private int concurrentAdvanceFrames;
         private int concurrentEntryFrames;
+        private sealed class NativeTimingDiagnostic
+        {
+            public readonly System.Collections.Generic.Queue<string> Frames = new System.Collections.Generic.Queue<string>();
+            public readonly System.Collections.Generic.HashSet<string> Seen = new System.Collections.Generic.HashSet<string>();
+            public readonly double Started = Time.realtimeSinceStartupAsDouble;
+            public float MaximumDt, MaximumSlow;
+            public bool Failed;
+            public AnimalCafe.Core.Time.GameTimeService Clock;
+            public NavigationSettings Settings;
+        }
+        private NativeTimingDiagnostic nativeTimingDiagnostic;
         [UnityTest] public IEnumerator NativeDefaultUnattendedOneSecondArrivalsDoNotResetFailedCountdown()
-        { yield return NativeDefaultUnattendedArrivals(0); }
+        { yield return NativeDefaultUnattendedArrivals(.1f); }
         [UnityTest] public IEnumerator NativeDefaultUnattendedTwoSecondArrivalsDoNotResetFailedCountdown()
-        { yield return NativeDefaultUnattendedArrivals(.25f); }
+        { yield return NativeDefaultUnattendedArrivals(.2f); }
         private IEnumerator NativeDefaultUnattendedArrivals(float intervalRandom)
         {
             nativeCaptureToRestore=Time.captureDeltaTime; Time.captureDeltaTime=1f/60;
@@ -96,7 +107,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
                     var passing=flow.Snapshot[6].State==CustomerVisitState.Entering && distance<.98f && distance>previousDistance+.0001f;
                     previousDistance=distance; return passing;
                 });
-                typeof(CustomerFlowController).GetField("clock",flags).SetValue(flow,new CustomerSpawnClock(()=>0));
+                typeof(CustomerFlowController).GetField("clock",flags).SetValue(flow,new CustomerSpawnClock(()=>.1f));
                 flow.AutoSpawn=true; flow.Step(1.01f); flow.AutoSpawn=false;
                 Assert.That(flow.Snapshot.Count,Is.EqualTo(8),"A moving predecessor passing the future tail must not pause safe admission: "+NativeState(flow,world));
                 concurrentEntryFrames=0;
@@ -131,7 +142,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
                 yield return WaitNative(flow,world,()=>flow.Snapshot[3].Position.x<-1.8f && flow.Snapshot[3].Position.z>.35f);
                 Assert.That(flow.Snapshot[3].State,Is.EqualTo(CustomerVisitState.Entering));
                 var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
-                typeof(CustomerFlowController).GetField("clock",flags).SetValue(flow,new CustomerSpawnClock(()=>0));
+                typeof(CustomerFlowController).GetField("clock",flags).SetValue(flow,new CustomerSpawnClock(()=>.1f));
                 flow.AutoSpawn=true; flow.Step(1.01f); flow.AutoSpawn=false;
                 Assert.That(flow.Snapshot.Count,Is.EqualTo(5),"Expired arrival must admit a safe follower before the fourth queues: "+NativeState(flow,world));
                 concurrentEntryFrames=0;
@@ -161,6 +172,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
         private IEnumerator NativeDefaultCornerArrivals(float frameTime)
         {
             nativeCaptureToRestore=Time.captureDeltaTime; Time.captureDeltaTime=frameTime;
+            if(frameTime==0) nativeTimingDiagnostic=new NativeTimingDiagnostic();
             var scene=EditorSceneManager.LoadSceneInPlayMode("Assets/Scenes/Validation/Phase12CustomerQueue.unity",new LoadSceneParameters(LoadSceneMode.Additive));
             yield return null;
             try
@@ -168,9 +180,15 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
                 var roots=scene.GetRootGameObjects();
                 var flow=roots.SelectMany(r=>r.GetComponentsInChildren<CustomerFlowController>(true)).Single();
                 var world=roots.SelectMany(r=>r.GetComponentsInChildren<NavigationWorld>(true)).Single();
+                if(nativeTimingDiagnostic!=null)
+                {
+                    nativeTimingDiagnostic.Clock=roots.SelectMany(r=>r.GetComponentsInChildren<AnimalCafe.Core.Time.GameTimeService>(true)).Single();
+                    nativeTimingDiagnostic.Settings=(NavigationSettings)typeof(NavigationWorld).GetField("settings",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(world);
+                    TestContext.WriteLine("P12_TIMING_START "+NativeTimingSceneSummary());
+                }
                 flow.AutoSpawn=false;
                 yield return WaitNative(flow,world,()=>!string.IsNullOrEmpty(flow.SelectedRegisterId));
-                typeof(CustomerFlowController).GetField("clock",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).SetValue(flow,new CustomerSpawnClock(()=>0));
+                typeof(CustomerFlowController).GetField("clock",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).SetValue(flow,new CustomerSpawnClock(()=>.1f));
                 requireCornerContinuity=true; flow.AutoSpawn=true;
                 yield return WaitNative(flow,world,()=>flow.Snapshot.Count==5 && flow.Snapshot.All(v=>v.State==CustomerVisitState.Queued),5);
                 var ids=flow.Snapshot.Select(v=>v.VisitId).ToArray();
@@ -182,7 +200,14 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
                 }
                 foreach(var ledger in flow.Capacity.GetCapacities()) Assert.That(ledger.Used,Is.Zero);
             }
-            finally { requireCornerContinuity=false; if(scene.IsValid() && scene.isLoaded) pendingUnload=SceneManager.UnloadSceneAsync(scene); }
+            finally
+            {
+                if(nativeTimingDiagnostic!=null)
+                    TestContext.WriteLine("P12_TIMING_SUMMARY failed="+nativeTimingDiagnostic.Failed+" maxDt="+nativeTimingDiagnostic.MaximumDt.ToString("R")+
+                        " maxSlow="+nativeTimingDiagnostic.MaximumSlow.ToString("R")+" realElapsed="+(Time.realtimeSinceStartupAsDouble-nativeTimingDiagnostic.Started).ToString("R")+" "+NativeTimingSceneSummary());
+                nativeTimingDiagnostic=null;
+                requireCornerContinuity=false; if(scene.IsValid() && scene.isLoaded) pendingUnload=SceneManager.UnloadSceneAsync(scene);
+            }
         }
         [UnityTearDown] public IEnumerator WaitForSceneInputOwnersToUnload()
         {
@@ -298,7 +323,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
                 yield return WaitNative(flow,world,()=>flow.Snapshot.All(v=>v.State==CustomerVisitState.Queued));
                 CollectionAssert.AreEqual(ids,flow.Snapshot.Select(v=>v.VisitId).ToArray(),"Cancelled preview must not reset customers");
                 var capacity=flow.Capacity;
-                typeof(CustomerFlowController).GetField("clock",flags).SetValue(flow,new CustomerSpawnClock(()=>.25f));
+                typeof(CustomerFlowController).GetField("clock",flags).SetValue(flow,new CustomerSpawnClock(()=>.2f));
                 for(var cycle=0;cycle<2;cycle++)
                 {
                     ids=flow.Snapshot.Select(v=>v.VisitId).ToArray();
@@ -580,7 +605,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
                 foreach(var ledger in flow.Capacity.GetCapacities()) Assert.That(ledger.Used,Is.Zero);
                 Assert.That(world.RegisteredActors.Any(a=>oldIds.Contains(a.ActorId)),Is.False,"Old movement owners must be unregistered");
                 yield return null; // Destroy retires old proxy objects at frame end before any new admission.
-                typeof(CustomerFlowController).GetField("clock",flags).SetValue(flow,new CustomerSpawnClock(()=>.25f));
+                typeof(CustomerFlowController).GetField("clock",flags).SetValue(flow,new CustomerSpawnClock(()=>.2f));
                 var replenish=customers<8 && (!destination.HasValue || requireCorner);
                 // 新批次包含逐次倒计时与入店；每位分别保持原60秒移动上限。
                 // Keep the same arrival deadline per customer instead of timing the whole reopening.
@@ -757,9 +782,16 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
                 // Arrived回调与下一位前移之间有一帧Queued间隙，不能当作整队已经完成。
                 if(done()) { if(++settledFrames>=2) yield break; } else settledFrames=0;
                 var actors=world.RegisteredActors.ToArray(); var old=actors.Select(a=>a.transform.position).ToArray();
+                // 仅真实timing case记录只读诊断；不改delta/clear/阈值，失败前才输出bounded ring。
+                var diagnosticBefore=nativeTimingDiagnostic==null?null:actors.Select(a=>NativeTimingActor(flow,world,a)).ToArray();
+                var diagnosticJoined=nativeTimingDiagnostic==null?null:actors.Select(a=>!nativeTimingDiagnostic.Seen.Contains(a.ActorId)).ToArray();
+                if(nativeTimingDiagnostic!=null) foreach(var actor in actors) nativeTimingDiagnostic.Seen.Add(actor.ActorId);
+                var diagnosticDtBefore=Time.deltaTime; var diagnosticRealBefore=nativeTimingDiagnostic==null?0:Time.realtimeSinceStartupAsDouble;
                 if(flow.Snapshot.Any(v=>v.State==CustomerVisitState.Blocked) && !(bool)recoveryFlag.GetValue(flow)) break;
                 yield return null;
+                var diagnosticRealAfter=nativeTimingDiagnostic==null?0:Time.realtimeSinceStartupAsDouble;
                 elapsed+=Time.deltaTime;
+                if(nativeTimingDiagnostic!=null) nativeTimingDiagnostic.MaximumDt=Mathf.Max(nativeTimingDiagnostic.MaximumDt,Time.deltaTime);
                 if(actors.Where((a,i)=>a!=null && Vector3.Distance(old[i],a.transform.position)>.001f &&
                     flow.Snapshot.Any(v=>v.VisitId==a.ActorId && v.State==CustomerVisitState.Advancing)).Count()>=2)
                     concurrentAdvanceFrames++;
@@ -795,9 +827,30 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
                             actors.All(a=>a==null || a==actors[i] || Vector3.Distance(old[i],a.transform.position)>1.03f) &&
                             (requireCornerContinuity || solids.All(s=>s==null || Vector3.Distance(old[i]+Vector3.up*.65f,s.ClosestPoint(old[i]+Vector3.up*.65f))>.55f));
                         slow.TryGetValue(actors[i],out var duration);
+                        var diagnosticSlowBefore=duration;
                         var minimumSpeed=actors[i].Settings.MaxSpeed*(requireCornerContinuity?.25f:.9f);
                         duration=clear && Vector3.Distance(current,old[i])/Time.deltaTime<minimumSpeed?duration+Time.deltaTime:0;
                         slow[actors[i]]=duration;
+                        if(nativeTimingDiagnostic!=null)
+                        {
+                            var diagnostic=nativeTimingDiagnostic; diagnostic.MaximumSlow=Mathf.Max(diagnostic.MaximumSlow,duration);
+                            var bodyClear=actors.All(a=>a==null || a==actors[i] || Vector3.Distance(old[i],a.transform.position)>1.03f);
+                            var solidClear=solids.All(s=>s==null || Vector3.Distance(old[i]+Vector3.up*.65f,s.ClosestPoint(old[i]+Vector3.up*.65f))>.55f);
+                            var budget=Mathf.Min(Time.deltaTime,diagnostic.Settings.MaxSubstepSeconds*diagnostic.Settings.MaxSubstepsPerFrame);
+                            diagnostic.Frames.Enqueue("frame="+Time.frameCount+" id="+actors[i].ActorId+" justSeen="+diagnosticJoined[i]+
+                                " dtBefore="+diagnosticDtBefore.ToString("R")+" dtAfter="+Time.deltaTime.ToString("R")+" realBefore="+diagnosticRealBefore.ToString("R")+" realAfter="+diagnosticRealAfter.ToString("R")+" realFrame="+(diagnosticRealAfter-diagnosticRealBefore).ToString("R")+
+                                " delta="+Vector3.Distance(current,old[i]).ToString("R")+" slow="+diagnosticSlowBefore.ToString("R")+"->"+duration.ToString("R")+
+                                " clear="+clear+" active="+active+" far="+(Vector3.Distance(old[i],actors[i].Agent.destination)>.25f)+" bodies="+bodyClear+" solids="+solidClear+" cornerMode="+requireCornerContinuity+
+                                " world="+world.isActiveAndEnabled+"/"+world.LayoutAvailable+" gameTime="+diagnostic.Clock.CurrentSpeed+"/blocked="+diagnostic.Clock.IsResumeBlocked+
+                                " maxSubstep="+diagnostic.Settings.MaxSubstepSeconds.ToString("R")+" maxSteps="+diagnostic.Settings.MaxSubstepsPerFrame+" derivedBudget="+budget.ToString("R")+" actualSteps=UNKNOWN"+
+                                " before={"+diagnosticBefore[i]+"} after={"+NativeTimingActor(flow,world,actors[i])+"}");
+                            while(diagnostic.Frames.Count>48) diagnostic.Frames.Dequeue();
+                            if(duration>.2f && !diagnostic.Failed)
+                            {
+                                diagnostic.Failed=true;
+                                TestContext.WriteLine("P12_TIMING_FAILURE "+NativeTimingSceneSummary()+"\n"+string.Join("\n",diagnostic.Frames));
+                            }
+                        }
                         Assert.That(duration,Is.LessThanOrEqualTo(.2f),"Clear route must not crawl before a corner/destination: "+NativeState(flow,world));
                     }
                     foreach(var solid in solids)
@@ -827,6 +880,27 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
                     " segments="+type.GetField("Segments").GetValue(visit)+" replans="+type.GetField("Replans").GetValue(visit));
             }
             Assert.That(settledFrames,Is.GreaterThanOrEqualTo(2),NativeState(flow,world));
+        }
+        private static string NativeTimingSceneSummary()
+        {
+            var paths=Enumerable.Range(0,SceneManager.sceneCount).Select(i=>SceneManager.GetSceneAt(i)).Where(s=>s.isLoaded).Select(s=>s.path+"["+s.name+"]");
+            var days=Resources.FindObjectsOfTypeAll<AnimalCafe.BusinessDay.BusinessDayController>().Count(d=>d.gameObject.scene.IsValid() && d.gameObject.scene.isLoaded && d.isActiveAndEnabled);
+            var views=Resources.FindObjectsOfTypeAll<AnimalCafe.BusinessDay.BusinessDayStatusView>().Count(v=>v.gameObject.scene.IsValid() && v.gameObject.scene.isLoaded && v.isActiveAndEnabled);
+            return "scenes="+string.Join("|",paths)+" activeDay="+days+" activeView="+views+" maximumDelta="+Time.maximumDeltaTime.ToString("R")+" captureDelta="+Time.captureDeltaTime.ToString("R")+" timeScale="+Time.timeScale.ToString("R");
+        }
+        private static string NativeTimingActor(CustomerFlowController flow,NavigationWorld world,NavigationActor actor)
+        {
+            if(actor==null) return "destroyed";
+            var visit=flow.Snapshot.FirstOrDefault(v=>v.VisitId==actor.ActorId);
+            var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+            var drivers=(System.Collections.IDictionary)typeof(NavigationWorld).GetField("drivers",flags).GetValue(world);
+            var driver=drivers.Contains(actor)?drivers[actor]:null;
+            var route=driver==null?"driver=missing":"revision="+driver.GetType().GetField("revision",flags).GetValue(driver)+" corner="+driver.GetType().GetField("corner",flags).GetValue(driver)+
+                " path="+string.Join(",",((Vector3[])driver.GetType().GetField("corners",flags).GetValue(driver)).Select(p=>p.ToString("F3")));
+            var agent=actor.Agent;
+            var agentState=agent==null || !agent.enabled || !agent.isOnNavMesh?"agent=unavailable":"stopped="+agent.isStopped+" pending="+agent.pathPending+" hasPath="+agent.hasPath+
+                " desired="+agent.desiredVelocity.ToString("F3")+" speed="+agent.velocity.magnitude.ToString("R")+" destination="+agent.destination.ToString("F3");
+            return "state="+visit.State+" pos="+actor.transform.position.ToString("F3")+" "+agentState+" "+route;
         }
         private static string NativeState(CustomerFlowController flow,NavigationWorld world)
             => flow.Status+" / "+string.Join(" | ",flow.Snapshot.Select(v=>v.VisitId.Substring(v.VisitId.Length-8)+" "+v.State+" "+v.Position.ToString("F3")))+

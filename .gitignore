@@ -80,3 +80,6 @@ crashlytics-build.properties
 # Unity Test Framework and temporary runner output
 /TestResults/
 /Assets/InitTestScene*.unity*
+
+# P15 local regression evidence / 本地测试日志、截图及恢复备份保留在磁盘，不纳入提交
+/outputs/phase15/

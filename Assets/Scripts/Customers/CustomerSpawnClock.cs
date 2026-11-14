@@ -31,7 +31,8 @@ namespace AnimalCafe.Customers
             var value=random();
             if (float.IsNaN(value) || float.IsInfinity(value) || value<0 || value>1)
                 throw new ArgumentOutOfRangeException("random");
-            return 1+4*value;
+            // 0秒也等待下一次正时间更新；每次Tick只返回一位 / Zero is due on a positive tick.
+            return 10*value;
         }
     }
 }

@@ -8,6 +8,315 @@ namespace AnimalCafe.Tests.EditMode.Phase12
 {
     public class CounterQueueTests
     {
+        private static void RestartOnlyBlockedCounterOwner(CounterQueueService queue,string[] ids)
+        {
+            var method=typeof(CounterQueueService).GetMethod("RestartAssignments",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic,
+                null,new[]{typeof(System.Collections.Generic.IReadOnlyCollection<string>)},null);
+            Assert.That(method,Is.Not.Null,"FEATURE: integrated recovery must not invalidate healthy Counter ownership by globally restarting the queue");
+            method.Invoke(queue,new object[]{ids});
+        }
+        [Test]
+        public void TargetedBlockedRestartInvalidatesPreviewButPreservesHealthyMovingClaim()
+        {
+            var queue=new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3,Vector3.forward*6});
+            foreach(var id in new[]{"retry","healthy"}){Assert.That(queue.TryJoin(id),Is.True);Assert.That(queue.Complete(id,1),Is.True);}
+            queue.UpdateSlots(new[]{Vector3.right,Vector3.right+Vector3.forward*3,Vector3.right+Vector3.forward*6});
+            Assert.That(queue.TryGetNextAdvance(out var retry),Is.True);Assert.That(retry.VisitId,Is.EqualTo("retry"));
+            Assert.That(queue.TryGetNextAdvance(out var healthy),Is.True);Assert.That(healthy.VisitId,Is.EqualTo("healthy"));
+            Assert.That(queue.TryCaptureAssignment("retry",out var retryClaim),Is.True);Assert.That(queue.TryCaptureAssignment("healthy",out var healthyClaim),Is.True);
+            Assert.That(queue.TryPrepareMutation(CounterQueueService.MutationKind.Join,"future",queue.Version,out var preview),Is.True);
+            var version=queue.Version;var before=queue.Snapshot.ToArray();
+            RestartOnlyBlockedCounterOwner(queue,new[]{"retry"});
+            Assert.That(queue.Version,Is.GreaterThan(version));Assert.That(preview.IsCurrent,Is.False,"Canonical Version still rejects every stale uncommitted preview");
+            Assert.That(queue.Snapshot.Single(row=>row.VisitId=="healthy"),Is.EqualTo(healthy));
+            Assert.That(queue.TryCaptureAssignment("healthy",out var freshHealthy),Is.True);
+            Assert.That(healthyClaim.IsSameCurrentClaim(freshHealthy),Is.True,"Healthy owned Counter checkpoint keeps its exact Moving/NeedsReplan semantics");
+            Assert.That(queue.TryCaptureAssignment("retry",out var freshRetry),Is.True);Assert.That(retryClaim.IsSameCurrentClaim(freshRetry),Is.False);
+            CollectionAssert.AreEqual(before,queue.Snapshot,"A restart changes no actual target, generation or arrival label before the real next advance");
+            Assert.That(queue.TryGetNextAdvance(out var resumed),Is.True);Assert.That(resumed.VisitId,Is.EqualTo("retry"));
+            Assert.That(resumed.Generation,Is.GreaterThan(retry.Generation));Assert.That(resumed.Position,Is.EqualTo(retry.Position));
+            Assert.That(queue.Complete("healthy",healthy.Generation),Is.True,"The unchanged healthy actual in-flight arrival is still accepted");
+            Assert.That(queue.Complete("retry",retry.Generation),Is.False);Assert.That(queue.Complete("retry",resumed.Generation),Is.True);
+            Assert.That(queue.Snapshot.All(row=>row.Arrived),Is.True);
+        }
+        [TestCase(false)][TestCase(true)]
+        public void TargetedRestartWithoutBlockedCounterOwnerDoesNotTouchQueueOrClaims(bool unknown)
+        {
+            var queue=new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3});
+            Assert.That(queue.TryJoin("healthy"),Is.True);Assert.That(queue.Complete("healthy",1),Is.True);
+            Assert.That(queue.TryCaptureAssignment("healthy",out var original),Is.True);
+            var version=queue.Version;var before=queue.Snapshot.ToArray();
+            RestartOnlyBlockedCounterOwner(queue,unknown?new[]{"absent"}:Array.Empty<string>());
+            Assert.That(queue.Version,Is.EqualTo(version));CollectionAssert.AreEqual(before,queue.Snapshot);
+            Assert.That(queue.TryCaptureAssignment("healthy",out var after),Is.True);Assert.That(original.IsSameCurrentClaim(after),Is.True);
+        }
+        [Test] public void CounterReservationLineageSurvivesActualAdvanceAndArrival()
+        {
+            var queue=CounterWithAdvanceCandidate();
+            Assert.That(queue.TryCaptureAssignment("next",out var original),Is.True);
+            var oldAssignment=original.Assignment;
+            Assert.That(queue.TryGetNextAdvance(out var advanced),Is.True);
+            Assert.That(advanced.Generation,Is.GreaterThan(oldAssignment.Generation));
+            Assert.That(queue.Complete("next",advanced.Generation),Is.True);
+            Assert.That(queue.Snapshot.Single().Arrived,Is.True,"FIXTURE: real canonical advance and arrival completed");
+            Assert.That(queue.TryCaptureAssignment("next",out var current),Is.True);
+            Assert.That(original.IsCurrent,Is.False);Assert.That(current.IsCurrent,Is.True);
+            var before=queue.Snapshot.ToArray();var version=queue.Version;
+            Assert.That(original.IsSameReservation(current),Is.True,"One real Entry keeps lineage across a changed assignment generation");
+            Assert.That(current.IsSameReservation(original),Is.True);
+            Assert.That(original.Assignment,Is.EqualTo(oldAssignment),"Captured assignment remains immutable");
+            CollectionAssert.AreEqual(before,queue.Snapshot);Assert.That(queue.Version,Is.EqualTo(version));
+        }
+
+        [Test] public void CounterReservationLineageSurvivesUnrelatedMetadataWithoutWrites()
+        {
+            var queue=new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3});
+            Assert.That(queue.TryJoin("own"),Is.True);Assert.That(queue.Complete("own",1),Is.True);
+            Assert.That(queue.TryCaptureAssignment("own",out var original),Is.True);
+            var priorVersion=queue.Version;queue.UpdateSlots(new[]{Vector3.zero,Vector3.forward*4});
+            Assert.That(queue.Version,Is.GreaterThan(priorVersion));Assert.That(original.IsCurrent,Is.True);
+            Assert.That(queue.TryCaptureAssignment("own",out var current),Is.True);
+            var before=queue.Snapshot.ToArray();var version=queue.Version;
+            Assert.That(original.IsSameReservation(current),Is.True);
+            Assert.That(current.IsSameReservation(original),Is.True);
+            Assert.That(original.IsSameReservation(null),Is.False);
+            CollectionAssert.AreEqual(before,queue.Snapshot);Assert.That(queue.Version,Is.EqualTo(version));
+        }
+
+        [TestCase("remove-rejoin")] [TestCase("rollback")] [TestCase("foreign")]
+        public void CounterReservationLineageRejectsReplacedOrForeignEntry(string replacement)
+        {
+            var queue=replacement=="rollback"?CounterWithAdvanceCandidate():new CounterQueueService(new[]{Vector3.zero});
+            var id=replacement=="rollback"?"next":"same";
+            if(replacement!="rollback")Assert.That(queue.TryJoin(id),Is.True);
+            Assert.That(queue.TryCaptureAssignment(id,out var original),Is.True);
+            var before=queue.Snapshot.ToArray();var target=queue;
+            if(replacement=="remove-rejoin")
+            {
+                Assert.That(queue.Remove(id),Is.True);Assert.That(queue.TryJoin(id),Is.True);
+                CollectionAssert.AreEqual(before,queue.Snapshot,"FIXTURE: remove/rejoin restores identical public assignment values");
+            }
+            else if(replacement=="rollback")
+            {
+                Assert.That(queue.TryPrepareMutation(CounterQueueService.MutationKind.Advance,id,queue.Version,out var prepared),Is.True);
+                Assert.That(prepared.TryApply(out var receipt),Is.True);receipt.RollbackOwnMutation();
+                CollectionAssert.AreEqual(before,queue.Snapshot,"FIXTURE: actual rollback restores values with a replacement Entry");
+            }
+            else { target=new CounterQueueService(new[]{Vector3.zero});Assert.That(target.TryJoin(id),Is.True); }
+            Assert.That(target.TryCaptureAssignment(id,out var current),Is.True);Assert.That(current.IsCurrent,Is.True);
+            if(replacement!="foreign")Assert.That(original.IsCurrent,Is.False);
+            var version=queue.Version;var targetVersion=target.Version;
+            Assert.That(original.IsSameReservation(current),Is.False,"Equal id/assignment values do not authorize another canonical Entry");
+            Assert.That(current.IsSameReservation(original),Is.False);
+            Assert.That(current.IsSameReservation(current),Is.True,"Control: the actual current claim must recognize its own Entry");
+            Assert.That(queue.Version,Is.EqualTo(version));Assert.That(target.Version,Is.EqualTo(targetVersion));
+        }
+
+        [Test] public void CounterAssignmentClaimIsReadOnlyAndSurvivesUnrelatedTailMetadata()
+        {
+            var queue=new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3});Assert.That(queue.TryJoin("own"),Is.True);
+            var before=queue.Snapshot.ToArray();var version=queue.Version;
+            Assert.That(queue.TryCaptureAssignment("own",out var claim),Is.True);Assert.That(claim.IsCurrent,Is.True);
+            Assert.That(claim.Assignment,Is.EqualTo(before.Single()));CollectionAssert.AreEqual(before,queue.Snapshot);Assert.That(queue.Version,Is.EqualTo(version));
+            queue.UpdateSlots(new[]{Vector3.zero,Vector3.forward*4});Assert.That(queue.Version,Is.GreaterThan(version));
+            Assert.That(claim.IsCurrent,Is.True,"An unallocated tail change does not replace this exact canonical assignment");
+            Assert.That(queue.Complete("own",1),Is.True);Assert.That(claim.IsCurrent,Is.True,"Actual arrival is separate from assignment ownership");
+        }
+        [Test] public void CounterAssignmentClaimRejectsRemovedAndRejoinedSameValueOwner()
+        {
+            var queue=new CounterQueueService(new[]{Vector3.zero});Assert.That(queue.TryJoin("same"),Is.True);
+            Assert.That(queue.TryCaptureAssignment("same",out var claim),Is.True);Assert.That(claim.IsCurrent,Is.True);
+            var before=queue.Snapshot.Single();Assert.That(queue.Remove("same"),Is.True);Assert.That(queue.TryJoin("same"),Is.True);
+            Assert.That(queue.Snapshot.Single(),Is.EqualTo(before),"FIXTURE: every public assignment value is identical after replacement");
+            Assert.That(claim.IsCurrent,Is.False,"Entry identity, not merely id/generation/position, rejects ABA");
+            Assert.That(queue.TryCaptureAssignment("same",out var replacement),Is.True);Assert.That(replacement.IsCurrent,Is.True);
+        }
+        [Test] public void CounterAssignmentClaimRejectsActualAssignmentGenerationChange()
+        {
+            var queue=CounterWithAdvanceCandidate();Assert.That(queue.TryCaptureAssignment("next",out var claim),Is.True);
+            Assert.That(claim.IsCurrent,Is.True);Assert.That(queue.TryGetNextAdvance(out var advanced),Is.True);
+            Assert.That(advanced.Generation,Is.GreaterThan(claim.Assignment.Generation));Assert.That(claim.IsCurrent,Is.False);
+        }
+        [Test] public void CounterAssignmentClaimSurvivesOtherOwnerRemovalWithoutTouchingEitherLedger()
+        {
+            var queue=new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3});Assert.That(queue.TryJoin("own"),Is.True);Assert.That(queue.TryJoin("other"),Is.True);
+            Assert.That(queue.TryCaptureAssignment("own",out var claim),Is.True);Assert.That(queue.Remove("other"),Is.True);
+            var before=queue.Snapshot.ToArray();var version=queue.Version;
+            Assert.That(claim.IsCurrent,Is.True);CollectionAssert.AreEqual(before,queue.Snapshot);Assert.That(queue.Version,Is.EqualTo(version));
+        }
+        [Test] public void CounterAssignmentClaimCannotBeCapturedForMissingOwner()
+        {
+            var queue=new CounterQueueService(new[]{Vector3.zero});var version=queue.Version;
+            Assert.That(queue.TryCaptureAssignment("missing",out var claim),Is.False);Assert.That(claim,Is.Null);
+            Assert.That(queue.Snapshot,Is.Empty);Assert.That(queue.Version,Is.EqualTo(version));
+        }
+        private static CounterQueueService CounterWithAdvanceCandidate()
+        {
+            var queue=new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3,Vector3.forward*6});
+            Assert.That(queue.TryJoin("head"),Is.True);
+            Assert.That(queue.TryJoin("next"),Is.True);
+            foreach(var assignment in queue.Snapshot) Assert.That(queue.Complete(assignment.VisitId,assignment.Generation),Is.True);
+            Assert.That(queue.Remove("head"),Is.True);
+            return queue;
+        }
+
+        [TestCase("join")] [TestCase("complete")] [TestCase("front-exit")]
+        [TestCase("remove")] [TestCase("advance")] [TestCase("slots")] [TestCase("restart")]
+        public void CounterCanonicalMutationInvalidatesPreparedVersion(string operation)
+        {
+            var queue=CounterWithAdvanceCandidate();
+            var before=queue.Version;
+            switch(operation)
+            {
+                case "join":
+                    queue=new CounterQueueService(new[]{Vector3.zero});before=queue.Version;
+                    Assert.That(queue.TryJoin("new"),Is.True);break;
+                case "complete":
+                    Assert.That(queue.TryGetNextAdvance(out var assignment),Is.True);before=queue.Version;
+                    Assert.That(queue.Complete("next",assignment.Generation),Is.True);break;
+                case "front-exit": Assert.That(queue.TryBeginFrontExit(out _),Is.True);break;
+                case "remove": Assert.That(queue.Remove("next"),Is.True);break;
+                case "advance": Assert.That(queue.TryGetNextAdvance(out _),Is.True);break;
+                case "slots": queue.UpdateSlots(new[]{Vector3.right*4,Vector3.right*4+Vector3.forward*3});break;
+                case "restart": queue.RestartAssignments();break;
+            }
+            Assert.That(queue.Version,Is.GreaterThan(before),"Canonical changes must invalidate captured permissions.");
+        }
+
+        [Test] public void CounterRejectedAndRepeatedArrivalDoNotInvalidateVersion()
+        {
+            var queue=CounterWithAdvanceCandidate();var before=queue.Version;
+            Assert.That(queue.TryJoin("next"),Is.False);
+            Assert.That(queue.Remove("missing"),Is.False);
+            Assert.That(queue.Complete("next",99),Is.False);
+            Assert.That(queue.TryGetNextAdvance(out _,candidate=>false),Is.False);
+            Assert.That(queue.Complete("next",1),Is.True,"Repeated actual arrival remains an idempotent acknowledgement.");
+            Assert.That(queue.Version,Is.EqualTo(before));
+        }
+
+        [TestCase("remove")] [TestCase("replace-owner")] [TestCase("slots")] [TestCase("restart")]
+        public void CounterAdvanceRejectsReentrantCanonicalMutation(string operation)
+        {
+            var queue=CounterWithAdvanceCandidate();QueueAssignment[] afterCallback=null;
+            var accepted=queue.TryGetNextAdvance(out var stale,candidate=>
+            {
+                switch(operation)
+                {
+                    case "remove": Assert.That(queue.Remove("next"),Is.True);break;
+                    case "replace-owner":
+                        Assert.That(queue.Remove("next"),Is.True);Assert.That(queue.TryJoin("next"),Is.True);break;
+                    case "slots": queue.UpdateSlots(new[]{Vector3.right*4,Vector3.right*4+Vector3.forward*3});break;
+                    case "restart": queue.RestartAssignments();break;
+                }
+                afterCallback=queue.Snapshot.ToArray();return true;
+            });
+            Assert.That(accepted,Is.False,"A callback may invalidate the captured Entry even when it returns true.");
+            Assert.That(stale.VisitId,Is.Null);
+            CollectionAssert.AreEqual(afterCallback,queue.Snapshot,"Rejecting the stale candidate must preserve the callback's own changes.");
+        }
+
+        [TestCase(CounterQueueService.MutationKind.Join)] [TestCase(CounterQueueService.MutationKind.Advance)]
+        public void CounterPreparationIsReadOnlyAndNamesExactCandidate(CounterQueueService.MutationKind kind)
+        {
+            var queue=kind==CounterQueueService.MutationKind.Join
+                ?new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3}):CounterWithAdvanceCandidate();
+            var id=kind==CounterQueueService.MutationKind.Join?"new":"next";
+            var before=queue.Snapshot.ToArray();var version=queue.Version;
+            Assert.That(queue.TryPrepareMutation(kind,id,version,out var prepared),Is.True);
+            Assert.That(prepared.IsCurrent,Is.True);
+            Assert.That(prepared.Assignment.VisitId,Is.EqualTo(id));
+            Assert.That(prepared.Assignment.SlotIndex,Is.Zero);
+            Assert.That(prepared.Assignment.Position,Is.EqualTo(Vector3.zero));
+            Assert.That(prepared.Assignment.Generation,Is.EqualTo(kind==CounterQueueService.MutationKind.Join?1:2));
+            Assert.That(prepared.Assignment.Arrived,Is.False);
+            CollectionAssert.AreEqual(before,queue.Snapshot);
+            Assert.That(queue.Version,Is.EqualTo(version));
+        }
+
+        [Test] public void CounterPreparationRejectsForeignAdvanceOwnerAndStaleVersion()
+        {
+            var queue=CounterWithAdvanceCandidate();var version=queue.Version;
+            Assert.That(queue.TryPrepareMutation(CounterQueueService.MutationKind.Advance,"next",version,out var valid),Is.True);
+            Assert.That(queue.TryPrepareMutation(CounterQueueService.MutationKind.Advance,"other",version,out _),Is.False);
+            Assert.That(queue.TryPrepareMutation(CounterQueueService.MutationKind.Join," next ",version,out _),Is.False);
+            queue.RestartAssignments();
+            Assert.That(queue.TryPrepareMutation(CounterQueueService.MutationKind.Advance,"next",version,out _),Is.False);
+            Assert.That(valid.IsCurrent,Is.False);
+        }
+
+        [TestCase(CounterQueueService.MutationKind.Join)] [TestCase(CounterQueueService.MutationKind.Advance)]
+        public void CounterPreparedApplyCommitsOnceAndRejectsOldArrival(CounterQueueService.MutationKind kind)
+        {
+            var queue=kind==CounterQueueService.MutationKind.Join
+                ?new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3}):CounterWithAdvanceCandidate();
+            var id=kind==CounterQueueService.MutationKind.Join?"new":"next";
+            Assert.That(queue.TryPrepareMutation(kind,id,queue.Version,out var prepared),Is.True);
+            var version=queue.Version;
+            Assert.That(prepared.TryApply(out var receipt),Is.True);
+            Assert.That(receipt,Is.Not.Null);Assert.That(receipt.IsCurrent,Is.True);
+            Assert.That(prepared.IsCurrent,Is.False);
+            Assert.That(queue.Version,Is.GreaterThan(version));
+            Assert.That(queue.Snapshot.Single(),Is.EqualTo(prepared.Assignment));
+            var committedVersion=queue.Version;
+            Assert.That(prepared.TryApply(out var duplicate),Is.False);Assert.That(duplicate,Is.Null);
+            Assert.That(queue.Version,Is.EqualTo(committedVersion));
+            Assert.That(queue.Complete(id,prepared.Assignment.Generation-1),Is.False);
+            Assert.That(queue.Complete(id,prepared.Assignment.Generation),Is.True);
+            Assert.That(queue.Snapshot.Single().Arrived,Is.True);
+        }
+
+        [Test] public void CounterPreparedApplyRejectsForeignQueueWithoutConsumingOwnerProposal()
+        {
+            var owner=new CounterQueueService(new[]{Vector3.zero});var foreign=new CounterQueueService(new[]{Vector3.right*4});
+            Assert.That(owner.TryPrepareMutation(CounterQueueService.MutationKind.Join,"new",owner.Version,out var prepared),Is.True);
+            Assert.That(foreign.TryApplyPrepared(prepared,out var refused),Is.False);Assert.That(refused,Is.Null);
+            Assert.That(foreign.Snapshot,Is.Empty);Assert.That(owner.Snapshot,Is.Empty);
+            Assert.That(prepared.IsCurrent,Is.True);
+            Assert.That(owner.TryApplyPrepared(prepared,out var receipt),Is.True);Assert.That(receipt.IsCurrent,Is.True);
+            Assert.That(owner.Snapshot.Single().Position,Is.EqualTo(Vector3.zero));
+        }
+
+        [Test] public void CounterPreparedApplyRejectsStaleVersionWithoutChangingNewOwner()
+        {
+            var queue=new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3});
+            Assert.That(queue.TryPrepareMutation(CounterQueueService.MutationKind.Join,"old",queue.Version,out var prepared),Is.True);
+            Assert.That(queue.TryJoin("new"),Is.True);var current=queue.Snapshot.ToArray();var version=queue.Version;
+            Assert.That(prepared.IsCurrent,Is.False);
+            Assert.That(prepared.TryApply(out var receipt),Is.False);Assert.That(receipt,Is.Null);
+            CollectionAssert.AreEqual(current,queue.Snapshot);Assert.That(queue.Version,Is.EqualTo(version));
+        }
+
+        [TestCase(CounterQueueService.MutationKind.Join)] [TestCase(CounterQueueService.MutationKind.Advance)]
+        public void CounterReceiptRollsBackOwnMutationOnceWithoutRevivingPreparedVersion(CounterQueueService.MutationKind kind)
+        {
+            var queue=kind==CounterQueueService.MutationKind.Join
+                ?new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3}):CounterWithAdvanceCandidate();
+            var id=kind==CounterQueueService.MutationKind.Join?"new":"next";
+            var before=queue.Snapshot.ToArray();
+            Assert.That(queue.TryPrepareMutation(kind,id,queue.Version,out var prepared),Is.True);
+            Assert.That(prepared.TryApply(out var receipt),Is.True);var appliedVersion=queue.Version;
+            receipt.RollbackOwnMutation();
+            CollectionAssert.AreEqual(before,queue.Snapshot);
+            Assert.That(queue.Version,Is.GreaterThan(appliedVersion),"Rollback cannot make an older proposal current again.");
+            Assert.That(prepared.IsCurrent,Is.False);Assert.That(receipt.IsCurrent,Is.False);
+            var rolledBackVersion=queue.Version;receipt.RollbackOwnMutation();
+            Assert.That(queue.Version,Is.EqualTo(rolledBackVersion));CollectionAssert.AreEqual(before,queue.Snapshot);
+            Assert.That(prepared.TryApply(out _),Is.False);
+        }
+
+        [Test] public void CounterStaleReceiptCannotEraseReplacementOwner()
+        {
+            var queue=new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3});
+            Assert.That(queue.TryPrepareMutation(CounterQueueService.MutationKind.Join,"same",queue.Version,out var prepared),Is.True);
+            Assert.That(prepared.TryApply(out var receipt),Is.True);
+            Assert.That(queue.Remove("same"),Is.True);Assert.That(queue.TryJoin("same"),Is.True);
+            Assert.That(queue.Complete("same",1),Is.True);
+            var replacement=queue.Snapshot.ToArray();var version=queue.Version;
+            Assert.That(receipt.IsCurrent,Is.False);
+            Assert.Throws<InvalidOperationException>(()=>receipt.RollbackOwnMutation());
+            CollectionAssert.AreEqual(replacement,queue.Snapshot);Assert.That(queue.Version,Is.EqualTo(version));
+        }
+
         [Test] public void AdmissionCanReserveStableTailWhileEarlierCustomerAdvances()
         {
             var queue=new CounterQueueService(new[]{Vector3.zero,Vector3.forward*3,Vector3.forward*6});

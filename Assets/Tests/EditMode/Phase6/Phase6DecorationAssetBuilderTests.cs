@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using AnimalCafe.Content;
 using AnimalCafe.Decoration;
@@ -22,6 +24,120 @@ namespace AnimalCafe.Tests.EditMode.Phase6
 {
     public sealed class Phase6DecorationAssetBuilderTests
     {
+        [Test]
+        public void UiPublishBackup_RestoreChangedMappedTargetPreservesBytesMetaGuidAndOldView()
+        {
+            using (var fixture = new UiBackupTextFixture())
+            {
+                var changed = new byte[] { 99, 104, 97, 110, 103, 101, 100 };
+                TestAssetBytes.Restore(fixture.Path, changed);
+                using (var stream = new FileStream(fixture.Path, FileMode.Open, FileAccess.Read,
+                    FileShare.ReadWrite | FileShare.Delete))
+                using (var mapping = MemoryMappedFile.CreateFromFile(stream, null, 0,
+                    MemoryMappedFileAccess.Read, HandleInheritability.None, leaveOpen: true))
+                using (var view = mapping.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read))
+                {
+                    // Real Windows mapped reader: truncating Copy fails; replacement preserves its old view.
+                    // 使用真实 mapped reader，恢复后旧 view 仍应能读取原来映射的 changed bytes。
+                    fixture.Restore();
+                    fixture.AssertRestored();
+                    var observed = new byte[changed.Length];
+                    view.ReadArray(0, observed, 0, observed.Length);
+                    Assert.That(observed, Is.EqualTo(changed));
+                }
+            }
+        }
+
+        [Test]
+        public void UiPublishBackup_RestoreIdenticalBytesNeedsNoWriteWithRestrictiveReaders()
+        {
+            using (var fixture = new UiBackupTextFixture())
+            using (var reader = new FileStream(fixture.Path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var metaReader = new FileStream(fixture.Path + ".meta", FileMode.Open,
+                FileAccess.Read, FileShare.Read))
+            {
+                fixture.Restore();
+                fixture.AssertRestored();
+            }
+        }
+
+        [Test]
+        public void UiPublishBackup_RestoreRecreatesMissingTargetAndMetaWithOriginalIdentity()
+        {
+            using (var fixture = new UiBackupTextFixture())
+            {
+                File.Delete(fixture.Path);
+                File.Delete(fixture.Path + ".meta");
+                fixture.Restore();
+                fixture.AssertRestored();
+            }
+        }
+
+        [Test]
+        public void UiPublishBackup_RestoreWithRestrictiveReaderRespectsPlatformSharingWithoutTempLeak()
+        {
+            using (var fixture = new UiBackupTextFixture())
+            {
+                var changed = new byte[] { 98, 108, 111, 99, 107, 101, 100 };
+                TestAssetBytes.Restore(fixture.Path, changed);
+                using (var reader = new FileStream(fixture.Path, FileMode.Open,
+                    FileAccess.Read, FileShare.Read))
+                {
+                    // Windows denies replacement without delete-sharing; Unix preserves the open file view.
+                    // Windows 检查真实 sharing error，Unix 检查原子替换及旧 reader 的完整内容。
+                    if (Application.platform == RuntimePlatform.WindowsEditor)
+                        Assert.Throws<IOException>(() => fixture.Restore());
+                    else
+                    {
+                        Assert.DoesNotThrow(() => fixture.Restore());
+                        fixture.AssertRestored();
+                    }
+                    using (var oldView = new BinaryReader(reader))
+                        Assert.That(oldView.ReadBytes(changed.Length), Is.EqualTo(changed));
+                }
+                Assert.That(File.ReadAllBytes(fixture.Path), Is.EqualTo(
+                    Application.platform == RuntimePlatform.WindowsEditor ? changed : fixture.Original));
+                Assert.That(File.ReadAllBytes(fixture.Path + ".meta"), Is.EqualTo(fixture.Meta));
+                Assert.That(AssetDatabase.AssetPathToGUID(fixture.AssetPath), Is.EqualTo(fixture.Guid));
+                fixture.AssertNoTemporaries();
+            }
+        }
+
+        [Test]
+        public void UiPublishBackup_RestoreDirectoryConflictPropagatesWithoutTempLeak()
+        {
+            using (var fixture = new UiBackupTextFixture())
+            {
+                var marker = System.IO.Path.Combine(fixture.Path, "owned-marker.bin");
+                AssetDatabase.DisallowAutoRefresh();
+                try
+                {
+                    // A nonempty directory cannot be replaced by the restored asset file on either platform.
+                    // 目录冲突在各平台都真实拒绝发布，仍须传播 I/O error 并清理本次 temp。
+                    File.Delete(fixture.Path);
+                    Directory.CreateDirectory(fixture.Path);
+                    File.WriteAllBytes(marker, fixture.Original);
+                    Assert.Throws<IOException>(() => fixture.Restore());
+                    Assert.That(Directory.Exists(fixture.Path), Is.True);
+                    Assert.That(File.ReadAllBytes(marker), Is.EqualTo(fixture.Original));
+                    Assert.That(File.ReadAllBytes(fixture.Path + ".meta"), Is.EqualTo(fixture.Meta));
+                    Assert.That(AssetDatabase.AssetPathToGUID(fixture.AssetPath), Is.EqualTo(fixture.Guid));
+                    fixture.AssertNoTemporaries();
+                }
+                finally
+                {
+                    try
+                    {
+                        if (File.Exists(marker)) File.Delete(marker);
+                        if (Directory.Exists(fixture.Path)) Directory.Delete(fixture.Path);
+                        File.WriteAllBytes(fixture.Path, fixture.Original);
+                    }
+                    finally { AssetDatabase.AllowAutoRefresh(); }
+                }
+                fixture.AssertRestored();
+            }
+        }
+
         [Test]
         public void BuildAll_CreatesExactMultiCellPrefabCompositionAndDefinitionContracts()
         {
@@ -324,7 +440,18 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             {
                 SetPrivateStaticBuilderField("UiPostPublishValidationFaultForTests", true);
                 Assert.That(
-                    () => Phase6DecorationAssetBuilder.BuildAll(),
+                    () =>
+                    {
+                        try
+                        {
+                            Phase6DecorationAssetBuilder.BuildAll();
+                        }
+                        catch (Exception error)
+                        {
+                            UnityEngine.Debug.Log("P6_POST_PUBLISH_FAILURE_DIAGNOSTIC\n" + error.ToString());
+                            throw;
+                        }
+                    },
                     Throws.TypeOf<InvalidOperationException>()
                         .With.Message.Contains("post-publish"));
                 AssertUiSnapshot(CaptureUiSnapshot(), before);
@@ -804,6 +931,96 @@ namespace AnimalCafe.Tests.EditMode.Phase6
             {
                 UnityEngine.Object.DestroyImmediate(definition);
                 PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        private sealed class UiBackupTextFixture : IDisposable
+        {
+            public readonly string AssetPath = "Assets/__P6Restore_" + System.Guid.NewGuid().ToString("N") + ".txt";
+            public readonly string Path;
+            public readonly byte[] Original = { 111, 114, 105, 103, 105, 110, 97, 108 };
+            public readonly byte[] Meta;
+            public readonly string Guid;
+            private readonly string identity;
+            private readonly object backup;
+            private bool ownsAsset;
+
+            public UiBackupTextFixture()
+            {
+                Path = System.IO.Path.GetFullPath(AssetPath);
+                try
+                {
+                    using (var stream = new FileStream(Path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    {
+                        ownsAsset = true;
+                        stream.Write(Original, 0, Original.Length);
+                    }
+                    AssetDatabase.ImportAsset(AssetPath, ImportAssetOptions.ForceSynchronousImport);
+                    Meta = File.ReadAllBytes(Path + ".meta");
+                    Guid = AssetDatabase.AssetPathToGUID(AssetPath);
+                    Assert.That(Guid, Is.Not.Empty);
+                    identity = CaptureObjectIdentity(AssetDatabase.LoadAssetAtPath<TextAsset>(AssetPath));
+                    var type = typeof(Phase6DecorationAssetBuilder).GetNestedType("UiPublishBackup", BindingFlags.NonPublic);
+                    Assert.That(type, Is.Not.Null);
+                    backup = InvokeBackup(type.GetMethod("Create", BindingFlags.Static | BindingFlags.Public),
+                        null, new object[] { new[] { AssetPath } });
+                }
+                catch
+                {
+                    Dispose();
+                    throw;
+                }
+            }
+
+            public void Restore()
+            {
+                InvokeBackup(backup.GetType().GetMethod("Restore", BindingFlags.Instance | BindingFlags.Public), backup);
+            }
+
+            public void AssertRestored()
+            {
+                Assert.That(File.ReadAllBytes(Path), Is.EqualTo(Original));
+                Assert.That(File.ReadAllBytes(Path + ".meta"), Is.EqualTo(Meta));
+                Assert.That(AssetDatabase.AssetPathToGUID(AssetPath), Is.EqualTo(Guid));
+                var text = AssetDatabase.LoadAssetAtPath<TextAsset>(AssetPath);
+                Assert.That(text.text, Is.EqualTo("original"), "Restore must synchronously import restored bytes.");
+                Assert.That(CaptureObjectIdentity(text), Is.EqualTo(identity));
+                AssertNoTemporaries();
+            }
+
+            public void AssertNoTemporaries()
+            {
+                Assert.That(Directory.GetFiles(System.IO.Path.GetDirectoryName(Path),
+                    "." + System.IO.Path.GetFileName(Path) + ".*.tmp"), Is.Empty);
+                Assert.That(Directory.GetFiles(System.IO.Path.GetDirectoryName(Path),
+                    "." + System.IO.Path.GetFileName(Path) + ".meta.*.tmp"), Is.Empty);
+            }
+
+            public void Dispose()
+            {
+                if (!ownsAsset) return;
+                try { (backup as IDisposable)?.Dispose(); }
+                finally
+                {
+                    // Delete only this unique imported fixture; never recursively clean shared Assets.
+                    // 仅清理本次测试持有的精确路径，不递归删除任何 Assets folder。
+                    var expected = System.IO.Path.Combine(Application.dataPath, System.IO.Path.GetFileName(AssetPath));
+                    if (!string.Equals(Path, System.IO.Path.GetFullPath(expected), StringComparison.OrdinalIgnoreCase)
+                        || !System.IO.Path.GetFileName(Path).StartsWith("__P6Restore_", StringComparison.Ordinal))
+                        throw new InvalidOperationException("Refuse cleanup outside owned P6 fixture.");
+                    AssetDatabase.DeleteAsset(AssetPath);
+                }
+            }
+
+            private static object InvokeBackup(MethodInfo method, object instance, params object[] arguments)
+            {
+                Assert.That(method, Is.Not.Null);
+                try { return method.Invoke(instance, arguments); }
+                catch (TargetInvocationException exception) when (exception.InnerException != null)
+                {
+                    ExceptionDispatchInfo.Capture(exception.InnerException).Throw();
+                    throw;
+                }
             }
         }
 
