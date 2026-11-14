@@ -5,6 +5,16 @@
 > 初步分类含 Linux 文件共享语义、旧 reflection optional 参数、未提交的开发机诊断依赖、旧同步准备前提与经营场景失败。修复和定向验证正在进行，全部 63 个失败尚未关闭。下方精简 PASS 保持其原 selectors 与 source 范围。原始报告保存于本地 outputs/phase15/p15-unity-ci-20261113/。
 
 
+<!-- P15_CI_PHOTO_REPAIR_20261113_BEGIN -->
+> **2026-11-13 CI 修复 checkpoint：完整 gate 仍未关闭。** Linux 定向运行 [43547618723](https://github.com/zhengparker/AnimalCafe/actions/runs/43547618723) 绑定 a6cf54f，EditMode 12/12、PlayMode 2/2 PASS。该 scope 为诊断，required Unity CI 按设计仍 FAIL，不能代替 full。它确认 P6/P7 跨平台文件共享测试，以及原 ThreeNatural／Center Normal 两例；其他旧失败不能据此外推为通过。
+>
+> **已修复 Photo 配置冲突场景的真实离店阻塞。** 首次等待只冻结当时的当前路线，遗漏另一位顾客已取得的同一 primary proof 后续段；后来该段及其真实移动身体进入原离店路线时，被误认为新 blocker。现在仅首次捕获确实相交的已取得路线资格，后续重新验证同 Entry／Source／Proof／ActorLife、真实 Bound leg、有限移动身体及原几何；保留 cycle、CanProgress、碰撞和原预算。没有把未来候选或静止身体视为独立进展。Editor 诊断异常不能打断原决策。
+>
+> 本地真实 Unity：完整 coordinator 类 **812/812 PASS**，含先 RED 后 GREEN 的后续段、moving-body、stationary／late-owner／原期限、throwing-diagnostic cases；XML SHA256 `2EF21ACE741953B0217FD55CFEB80A897CDB5EB6449E903F23A4F9C2A67253D8`。两组 Photo 各 **12 单 Completed、12 位顾客实际离店、容量归零、两员工 Idle**；该批另一个 Cashier 测试仍 FAIL，整批为 2 PASS／1 FAIL，XML `08C423BE5E71788A51842A30A30954CEEC75FC0AEF21A495284910D04230D054`。Core SHA256 `B9F8B28681C62E50277C26CACF86EAC8543941A75376D4F049E22F76FE68F10A`，Photo tests `50E739B9870B72D017888F4C5362CEB826099258438767ACF19194E54C8B1F5F`。限定独立 source review 无剩余 Critical／Important。
+>
+> PR 仍 Open、未 merge。剩余旧测试迁移、Cashier 送杯拒绝、Matrix 布局和新一轮 full CI 继续处理；本 checkpoint 不声明 P15 正式关闭。
+<!-- P15_CI_PHOTO_REPAIR_20261113_END -->
+
 <!-- P15_STOPPED_ARRIVAL_CLOSEOUT_20261107_BEGIN -->
 > **P15 开发验收已通过，PR #15 已创建并保持 Open。** Owner 授权继续修复并跑新一轮精简回归，沿用上一轮 selectors，并由原 P15 namespace 纳入 1 条新增 regression。最终 EditMode **1388/1388 PASS**，其中 P15 68 项。PlayMode **90/90 PASS**，其中 P15 77 项。全部预期用例各执行一次，FAIL／SKIP／缺失／重复均为 0。对应 XML SHA256 为 `E8E25E3B5B9294378983AE34C2298909D763383946C324992E481543FED54E4B` 和 `189B7FC7E2B3BD9B9F6750D5D751487E7594B426AB8138B1AAB1946F167661E4`。
 >

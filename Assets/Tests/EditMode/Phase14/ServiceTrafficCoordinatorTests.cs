@@ -2110,6 +2110,225 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             core.Close();Assert.That(core.HasPendingWork,Is.False);Assert.That(core.CurrentWorkPresentation,Is.Null);
         }
 
+        // Analytic model. Public Core operations create every owned source and stamped strict leg.
+        // 模型只用公开提交/到站/分腿接口；Native fixture 另证真实顾客与 canonical Queue。
+        private sealed class OriginalExitSelectedSuffixFixture
+        {
+            internal readonly TrafficIntentKey Exit=Key("original-suffix-exit","actual-exit",40);
+            internal readonly TrafficIntentKey Paid=Key("original-suffix-paid","pickup-paid-movement",30);
+            internal readonly TrafficIntentKey Gate=Key("original-suffix-gate","counter-admission",20);
+            internal readonly TrafficIntentKey Late=Key("original-suffix-late","pickup-paid-movement",50);
+            private readonly TrafficIntentKey pillar=Key("original-suffix-pillar","body");
+            private readonly object paidLife=new object(),gateLife=new object(),exitLife=new object(),pillarLife=new object(),lateLife=new object();
+            internal readonly ServiceTrafficCoordinator Core;
+            internal readonly TrafficDecision PaidSource,InitialWait;
+            internal readonly TrafficRouteProof PaidProof;
+            internal readonly HashSet<string> ThrownDiagnosticPrefixes=new HashSet<string>();
+            internal TrafficWorldSnapshot Snapshot;
+            internal readonly Vector3 Crossing,ExitStart,ExitGoal,GateEnd;
+            private Vector3 paidPosition=Origin,gatePosition,latePosition;
+            private bool gatePresent,exitPresent,latePresent,paidMoving,gateMoving,lateMoving;
+            private long version;private int frame=10,paidLeg;
+            private TrafficNativeStamp paidStamp;private readonly TrafficNativeStamp gateStamp=new TrafficNativeStamp(8201,1);
+            internal string PaidResource=>"pickup/"+Paid.ActorId;
+
+            internal OriginalExitSelectedSuffixFixture(bool throwingDiagnostic=false)
+            {
+                Snapshot=MakeWorld();
+                Core=Coordinator(Snapshot,frameBudget:4000,intentBudget:16384,waitSeconds:30);
+                PaidSource=Grant(Core,Request(Paid,Origin,P(6),Snapshot,resource:PaidResource,seconds:30));
+                PaidProof=PaidSource.ProofRoutes.Single();
+                Assert.That(PaidProof.Waypoints.Count,Is.GreaterThan(1),"FIXTURE: the real analytic planner must split around the static pillar");
+                var lastStart=PaidProof.Waypoints[PaidProof.Waypoints.Count-2];
+                Crossing=(lastStart+PaidProof.Waypoints.Last())*.5f;
+                ExitStart=Crossing+Vector3.back*4;ExitGoal=Crossing+Vector3.forward*4;
+                gatePosition=Crossing+Vector3.forward*3;GateEnd=gatePosition+Vector3.right*3;
+                Core.PrepareLeg(PaidSource,PaidResource,0,paidLife,1,Snapshot,paidPosition,.05f,2);Core.ProcessReady(2);
+                Assert.That(Core.GetDecision(Paid).Kind,Is.EqualTo(TrafficDecisionKind.Granted));
+                Assert.That(D1Read(Core,Paid,"Prepared"),Is.EqualTo(true));
+                Assert.That(D3ReadField(D1Read(Core,Paid,"Leg"),"Bound"),Is.EqualTo(false));
+                Assert.That(((Vector3[])D1Read(Core,Paid,"CurrentPath")).Max(p=>p.x),Is.LessThan(Crossing.x-.8f),
+                    "FIXTURE: initial current paid leg is entirely clear of the exit path, while its owned suffix crosses it");
+                Assert.That(CustomerRoutePlanner.IsClear(new[]{ExitStart,ExitGoal},new[]{Crossing},.8f),Is.False);
+                gatePresent=true;gateMoving=true;Refresh();
+                var gateSource=Grant(Core,Request(Gate,gatePosition,GateEnd,Snapshot,frame:3,resource:"counter/"+Gate.ActorId,seconds:30));
+                Core.PrepareLeg(gateSource,"counter/"+Gate.ActorId,0,gateLife,1,Snapshot,gatePosition,.05f,4);Core.ProcessReady(4);
+                Assert.That(Core.TryCommit(Core.GetDecision(Gate)),Is.True);Assert.That(Core.BindLeg(Gate,gateLife,gateStamp),Is.True);
+                exitPresent=true;Refresh();
+                Assert.That(RequeuePreparedLeg(Core,PaidSource,PaidResource,0,paidLife,1,Snapshot,paidPosition,out _),Is.EqualTo("Requeued"));
+                Core.ProcessReady(frame++);
+                Assert.That(Core.GetDecision(Paid).Kind,Is.EqualTo(TrafficDecisionKind.Granted));
+                Assert.That(D1Read(Core,Paid,"Prepared"),Is.EqualTo(true));
+                if(throwingDiagnostic)
+                {
+                    var observer=typeof(ServiceTrafficCoordinator).GetField("WaitFailureObserver",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+                    observer.SetValue(Core,(Action<string>)(message=>
+                    {
+                        ThrownDiagnosticPrefixes.Add(message.Split(' ')[0]);
+                        throw new InvalidOperationException("TEST diagnostic observer failure");
+                    }));
+                }
+                Core.EvaluateMovement(Request(Exit,ExitStart,ExitGoal,Snapshot,frame:frame++,resource:"pickup/"+Exit.ActorId,seconds:30));
+                Core.ProcessReady(frame++);InitialWait=Core.GetDecision(Exit);
+                Assert.That(InitialWait.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),InitialWait.Reason);
+                Assert.That(InitialWait.Blockers.Any(b=>b.Owner.Equals(Gate)),Is.True);
+                Assert.That(InitialWait.Blockers.All(b=>b.Owner.Equals(Gate)),Is.True,
+                    "FIXTURE: a relevant original suffix is eligibility, not a newly fabricated current WAIT edge");
+                Assert.That(D1Read(Core,Paid,"JourneyPermit"),Is.SameAs(PaidSource));
+                Core.DrainReady();
+            }
+            private TrafficWorldSnapshot MakeWorld()
+            {
+                var bodies=new List<TrafficBodyFact>{
+                    new TrafficBodyFact(Paid,paidPosition,.4f,true,paidMoving,paidMoving?30:0,actorLife:paidLife),
+                    new TrafficBodyFact(pillar,P(3),.4f,actorLife:pillarLife)};
+                if(gatePresent)bodies.Add(new TrafficBodyFact(Gate,gatePosition,.4f,true,gateMoving,gateMoving?30:0,actorLife:gateLife));
+                if(exitPresent)bodies.Add(new TrafficBodyFact(Exit,ExitStart,.4f,actorLife:exitLife));
+                if(latePresent)bodies.Add(new TrafficBodyFact(Late,latePosition,.4f,true,lateMoving,lateMoving?30:0,actorLife:lateLife));
+                return World(++version,version,bodies.ToArray());
+            }
+            private void Refresh(){Snapshot=MakeWorld();Core.SetSnapshot(Snapshot);}
+            internal void BindFirstPaidLeg()
+            {
+                var requeued=RequeuePreparedLeg(Core,PaidSource,PaidResource,0,paidLife,1,Snapshot,paidPosition,out _);
+                Assert.That(requeued,Is.EqualTo("NoOp").Or.EqualTo("Requeued"));
+                if(requeued=="Requeued")Core.ProcessReady(frame++);
+                Assert.That(Core.TryCommit(Core.GetDecision(Paid)),Is.True);
+                paidStamp=new TrafficNativeStamp(8301,1);Assert.That(Core.BindLeg(Paid,paidLife,paidStamp),Is.True);
+                paidMoving=true;Refresh();
+            }
+            internal void AdvancePaidToLastLeg()
+            {
+                BindFirstPaidLeg();
+                for(paidLeg=0;paidLeg<PaidProof.Waypoints.Count-1;paidLeg++)
+                {
+                    paidPosition=PaidProof.Waypoints[paidLeg];paidMoving=false;Refresh();
+                    Assert.That(Core.CompleteLeg(Paid,paidLife,paidStamp,paidPosition),Is.True);
+                    Core.PrepareLeg(PaidSource,PaidResource,paidLeg+1,paidLife,paidLeg+2,Snapshot,paidPosition,.05f,frame++);
+                    Core.ProcessReady(frame++);var leg=Core.GetDecision(Paid);
+                    Assert.That(leg.Kind,Is.EqualTo(TrafficDecisionKind.Granted),leg.Reason);Assert.That(Core.TryCommit(leg),Is.True);
+                    paidStamp=new TrafficNativeStamp(8302+paidLeg,paidLeg+2);Assert.That(Core.BindLeg(Paid,paidLife,paidStamp),Is.True);
+                    paidMoving=true;gatePosition+=Vector3.right*.05f;Refresh();
+                    Core.NotifyChanged(Gate,"body");Core.ProcessReady(frame++);
+                }
+            }
+            internal void FinishGate()
+            {
+                gatePosition=GateEnd;gateMoving=false;Refresh();
+                Assert.That(Core.CompleteLeg(Gate,gateLife,gateStamp,gatePosition),Is.True);Core.ProcessReady(frame++);
+            }
+            internal void FinishPaid()
+            {
+                paidPosition=PaidProof.Waypoints.Last();paidMoving=false;Refresh();
+                Assert.That(Core.CompleteLeg(Paid,paidLife,paidStamp,paidPosition),Is.True);Core.ProcessReady(frame++);
+            }
+            internal void MovePaidBodyOntoOriginalCrossing(bool progressing)
+            {
+                Assert.That(CustomerRoutePlanner.IsClear((Vector3[])D1Read(Core,Paid,"CurrentPath"),new[]{Crossing},.8f),Is.False,
+                    "FIXTURE: the checkpoint is on the actual original Bound final leg");
+                paidPosition=Crossing;paidMoving=progressing;
+                gatePosition+=Vector3.right*.05f;Refresh();
+                Core.NotifyChanged(Gate,"body");Core.ProcessReady(frame++);
+            }
+            internal void AddActuallyBoundLateOwner()
+            {
+                latePresent=true;latePosition=Crossing+Vector3.left*2+Vector3.back*2;Refresh();
+                var end=latePosition+Vector3.right*4;
+                var source=Grant(Core,Request(Late,latePosition,end,Snapshot,frame:frame++,resource:"pickup/"+Late.ActorId,seconds:30));
+                Core.PrepareLeg(source,"pickup/"+Late.ActorId,0,lateLife,1,Snapshot,latePosition,.05f,frame++);Core.ProcessReady(frame++);
+                Assert.That(Core.TryCommit(Core.GetDecision(Late)),Is.True);
+                Assert.That(Core.BindLeg(Late,lateLife,new TrafficNativeStamp(8401,1)),Is.True);lateMoving=true;Refresh();
+            }
+        }
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ActualExitFirstFreezeCapturesOwnedSuffixEligibilityWithoutChangingItsFrozenPool(bool expire)
+        {
+            var f=new OriginalExitSelectedSuffixFixture();
+            var frozen=(HashSet<TrafficIntentKey>)D1Read(f.Core,f.Exit,"FrozenOwners");
+            var pool=(Dictionary<TrafficIntentKey,HashSet<string>>)D1Read(f.Core,f.Exit,"FrozenResources");
+            Assert.That(frozen,Is.EquivalentTo(new[]{f.Gate}));Assert.That(pool.ContainsKey(f.Paid),Is.False);
+            var entry=((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Exit];
+            // An old Core reaches the actual new-frozen-owner behavior below before this new-field assertion.
+            // 旧实现的RED落在真实换腿拒绝；反射只读最初capture对象，用于之后核对不可动态扩展。
+            var eligibilityField=entry.GetType().GetField("FrozenSelectedRouteEligibility",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Public);
+            var originalEligibility=eligibilityField?.GetValue(entry);
+            var accounting=D3CaptureAccounting(f.Core,f.Exit);f.Core.Tick(.25f,false);
+            if(expire)
+            {
+                f.Core.Tick(31,false);Assert.That(f.Core.GetDecision(f.Exit).FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+                Assert.That(f.Core.GetDecision(f.Exit).AcquiredSequence,Is.Zero);return;
+            }
+            f.AdvancePaidToLastLeg();var waiting=f.Core.GetDecision(f.Exit);
+            Assert.That(waiting.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),
+                "FEATURE RED: the same original committed suffix became an actual independently progressing strict-leg conflict: "+waiting.Reason);
+            Assert.That(originalEligibility,Is.Not.Null,"Original first Freeze captured the same-source capability before the next leg existed");
+            Assert.That(eligibilityField.GetValue(entry),Is.SameAs(originalEligibility));
+            Assert.That(((System.Collections.IDictionary)originalEligibility).Contains(f.Paid),Is.True);
+            Assert.That(frozen,Is.EquivalentTo(new[]{f.Gate}));Assert.That(pool.ContainsKey(f.Paid),Is.False);
+            Assert.That(waiting.Blockers.Any(b=>b.Owner.Equals(f.Paid) && b.ResourceId==f.PaidResource && b.Proof=="current-conflict-segment"),Is.True);
+            f.MovePaidBodyOntoOriginalCrossing(true);waiting=f.Core.GetDecision(f.Exit);
+            Assert.That(waiting.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),
+                "FEATURE RED: the same captured Bound source's finite moving body entered its original selected route intersection: "+waiting.Reason);
+            Assert.That(waiting.Blockers.Any(b=>b.Owner.Equals(f.Paid) && b.ResourceId=="body" && b.Proof=="live-body-checkpoint"),Is.True);
+            Assert.That(eligibilityField.GetValue(entry),Is.SameAs(originalEligibility));
+            Assert.That(frozen,Is.EquivalentTo(new[]{f.Gate}));Assert.That(pool.ContainsKey(f.Paid),Is.False);
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(pool));
+            f.FinishGate();Assert.That(f.Core.GetDecision(f.Exit).Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic));
+            f.FinishPaid();var ready=f.Core.GetDecision(f.Exit);Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);
+            Assert.That(ready.RequestSequence,Is.EqualTo((long)accounting["RequestSequence"]));Assert.That(D1Read(f.Core,f.Exit,"FirstFrame"),Is.EqualTo(accounting["FirstFrame"]));
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo((float)accounting["WaitRemaining"]-.25f));
+            Assert.That(ready.AcquiredSequence,Is.Zero);Assert.That(f.Core.TryCommit(ready),Is.True);
+        }
+        [Test]
+        public void ActualExitInitialFreezeAndWaitRefusalSurviveAThrowingEditorDiagnostic()
+        {
+            var f=new OriginalExitSelectedSuffixFixture(throwingDiagnostic:true);
+            Assert.That(f.ThrownDiagnosticPrefixes,Has.Member("EXIT_INITIAL_FREEZE"),"The original first-freeze diagnostic was actually invoked");
+            Assert.That(f.InitialWait.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic));
+            Assert.That(f.InitialWait.AcquiredSequence,Is.Zero);
+            Assert.That((IEnumerable<TrafficIntentKey>)D1Read(f.Core,f.Exit,"FrozenOwners"),Is.EquivalentTo(new[]{f.Gate}));
+            Assert.That(D1Read(f.Core,f.Exit,"WaitRemaining"),Is.EqualTo(30f));
+            Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));
+            Assert.That(D1Read(f.Core,f.Paid,"Prepared"),Is.EqualTo(true));
+            Assert.That(f.Core.QueriesConsumed(f.Exit),Is.GreaterThan(0));
+            var sourceAge=D1Read(f.Core,f.Exit,"FirstFrame");var sequence=f.InitialWait.RequestSequence;
+            f.Core.Tick(.25f,false);f.AddActuallyBoundLateOwner();f.FinishGate();
+            Assert.That(f.ThrownDiagnosticPrefixes,Has.Member("WAIT_ORIGINAL"),"The actual original refusal diagnostic was also invoked");
+            var refused=f.Core.GetDecision(f.Exit);
+            Assert.That(refused.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed));
+            Assert.That(refused.Reason,Is.EqualTo("no-independent-finite-release-or-cycle"));
+            Assert.That(refused.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            Assert.That(refused.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(f.Core,f.Exit,"FirstFrame"),Is.EqualTo(sourceAge));
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo(29.75f));
+        }
+        [Test]
+        public void ActualExitOriginalSuffixEligibilityCannotAuthorizeAStationaryBodyCheckpoint()
+        {
+            var f=new OriginalExitSelectedSuffixFixture();f.Core.Tick(.25f,false);f.AdvancePaidToLastLeg();
+            var frozen=D1Read(f.Core,f.Exit,"FrozenOwners");var pool=D1Read(f.Core,f.Exit,"FrozenResources");
+            var remaining=(float)D1Read(f.Core,f.Exit,"WaitRemaining");
+            f.MovePaidBodyOntoOriginalCrossing(false);var refused=f.Core.GetDecision(f.Exit);
+            var body=f.Snapshot.Bodies.Single(b=>b.Owner.Equals(f.Paid));
+            Assert.That(body.IndependentlyProgressing,Is.False);Assert.That(body.RemainingSeconds,Is.Zero);
+            Assert.That(refused.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed));
+            Assert.That(refused.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            Assert.That(refused.Blockers.Any(b=>b.Owner.Equals(f.Paid) && b.ResourceId=="body" && b.Proof=="live-body-checkpoint"),Is.True);
+            Assert.That(refused.AcquiredSequence,Is.Zero);
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(pool));
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo(remaining));
+        }
+        [Test]
+        public void ActualExitOriginalSuffixEligibilityCannotAdoptAnOwnerCommittedAfterFirstFreeze()
+        {
+            var f=new OriginalExitSelectedSuffixFixture();var frozen=D1Read(f.Core,f.Exit,"FrozenOwners");
+            f.Core.Tick(.25f,false);var remaining=(float)D1Read(f.Core,f.Exit,"WaitRemaining");
+            f.AddActuallyBoundLateOwner();f.FinishGate();var refused=f.Core.GetDecision(f.Exit);
+            Assert.That(refused.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed));Assert.That(refused.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That((IEnumerable<TrafficIntentKey>)frozen,Has.No.Member(f.Late));
+            Assert.That(refused.AcquiredSequence,Is.Zero);Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo(remaining));
+        }
+
         private static readonly Vector3 Origin = Vector3.zero;
         private static Vector3 P(float x, float z = 0) => new Vector3(x, 0, z);
         private static TrafficIntentKey Key(string actor, string phase = "journey", int generation = 1,

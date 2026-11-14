@@ -59,9 +59,20 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 " paid="+string.Join(";",owner.Snapshot.PaidVisitIds);
 
         [UnityTest, Timeout(180000)] public IEnumerator PhotoParallelBenchesExposeActualPickupWaitReason()
+            => PhotoParallelBenchesBusinessAndAdmissionReadiness(false);
+
+        [UnityTest, Timeout(180000)] public IEnumerator PhotoParallelBenchesConfiguredConflictHoldsAndResumesOriginalAdmission()
+            => PhotoParallelBenchesBusinessAndAdmissionReadiness(true);
+
+        private IEnumerator PhotoParallelBenchesBusinessAndAdmissionReadiness(bool requireConflict)
         {
             // 截图估计布局，不能冒充Owner精确存档 / Photo-derived estimate, not an exact saved layout.
             yield return MatrixStart();
+            var configuredSpawn=CafeLoopRuntimeProof.Field<Transform>(customers,"spawn");
+            var originalSpawn=configuredSpawn.position;
+            var originalClock=CafeLoopRuntimeProof.Field<CustomerSpawnClock>(customers,"clock");
+            try
+            {
             var runtime=Find<AnimalCafe.Decoration.CafeLayoutRuntime>();var decor=Find<DecorationModeController>();
             var edit=CafeLoopRuntimeProof.Field<AnimalCafe.Decoration.DecorationSession>(decor,"session");
             var register=runtime.Layout.FurnitureInstances.Single(f=>f.Position==new AnimalCafe.Layout.GridPosition(1,5));
@@ -82,6 +93,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             Assert.That(decor.TryBeginFunctionalSurfacePreview(AnimalCafe.UI.Decoration.DecorationCatalogueItemKind.PickUpPoint,
                 "pickup.point",new AnimalCafe.Layout.SurfaceSlotAddress(pickupSupport.InstanceId,slot)),Is.True);
             Assert.That(decor.TryConfirmFunctionalSurfacePreview(),Is.True);yield return null;
+            // This variant changes its declared entry configuration before any real customer is born.
+            // 独立场景明确配置入口，原截图布局场景保持原入口；真实身体和通行权由正常流程建立。
+            if(requireConflict)configuredSpawn.position=new Vector3(1.5f,0,-3.35f);
             decor.ExitDecorationMode();yield return Until(()=>owner.CanProgress && employees.Snapshot.All(e=>e.State==EmployeeState.Idle));
             yield return null; // Let the normal owner publish the final layout binding before the input-order control.
             if(Environment.GetCommandLineArgs().Contains("-photoPreferFront"))
@@ -95,7 +109,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 TestContext.WriteLine("PHOTO_CONTROL only full legal side order changed; front-first; no removed side or bypass");
             }
             CafeLoopRuntimeProof.Set(customers,"clock",new CustomerSpawnClock(()=>.1f)); // One-second valid input, normal admission only.
-            tools.ResumeCollection();tools.ResumeArrivals();
+            if(!requireConflict){tools.ResumeCollection();tools.ResumeArrivals();}
             TestContext.WriteLine("PHOTO_ESTIMATE CR=(3,5)/0 CM=(5,7)/180 pickup=(6,5) ownerConfirmedMiddle=True fixedArrival=1gameSecond rows=(4..6,7),(5..7,5)");
             Assert.That(employees.TryGetBinding(EmployeeRole.Barista,out var binding),Is.True);
             TestContext.WriteLine("PHOTO_BINDING machine="+binding.WorkStationId+" work="+binding.WorkTarget.Position+
@@ -105,6 +119,38 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             var previousPhoto=photoHook.GetValue(customers) as Delegate;var photoEvents=new List<string>();
             var photoCore=CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic");
             var photoStates=new Dictionary<TrafficIntentKey,string>();
+            var departure=CafeLoopRuntimeProof.Field<Transform>(customers,"exit");
+            var photoAdmitted=new Dictionary<string,CapacityToken>();var actualPhotoExits=new HashSet<string>();
+            var exitErrors=new List<string>();var exitObservers=new List<CafeActualExitObserver>();var trackExits=true;
+            void WatchPhoto(CafeLoopSnapshot snapshot)
+            {
+                try
+                {
+                    foreach(var visit in customers.Snapshot)
+                    {
+                        if(photoAdmitted.ContainsKey(visit.VisitId))continue;
+                        var id=visit.VisitId;
+                        photoAdmitted.Add(id,customers.Capacity.GetReservations().Single(r=>r.OwnerId==id && r.Kind==CapacityKind.TotalCustomers).Token);
+                        var actor=world.RegisteredActors.Single(a=>a.ActorId==id);
+                        var exitTolerance=actor.Settings.ArrivalDistance+actor.Settings.Epsilon;
+                        var observer=actor.gameObject.AddComponent<CafeActualExitObserver>();exitObservers.Add(observer);observer.VisitId=id;
+                        observer.Receipt=(leaving,pose)=>
+                        {
+                            if(!trackExits)return;
+                            try
+                            {
+                                if(Vector3.Distance(pose,departure.position)>exitTolerance ||
+                                    customers.Capacity.GetReservations().Single(r=>ReferenceEquals(r.Token,photoAdmitted[leaving])).State!=ReservationState.Released ||
+                                    !owner.Snapshot.Orders.Values.Any(o=>o.CustomerId==leaving && o.State==OrderState.Completed) || !actualPhotoExits.Add(leaving))
+                                    exitErrors.Add("Invalid or repeated actual exit: "+leaving);
+                            }
+                            catch(Exception error){exitErrors.Add(error.ToString());}
+                        };
+                    }
+                    if(photoAdmitted.Count>=12)customers.AutoSpawn=false;
+                }
+                catch(Exception error){exitErrors.Add(error.ToString());}
+            }
             string PhotoPath(IEnumerable<Vector3> points)=>string.Join(";",points.Select(v=>v.ToString("F4")));
             void PhotoEntries(string cause,bool force=false)
             {
@@ -161,25 +207,123 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             var photoWaitTrace=new TrafficWaitFailureTrace(CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic"));
             var failureHook=typeof(ServiceTrafficCoordinator).GetField("WaitFailureObserver",BindingFlags.Instance|BindingFlags.NonPublic);
             var previousFailure=failureHook.GetValue(photoCore) as Delegate;
-            Action<string> failureCapture=text=>{if(text.StartsWith("WAIT_ORIGINAL"))PhotoEntries("original-refusal",true);};
+            Action<string> failureCapture=text=>{if(text.StartsWith("EXIT_INITIAL_FREEZE"))TestContext.WriteLine(text);if(text.StartsWith("WAIT_ORIGINAL")){TestContext.WriteLine("PHOTO_ORIGINAL_WAIT "+text);PhotoEntries("original-refusal",true);}};
             failureHook.SetValue(photoCore,Delegate.Combine(previousFailure,failureCapture));
+            owner.SnapshotChanged+=WatchPhoto;
             try
             {
+            TrafficIntentKey? controlledAdmission=null;TrafficRequest controlledExit=null;var controlledBorn=false;
+            if(requireConflict)
+            {
+                var prefabs=CafeLoopRuntimeProof.Field<NavigationActor[]>(customers,"prefabs");
+                var next=CafeLoopRuntimeProof.Field<long>(customers,"nextVisit");
+                var priorSettings=prefabs[(int)(next%prefabs.Length)].Settings;
+                var incomingSettings=prefabs[(int)((next+1)%prefabs.Length)].Settings;
+                var clearance=priorSettings.AgentRadius+incomingSettings.AgentRadius+
+                    Mathf.Max(priorSettings.CollisionSkin+priorSettings.Epsilon,incomingSettings.CollisionSkin+incomingSettings.Epsilon);
+                var counter=CafeLoopRuntimeProof.Field<CounterQueueService>(customers,"queue");
+                Assert.That(counter.NextAdmissionPosition.HasValue,Is.True,"FIXTURE: real Counter has a legal first endpoint");
+                var endpoint=counter.NextAdmissionPosition.Value;
+                Assert.That(adapter.IsPointWalkable(configuredSpawn.position),Is.True,"FIXTURE: configured entry is on the real NavMesh");
+                Assert.That(adapter.IsPointWalkable(departure.position),Is.True);
+                var approach=adapter.GetCompletePath(configuredSpawn.position,endpoint);
+                Assert.That(approach,Is.Not.Null.And.Not.Empty,"FIXTURE: actual Native entry approach is complete");
+                Assert.That(CustomerRoutePlanner.IsClear(approach,new[]{departure.position},clearance),Is.False,
+                    "FIXTURE: actual Native approach must cross the fixed exit endpoint clearance");
+                Assert.That(Vector3.Distance(configuredSpawn.position,departure.position),Is.GreaterThan(clearance));
+                Assert.That(Vector3.Distance(endpoint,departure.position),Is.GreaterThan(clearance));
+                TestContext.WriteLine("PHOTO_CONFIGURED_CONFLICT spawn="+configuredSpawn.position+" exit="+departure.position+
+                    " endpoint="+endpoint+" clearance="+clearance+" native=["+PhotoPath(approach)+"]");
+                yield return AwaitTrafficAdmission();
+                var predecessor=customers.Snapshot.Single().VisitId;
+                yield return Until(()=>owner.Snapshot.Orders.Values.Any(o=>o.CustomerId==predecessor && o.State==OrderState.ReadyForPickup) &&
+                    customers.Snapshot.Single(v=>v.VisitId==predecessor).State==CustomerVisitState.PickupWaiting &&
+                    employees.Snapshot.All(e=>e.State==EmployeeState.Idle));
+                tools.ResumeCollection();
+                yield return Until(()=>customers.Snapshot.Any(v=>v.VisitId==predecessor && v.State==CustomerVisitState.Exiting) &&
+                    (long)MovementRead(CafeLoopRuntimeProof.Field<IDictionary>(customers,"visits")[predecessor],"RequestId")>0);
+                var priorVisit=CafeLoopRuntimeProof.Field<IDictionary>(customers,"visits")[predecessor];
+                var priorMove=MovementRead(priorVisit,"TrafficMove");var priorKey=(TrafficIntentKey)MovementRead(priorMove,"Intent");
+                Assert.That(priorKey.IntentId,Is.EqualTo("actual-exit"));
+                var priorEntry=CafeLoopRuntimeProof.Field<IDictionary>(photoCore,"entries")[priorKey];
+                var priorLeg=MovementRead(priorEntry,"Leg");
+                Assert.That(MovementRead(priorLeg,"Bound"),Is.EqualTo(true),"FIXTURE: original real Native exit has actually been accepted");
+                controlledExit=(TrafficRequest)MovementRead(priorEntry,"JourneyRequest");
+                Assert.That(controlledExit.Target.Equals(departure.position),Is.True);
+                Assert.That(customers.TrySpawn(),Is.False,"FIXTURE: the new original manual admission first prepares normally");
+                var anchor=CafeLoopRuntimeProof.Field<object>(customers,"pendingAdmissionAnchor");
+                Assert.That(anchor,Is.Not.Null);controlledAdmission=(TrafficIntentKey)MovementRead(anchor,"Key");
+            }
             var first="";var reached=false;var last="";var records=0;var pickupVisits=new HashSet<string>();
             var heldAdmissions=new HashSet<string>();var resumedAdmissions=new HashSet<string>();
-            for(var frame=0;frame<7200;frame++)
+            var heldSources=new Dictionary<TrafficIntentKey,(object Entry,int FirstFrame,int Queries,float Wait)>();
+            var resumedSources=new HashSet<TrafficIntentKey>();
+            for(var frame=0;frame<7200 && actualPhotoExits.Count<12;frame++)
             {
                 foreach(DictionaryEntry row in CafeLoopRuntimeProof.Field<IDictionary>(photoCore,"entries"))
                 {
                     var key=(TrafficIntentKey)row.Key;
-                    if(key.IntentId!="counter-admission" || !(bool)MovementRead(row.Value,"AdmissionHeld"))continue;
-                    heldAdmissions.Add(key.ActorId);
+                    if(key.IntentId!="counter-admission")continue;
+                    var heldEntry=row.Value;var heldDecision=(TrafficDecision)MovementRead(heldEntry,"Decision");
+                    var actualReadinessHold=(bool)MovementRead(heldEntry,"AdmissionHeld") &&
+                        heldDecision.Kind==TrafficDecisionKind.DeferredByBudget && heldDecision.Reason=="admission-exit-readiness-held" &&
+                        heldDecision.FailureDisposition==TrafficFailureDisposition.None;
+                    if(!heldSources.TryGetValue(key,out var saved))
+                    {
+                        // Only the current exact readiness decision establishes the first hold receipt.
+                        // AdmissionHeld 可跨正常重证保留；普通 budget 状态不能首次充当 readiness 证据。
+                        if(!actualReadinessHold)continue;
+                        heldAdmissions.Add(key.ActorId);
+                        saved=(heldEntry,(int)MovementRead(heldEntry,"FirstFrame"),(int)MovementRead(heldEntry,"Queries"),(float)MovementRead(heldEntry,"WaitRemaining"));
+                        heldSources.Add(key,saved);
+                    }
+                    if(resumedSources.Contains(key) || customers.Snapshot.Any(v=>v.VisitId==key.ActorId))continue;
+                    Assert.That(heldEntry,Is.SameAs(saved.Entry));
+                    Assert.That(MovementRead(heldEntry,"FirstFrame"),Is.EqualTo(saved.FirstFrame));
+                    Assert.That((int)MovementRead(heldEntry,"Queries"),Is.GreaterThanOrEqualTo(saved.Queries),"The original query accounting cannot reset across a held source");
+                    Assert.That((float)MovementRead(heldEntry,"WaitRemaining"),Is.LessThanOrEqualTo(saved.Wait));
+                    Assert.That(heldDecision.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));
+                    Assert.That(heldDecision.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget).Or.EqualTo(TrafficDecisionKind.Granted),
+                        "An observed original hold can pass through normal bounded reproof and uncommitted preparation before birth");
+                    Assert.That(heldDecision.AcquiredSequence,Is.Zero);
+                    Assert.That(MovementRead(heldEntry,"Active"),Is.EqualTo(false));
+                    if(heldDecision.Kind==TrafficDecisionKind.DeferredByBudget)
+                        Assert.That(MovementRead(heldEntry,"Prepared"),Is.EqualTo(false));
+                    if(actualReadinessHold)Assert.That(heldDecision.Reason,Is.EqualTo("admission-exit-readiness-held"));
+                    Assert.That(MovementRead(heldEntry,"FrozenOwners"),Is.Null);Assert.That(MovementRead(heldEntry,"FrozenResources"),Is.Null);
+                    if(actualReadinessHold && requireConflict && controlledAdmission.HasValue && key.Equals(controlledAdmission.Value))
+                    {
+                        var heldRequest=(TrafficRequest)MovementRead(heldEntry,"Request");
+                        var pairClearance=heldRequest.Radius+controlledExit.Radius+Mathf.Max(heldRequest.SafetyMargin,controlledExit.SafetyMargin);
+                        var heldPath=(Vector3[])MovementRead(heldEntry,"AdmissionFirstLeg");
+                        Assert.That(heldPath,Is.Not.Empty,"FIXTURE: inspect the actual stored first leg used by readiness");
+                        Assert.That(CustomerRoutePlanner.IsClear(heldPath,new[]{controlledExit.Target},pairClearance),Is.False);
+                    }
                     Assert.That(customers.Snapshot.Any(v=>v.VisitId==key.ActorId),Is.False,"Held admission must remain unborn");
                     Assert.That(world.RegisteredActors.Any(v=>v.ActorId==key.ActorId),Is.False);
                     Assert.That(customers.CounterAssignments.Any(v=>v.VisitId==key.ActorId),Is.False);
                     Assert.That(customers.Capacity.GetReservations().Any(v=>v.OwnerId==key.ActorId),Is.False);
                 }
-                foreach(var v in customers.Snapshot.Where(v=>heldAdmissions.Contains(v.VisitId)))resumedAdmissions.Add(v.VisitId);
+                foreach(var v in customers.Snapshot.Where(v=>heldAdmissions.Contains(v.VisitId)))
+                {
+                    resumedAdmissions.Add(v.VisitId);
+                    foreach(var saved in heldSources.Where(p=>p.Key.ActorId==v.VisitId && !resumedSources.Contains(p.Key)))
+                    {
+                        var resumed=CafeLoopRuntimeProof.Field<IDictionary>(photoCore,"entries")[saved.Key];
+                        Assert.That(resumed,Is.SameAs(saved.Value.Entry));
+                        Assert.That(MovementRead(resumed,"FirstFrame"),Is.EqualTo(saved.Value.FirstFrame));
+                        var primary=(TrafficRequest)MovementRead(resumed,"JourneyRequest");
+                        Assert.That(primary,Is.Not.Null);Assert.That(primary.Intent,Is.EqualTo(saved.Key));
+                        Assert.That(primary.RequestedFrame,Is.EqualTo(saved.Value.FirstFrame));
+                        Assert.That((float)MovementRead(resumed,"WaitRemaining"),Is.LessThanOrEqualTo(saved.Value.Wait));
+                        resumedSources.Add(saved.Key);
+                    }
+                }
+                if(requireConflict && !controlledBorn)
+                {
+                    controlledBorn=customers.TrySpawn();
+                    if(controlledBorn)tools.ResumeArrivals();
+                }
                 PhotoEntries("frame");
                 if(first.Length==0 && customers.Snapshot.Count>0)first=customers.Snapshot[0].VisitId;
                 foreach(var visit in customers.CafeSnapshot.Where(v=>v.PickupArrived))pickupVisits.Add(visit.VisitId);
@@ -235,27 +379,50 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             {
                 camera.targetTexture=render;camera.aspect=664f/855;camera.Render();RenderTexture.active=render;
                 image.ReadPixels(new Rect(0,0,664,855),0,0);image.Apply();
-                var screenshotPath=System.IO.Path.Combine(Application.dataPath,"../outputs/phase15/photo-pickup-wait-20261103/layout.png");
+                var screenshotPath=System.IO.Path.Combine(Application.dataPath,requireConflict
+                    ? "../outputs/phase15/photo-pickup-wait-20261103/configured-conflict-layout.png"
+                    : "../outputs/phase15/photo-pickup-wait-20261103/layout.png");
                 System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(screenshotPath));
                 System.IO.File.WriteAllBytes(screenshotPath,image.EncodeToPNG());
             }
             finally{camera.targetTexture=oldTarget;camera.aspect=oldAspect;RenderTexture.active=oldActive;UnityEngine.Object.Destroy(render);UnityEngine.Object.Destroy(image);}
             TestContext.WriteLine("PHOTO_READINESS held="+string.Join(";",heldAdmissions)+" resumed="+string.Join(";",resumedAdmissions));
-            Assert.That(heldAdmissions,Is.Not.Empty,"Require actual same-layout unborn readiness hold");
-            Assert.That(resumedAdmissions,Is.Not.Empty,"Held original admission must later resume naturally");
+            if(requireConflict)
+            {
+                Assert.That(controlledAdmission.HasValue,Is.True);
+                Assert.That(heldAdmissions,Is.Not.Empty,"Require actual configured-layout unborn readiness hold");
+                Assert.That(resumedAdmissions,Is.Not.Empty,"Held original admission must later resume naturally");
+                Assert.That(heldSources.ContainsKey(controlledAdmission.Value),Is.True,"The specifically submitted original source must actually hold");
+                Assert.That(resumedSources.Contains(controlledAdmission.Value),Is.True,"The exact held key must actually resume and give birth");
+            }
             Assert.That(pickupVisits.Count,Is.GreaterThanOrEqualTo(4),"Photo-derived multi-guest reproduction: inspect actual payments and blocker facts");
             yield return Until(()=>customers.Snapshot.Count==0 && employees.Snapshot.All(e=>e.State==EmployeeState.Idle));
             Assert.That(customers.Capacity.GetCapacities().All(c=>c.Used==0),Is.True,"真实排空后原容量归零 / Real departure releases capacity");
             Assert.That(owner.Snapshot.Orders.Values.All(o=>o.State==OrderState.Completed),Is.True);
+            Assert.That(exitErrors,Is.Empty);
+            Assert.That(photoAdmitted.Count,Is.EqualTo(12),"Require the same bounded twelve-customer business cohort");
+            CollectionAssert.AreEquivalent(photoAdmitted.Keys,actualPhotoExits,"Every admitted body must reach the fixed exit and release its original capacity token exactly once");
+            Assert.That(owner.Snapshot.Orders.Count,Is.EqualTo(12));
+            Assert.That(owner.Snapshot.PaidVisitIds.Count,Is.EqualTo(12));
+            Assert.That(world.RegisteredActors.Count,Is.EqualTo(2),"Both staff remain after every customer actually departs");
             TestContext.WriteLine("PHOTO_FINAL_DRAIN orders="+owner.Snapshot.Orders.Count+" completed="+owner.Snapshot.Orders.Values.Count(o=>o.State==OrderState.Completed)+
                 " visits="+customers.Snapshot.Count+" staffIdle="+employees.Snapshot.All(e=>e.State==EmployeeState.Idle)+" capacityZero="+customers.Capacity.GetCapacities().All(c=>c.Used==0));
             }
             finally
             {
+                trackExits=false;owner.SnapshotChanged-=WatchPhoto;customers.AutoSpawn=false;
+                foreach(var observer in exitObservers)if(observer!=null)observer.Receipt=null;
                 photoHook.SetValue(customers,previousPhoto);
                 failureHook.SetValue(photoCore,previousFailure);
                 photoWaitTrace.Dispose();
                 foreach(var photoEvent in photoEvents)TestContext.WriteLine(photoEvent);
+            }
+            }
+            finally
+            {
+                customers.AutoSpawn=false;
+                configuredSpawn.position=originalSpawn;
+                CafeLoopRuntimeProof.Set(customers,"clock",originalClock);
             }
         }
 
