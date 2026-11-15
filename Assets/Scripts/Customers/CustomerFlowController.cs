@@ -616,7 +616,12 @@ namespace AnimalCafe.Customers
             if(preview==null)
             {
                 if(PickupFamilyPreviewMatches(p,p.CurrentPreview))preview=p.CurrentPreview;
-                else if(!p.Owner.TryPrepareMutation(p.Operation,p.Visit.Id,p.Owner.Version,out preview,p.Target))return false;
+                else if(!p.Owner.TryPrepareMutation(p.Operation,p.Visit.Id,p.Owner.Version,out preview,p.Target))
+                {
+                    if(p.Operation==PickupQueueService.MutationKind.CollectionLease && PickupFamilyPreparationCurrent(p) &&
+                        ReferenceEquals(traffic.GetDecision(p.Key),expected))traffic.TryHoldCanonicalAnchorPreparation(expected);
+                    return false;
+                }
             }
             if(!PickupFamilyPreviewMatches(p,preview))return false;
             if(!traffic.TryReprepareCanonicalAnchor(expected,PickupFamilyRequest(p,snapshot),out next))return false;
@@ -764,6 +769,8 @@ namespace AnimalCafe.Customers
             internal readonly HashSet<int> AttemptedIndices=new HashSet<int>(),StaticInvalidIndices=new HashSet<int>();
             internal readonly HashSet<int> UnpaidEligibilityAttempts=new HashSet<int>();
             internal TrafficUnpaidParkingEligibility UnpaidEligibility;
+            internal InitialPickupGeometry InitialGeometry;
+            internal int PhysicalSideIndex(int index)=>InitialGeometry==null?index:InitialGeometry.Members[index].SideIndex;
             internal TrafficDecision UnpaidEligibilityRound;
             internal bool HasAttempted(int index)=>(UnpaidEligibility==null?AttemptedIndices:UnpaidEligibilityAttempts).Contains(index);
             internal int CurrentIndex;
@@ -782,7 +789,8 @@ namespace AnimalCafe.Customers
             internal TrafficDecision ObservedAdvanceSource;
             internal bool ObservedPreflight;
 #endif
-            internal int Count=>Sides.Count*(Role==TrafficCandidateRole.Yield?24:1)+(OriginalDeliveryPlan==null?0:1);
+            internal int Count=>InitialGeometry!=null?InitialGeometry.Members.Length:
+                Sides.Count*(Role==TrafficCandidateRole.Yield?24:1)+(OriginalDeliveryPlan==null?0:1);
             internal TrafficCandidateCursor(TrafficIntentKey key,object actorLife,NavigationTarget[] sides,Vector3 origin,
                 TrafficCandidateRole role,int currentIndex,TrafficDecision source)
             {
@@ -879,7 +887,7 @@ namespace AnimalCafe.Customers
                 }
                 if(UnpaidEligibility!=null)
                 {
-                    if(next.Reason=="unpaid-eligibility/spatial-change" && !ReferenceEquals(next,UnpaidEligibilityRound))
+                    if(InitialGeometry==null && next.Reason=="unpaid-eligibility/spatial-change" && !ReferenceEquals(next,UnpaidEligibilityRound))
                     {UnpaidEligibilityAttempts.Clear();UnpaidEligibilityRound=next;}
                     UnpaidEligibilityAttempts.Add(index);
                 }
@@ -889,6 +897,8 @@ namespace AnimalCafe.Customers
             {
                 side=default;target=default;
                 if(!Key.Equals(key) || actorLife==null || !ReferenceEquals(ActorLife,actorLife) || index<0 || index>=Count)return false;
+                if(InitialGeometry!=null)
+                {var member=InitialGeometry.Members[index];side=member.Side;target=member.Slots[0];return true;}
                 if(Role!=TrafficCandidateRole.Yield)
                 {side=index==Sides.Count?OriginalDeliveryPlan.Side:Sides[index];target=side.Position;return true;}
                 // Index decoding only; candidate selection never wraps or expands this original finite set.
@@ -1169,6 +1179,30 @@ namespace AnimalCafe.Customers
             catch(Exception error){return Refused("cfc.exception/"+error.GetType().Name);}
             return Refused("cfc.no-held-counter-claim");
         }
+        // Core passes its actual current prepared Decision; the producer cursor may still cache the prior batch result.
+        // 不写回stale cursor.Source；只认证原anchor/preview/同CQ头客，Core独立重验完整准备事实。
+        private TrafficCounterUncommittedPreparationObservation ReadCounterUncommittedPredecessor(CounterAdvanceAnchor a,
+            TrafficIntentKey owner,TrafficDecision source)
+        {
+            if(a.Recovery || !CounterAdvanceAnchorCurrent(a) || source==null || !source.Intent.Equals(owner) ||
+                source.Kind!=TrafficDecisionKind.Granted || source.FailureDisposition!=TrafficFailureDisposition.None || source.AcquiredSequence!=0 ||
+                owner.IntentId!="pickup-wait" || !ReferenceEquals(a.Coordinator.GetDecision(owner),source) ||
+                !visits.TryGetValue(owner.ActorId,out var predecessor))return null;
+            var p=predecessor.PendingReservationAnchor;
+            if(p==null || !p.Submitted || !p.Key.Equals(owner) || !ReferenceEquals(p.Coordinator,a.Coordinator) ||
+                !ReferenceEquals(p.Counter,a.Counter) || !ReferenceEquals(p.Visit,predecessor) || !ReservationAnchorCurrent(p) ||
+                predecessor.QueueLeft || predecessor.PickupAssigned || predecessor.PickupParking!=null || predecessor.PaidPickup!=null ||
+                predecessor.RequestId!=0 || predecessor.PickupInTransit || predecessor.TrafficMovePending ||
+                !trafficCandidates.TryGetValue(owner,out var cursor) || !ReferenceEquals(cursor.UnpaidEligibility,p.Eligibility) ||
+                cursor.Role!=TrafficCandidateRole.Reservation || !ReferenceEquals(cursor.ActorLife,p.Actor) ||
+                p.Preview==null || p.Preview.Consumed || !p.Preview.BelongsTo(p.Owner) || !p.Preview.IsCurrent ||
+                p.Preview.Kind!=PickupQueueService.MutationKind.Reserve || p.Preview.Id!=owner.ActorId ||
+                p.Preview.Assignment.VisitId!=owner.ActorId || p.Owner.TryCaptureReservation(owner.ActorId,out _))return null;
+            var rows=a.Counter.Snapshot;
+            if(rows.Count<2 || rows[0].VisitId!=owner.ActorId || rows[0].SlotIndex!=0 || !rows[0].Arrived ||
+                !rows.Skip(1).Any(row=>row.VisitId==a.Visit.Id))return null;
+            return new TrafficCounterUncommittedPreparationObservation(p.Actor,predecessor,p.Admission,p.CounterClaim,p.Owner,p.Preview,source);
+        }
         private bool BindCounterAdvanceReadiness(CounterAdvanceAnchor a,TrafficDecision expected)
         {
             if(a.Recovery)return true;
@@ -1177,7 +1211,8 @@ namespace AnimalCafe.Customers
             {
                 var working=CounterAdvanceWorkingPredecessorSeconds(a,owner);
                 return working>0?working:CounterAdvanceHandoffPredecessorSeconds(a,owner);
-            },(owner,source)=>ReadCounterOriginalPaidTraversal(a,owner,source));
+            },(owner,source)=>ReadCounterOriginalPaidTraversal(a,owner,source),
+                (owner,source)=>ReadCounterUncommittedPredecessor(a,owner,source));
             return a.Coordinator.TrySetCounterAdvanceReadiness(expected,a.Readiness);
         }
         private bool CounterAdvanceAnchorCurrent(CounterAdvanceAnchor a)
@@ -1237,6 +1272,100 @@ namespace AnimalCafe.Customers
                 a.Coordinator.Retire(a.Key);
         }
 
+        // Static preparation data only; no Visit/ActorLife is retained by the published blueprint.
+        // 蓝图只保存几何历史；真实owner/身体/许可仍由每次原Core请求证明。
+        private sealed class InitialPickupMember
+        {
+            internal readonly Vector3[] Slots;
+            internal readonly int SideIndex;
+            internal readonly NavigationTarget Side;
+            internal readonly Vector3 Outward;
+            internal readonly bool Shared;
+            internal readonly QueueForwardRejection[] Rejections;
+            internal readonly TrafficRouteRequirement[] Roles;
+            internal InitialPickupMember(Vector3[] slots,int sideIndex,NavigationTarget side,Vector3 outward,bool shared,
+                IEnumerable<QueueForwardRejection> rejections,IEnumerable<TrafficRouteRequirement> roles)
+            {Slots=slots.ToArray();SideIndex=sideIndex;Side=side;Outward=outward;Shared=shared;Rejections=rejections.ToArray();Roles=roles.ToArray();}
+        }
+        private sealed class InitialPickupGeometry
+        {
+            internal readonly InitialPickupMember[] Members;
+            internal readonly TrafficInitialQueueGeometry Descriptor;
+            internal readonly object NativeContext;
+            internal readonly int Revision;
+            internal readonly Vector3 Work,Exit;
+            internal readonly float[] Footprints;
+            internal readonly float Clearance,CounterEnvelope;
+            internal readonly Vector3? CounterHead;
+            internal readonly string CounterRegisterId;
+            internal InitialPickupGeometry(InitialPickupMember[] members,object nativeContext,int revision,Vector3 work,Vector3 exit,
+                float[] footprints,float clearance,Vector3? counterHead,float envelope,string counterRegisterId)
+            {
+                Members=members.ToArray();NativeContext=nativeContext;Revision=revision;Work=work;Exit=exit;
+                Footprints=footprints.ToArray();Clearance=clearance;CounterHead=counterHead;CounterEnvelope=envelope;CounterRegisterId=counterRegisterId;
+                Descriptor=new TrafficInitialQueueGeometry(this,Members.Select(m=>new TrafficInitialQueueMember(m.Slots[0],m.Roles)));
+            }
+        }
+        private sealed class PickupQueueBlueprint
+        {
+            internal readonly PickupQueueService Owner;
+            internal readonly Vector3[] Slots;
+            internal readonly NavigationTarget Side;
+            internal readonly object NativeContext;
+            internal readonly int Revision;
+            internal readonly Vector3 Work,Exit;
+            internal readonly float[] Footprints;
+            internal readonly float Clearance,CounterEnvelope;
+            internal readonly Vector3? CounterHead;
+            internal readonly string CounterRegisterId;
+            internal readonly TrafficRouteRequirement[] Roles;
+            internal readonly TrafficRouteProof[] Proofs;
+            internal PickupQueueBlueprint(PickupQueueService owner,InitialPickupGeometry geometry,InitialPickupMember member,
+                IEnumerable<TrafficRouteProof> proofs)
+            {
+                Owner=owner;Slots=member.Slots.ToArray();Side=member.Side;NativeContext=geometry.NativeContext;Revision=geometry.Revision;
+                Work=geometry.Work;Exit=geometry.Exit;Footprints=geometry.Footprints.ToArray();Clearance=geometry.Clearance;
+                CounterHead=geometry.CounterHead;CounterEnvelope=geometry.CounterEnvelope;CounterRegisterId=geometry.CounterRegisterId;
+                Roles=member.Roles.Select(r=>new TrafficRouteRequirement(r.ResourceId,r.Start,r.Goal,r.Clearance,r.Obstacles,
+                    r.SelectedJourney,r.AvoidProposedParking,r.LocalObstacles)).ToArray();
+                Proofs=proofs.Select(p=>new TrafficRouteProof(p.ResourceId,p.Waypoints,p.ExpandedPath,p.LegEnds)).ToArray();
+            }
+        }
+        // This seal belongs only to an uncommitted new tail proposal, never to the geometry blueprint.
+        // 当前真实leader/paid成员凭证只保留在原未提交anchor；不变成新的运动权利。
+        private sealed class CachedPickupMember
+        {
+            internal Visit Visit;
+            internal NavigationActor Actor;
+            internal CustomerAdmission Admission;
+            internal CustomerVisitState Phase;
+            internal int Generation;
+            internal bool Collected,Departed,InTransit;
+            internal Vector3 Pose;
+            internal float[] Settings;
+            internal PickupQueueService.ReservationClaim Claim;
+            internal TrafficBodyFact Body;
+            internal TrafficParkingFact Parking;
+            internal TrafficParkingFact Service;
+            internal TrafficDecision Source;
+            internal TrafficPhaseReceipt Receipt;
+            internal PickupParkingRight Unpaid;
+            internal TrafficMovement Movement;
+            internal bool Lease;
+            internal Vector3 LeasePosition;
+        }
+        private sealed class CachedPickupLeaderPreparation
+        {
+            internal PickupQueueBlueprint Blueprint;
+            internal PickupQueueService.PreparedMutation Preview;
+            internal TrafficWorldSnapshot Snapshot;
+            internal CachedPickupMember Leader;
+            internal CachedPickupMember[] Paid;
+            internal CachedPickupMember[] WaitingTails;
+            internal Vector3 Side;
+            internal TrafficRouteRequirement[] Roles;
+        }
+        private PickupQueueBlueprint pickupBlueprint;
         private sealed class PickupReservationAnchor
         {
             internal ServiceTrafficCoordinator Coordinator;
@@ -1257,6 +1386,11 @@ namespace AnimalCafe.Customers
             internal Vector3 Start,Work,Exit;
             internal bool Submitted;
             internal TrafficUnpaidParkingEligibility Eligibility;
+            internal InitialPickupGeometry InitialGeometry;
+            internal CachedPickupLeaderPreparation CachedLeader;
+            internal float[] InitialActorSettings,InitialEmployeeSettings;
+            internal PickupQueueService InitialChosenOwner;
+            internal int InitialChosenIndex=-1;
             internal PickupQueueService.PreparedMutation Preview;
         }
         // Keep the already committed right, not a cache of an uncommitted physical proposal.
@@ -2400,7 +2534,8 @@ namespace AnimalCafe.Customers
         private bool ReservationAnchorCurrent(PickupReservationAnchor a)
         {
             if(a==null || !AnchorContextCurrent(a.Coordinator,a.Key) || !ReferenceEquals(world,a.World) ||
-                !ReferenceEquals(pickupQueue,a.Owner) || !ReferenceEquals(queue,a.Counter) || !ReferenceEquals(Capacity,a.Capacity) ||
+                (a.InitialGeometry==null?!ReferenceEquals(pickupQueue,a.Owner):!InitialPickupGeometryCurrent(a)) ||
+                !ReferenceEquals(queue,a.Counter) || !ReferenceEquals(Capacity,a.Capacity) ||
                 a.Actor==null || !a.Actor.isActiveAndEnabled || a.Actor.Agent==null || !a.Actor.Agent.enabled || !a.Actor.Agent.isOnNavMesh ||
                 a.Actor.transform.position!=a.Start || !world.RegisteredActors.Any(actor=>ReferenceEquals(actor,a.Actor)) ||
                 !visits.TryGetValue(a.Key.ActorId,out var visit) || !ReferenceEquals(visit,a.Visit) || !ReferenceEquals(visit.PendingReservationAnchor,a) ||
@@ -2410,7 +2545,7 @@ namespace AnimalCafe.Customers
                 a.Counter.Snapshot[0].VisitId!=visit.Id || a.Counter.Snapshot[0].SlotIndex!=0 || !a.Counter.Snapshot[0].Arrived ||
                 a.SideIndex<0 || a.SideIndex>=pickupSides.Length || !pickupSides[a.SideIndex].Equals(a.Side) ||
                 !trafficCandidates.TryGetValue(a.Key,out var cursor) || cursor.Role!=TrafficCandidateRole.Reservation ||
-                !ReferenceEquals(cursor.ActorLife,a.Actor) || (cursor.CurrentIndex>=0 && cursor.CurrentIndex!=a.SideIndex) ||
+                !ReferenceEquals(cursor.ActorLife,a.Actor) || (cursor.CurrentIndex>=0 && cursor.PhysicalSideIndex(cursor.CurrentIndex)!=a.SideIndex) ||
                 !cursor.Sides[a.SideIndex].Equals(a.Side) ||
                 deliveryActorId!=a.EmployeeId || deliveryWorkTarget.Position!=a.Work || exit.position!=a.Exit)return false;
             var employee=world.RegisteredActors.FirstOrDefault(actor=>actor!=null && actor.ActorId==a.EmployeeId);
@@ -2525,6 +2660,7 @@ namespace AnimalCafe.Customers
         private bool PrepareReservationAnchor(PickupReservationAnchor a,TrafficWorldSnapshot snapshot,out TrafficDecision decision,int candidateIndex=-1)
         {
             decision=null;
+            if(a?.InitialGeometry!=null)return PrepareInitialPickupAnchor(a,snapshot,out decision,candidateIndex);
             if(!ReservationAnchorCurrent(a))
             {ObserveReservationRefusal("anchorCurrent",a?.Visit,a,sideIndex:candidateIndex);return false;}
             if(!trafficCandidates.TryGetValue(a.Key,out var cursor))
@@ -2544,23 +2680,28 @@ namespace AnimalCafe.Customers
             if(preview.Kind!=PickupQueueService.MutationKind.Reserve || preview.Id!=a.Key.ActorId || preview.Assignment.VisitId!=a.Key.ActorId ||
                 !preview.BelongsTo(a.Owner) || !preview.IsCurrent)
             {ObserveReservationRefusal("preview",a.Visit,a,cursor,expected,true,index);return false;}
-            var proofs=PreservePickupGoals(a.Visit,preserveExitCapability:true).ToList();
+            var previousLeader=a.CachedLeader;
+            var leader=CaptureCachedPickupLeader(a,preview,snapshot);
+            a.CachedLeader=leader;
+            var proofs=PreservePickupGoals(a.Visit,preserveExitCapability:true,cached:leader).ToList();
+            if(leader!=null)proofs.AddRange(leader.Roles);
             if(a.Employee!=null)
             {
                 var occupied=TrafficObstacles(a.Employee.ActorId);var clearance=RouteClearance(a.Employee.Settings);
                 proofs.Add(new TrafficRouteRequirement("work-outward",a.Work,side.Position,clearance,occupied));
                 proofs.Add(new TrafficRouteRequirement("work-home",side.Position,a.Work,clearance,occupied));
             }
-            proofs.Add(new TrafficRouteRequirement("waiting-exit-capability",preview.Assignment.Position,a.Exit,
+            if(leader==null)proofs.Add(new TrafficRouteRequirement("waiting-exit-capability",preview.Assignment.Position,a.Exit,
                 RouteClearance(a.Actor.Settings),TrafficObstacles(a.Visit.Id),avoidProposedParking:false));
             var request=new TrafficRequest(a.Key,a.FirstFrame,snapshot,a.Start,preview.Assignment.Position,a.Actor.Settings.AgentRadius,
                 "pickup/"+a.Visit.Id,requirements:proofs,safetyMargin:a.Actor.Settings.CollisionSkin+a.Actor.Settings.Epsilon,planPrimaryRoute:true);
             if(a.Eligibility==null)a.Eligibility=new TrafficUnpaidParkingEligibility(a.Key,a.Actor,a.Counter,a.Visit,a.Admission,
-                ()=>CanIntegratedProgress && a.Visit.PaidPickup==null && ReservationAnchorCurrent(a));
+                ()=>CanIntegratedProgress && a.Visit.PaidPickup==null && ReservationAnchorCurrent(a) &&
+                    (a.CachedLeader==null || CachedPickupLeaderCurrent(a,a.CachedLeader)));
             if(cursor.UnpaidEligibility==null && cursor.Source==null)cursor.UnpaidEligibility=a.Eligibility;
-            if(!ReferenceEquals(cursor.UnpaidEligibility,a.Eligibility))return false;
+            if(!ReferenceEquals(cursor.UnpaidEligibility,a.Eligibility)){a.CachedLeader=previousLeader;return false;}
             if(!PrepareTrafficCandidate(cursor,request,a.Actor,index,expected,out decision))
-            {ObserveReservationRefusal("corePrepare",a.Visit,a,cursor,decision,true,index);return false;}
+            {a.CachedLeader=previousLeader;ObserveReservationRefusal("corePrepare",a.Visit,a,cursor,decision,true,index);return false;}
             // Only successful Core advancement can replace the submitted proof-role descriptor.
             // Queue的新tail仍来自preview；成功advance之后才更新原anchor的side。
             if(index!=a.SideIndex){a.SideIndex=index;a.Side=side;}
@@ -2568,7 +2709,7 @@ namespace AnimalCafe.Customers
             a.Preview=preview;
             if(!ReservationAnchorCurrent(a))
             {ObserveReservationRefusal("postCurrent.anchor",a.Visit,a,cursor,decision,true,index);return false;}
-            if(!preview.IsCurrent)
+            if(!preview.IsCurrent || leader!=null && !CachedPickupLeaderCurrent(a,leader))
             {ObserveReservationRefusal("postCurrent.preview",a.Visit,a,cursor,decision,true,index);return false;}
             return true;
         }
@@ -2839,7 +2980,171 @@ namespace AnimalCafe.Customers
             var expected=cursor.Source==null?null:traffic.GetDecision(key);
             return PrepareTrafficCandidate(cursor,request,actor,candidateIndex,expected,out var decision)?decision:traffic.GetDecision(key);
         }
-        private IEnumerable<TrafficRouteRequirement> PreservePickupGoals(Visit incoming,bool preserveExitCapability=false)
+        private bool PickupBlueprintCurrent(PickupQueueBlueprint b,PickupReservationAnchor a)
+        {
+            if(b==null || a.InitialGeometry!=null || !ReferenceEquals(b,pickupBlueprint) || !ReferenceEquals(b.Owner,pickupQueue) ||
+                !ReferenceEquals(b.Owner,a.Owner) || adapter==null || b.Revision!=adapter.Revision || b.NativeContext==null ||
+                !ReferenceEquals(b.NativeContext,adapter.NativePathQueryContext) || b.Work!=deliveryWorkTarget.Position || b.Exit!=exit.position ||
+                !b.Slots.SequenceEqual(pickupWaitSlots) || !pickupSides.Any(side=>side.Equals(b.Side)) ||
+                !b.Footprints.SequenceEqual(PickupBlueprintFootprints()) || b.CounterRegisterId!=SelectedRegisterId ||
+                prefabs.Length==0 || b.Proofs.Length!=b.Roles.Length || b.Roles.Length<b.Slots.Length+1)return false;
+            InitialPickupCounterEnvelope(a.Visit,out var counterHead,out var envelope);
+            if(!b.CounterHead.Equals(counterHead) || b.CounterEnvelope!=envelope || !BlueprintFitsActor(b,a.Actor))return false;
+            var radius=prefabs.Max(p=>p.Settings.AgentRadius);var skin=prefabs.Max(p=>p.Settings.CollisionSkin+p.Settings.Epsilon);
+            // RouteClearance uses the live world's maximum radius; verify the certificate really covered future prefab pairs too.
+            // Compare the same float32 clearance contract as the stored certificate; no radius or threshold adjustment.
+            // 与证书相同的float32合同；不是近似比较，也不调整阈值。
+            if(b.Clearance.CompareTo(2*radius+skin)<0)return false;
+            for(var i=0;i<b.Roles.Length;i++)
+                if(b.Proofs[i].ResourceId!=b.Roles[i].ResourceId || b.Proofs[i].ExpandedPath.Count==0)return false;
+            return true;
+        }
+        private static bool BlueprintSlotMatches(PickupQueueBlueprint blueprint,QueueAssignment assignment)
+            =>assignment.SlotIndex>=0 && assignment.SlotIndex<blueprint.Slots.Length &&
+                assignment.Position==blueprint.Slots[assignment.SlotIndex];
+        private bool BlueprintFitsActor(PickupQueueBlueprint b,NavigationActor actor)
+        {
+            if(actor==null || prefabs.Length==0 || b.Footprints.Length<prefabs.Length*5)return false;
+            var profile=PickupActorGeometry(actor);
+            for(var component=0;component<profile.Length;component++)
+                if(profile[component]>Enumerable.Range(0,prefabs.Length).Max(i=>b.Footprints[i*5+component]))return false;
+            return true;
+        }
+        private CachedPickupMember CaptureCachedPickupMember(PickupQueueService owner,Visit visit,TrafficWorldSnapshot snapshot)
+        {
+            if(visit==null || visit.Actor==null || !TrafficActorReady(visit.Actor) || !visit.PickupAssigned || visit.PickupDeparted ||
+                !ReferenceEquals(visit.PickupOwner,owner) || !owner.TryCaptureReservation(visit.Id,out var claim) || !claim.IsCurrent)return null;
+            var bodies=snapshot.Bodies.Where(body=>body.Owner.ActorId==visit.Id).ToArray();
+            var parking=snapshot.Parking.Where(fact=>fact.ResourceId=="pickup/"+visit.Id && ReferenceEquals(fact.CanonicalOwner,owner)).ToArray();
+            if(bodies.Length!=1 || parking.Length!=1)return null;
+            var body=bodies[0];var fact=parking[0];
+            if(!ReferenceEquals(body.ActorLife,visit.Actor) || !body.Enabled || !body.ActorActive || body.Position!=visit.Actor.transform.position ||
+                // Compare exact stored float32 margins; typed operands round like TrafficBodyFact storage, without tolerance.
+                // 精确比较已存float32；不把Mono扩展精度中间值误当变化，不加epsilon。
+                body.Radius!=visit.Actor.Settings.AgentRadius || !body.SafetyMargin.Equals(visit.Actor.Settings.CollisionSkin+visit.Actor.Settings.Epsilon) ||
+                !ReferenceEquals(fact.BusinessOwner,visit) || !ReferenceEquals(fact.ReleaseObligation,visit.Admission) ||
+                !fact.Owner.Equals(body.Owner) || fact.Position!=claim.Assignment.Position || fact.Radius!=body.Radius || fact.SafetyMargin!=body.SafetyMargin ||
+                !claim.IsSameCurrentClaim(fact.SemanticCheckpoint as ITrafficClaimCheckpoint) ||
+                !traffic.TryGetCommittedJourney(body.Owner,out var source) || source.AcquiredSequence<=0)return null;
+            var receipt=new[]{visit.PendingTraffic,visit.IssuedTraffic}.FirstOrDefault(r=>r!=null &&
+                ReferenceEquals(r.Actor,visit.Actor) && ReferenceEquals(r.Visit,visit) && ReferenceEquals(r.Source,source) &&
+                r.Intent.Equals(body.Owner) && TrafficReceiptCurrent(r));
+            var unpaid=receipt==null && ReferenceEquals(visit.PickupParking?.Source,source) && PickupParkingCurrent(visit,snapshot)?visit.PickupParking:null;
+            if(receipt==null && unpaid==null)return null;
+            if(IsPickupMovement(visit.State) && (!TrafficSelectionCurrent(visit,visit.TrafficSelection) ||
+                !ReferenceEquals(visit.TrafficMove?.Source,source)))return null;
+            var lease=owner.TryGetServiceLease(visit.Id,out var leasePosition);
+            TrafficParkingFact service=null;
+            if(lease)
+            {
+                var facts=snapshot.Parking.Where(p=>p.ResourceId=="service/"+visit.Id && ReferenceEquals(p.CanonicalOwner,owner)).ToArray();
+                var checkpoint=PickupServiceLeaseCheckpoint.Capture(owner,visit.Id,leasePosition);
+                if(!claim.IsCurrentCollectionLease || claim.Assignment.Position!=leasePosition || facts.Length!=1 || checkpoint==null ||
+                    !facts[0].Owner.Equals(body.Owner) || facts[0].Radius!=body.Radius || facts[0].SafetyMargin!=body.SafetyMargin ||
+                    !ReferenceEquals(facts[0].BusinessOwner,visit) ||
+                    !ReferenceEquals(facts[0].ReleaseObligation,visit.Admission) ||
+                    !checkpoint.IsSameCurrentClaim(facts[0].SemanticCheckpoint as ITrafficClaimCheckpoint))return null;
+                service=facts[0];
+            }
+            return new CachedPickupMember{Visit=visit,Actor=visit.Actor,Admission=visit.Admission,Phase=visit.State,Generation=visit.Generation,
+                Collected=visit.HasCollected,Departed=visit.PickupDeparted,InTransit=visit.PickupInTransit,Pose=body.Position,
+                Settings=PickupActorGeometry(visit.Actor),Claim=claim,Body=body,Parking=fact,Service=service,Source=source,Receipt=receipt,Unpaid=unpaid,
+                Movement=visit.TrafficMove,Lease=lease,LeasePosition=leasePosition};
+        }
+        private bool CachedPickupMemberCurrent(PickupQueueService owner,CachedPickupMember member)
+        {
+            if(member==null || !visits.TryGetValue(member.Visit.Id,out var visit) || !ReferenceEquals(visit,member.Visit) ||
+                !ReferenceEquals(visit.Actor,member.Actor) || !ReferenceEquals(visit.Admission,member.Admission) ||
+                !ReferenceEquals(visit.PickupOwner,owner) || !visit.PickupAssigned || visit.State!=member.Phase || visit.Generation!=member.Generation ||
+                visit.HasCollected!=member.Collected || visit.PickupDeparted!=member.Departed || visit.PickupInTransit!=member.InTransit ||
+                visit.Actor==null || !TrafficActorReady(visit.Actor) || visit.Actor.transform.position!=member.Pose ||
+                !member.Settings.SequenceEqual(PickupActorGeometry(visit.Actor)) ||
+                world.RegisteredActors.Count(actor=>actor!=null && actor.ActorId==visit.Id)!=1 ||
+                !trafficActorKeys.TryGetValue(visit.Id,out var key) || !key.Equals(member.Body.Owner) ||
+                !ReferenceEquals(visit.TrafficMove,member.Movement) || !member.Claim.IsCurrent ||
+                !owner.TryCaptureReservation(visit.Id,out var current) || !member.Claim.IsSameCurrentClaim(current) ||
+                !traffic.TryGetCommittedJourney(member.Body.Owner,out var source) || !ReferenceEquals(source,member.Source))return false;
+            var lease=owner.TryGetServiceLease(visit.Id,out var side);
+            if(lease!=member.Lease || lease && (side!=member.LeasePosition || !current.IsCurrentCollectionLease))return false;
+            if(member.Receipt!=null)return (ReferenceEquals(visit.PendingTraffic,member.Receipt) || ReferenceEquals(visit.IssuedTraffic,member.Receipt)) &&
+                TrafficReceiptCurrent(member.Receipt) && ReferenceEquals(member.Receipt.Source,source);
+            return ReferenceEquals(visit.PickupParking,member.Unpaid) && PickupParkingCurrent(visit,trafficSnapshot);
+        }
+        private bool CachedPickupLeaderCurrent(PickupReservationAnchor a,CachedPickupLeaderPreparation prepared)
+        {
+            if(prepared==null || !ReferenceEquals(a.CachedLeader,prepared) || !PickupBlueprintCurrent(prepared.Blueprint,a) ||
+                !ReferenceEquals(prepared.Snapshot,trafficSnapshot) || !prepared.Preview.IsCurrent || !prepared.Preview.BelongsTo(a.Owner) ||
+                prepared.Preview.Id!=a.Visit.Id || !BlueprintSlotMatches(prepared.Blueprint,prepared.Preview.Assignment) ||
+                prepared.Leader.Visit.DeliveryYieldPhase!=0 || !CachedPickupMemberCurrent(a.Owner,prepared.Leader))return false;
+            var rows=a.Owner.Snapshot;
+            if(rows.Count!=prepared.Paid.Length)return false;
+            for(var i=0;i<rows.Count;i++)
+                if(!SameAssignment(rows[i],prepared.Paid[i].Claim.Assignment) || !CachedPickupMemberCurrent(a.Owner,prepared.Paid[i]) ||
+                    !prepared.Paid[i].Lease && prepared.Paid[i].Visit.DeliveryYieldPhase==0 && !BlueprintSlotMatches(prepared.Blueprint,rows[i]))return false;
+            if(prepared.WaitingTails.Any(member=>member.Visit.DeliveryYieldPhase!=0))return false;
+            if(rows.Count>0 && !ReferenceEquals(prepared.Leader,prepared.Paid[0]))return false;
+            return !a.Owner.ServiceLeases.Any(lease=>visits.TryGetValue(lease.Key,out var owner) && owner.HasCollected &&
+                !owner.PickupDeparted && !ReferenceEquals(owner,prepared.Leader.Visit));
+        }
+        private CachedPickupLeaderPreparation CaptureCachedPickupLeader(PickupReservationAnchor a,
+            PickupQueueService.PreparedMutation preview,TrafficWorldSnapshot snapshot)
+        {
+            var blueprint=pickupBlueprint;
+            if(!PickupBlueprintCurrent(blueprint,a) || !ReferenceEquals(snapshot,trafficSnapshot) || preview==null || !preview.IsCurrent ||
+                !preview.BelongsTo(a.Owner) || preview.Kind!=PickupQueueService.MutationKind.Reserve || preview.Id!=a.Visit.Id ||
+                !BlueprintSlotMatches(blueprint,preview.Assignment))return null;
+            var rows=a.Owner.Snapshot;var paid=new List<CachedPickupMember>();
+            foreach(var row in rows)
+            {
+                if(!visits.TryGetValue(row.VisitId,out var visit))return null;
+                var member=CaptureCachedPickupMember(a.Owner,visit,snapshot);
+                if(member==null || !SameAssignment(row,member.Claim.Assignment) || !BlueprintFitsActor(blueprint,member.Actor) ||
+                    visit.PaidPickup==null || !visit.PaidPickup.Accepted || !visit.PaidPickup.Transferred || visit.PaidPickup.Failed)return null;
+                if(!member.Lease && visit.DeliveryYieldPhase==0 && !BlueprintSlotMatches(blueprint,row))return null;
+                paid.Add(member);
+            }
+            CachedPickupMember head;
+            if(paid.Count>0)head=paid[0];
+            else
+            {
+                var owners=visits.Values.Where(v=>v!=a.Visit && v.PickupAssigned && ReferenceEquals(v.PickupOwner,a.Owner)).ToArray();
+                if(owners.Length!=1)return null;
+                head=CaptureCachedPickupMember(a.Owner,owners[0],snapshot);
+                if(head?.Unpaid==null || !BlueprintFitsActor(blueprint,head.Actor))return null;
+            }
+            if(head.Visit.DeliveryYieldPhase!=0)return null; // Blueprint never certifies a yield-to-head return.
+            // A collected predecessor retaining its lease cannot be replaced by the next paid row.
+            // 已取餐但未release的真实service义务仍存在；缺当前凭证就完整回原legacy要求。
+            if(a.Owner.ServiceLeases.Any(lease=>visits.TryGetValue(lease.Key,out var owner) && owner.HasCollected &&
+                !owner.PickupDeparted && !ReferenceEquals(owner,head.Visit)))return null;
+            if((head.Phase==CustomerVisitState.MovingToPickupService || head.Phase==CustomerVisitState.PickupService || head.Collected) && !head.Lease)return null;
+            var side=head.Lease?head.LeasePosition:blueprint.Side.Position;
+            if(!pickupSides.Any(s=>s.Position==side))return null;
+            var tails=paid.Skip(1).Where(member=>!member.Collected && !member.Departed && member.Phase==CustomerVisitState.PickupWaiting &&
+                member.Claim.Assignment.Arrived && !member.Lease && member.Visit.DeliveryYieldPhase==0).ToArray();
+            var radius=head.Body.Radius;var safety=head.Body.SafetyMargin;var obstacles=new List<TrafficRouteObstacle>();
+            foreach(var body in snapshot.Bodies)
+                if(!ReferenceEquals(body,head.Body) && body.Enabled && body.ActorActive)
+                    obstacles.Add(new TrafficRouteObstacle(body.Position,radius+body.Radius+Mathf.Max(safety,body.SafetyMargin)));
+            foreach(var fact in snapshot.Parking)
+            {
+                var ownParking=ReferenceEquals(fact,head.Parking);
+                var ownLease=head.Lease && ReferenceEquals(fact,head.Service);
+                if(!ownParking && !ownLease)obstacles.Add(new TrafficRouteObstacle(fact.Position,radius+fact.Radius+Mathf.Max(safety,fact.SafetyMargin)));
+            }
+            obstacles.Add(new TrafficRouteObstacle(preview.Assignment.Position,radius+a.Actor.Settings.AgentRadius+
+                Mathf.Max(safety,a.Actor.Settings.CollisionSkin+a.Actor.Settings.Epsilon)));
+            if(blueprint.CounterHead.HasValue)obstacles.Add(new TrafficRouteObstacle(blueprint.CounterHead.Value,blueprint.CounterEnvelope));
+            var clearance=2*radius+safety;
+            var roles=new[]{new TrafficRouteRequirement("queue-current/"+head.Visit.Id+"/goal-service",head.Claim.Assignment.Position,side,
+                    clearance,avoidProposedParking:false,localObstacles:obstacles),
+                new TrafficRouteRequirement("queue-current/"+head.Visit.Id+"/service-exit",side,a.Exit,
+                    clearance,avoidProposedParking:false,localObstacles:obstacles)};
+            return new CachedPickupLeaderPreparation{Blueprint=blueprint,Preview=preview,Snapshot=snapshot,Leader=head,Paid=paid.ToArray(),
+                WaitingTails=tails,Side=side,Roles=roles};
+        }
+        private IEnumerable<TrafficRouteRequirement> PreservePickupGoals(Visit incoming,bool preserveExitCapability=false,
+            CachedPickupLeaderPreparation cached=null)
         {
             foreach(var owner in visits.Values.Where(v=>v!=incoming && v.Actor!=null && v.PickupAssigned &&
                 (!v.HasCollected || preserveExitCapability && !v.PickupDeparted) && v.PickupOwner!=null))
@@ -2851,7 +3156,8 @@ namespace AnimalCafe.Customers
                         yield return new TrafficRouteRequirement("existing-goal/"+owner.Id,owner.Actor.transform.position,assignment.Position,clearance,obstacles);
                     // Only new unpaid PQS Reserve parking preserves this capability until real canonical departure/release.
                     // 取餐不是实际离位；只对新PQS预留保留仍拥有目标的离店能力，默认actual-to-goal范围不变。
-                    if(preserveExitCapability)
+                    if(preserveExitCapability && (cached==null || owner.HasCollected ||
+                        !cached.WaitingTails.Any(member=>ReferenceEquals(member.Visit,owner))))
                         yield return new TrafficRouteRequirement("existing-goal/"+owner.Id+"/exit-capability",assignment.Position,exit.position,clearance,obstacles);
                 }
         }
@@ -2866,6 +3172,7 @@ namespace AnimalCafe.Customers
                 var held=PickupParkingCurrent(visit,currentSnapshot);
                 reason=held?"":"原Pick-up预留身份已失效 / Existing pickup right is no longer current";return held;
             }
+            if(pickupQueue==null)return TryInitialPickupReservation(visit,currentSnapshot,out reason);
             if(!EnsurePickupQueue(visit,out reason))return RefuseUnreservedFront(visit);
             var owner=visit.PickupAssigned?visit.PickupOwner:pickupQueue;
             if(!owner.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,visit.Id,owner.Version,out var prepared))
@@ -2919,8 +3226,24 @@ namespace AnimalCafe.Customers
                 ObserveReservationRefusal("decision-not-granted",visit,anchor,cursor,decision,true,index,key);
                 return RefuseUnreservedFront(visit,decision);
             }
+            return CommitPickupReservation(visit,anchor,cursor,decision,index,out reason);
+        }
+        private bool CommitPickupReservation(Visit visit,PickupReservationAnchor anchor,TrafficCandidateCursor cursor,
+            TrafficDecision decision,int index,out string reason)
+        {
+            reason="停车共同提交已失效 / Stale pickup commit";
+            var owner=anchor.Owner;var prepared=anchor.Preview;var key=anchor.Key;
+            PickupQueueBlueprint blueprint=null;
+            if(anchor.InitialGeometry!=null)
+            {
+                var member=anchor.InitialGeometry.Members[index];
+                var proofs=member.Roles.Select(r=>decision.ProofRoutes.SingleOrDefault(p=>p.ResourceId==r.ResourceId)).ToArray();
+                if(proofs.Any(p=>p==null || p.ExpandedPath.Count==0))return false;
+                blueprint=new PickupQueueBlueprint(owner,anchor.InitialGeometry,member,proofs);
+            }
             var primary=decision.ProofRoutes.FirstOrDefault(p=>p.ResourceId=="pickup/"+visit.Id);
-            if(!ReservationAnchorCurrent(anchor) || !ReferenceEquals(anchor.Preview,prepared) ||
+            if(!ReservationAnchorCurrent(anchor) || anchor.CachedLeader!=null && !CachedPickupLeaderCurrent(anchor,anchor.CachedLeader) ||
+                !ReferenceEquals(anchor.Preview,prepared) ||
                 !PrimaryMatchesPickupReservationPreview(owner,visit.Id,prepared,primary))
             {ObserveReservationRefusal("commit-preview-current",visit,anchor,cursor,decision,true,index,key);return false;}
             var originalAssigned=visit.PickupAssigned;
@@ -2928,6 +3251,12 @@ namespace AnimalCafe.Customers
             {ObserveReservationRefusal("canonical-successor-can-commit",visit,anchor,cursor,decision,true,index,key);return false;}
             var committed=traffic.TryCommit(decision,prepared,()=>
             {
+                if(blueprint!=null)
+                {
+                    var member=anchor.InitialGeometry.Members[index];
+                    pickupQueue=owner;pickupWaitSlots=member.Slots.ToArray();pickupCustomer=member.Side.Position;pickupOutward=member.Outward;
+                    pickupPlanningRejections.Clear();pickupPlanningRejections.AddRange(member.Rejections);pickupBlueprint=blueprint;
+                }
                 visit.PendingReservationAnchor=null;
                 visit.PickupAssigned=true;visit.PickupOwner=owner;visit.ReservedPickup=prepared.Assignment;visit.ReservedPickupOwner=owner;
                 visit.ReservedPickupRevision=adapter.Revision;visit.ReservedPickupPath=primary.ExpandedPath;visit.ReservedPickupRoute=primary.Waypoints;
@@ -3828,14 +4157,15 @@ namespace AnimalCafe.Customers
         internal void SetTrafficDeliveryGate(Func<string,bool> gate) => trafficDeliveryGate=gate;
         private bool BindDeliveryPreparationReadiness(TrafficCandidateCursor cursor,TrafficDecision initial)
         {
-            var coordinator=traffic;var context=cursor.DeliveryContext;
+            var coordinator=traffic;var context=cursor.DeliveryContext;var pickupOwner=cursor.DeliveryOwner;
             bool Current()=>ReferenceEquals(traffic,coordinator) && ReferenceEquals(cursor.DeliveryContext,context) &&
+                ReferenceEquals(cursor.DeliveryOwner,pickupOwner) && ReferenceEquals(pickupQueue,pickupOwner) &&
                 trafficCandidates.TryGetValue(cursor.Key,out var actual) && ReferenceEquals(actual,cursor) &&
                 DeliveryContextCurrent(cursor,cursor.ActorLife as NavigationActor) &&
                 DeliveryPreviewMatches(cursor,cursor.DeliveryPreview,cursor.CurrentIndex,true) && DeliveryReservedOptionCurrent(cursor);
-            if(context==null || cursor.DeliveryReadiness!=null || !Current())return false;
+            if(context==null || pickupOwner==null || cursor.DeliveryReadiness!=null || !Current())return false;
             var readiness=new TrafficDeliveryPreparationReadiness(cursor.Key,Current,
-                (owner,source)=>ReadDeliveryPreparation(cursor,coordinator,owner,source));
+                (owner,source)=>ReadDeliveryPreparation(cursor,coordinator,owner,source),pickupOwner);
             if(!coordinator.TrySetDeliveryPreparationReadiness(initial,readiness))return false;
             cursor.DeliveryReadiness=readiness;
             try{RefreshDeliveryWorkingPredecessor(cursor);}
@@ -4427,7 +4757,7 @@ namespace AnimalCafe.Customers
             if(visits.Values.Any(v=>v.PickupAssigned && !v.HasCollected))
                 throw new InvalidOperationException("Retire uncollected pickup assignments before changing geometry.");
             selectedPickupId=pickupId; pickupCustomer=customerPosition; pickupEmployee=employeePosition;
-            pickupOutward=outward.normalized; pickupGeometryConfigured=true; pickupQueue=null;pickupPlanningRejections.Clear();
+            pickupOutward=outward.normalized; pickupGeometryConfigured=true; pickupQueue=null;pickupBlueprint=null;pickupPlanningRejections.Clear();
             multiSidePickup=false; pickupSides=new[]{new NavigationTarget(customerPosition,-pickupOutward)};
         }
         public bool TryConfigurePickupFromLayout(string pickupId,out string reason)
@@ -4458,12 +4788,180 @@ namespace AnimalCafe.Customers
             return anchors.Select(a=>new NavigationTarget(WorldAnchor(a),Direction(a.Facing)))
                 .Where(t=>adapter.IsPointWalkable(t.Position)).ToArray();
         }
+        private static float[] PickupActorGeometry(NavigationActor actor)=>actor==null?Array.Empty<float>():new[]{actor.Settings.AgentRadius,
+            actor.Settings.CollisionSkin,actor.Settings.Epsilon,actor.Settings.ArrivalDistance,actor.Settings.TargetSampleDistance};
+        private float[] PickupBlueprintFootprints()=>prefabs.SelectMany(p=>new[]{p.Settings.AgentRadius,
+            p.Settings.CollisionSkin,p.Settings.Epsilon,p.Settings.ArrivalDistance,p.Settings.TargetSampleDistance})
+            .Concat(PickupActorGeometry(world.RegisteredActors.FirstOrDefault(actor=>actor!=null && actor.ActorId==deliveryActorId))).ToArray();
+        private void InitialPickupCounterEnvelope(Visit visit,out Vector3? counterHead,out float envelope)
+        {
+            PickupCounterEnvelope(visit,out counterHead,out _);var actual=visit.Actor.Settings;
+            envelope=counterHead.HasValue?Mathf.Max(prefabs.Max(p=>p.Settings.AgentRadius+p.Settings.CollisionSkin+p.Settings.Epsilon),
+                actual.AgentRadius+actual.CollisionSkin+actual.Epsilon)+
+                prefabs.Max(p=>p.Settings.AgentRadius+p.Settings.TargetSampleDistance+p.Settings.Epsilon+p.Settings.ArrivalDistance):0;
+        }
+        private bool InitialPickupGeometryCurrent(PickupReservationAnchor a)
+        {
+            var g=a.InitialGeometry;
+            if(a.Visit?.Actor==null || prefabs.Length==0)return false;
+            InitialPickupCounterEnvelope(a.Visit,out var currentCounterHead,out var currentEnvelope);
+            return g!=null && pickupQueue==null && g.NativeContext!=null && adapter!=null && g.Revision==adapter.Revision &&
+                ReferenceEquals(g.NativeContext,adapter.NativePathQueryContext) && g.Work==deliveryWorkTarget.Position &&
+                g.Exit==exit.position && g.Footprints.SequenceEqual(PickupBlueprintFootprints()) &&
+                g.CounterRegisterId==SelectedRegisterId && g.CounterHead.Equals(currentCounterHead) && g.CounterEnvelope.Equals(currentEnvelope) &&
+                g.Members.All(m=>m.SideIndex>=0 && m.SideIndex<pickupSides.Length && pickupSides[m.SideIndex].Equals(m.Side)) &&
+                a.InitialActorSettings!=null && a.InitialActorSettings.SequenceEqual(PickupActorGeometry(a.Actor)) &&
+                a.InitialEmployeeSettings!=null && a.InitialEmployeeSettings.SequenceEqual(PickupActorGeometry(a.Employee)) &&
+                ReferenceEquals(g.Descriptor.Owner,g) && trafficCandidates.TryGetValue(a.Key,out var cursor) &&
+                ReferenceEquals(cursor.InitialGeometry,g) && (a.Owner==null?a.InitialChosenOwner==null && a.InitialChosenIndex<0:
+                    ReferenceEquals(a.Owner,a.InitialChosenOwner) && a.InitialChosenIndex==cursor.CurrentIndex) &&
+                (a.Eligibility==null || ReferenceEquals(a.Eligibility.InitialQueueGeometry,g.Descriptor));
+        }
+        private InitialPickupGeometry BuildInitialPickupGeometry(Visit visit)
+        {
+            var native=adapter.NativePathQueryContext;if(native==null || prefabs.Length==0)return null;
+            var actual=visit.Actor.Settings;
+            var spacing=Mathf.Max(prefabs.Max(p=>2*p.Settings.AgentRadius+p.Settings.CollisionSkin+p.Settings.Epsilon+p.Settings.ArrivalDistance),
+                2*actual.AgentRadius+actual.CollisionSkin+actual.Epsilon+actual.ArrivalDistance);
+            var clearance=Mathf.Max(prefabs.Max(p=>RouteClearance(p.Settings)),RouteClearance(actual));
+            InitialPickupCounterEnvelope(visit,out var counterHead,out var envelope);
+            var employee=world.RegisteredActors.FirstOrDefault(actor=>actor!=null && actor.ActorId==deliveryActorId);
+            var local=counterHead.HasValue?new[]{new TrafficRouteObstacle(counterHead.Value,envelope)}:Array.Empty<TrafficRouteObstacle>();
+            var assigned=queue.Snapshot.Select(row=>row.Position).ToArray();var members=new List<InitialPickupMember>();
+            foreach(var sideIndex in Enumerable.Range(0,pickupSides.Length).OrderBy(i=>(pickupSides[i].Position-visit.Actor.transform.position).sqrMagnitude))
+            {
+                var side=pickupSides[sideIndex];var outward=-side.Facing.Value;
+                var shared=multiSidePickup || Vector3.Distance(side.Position,pickupEmployee)<spacing;
+                var first=shared?side.Position+outward*1.1f:side.Position;
+                var heads=PickupWaitHeads(first,outward,!string.IsNullOrEmpty(deliveryActorId));
+                if(pickupSides.Length==1 && !string.IsNullOrEmpty(deliveryActorId))heads=heads.OrderBy(head=>CustomerRoutePlanner.IsClear(
+                    new[]{deliveryWorkTarget.Position,side.Position},new[]{head},spacing)?0:1);
+                foreach(var head in heads)
+                {
+                    // Only the real head checks transient occupancy; unused tails are geometry candidates, not occupied rights.
+                    // 真实head保留当前可用检查；未使用尾格不因短暂员工/顾客位置永久缩短。
+                    if(world.RegisteredActors.Any(actor=>actor!=null && Vector3.Distance(actor.transform.position,head)<spacing) ||
+                        trafficSnapshot.Parking.Any(p=>Vector3.Distance(p.Position,head)<spacing))continue;
+                    var rejected=new List<QueueForwardRejection>();var planner=new CounterQueuePlanner(1.1f,preserveStraightPrefix:true);
+                    planner.RejectedForward=(point,previous,direction,prefix,failure)=>{
+                        if(rejected.Count<256)rejected.Add(new QueueForwardRejection(point,previous,direction,prefix,failure));};
+                    var slots=planner.Build(head,outward,Capacity.Limits.PickUp,
+                        (point,previous)=>adapter.IsPointArrivable(point,visit.Actor.Settings.ArrivalDistance) && !InEntrance(point) &&
+                            Vector3.Distance(point,exit.position)>=1.2f && (!shared || Vector3.Distance(point,side.Position)>=spacing) &&
+                            (!multiSidePickup || pickupSides.All(s=>Vector3.Distance(point,s.Position)>=spacing)) &&
+                            assigned.All(p=>Vector3.Distance(p,point)>=spacing) &&
+                            (string.IsNullOrEmpty(deliveryActorId) || Vector3.Distance(point,deliveryWorkTarget.Position)>=spacing),
+                        (point,prefix)=>true,(from,to)=>adapter.IsPointArrivable(to,visit.Actor.Settings.ArrivalDistance)?(Vector3?)to:null);
+                    for(var count=slots.Count;count>0;count--)
+                    {
+                        var prefix=slots.Take(count).ToArray();var roles=new List<TrafficRouteRequirement>();
+                        for(var i=1;i<count;i++)roles.Add(new TrafficRouteRequirement("queue-geometry/fifo/"+i,prefix[i],prefix[i-1],clearance,
+                            prefix.Where((p,j)=>j!=i && j!=i-1),avoidProposedParking:false,localObstacles:local));
+                        roles.Add(new TrafficRouteRequirement("queue-geometry/head-service",prefix[0],side.Position,clearance,
+                            prefix.Skip(1),avoidProposedParking:false,localObstacles:local));
+                        roles.Add(new TrafficRouteRequirement("queue-geometry/service-exit",side.Position,exit.position,clearance,
+                            prefix.Skip(1),avoidProposedParking:false,localObstacles:local));
+                        if(employee!=null)
+                        {
+                            // Fixed work geometry must be feasible with the complete planned prefix, before dynamic traffic is considered.
+                            // 固定工作通道先避完整候位链；真实临时身体仍只属于原动态work角色。
+                            var workClearance=RouteClearance(employee.Settings);
+                            roles.Add(new TrafficRouteRequirement("queue-geometry/work-outward",deliveryWorkTarget.Position,side.Position,
+                                workClearance,prefix,avoidProposedParking:false));
+                            roles.Add(new TrafficRouteRequirement("queue-geometry/work-home",side.Position,deliveryWorkTarget.Position,
+                                workClearance,prefix,avoidProposedParking:false));
+                        }
+                        members.Add(new InitialPickupMember(prefix,sideIndex,side,outward,shared,rejected,roles));
+                    }
+                }
+            }
+            // Explicit approved preference: larger fully-proved capacity first; original side/head order breaks ties.
+            // 仅固定声明顺序；每个成员仍须完整证明，原预算不重置。
+            return members.Count==0?null:new InitialPickupGeometry(members.OrderByDescending(m=>m.Slots.Length).ToArray(),native,
+                adapter.Revision,deliveryWorkTarget.Position,exit.position,PickupBlueprintFootprints(),clearance,counterHead,envelope,SelectedRegisterId);
+        }
+        private bool PrepareInitialPickupAnchor(PickupReservationAnchor a,TrafficWorldSnapshot snapshot,out TrafficDecision decision,int candidateIndex)
+        {
+            decision=null;
+            if(!ReservationAnchorCurrent(a) || !ReferenceEquals(snapshot,trafficSnapshot) ||
+                !trafficCandidates.TryGetValue(a.Key,out var cursor))return false;
+            var expected=a.Submitted?a.Coordinator.GetDecision(a.Key):null;
+            if(candidateIndex<0 && !SelectTrafficCandidate(cursor,a.Actor,(i,side,target)=>true,out candidateIndex,out expected))return false;
+            if(candidateIndex<0 || candidateIndex>=a.InitialGeometry.Members.Length)return false;
+            var member=a.InitialGeometry.Members[candidateIndex];
+            if(a.Owner!=null && candidateIndex!=cursor.CurrentIndex)return false; // Never reconfigure a privately chosen owner.
+            var self=snapshot.Bodies.Where(b=>b.Owner.ActorId==a.Visit.Id).ToArray();
+            if(self.Length!=1 || !ReferenceEquals(self[0].ActorLife,a.Actor) || !self[0].Enabled || !self[0].ActorActive)return false;
+            var obstacles=snapshot.Bodies.Where(b=>b.Owner.ActorId!=a.Visit.Id && b.Enabled && b.ActorActive).Select(b=>b.Position)
+                .Concat(snapshot.Parking.Where(p=>p.Owner.ActorId!=a.Visit.Id).Select(p=>p.Position)).Concat(member.Slots.Skip(1)).Distinct().ToArray();
+            var roles=member.Roles.ToList();roles.AddRange(PreservePickupGoals(a.Visit,preserveExitCapability:true));
+            if(a.Employee!=null)
+            {
+                var occupied=TrafficObstacles(a.Employee.ActorId);var clearance=RouteClearance(a.Employee.Settings);
+                roles.Add(new TrafficRouteRequirement("work-outward",a.Work,member.Side.Position,clearance,occupied));
+                roles.Add(new TrafficRouteRequirement("work-home",member.Side.Position,a.Work,clearance,occupied));
+            }
+            var local=a.InitialGeometry.CounterHead.HasValue?new[]{new TrafficRouteObstacle(a.InitialGeometry.CounterHead.Value,
+                a.InitialGeometry.CounterEnvelope)}:Array.Empty<TrafficRouteObstacle>();
+            roles.Add(new TrafficRouteRequirement("queue-current/head-service",member.Slots[0],member.Side.Position,
+                RouteClearance(a.Actor.Settings),obstacles,avoidProposedParking:false,localObstacles:local));
+            roles.Add(new TrafficRouteRequirement("queue-current/service-exit",member.Side.Position,a.Exit,
+                RouteClearance(a.Actor.Settings),obstacles,avoidProposedParking:false,localObstacles:local));
+            var request=new TrafficRequest(a.Key,a.FirstFrame,snapshot,a.Start,member.Slots[0],a.Actor.Settings.AgentRadius,
+                "pickup/"+a.Visit.Id,requirements:roles,safetyMargin:a.Actor.Settings.CollisionSkin+a.Actor.Settings.Epsilon,planPrimaryRoute:true);
+            if(a.Eligibility==null)a.Eligibility=new TrafficUnpaidParkingEligibility(a.Key,a.Actor,a.Counter,a.Visit,a.Admission,
+                ()=>CanIntegratedProgress && a.Visit.PaidPickup==null && ReservationAnchorCurrent(a),a.InitialGeometry.Descriptor);
+            if(cursor.UnpaidEligibility==null && cursor.Source==null)cursor.UnpaidEligibility=a.Eligibility;
+            if(!ReferenceEquals(cursor.UnpaidEligibility,a.Eligibility) || !PrepareTrafficCandidate(cursor,request,a.Actor,candidateIndex,expected,out decision))return false;
+            a.Submitted=true;a.SideIndex=member.SideIndex;a.Side=member.Side;
+            return ReservationAnchorCurrent(a) && ReferenceEquals(a.Coordinator.GetDecision(a.Key),decision);
+        }
+        private bool TryInitialPickupReservation(Visit visit,TrafficWorldSnapshot snapshot,out string reason)
+        {
+            reason="等待初始Pick-up完整几何证明 / Preparing initial pickup geometry";
+            if(!pickupGeometryConfigured && !TryConfigurePickupFromLayout(selectedPickupId,out reason))return false;
+            if(pickupQueue!=null || !TrafficActorReady(visit.Actor))return false;
+            var key=TrafficKey(visit.Id,"pickup-wait",visit.Id+"/"+visit.TrafficPhaseSequence);
+            var cursor=GetTrafficCursor(key,visit.Actor,TrafficCandidateRole.Reservation,pickupSides);if(cursor==null)return false;
+            var anchor=visit.PendingReservationAnchor;
+            if(anchor==null)
+            {
+                if(cursor.Source!=null || cursor.InitialGeometry!=null || !queue.TryCaptureAssignment(visit.Id,out var claim))return false;
+                var employee=world.RegisteredActors.FirstOrDefault(actor=>actor!=null && actor.ActorId==deliveryActorId);
+                if(employee!=null && !TrafficActorReady(employee))return false;
+                var geometry=BuildInitialPickupGeometry(visit);if(geometry==null)return false;
+                var member=geometry.Members[0];cursor.InitialGeometry=geometry;
+                anchor=new PickupReservationAnchor{Coordinator=traffic,Key=key,Counter=queue,CounterClaim=claim,Visit=visit,Actor=visit.Actor,
+                    Admission=visit.Admission,Capacity=Capacity,World=world,Tokens=Capacity.GetReservations().Where(r=>r.OwnerId==visit.Id).ToArray(),
+                    EmployeeId=deliveryActorId,Employee=employee,Phase=visit.State,Generation=visit.Generation,Cursor=visit.TrafficPhaseSequence,
+                    SideIndex=member.SideIndex,Side=member.Side,Start=visit.Actor.transform.position,Work=deliveryWorkTarget.Position,
+                    Exit=exit.position,FirstFrame=CustomerSourceFrame(visit,key),InitialGeometry=geometry,
+                    InitialActorSettings=PickupActorGeometry(visit.Actor),InitialEmployeeSettings=PickupActorGeometry(employee)};
+                visit.PendingReservationAnchor=anchor;
+            }
+            if(!anchor.Key.Equals(key) || anchor.InitialGeometry==null ||
+                !SelectTrafficCandidate(cursor,visit.Actor,(i,side,target)=>true,out var index,out _) ||
+                !PrepareInitialPickupAnchor(anchor,snapshot,out var decision,index))return false;
+            if(decision.Kind!=TrafficDecisionKind.Granted)
+            {reason=decision.Kind+": "+decision.Reason;return RefuseUnreservedFront(visit,decision);}
+            var chosen=anchor.InitialGeometry.Members[index];
+            if(anchor.Owner==null)
+            {
+                anchor.Owner=multiSidePickup?new PickupQueueService(chosen.Slots,pickupSides.Select(s=>s.Position).ToArray()):
+                    new PickupQueueService(chosen.Slots,chosen.Side.Position,chosen.Shared);
+                anchor.InitialChosenOwner=anchor.Owner;anchor.InitialChosenIndex=index;
+            }
+            if(!anchor.Owner.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,visit.Id,anchor.Owner.Version,out var preview) ||
+                !preview.IsCurrent || !preview.BelongsTo(anchor.Owner) || preview.Assignment.Position!=chosen.Slots[0])return false;
+            anchor.Preview=preview;
+            return CommitPickupReservation(visit,anchor,cursor,decision,index,out reason);
+        }
         private bool EnsurePickupQueue(Visit visit,out string reason)
         {
             reason="没有合法且完整可达的Pick-up等候位";
             if(!pickupGeometryConfigured && !TryConfigurePickupFromLayout(selectedPickupId,out reason)) return false;
             if(pickupQueue!=null) return true;
-            if(traffic!=null) return BuildTrafficPickupCandidates(visit,out reason);
+            if(traffic!=null){reason="初始队列必须经原停车共同提交 / Initial queue requires original joint commit";return false;}
             var clearance=prefabs.Max(p=>2*p.Settings.AgentRadius+p.Settings.CollisionSkin+p.Settings.Epsilon+p.Settings.ArrivalDistance);
             var corridors=PickupDeliveryCorridors();
             if(corridors!=null && corridors.Count==0) { reason="送杯通道堵塞，请调整布局 / No complete delivery and return corridor"; return false; }
@@ -4498,48 +4996,6 @@ namespace AnimalCafe.Customers
                 pickupQueue=multiSidePickup?new PickupQueueService(slots,pickupSides.Select(t=>t.Position).ToArray()):new PickupQueueService(slots,customer,shared);
                 pickupWaitSlots=slots.ToArray();
                 reason=""; return true;
-                }
-            }
-            return false;
-        }
-        private bool BuildTrafficPickupCandidates(Visit visit,out string reason)
-        {
-            reason="没有合法Pick-up候选链 / No pickup candidate chain";
-            var clearance=prefabs.Max(p=>2*p.Settings.AgentRadius+p.Settings.CollisionSkin+p.Settings.Epsilon+p.Settings.ArrivalDistance);
-            // 空的未来收银尾位尚无owner；真实分配和已有路线仍由共同许可保护 / Unassigned tail slots own no space.
-            var assignedCounter=queue?.Snapshot.Select(row=>row.Position).ToArray()??Array.Empty<Vector3>();
-            // 初建候位先考虑靠近当前队首的一侧；完整route proof仍是唯一占位许可 / Prefer the nearer approach, prove before commit.
-            foreach(var side in pickupSides.OrderBy(side=>(side.Position-visit.Actor.transform.position).sqrMagnitude))
-            {
-                var outward=-side.Facing.Value;var shared=multiSidePickup || Vector3.Distance(side.Position,pickupEmployee)<clearance;
-                var first=shared?side.Position+outward*1.1f:side.Position;
-                // 只排序既有有限候选，优先避开工作通道；最终仍需Core完整证明 / Preference only, never permission.
-                var heads=PickupWaitHeads(first,outward,!string.IsNullOrEmpty(deliveryActorId));
-                if(pickupSides.Length==1 && !string.IsNullOrEmpty(deliveryActorId))heads=heads.OrderBy(head=>CustomerRoutePlanner.IsClear(
-                    new[]{deliveryWorkTarget.Position,side.Position},new[]{head},clearance)?0:1);
-                foreach(var head in heads)
-                {
-                    // Geometry produces candidates only. Each actual parking prefix still needs the shared bounded capability proof.
-                    // 候选链本身不授予空间；真正占位必须通过同一coordinator共同提交。
-                    // Retain the same original forward-gate facts as the legacy branch; no diagnostic requery.
-                    // 当前分支也保存原转弯拒绝结果，验收不能事后重算。
-                    pickupPlanningRejections.Clear();
-                    var planner=new CounterQueuePlanner(1.1f,preserveStraightPrefix:true);
-                    planner.RejectedForward=(point,previous,direction,prefix,failure)=>{
-                        if(pickupPlanningRejections.Count<256)
-                            pickupPlanningRejections.Add(new QueueForwardRejection(point,previous,direction,prefix,failure));
-                    };
-                    var slots=planner.Build(head,outward,Capacity.Limits.PickUp,
-                        (point,previous)=>adapter.IsPointArrivable(point,visit.Actor.Settings.ArrivalDistance) && !InEntrance(point) && Vector3.Distance(point,exit.position)>=1.2f &&
-                            (!shared || Vector3.Distance(point,side.Position)>=clearance) &&
-                            (!multiSidePickup || pickupSides.All(s=>Vector3.Distance(point,s.Position)>=clearance)) &&
-                            assignedCounter.All(p=>Vector3.Distance(p,point)>=clearance) &&
-                            world.RegisteredActors.All(actor=>actor==null || Vector3.Distance(actor.transform.position,point)>=clearance),
-                        (point,prefix)=>true,(from,to)=>adapter.IsPointArrivable(to,visit.Actor.Settings.ArrivalDistance)?(Vector3?)to:null);
-                    if(slots.Count==0)continue;
-                    pickupCustomer=side.Position;pickupOutward=outward;pickupWaitSlots=slots.ToArray();
-                    pickupQueue=multiSidePickup?new PickupQueueService(slots,pickupSides.Select(s=>s.Position).ToArray()):new PickupQueueService(slots,side.Position,shared);
-                    reason="";return true;
                 }
             }
             return false;
@@ -5545,7 +6001,7 @@ namespace AnimalCafe.Customers
                 HoldVisit(visit); visit.ResumeState=CustomerVisitState.Exiting;
             }
             // 保留者仍持旧PickupOwner用于实际离位释放；新客必须解析新布局geometry。
-            pickupQueue=null; pickupGeometryConfigured=false; selectedPickupId=null;pickupPlanningRejections.Clear();
+            pickupQueue=null;pickupBlueprint=null; pickupGeometryConfigured=false; selectedPickupId=null;pickupPlanningRejections.Clear();
             deliveryAcquired=false;deliveryWasAway=false;deliveryYieldCount=0;deliveryAttempt=0;PickupDeliveryFailure="";deliveryTrafficPaths=null;
             revision=-1; suspended=true; clock?.Tick(0,false,false);
         }
@@ -7204,7 +7660,7 @@ namespace AnimalCafe.Customers
         private void OnDisable() { HoldVisits(captureYieldContinuation:true); clock?.Tick(0,false,false); }
         private void OnEnable() { suspended=true; }
         private void OnDestroy()
-        { pickupPreparationLife++;disposed=true; foreach(var id in visits.Keys.ToArray()) RemoveVisit(id); Capacity=null; queue=null; pickupQueue=null;pickupPlanningRejections.Clear(); exitSnapshots.Clear(); }
+        { pickupPreparationLife++;disposed=true; foreach(var id in visits.Keys.ToArray()) RemoveVisit(id); Capacity=null; queue=null; pickupQueue=null;pickupBlueprint=null;pickupPlanningRejections.Clear(); exitSnapshots.Clear(); }
     }
 }
 

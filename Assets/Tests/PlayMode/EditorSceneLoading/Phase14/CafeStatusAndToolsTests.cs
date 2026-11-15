@@ -310,7 +310,8 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             }
             try
             {
-                yield return OpenPickupLayoutForProjectionCapacity(); // Original fixed4,4; no alternative layout or slot rewrite.
+                yield return OpenPickupLayoutForProjectionCapacity(); // Same formal4,4; initialize legacy cache before any real visit/source.
+                InitializeLegacyCachedPickupInput(); // After publication, the original cached owner/slots are never rewritten.
                 savedStepping=CafeLoopRuntimeProof.Field<bool>(owner,"stepping");var world=Find<NavigationWorld>();tools.ResumeCollection();
                 Assert.That(customers.AutoSpawn,Is.False,"Three manual real opportunities only; no automatic anchor is cancelled/replaced");
                 yield return Run(CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,Math.Min(6000,remaining),requireCurrentSnapshot:true));
@@ -489,6 +490,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         [UnityTest] public IEnumerator ReusedPickupCandidatesKeepOriginalGeometryAndTwoRealGuestsDrain()
         {
             yield return OpenPickupLayoutForProjectionCapacity();
+            InitializeLegacyCachedPickupInput(); // Explicit old cache input; every later source/row/lease/exit remains real.
             var world=Find<NavigationWorld>();tools.ResumeCollection();
             var observers=new System.Collections.Generic.List<CafeActualExitObserver>();
             var exits=new System.Collections.Generic.HashSet<string>();var observing=true;
@@ -542,6 +544,53 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 observing=false;foreach(var observer in observers)if(observer!=null)observer.Receipt=null;
                 CafeLoopRuntimeProof.Set(customers,"clock",savedClock);tools.HoldArrivals();
             }
+        }
+        // Compatibility input for these two cached-owner regressions, before any actual business publication.
+        // 仅初始化旧格式空缓存；不是initial-blueprint算法测试，发布后绝不改slots/owner/actor/source。
+        private void InitializeLegacyCachedPickupInput()
+        {
+            Assert.That(customers.Snapshot,Is.Empty);Assert.That(owner.Snapshot.Orders,Is.Empty);Assert.That(customers.CounterAssignments,Is.Empty);
+            Assert.That(customers.Capacity.GetReservations(),Is.Empty);Assert.That(CafeLoopRuntimeProof.Field<long>(customers,"nextVisit"),Is.Zero);
+            Assert.That(CafeLoopRuntimeProof.Field<IDictionary>(customers,"visits").Count,Is.Zero);
+            Assert.That(CafeLoopRuntimeProof.Field<IDictionary>(customers,"trafficCandidates").Count,Is.Zero);
+            Assert.That(CafeLoopRuntimeProof.Field<object>(customers,"pendingAdmissionAnchor"),Is.Null);
+            Assert.That(CafeLoopRuntimeProof.Field<PickupQueueService>(customers,"pickupQueue"),Is.Null);
+            var runtime=Find<CafeLayoutRuntime>();var world=Find<NavigationWorld>();var adapter=Find<NavigationLayoutAdapter>();
+            var pickupId=runtime.FunctionalSurfaceLayout.PickUpPoints.Single().InstanceId;
+            Assert.That(customers.TryConfigurePickupFromLayout(pickupId,out var reason),Is.True,reason);
+            Assert.That(CafeLoopRuntimeProof.Field<object>(customers,"pickupBlueprint"),Is.Null);
+            var sides=customers.GetPickupServiceTargets(pickupId).ToArray();Assert.That(sides.Length,Is.EqualTo(4));
+            var side=sides.Single(target=>Vector3.Distance(target.Position,new Vector3(-.5f,0,.5f))<.001f);
+            Assert.That(side.Facing.HasValue,Is.True);var outward=-side.Facing.Value;var lateral=new Vector3(-outward.z,0,outward.x);
+            var head=side.Position+outward*1.1f+lateral*1.1f;
+            Assert.That(Vector3.Distance(head,new Vector3(-1.6f,0,-.6f)),Is.LessThan(.001f),"Original formal legacy head, derived from its real side");
+            var prefabs=CafeLoopRuntimeProof.Field<NavigationActor[]>(customers,"prefabs");
+            var clearance=prefabs.Max(body=>2*body.Settings.AgentRadius+body.Settings.CollisionSkin+body.Settings.Epsilon+body.Settings.ArrivalDistance);
+            var arrival=prefabs.Min(body=>body.Settings.ArrivalDistance+body.Settings.Epsilon);
+            var grid=CafeLoopRuntimeProof.Field<Transform>(customers,"gridRoot");var size=runtime.Layout.GridSettings.CellSize;
+            bool InEntrance(Vector3 point)
+            {
+                var local=grid.InverseTransformPoint(point);
+                return runtime.Layout.Reservations.Any(row=>row.Type==LayoutReservationType.EntranceClearance &&
+                    local.x>=row.Origin.X*size-.46f && local.x<=(row.Origin.X+row.Size.Width)*size+.46f &&
+                    local.z>=row.Origin.Y*size-.46f && local.z<=(row.Origin.Y+row.Size.Height)*size+.46f);
+            }
+            var exit=CafeLoopRuntimeProof.Field<Transform>(customers,"exit").position;
+            var slots=new CounterQueuePlanner(1.1f,preserveStraightPrefix:true).Build(head,outward,customers.Capacity.Limits.PickUp,
+                (point,previous)=>adapter.IsPointArrivable(point,arrival) && !InEntrance(point) && Vector3.Distance(point,exit)>=1.2f &&
+                    sides.All(target=>Vector3.Distance(point,target.Position)>=clearance) &&
+                    world.RegisteredActors.All(actor=>actor==null || Vector3.Distance(actor.transform.position,point)>=clearance) &&
+                    (previous==null || adapter.HasClearPath(previous.Value,point)) && adapter.HasClearPath(point,side.Position),
+                sampleEdge:(from,to)=>{var path=adapter.GetCompletePath(from,to);return path==null || path.Count==0?(Vector3?)null:path[path.Count-1];}).ToArray();
+            Assert.That(slots.Length,Is.GreaterThanOrEqualTo(2),"Legacy cache must support the unchanged two-paid-guest proof");
+            Assert.That(slots[0],Is.EqualTo(head));var cached=new PickupQueueService(slots,sides.Select(target=>target.Position).ToArray());
+            Assert.That(CafeLoopRuntimeProof.Field<IDictionary>(cached,"reservations").Count,Is.Zero);Assert.That(cached.ServiceLeases,Is.Empty);
+            Assert.That(cached.Snapshot,Is.Empty);Assert.That(cached.Version,Is.Zero);
+            CafeLoopRuntimeProof.Set(customers,"pickupWaitSlots",slots);CafeLoopRuntimeProof.Set(customers,"pickupQueue",cached);
+            Assert.That(CafeLoopRuntimeProof.Field<object>(customers,"pickupBlueprint"),Is.Null);
+            Assert.That(customers.Snapshot,Is.Empty);Assert.That(owner.Snapshot.Orders,Is.Empty);Assert.That(customers.Capacity.GetReservations(),Is.Empty);
+            TestContext.WriteLine("LEGACY_CACHED_PICKUP_INPUT formalPickup="+pickupId+" originalHead="+head.ToString("F6")+
+                " slotCount="+slots.Length+" beforeFirstVisit=True rows=0 leases=0 blueprint=NULL noPublishedOwnerRewrite=True");
         }
         // Fixed formal layout already proved by MatrixOpen: this fixture tests five-order projection/FIFO.
         // Move the same pickup support before business; no body, order, payment, speed or budget mutation.

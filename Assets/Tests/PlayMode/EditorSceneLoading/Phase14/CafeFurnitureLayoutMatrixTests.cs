@@ -32,9 +32,11 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         public static readonly int[] MatrixRapidRecipes={0,1};
         private bool matrixObserving;
         private bool exitDependencyObserved;
-        private bool controlledRecoveryStaged;
-        [UnityTest] public IEnumerator ControlledPendingCollectedExitRecoveryUsesIntegratedBoundaryPlan()
-            => MatrixEntranceRejectsFurnitureAndFloorEdgeKeepsOwnedWaitsInside();
+        private bool controlledRecoveryStaged,controlledRecoveryRequired;
+        // Current integrated contract: real Native failure, one explicit recovery, same business identity.
+        // 旧ring/Grid oracle不再是Main权限；原订单/杯/token与完整matrix经营断言均保留。
+        [UnityTest] public IEnumerator ControlledCollectedExitNativeFailureRecoversOnceAndReleasesOriginalTokens()
+            => MatrixEntranceAndFloorEdge(true);
         private readonly System.Collections.Generic.Queue<string> matrixTrafficHistory=new System.Collections.Generic.Queue<string>();
         private static readonly GridPosition[] MatrixNeighbours={new GridPosition(4,5),new GridPosition(5,4),new GridPosition(4,3),new GridPosition(3,4)};
 
@@ -78,6 +80,8 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             yield return MatrixFinish(pickup.InstanceId,"slot.0",3,"L-07",0,true);
         }
         [UnityTest] public IEnumerator MatrixEntranceRejectsFurnitureAndFloorEdgeKeepsOwnedWaitsInside()
+            => MatrixEntranceAndFloorEdge(false);
+        private IEnumerator MatrixEntranceAndFloorEdge(bool recoverCollectedExit)
         {
             yield return MatrixStart();var decor=Find<DecorationModeController>();var runtime=Find<CafeLayoutRuntime>();
             var session=CafeLoopRuntimeProof.Field<DecorationSession>(decor,"session");var original=runtime.Layout.FurnitureInstances.First();
@@ -90,7 +94,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             typeof(DecorationModeController).GetMethod("HandleCancelRequested",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(decor,null);
             yield return MatrixFurniture("furniture.counter.module.01",new GridPosition(7,3),0);
             var pickup=runtime.Layout.FurnitureInstances.Single(f=>f.Position==new GridPosition(7,3));
-            yield return MatrixFinish(pickup.InstanceId,"slot.0",3,"L-08+L-09",0);
+            yield return MatrixFinish(pickup.InstanceId,"slot.0",3,"L-08+L-09",0,recoverCollectedExit:recoverCollectedExit);
         }
         [UnityTest] public IEnumerator MatrixExposedButDisconnectedSidesBlockWithoutChargeThenFormalRepairServes()
         {
@@ -155,7 +159,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         {
             matrixTrafficHistory.Clear();
             exitDependencyObserved=false;
-            controlledRecoveryStaged=false;
+            controlledRecoveryStaged=controlledRecoveryRequired=false;
             var old=scene;var oldInputs=inputs;
             SceneManager.SetActiveScene(SceneManager.CreateScene("corridor matrix switch"));
             yield return SceneManager.UnloadSceneAsync(old);Phase8SceneInputTestCleanup.DisposeReleasedAssets(oldInputs);
@@ -197,8 +201,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             Assert.That(confirm,Is.Not.Null);confirm.Invoke(decor,null);
             Assert.That(CafeLoopRuntimeProof.Field<DecorationSession>(decor,"session").ActivePreview,Is.Null,"Controller Confirm retains all placement/navigation guards");yield return null;
         }
-        private IEnumerator MatrixFinish(string supportId,string slot,int sideCount,string layoutId,int rotation,bool requireDetour=false,bool pickupAlreadyMounted=false,bool rapid=false)
+        private IEnumerator MatrixFinish(string supportId,string slot,int sideCount,string layoutId,int rotation,bool requireDetour=false,bool pickupAlreadyMounted=false,bool rapid=false,bool recoverCollectedExit=false)
         {
+            controlledRecoveryRequired=recoverCollectedExit;
             var runtime=Find<CafeLayoutRuntime>();var decor=Find<DecorationModeController>();
             if(!pickupAlreadyMounted)
             {Assert.That(decor.TryBeginFunctionalSurfacePreview(DecorationCatalogueItemKind.PickUpPoint,"pickup.point",new SurfaceSlotAddress(supportId,slot)),Is.True);
@@ -253,7 +258,11 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 var observer=body.gameObject.AddComponent<CafeActualExitObserver>();observer.VisitId=id;
                 observer.Receipt=(visit,pose)=>{if(!tracking)return;Assert.That(Vector3.Distance(pose,CafeLoopRuntimeProof.Field<Transform>(customers,"exit").position),Is.LessThanOrEqualTo(.081f));
                     Assert.That(customers.Capacity.GetReservations().Single(r=>ReferenceEquals(r.Token,total)).State,Is.EqualTo(ReservationState.Released));actualExit=true;};
-                try{tools.ResumeCollection();yield return Until(()=>actualExit && customers.Capacity.GetCapacities().All(c=>c.Used==0) && employees.Snapshot.All(e=>e.State==EmployeeState.Idle));}
+                try
+                {
+                    if(recoverCollectedExit)yield return MatrixRecoverActualCollectedExit(id,body,()=>actualExit);
+                    else{tools.ResumeCollection();yield return Until(()=>actualExit && customers.Capacity.GetCapacities().All(c=>c.Used==0) && employees.Snapshot.All(e=>e.State==EmployeeState.Idle));}
+                }
                 finally{tracking=false;}
                 Assert.That(owner.Snapshot.Orders.Values.Single().State,Is.EqualTo(OrderState.Completed));
                 Assert.That(paid,Is.EqualTo(1));Assert.That(prepared,Is.EqualTo(1));Assert.That(delivered,Is.EqualTo(1));
@@ -1292,7 +1301,6 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             var previous=followers.ToDictionary(a=>a.VisitId,a=>world.RegisteredActors.Single(b=>b.ActorId==a.VisitId).transform.position);
             var advancedIds=new System.Collections.Generic.HashSet<string>();
             var advanced=false;Action<CafeLoopSnapshot> watch=s=>{
-                StageControlledPendingRecovery();
                 ObserveFiniteExitDependency();
                 foreach(var old in followers)
                 {
@@ -1349,8 +1357,8 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 }
                 Assert.That(owner.Snapshot.Delivery,Is.Empty);Assert.That(Find<PickupCupDisplay>().VisibleOrders,Is.Empty);
                 CollectionAssert.AreEquivalent(originalTokens.Keys,exited,"Every original body physically reached the exit before releasing its original total token");
-                if(TestContext.CurrentContext.Test.Name.StartsWith("ControlledPendingCollectedExitRecovery"))
-                    Assert.That(controlledRecoveryStaged,Is.True,"Controlled ring-nil/Grid-complete recovery boundary must actually occur");
+                if(controlledRecoveryRequired)
+                    Assert.That(controlledRecoveryStaged,Is.True,"Original collected Native failure and one explicit recovery must actually reach the real Exit");
                 TestContext.WriteLine("PAID_COHORT_DRAIN "+layoutId+"/"+rotation+" actual="+ids.Count+" extraUnpaid="+(unpaid!=null)+" advanced="+advanced+" originalTokensReleased=True");
             }
             finally {owner.SnapshotChanged-=watch;}
@@ -1466,120 +1474,390 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             }
         }
 
-        private void StageControlledPendingRecovery()
+        private IEnumerator MatrixRecoverActualCollectedExit(string id,NavigationActor actor,Func<bool> actualExit)
         {
-            if(controlledRecoveryStaged || !TestContext.CurrentContext.Test.Name.StartsWith("ControlledPendingCollectedExitRecovery"))return;
-            var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
-            var entries=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(customers,"visits");
-            foreach(System.Collections.DictionaryEntry pair in entries)
+            const System.Reflection.BindingFlags flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+            object Read(object value,string name)=>value==null?null:value.GetType().GetField(name,flags)?.GetValue(value);
+            bool Flag(object value,string name)=>Read(value,name) is bool bit && bit;
+            var core=CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic");
+            var entries=(IDictionary)Read(core,"entries");var visits=(IDictionary)Read(customers,"visits");
+            var native=(IDictionary)Read(world.Service,"byId");var byActor=(IDictionary)Read(world.Service,"byActor");
+            var departure=CafeLoopRuntimeProof.Field<Transform>(customers,"exit").position;
+            var order=owner.Snapshot.Orders.Single(o=>o.Value.CustomerId==id).Key;
+            var tokens=customers.Capacity.GetReservations().Where(r=>r.OwnerId==id).Select(r=>r.Token).ToArray();
+            var total=customers.Capacity.GetReservations().Single(r=>r.OwnerId==id && r.Kind==CapacityKind.TotalCustomers).Token;
+            var originalKey=default(TrafficIntentKey);object originalEntry=null;TrafficDecision originalSource=null;
+            var originalStamp=default(TrafficNativeStamp);var originalFirst=0;var originalQueries=0;var failureCount=0;
+            var failure="";var observerErrors=new System.Collections.Generic.List<string>();
+            NavigationActor obstruction=null;var blocked=false;var removedAt=-1;var resumeCalls=0;var recoveredBound=false;var active=true;
+            var hook=typeof(CustomerFlowController).GetField("CorridorObserver",flags);var previous=hook.GetValue(customers) as Delegate;
+            Action<string,string,string,Vector3,System.Collections.Generic.IReadOnlyList<Vector3>,Vector3[],string> tap=(op,who,other,target,path,obstacles,result)=>
             {
-                var entry=pair.Value;var type=entry.GetType();
-                if((CustomerVisitState)type.GetField("State").GetValue(entry)!=CustomerVisitState.Exiting ||
-                    (long)type.GetField("RequestId").GetValue(entry)==0)continue;
-                var actor=(NavigationActor)type.GetField("Actor").GetValue(entry);var target=(NavigationTarget)type.GetField("FinalTarget").GetValue(entry);
-                var occupied=(Vector3[])typeof(CustomerFlowController).GetMethod("RouteObstacles",flags).Invoke(customers,new object[]{pair.Key,null,false});
-                var ring=typeof(CustomerFlowController).GetMethod("BuildRoute",flags).Invoke(customers,new object[]{actor.transform.position,target.Position,pair.Key,actor.Settings,null,false});
-                var full=typeof(CustomerFlowController).GetMethod("PlanPickupExit",flags).Invoke(customers,new object[]{actor.transform.position,target.Position,occupied,actor.Settings});
-                if(ring!=null || full==null)continue;
-                var oldRequest=(long)type.GetField("RequestId").GetValue(entry);var oldGeneration=(int)type.GetField("Generation").GetValue(entry);var pose=actor.transform.position;
-                typeof(CustomerFlowController).GetMethod("HoldVisit",flags).Invoke(customers,new object[]{entry,false});
-                Assert.That((long)type.GetField("RequestId").GetValue(entry),Is.Zero);
-                Assert.That((int)type.GetField("Generation").GetValue(entry),Is.EqualTo(oldGeneration+1));
-                type.GetField("State").SetValue(entry,CustomerVisitState.Exiting);type.GetField("PendingExitSegment").SetValue(entry,true);type.GetField("Route").SetValue(entry,null);
-                Assert.That(actor.transform.position,Is.EqualTo(pose));controlledRecoveryStaged=true;
-                TestContext.WriteLine("CONTROLLED_PENDING_EXIT_RECOVERY HoldVisit=True retiredRequest="+oldRequest+" originalRingNil=True completeGridPlan=True RouteSetNil=True originalPose/visit/order/tokensPreserved=True");
-                return;
+                if(!active || op!="segment.callback-result" || who!=id || originalStamp.RequestId<=0)return;
+                try
+                {
+                    var words=(result??"").Split(' ');
+                    if(!words.Contains("request="+originalStamp.RequestId) || !words.Contains("issuedGeneration="+originalStamp.LegGeneration))return;
+                    failureCount++;failure=result;
+                }
+                catch(Exception error){observerErrors.Add(error.ToString());}
+            };
+            var holder=Delegate.Combine(previous,tap);hook.SetValue(customers,holder);
+            try
+            {
+                tools.ResumeCollection();
+                // One original Exit window: capture, physical obstruction, actual failure, repair and recovery share 6000.
+                // 同一6000界内完成全部阶段；不移动actor、不改State/Route/Source、不追加失败重试窗口。
+                for(var frame=0;frame<6000;frame++)
+                {
+                    Assert.That(employees.Snapshot.All(employee=>employee.State!=EmployeeState.Blocked),Is.True,"Only this original customer Exit failure is controlled; do not recover unrelated employee failures");
+                    Assert.That(observerErrors,Is.Empty,string.Join("\n",observerErrors));
+                    var visit=visits.Contains(id)?visits[id]:null;
+                    if(originalEntry==null && visit!=null && (CustomerVisitState)Read(visit,"State")==CustomerVisitState.Exiting)
+                    {
+                        var move=Read(visit,"TrafficMove");
+                        if(move!=null && Read(move,"Intent") is TrafficIntentKey key && key.IntentId=="actual-exit" && entries.Contains(key))
+                        {
+                            var entry=entries[key];var leg=Read(entry,"Leg");var source=Read(entry,"JourneyPermit") as TrafficDecision;
+                            var request=Read(entry,"Request") as TrafficRequest;var stamp=Read(leg,"Stamp") is TrafficNativeStamp actual?actual:default;
+                            if(leg!=null && source!=null && source.AcquiredSequence>0 && request!=null && request.Target.Equals(departure) &&
+                                Flag(leg,"Committed") && Flag(leg,"Bound") && !Flag(leg,"Completed") && ReferenceEquals(Read(leg,"ActorLife"),actor) &&
+                                stamp.RequestId>0 && native.Contains(stamp.RequestId) && byActor.Contains(id) && ReferenceEquals(native[stamp.RequestId],byActor[id]) &&
+                                stamp.RequestId==(long)Read(visit,"RequestId") && (int)Read(move,"NativeGeneration")==stamp.LegGeneration)
+                            {
+                                Assert.That(Read(visit,"HasCollected"),Is.EqualTo(true));Assert.That(Read(visit,"CollectedOrder"),Is.EqualTo(order));
+                                Assert.That(owner.Snapshot.Orders[order].State,Is.EqualTo(OrderState.Completed));
+                                Assert.That(actualExit(),Is.False);Assert.That(source.ProofRoutes.Any(proof=>ReferenceEquals(proof,Read(leg,"Proof"))),Is.True);
+                                Assert.That(((TrafficIntentKey)Read(entry,"Key")).Equals(key),Is.True);
+                                var path=(Vector3[])Read(entry,"CurrentPath");Assert.That(path.Length,Is.GreaterThan(1));
+                                originalKey=key;originalEntry=entry;originalSource=source;originalStamp=stamp;
+                                originalFirst=(int)Read(entry,"FirstFrame");originalQueries=core.QueriesConsumed(key);
+                                // Exactly the existing final endpoint once, after actual Native acceptance. No search/fallback.
+                                // 固定原Exit endpoint；真实walkable/body/Register若拒绝就是PremiseNotProven。
+                                obstruction=Blocker(departure,"matrix-actual-collected-exit-recovery-body");
+                                var pair=actor.Settings.AgentRadius+obstruction.Settings.AgentRadius+
+                                    Math.Max(actor.Settings.CollisionSkin+actor.Settings.Epsilon,obstruction.Settings.CollisionSkin+obstruction.Settings.Epsilon);
+                                Assert.That(CustomerRoutePlanner.IsClear(path,new[]{obstruction.transform.position},pair),Is.False,
+                                    "PREMISE: the one registered body must physically obstruct this original current Native Exit path");
+                                TestContext.WriteLine("MATRIX_REAL_EXIT_BLOCK key="+originalKey+" acquired="+source.AcquiredSequence+" stamp="+stamp.RequestId+"/"+stamp.LegGeneration+" fixedEndpoint="+departure.ToString("F6"));
+                            }
+                        }
+                    }
+                    if(obstruction!=null && !blocked && visit!=null && (CustomerVisitState)Read(visit,"State")==CustomerVisitState.Blocked)
+                    {
+                        Assert.That(failureCount,Is.EqualTo(1),"PREMISE: capture this original Native terminal callback, not a later planner refusal");
+                        var words=failure.Split(' ');Assert.That(words,Has.Member("status=Failed"));Assert.That(words,Has.No.Member("reason=None"));
+                        Assert.That(words.Contains("retry=0") || words.Contains("retry=1"),Is.True,"Original Native has at most its existing bounded retry");
+                        Assert.That(native.Contains(originalStamp.RequestId),Is.False);Assert.That((long)Read(visit,"RequestId"),Is.Zero);
+                        Assert.That(Read(visit,"HasCollected"),Is.EqualTo(true));Assert.That(Read(visit,"CollectedOrder"),Is.EqualTo(order));
+                        Assert.That(owner.Snapshot.Orders.Count,Is.EqualTo(1));Assert.That(owner.Snapshot.Orders[order].State,Is.EqualTo(OrderState.Completed));
+                        Assert.That(actualExit(),Is.False);Assert.That(actor!=null && world.RegisteredActors.Contains(actor),Is.True);
+                        CollectionAssert.AreEqual(tokens,customers.Capacity.GetReservations().Where(r=>r.OwnerId==id).Select(r=>r.Token));
+                        Assert.That(customers.Capacity.GetReservations().Single(r=>ReferenceEquals(r.Token,total)).State,Is.EqualTo(ReservationState.Occupied));
+                        Assert.That(entries[originalKey],Is.SameAs(originalEntry));Assert.That(Read(originalEntry,"Retired"),Is.EqualTo(true));
+                        Assert.That(Read(originalEntry,"FirstFrame"),Is.EqualTo(originalFirst));Assert.That(core.QueriesConsumed(originalKey),Is.GreaterThanOrEqualTo(originalQueries));
+                        blocked=true;world.Unregister(obstruction);obstruction.gameObject.SetActive(false);UnityEngine.Object.Destroy(obstruction.gameObject);obstruction=null;removedAt=frame;
+                    }
+                    if(blocked && resumeCalls==0 && frame>removedAt)
+                    {
+                        Assert.That(visit,Is.Not.Null);Assert.That((CustomerVisitState)Read(visit,"State"),Is.EqualTo(CustomerVisitState.Blocked));
+                        Assert.That((long)Read(visit,"RequestId"),Is.Zero);Assert.That(actualExit(),Is.False);
+                        resumeCalls++;tools.ResumeBlockedFlow(); // Exactly one public explicit recovery; no private generation/route writes.
+                    }
+                    if(resumeCalls==1 && visit!=null)
+                    {
+                        var move=Read(visit,"TrafficMove");
+                        if(move!=null && Read(move,"Intent") is TrafficIntentKey key && key.IntentId=="actual-exit" && entries.Contains(key))
+                        {
+                            var entry=entries[key];var leg=Read(entry,"Leg");var source=Read(entry,"JourneyPermit") as TrafficDecision;
+                            if(source!=null && Flag(leg,"Bound") && Flag(leg,"Committed") && Read(leg,"Stamp") is TrafficNativeStamp stamp && native.Contains(stamp.RequestId))
+                            {
+                                Assert.That(key,Is.Not.EqualTo(originalKey));Assert.That(source,Is.Not.SameAs(originalSource));
+                                Assert.That(source.AcquiredSequence,Is.GreaterThan(originalSource.AcquiredSequence));
+                                Assert.That(ReferenceEquals(byActor[id],native[stamp.RequestId]),Is.True);Assert.That(Read(leg,"ActorLife"),Is.SameAs(actor));recoveredBound=true;
+                            }
+                        }
+                    }
+                    if(actualExit() && customers.Capacity.GetCapacities().All(c=>c.Used==0) && employees.Snapshot.All(e=>e.State==EmployeeState.Idle))break;
+                    yield return null;
+                }
+                Assert.That(observerErrors,Is.Empty,string.Join("\n",observerErrors));
+                Assert.That(originalEntry,Is.Not.Null,"PremiseNotProven: no real final-leg Bound actual Exit was observed in the original 6000 window");
+                Assert.That(blocked,Is.True,"The fixed real body must cause this original Native failure, not an invented hold");
+                Assert.That(resumeCalls,Is.EqualTo(1));Assert.That(recoveredBound,Is.True,"A new real full-proof Exit source must bind after the one public Resume");
+                Assert.That(actualExit(),Is.True,"Recovery is not Arrived: require the actual original customer Exit receipt");
+                Assert.That(owner.Snapshot.Orders.Count,Is.EqualTo(1));Assert.That(owner.Snapshot.Orders[order].State,Is.EqualTo(OrderState.Completed));
+                CollectionAssert.AreEqual(tokens,customers.Capacity.GetReservations().Where(r=>r.OwnerId==id).Select(r=>r.Token));
+                Assert.That(customers.Capacity.GetReservations().Where(r=>r.OwnerId==id).All(r=>r.State==ReservationState.Released),Is.True);
+                Assert.That(customers.Capacity.GetCapacities().All(c=>c.Used==0),Is.True);Assert.That(employees.Snapshot.All(e=>e.State==EmployeeState.Idle),Is.True);
+                controlledRecoveryStaged=true;
+                TestContext.WriteLine("MATRIX_REAL_EXIT_RECOVERY original="+originalKey+" nativeFailure="+failure+" explicitResume=1 realNewBound=True actualExit=True sameOrderAndTokens=True sharedWindow=6000");
+            }
+            finally
+            {
+                active=false;
+                if(ReferenceEquals(hook.GetValue(customers),holder))hook.SetValue(customers,previous);
+                else TestContext.WriteLine("MATRIX_REAL_EXIT_RECOVERY UNKNOWN_OBSERVER_REPLACEMENT preserved=True");
+                if(obstruction!=null){world.Unregister(obstruction);obstruction.gameObject.SetActive(false);UnityEngine.Object.Destroy(obstruction.gameObject);}
             }
         }
 
-        [UnityTest] public IEnumerator ControlledPendingCollectedExitNextLegKeepsRouteAndBudgetDuringIndependentPickup()
+        [UnityTest] public IEnumerator CollectedActualExitNextLegWaitsForIndependentMovingBodyWithoutBudgetReset()
         {
-            var tracking=true;var exits=new System.Collections.Generic.HashSet<string>();
-            void Receipt(string id)
+            const System.Reflection.BindingFlags flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+            const string premise="ACTUAL_EXIT_NEXT_LEG_NOT_PROVEN: ";
+            object Read(object value,string name)=>value==null?null:value.GetType().GetField(name,flags)?.GetValue(value)??value.GetType().GetProperty(name,flags)?.GetValue(value);
+            bool Flag(object value,string name)=>Read(value,name) is bool bit&&bit;
+            var deadline=Time.frameCount+6000;var alive=true;var finished=false;var errors=new System.Collections.Generic.List<string>();
+            var exits=new System.Collections.Generic.HashSet<string>();var observers=new System.Collections.Generic.List<CafeActualExitObserver>();
+            var originalTokens=new System.Collections.Generic.Dictionary<string,CapacityToken[]>();
+            NavigationActor shaping=null,body=null,actor=null;ServiceTrafficCoordinator core=null;
+            IDictionary entries=null,visits=null,native=null,byActor=null;object visit=null,entry=null,move=null,firstLeg=null,nextLeg=null,bodyEntry=null;
+            TrafficIntentKey key=default,bodyKey=default;TrafficDecision source=null,bodySource=null;TrafficRouteProof proof=null;
+            TrafficNativeStamp firstStamp=default,bodyStamp=default;MovementResult? bodyResult=null;
+            var bodyCompleted=false;var firstArrived=false;var firstCompleted=false;var nextBound=false;var waited=false;var waitFrames=0;
+            object frozen=null,resources=null;var firstFrame=0;var sequence=0L;var acquisition=0L;var queries=0;var debt=0f;
+            var originalFinite=0f;var nextGeneration=0;var bodyStart=default(Vector3);var furthestBodyProgress=0f;
+            var savedScale=Time.timeScale;var savedCapture=Time.captureDeltaTime;var savedStepping=false;var timeChanged=false;
+            System.Reflection.FieldInfo hook=null;Delegate prior=null,holder=null;Action cleanup=null;
+            var previousCleanup=parkingEndpointWitnessCleanup;var previousEnd=parkingEndpointStoredEnd;
+            var paidEvents=0;var preparedEvents=0;var deliveryEvents=0;
+            Action<CafeTaskEvent> countTask=e=>{if(e.Kind==CafeTaskEventKind.ServiceFinished)paidEvents++;if(e.Kind==CafeTaskEventKind.Prepared)preparedEvents++;if(e.Kind==CafeTaskEventKind.DeliveryArrived)deliveryEvents++;};
+            int Remaining()=>deadline-Time.frameCount;
+            void Guard()
             {
-                var actor=world.RegisteredActors.Single(a=>a.ActorId==id);var total=customers.Capacity.GetReservations().Single(r=>r.OwnerId==id && r.Kind==CapacityKind.TotalCustomers).Token;
-                var observer=actor.gameObject.AddComponent<CafeActualExitObserver>();observer.VisitId=id;observer.Receipt=(visit,pose)=>{
-                    if(!tracking)return;Assert.That(Vector3.Distance(pose,CafeLoopRuntimeProof.Field<Transform>(customers,"exit").position),Is.LessThanOrEqualTo(.081f));
-                    Assert.That(customers.Capacity.GetReservations().Single(r=>ReferenceEquals(r.Token,total)).State,Is.EqualTo(ReservationState.Released));Assert.That(exits.Add(visit),Is.True);};
+                Assert.That(Remaining(),Is.GreaterThan(0),premise+"all stages share the original 6000-frame window");
+                Assert.That(errors,Is.Empty,string.Join("\n",errors));
+                if(core!=null)
+                {
+                    Assert.That(CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic"),Is.SameAs(core));
+                    Assert.That(customers.Snapshot.All(row=>row.State!=CustomerVisitState.Blocked),Is.True,premise+customers.Status);
+                    Assert.That(employees.Snapshot.All(row=>row.State!=EmployeeState.Blocked),Is.True,premise+"no unrelated staff failure may be recovered");
+                }
             }
-            var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+            IEnumerator Run(IEnumerator routine)
+            {
+                // Bound nested existing setup helpers too; do not renew their own loop allowances.
+                try{while(true){Guard();if(!routine.MoveNext())break;if(routine.Current is IEnumerator nested)yield return Run(nested);else yield return routine.Current;}}
+                finally{(routine as IDisposable)?.Dispose();}
+            }
+            IEnumerator Wait(Func<bool> done){while(!done()){Guard();yield return null;}Guard();}
+            void Track(string id)
+            {
+                originalTokens[id]=customers.Capacity.GetReservations().Where(r=>r.OwnerId==id).Select(r=>r.Token).ToArray();Assert.That(originalTokens[id],Has.Length.EqualTo(3));
+                var observed=world.RegisteredActors.Single(a=>a.ActorId==id).gameObject.AddComponent<CafeActualExitObserver>();observed.VisitId=id;
+                observed.Receipt=(who,pose)=>{if(!alive)return;try{
+                    Assert.That(Vector3.Distance(pose,CafeLoopRuntimeProof.Field<Transform>(customers,"exit").position),Is.LessThanOrEqualTo(.081f));
+                    Assert.That(owner.Snapshot.Orders.Values.Single(o=>o.CustomerId==who).State,Is.EqualTo(OrderState.Completed));
+                    foreach(var token in originalTokens[who])Assert.That(customers.Capacity.GetReservations().Single(r=>ReferenceEquals(r.Token,token)).State,Is.EqualTo(ReservationState.Released));
+                    Assert.That(exits.Add(who),Is.True);
+                }catch(Exception error){if(errors.Count<3)errors.Add(error.ToString());}};observers.Add(observed);
+            }
+            void SameSource()
+            {
+                Assert.That(entries[key],Is.SameAs(entry));Assert.That(Read(entry,"JourneyPermit"),Is.SameAs(source));Assert.That(Read(move,"Source"),Is.SameAs(source));
+                Assert.That(Read(move,"Proof"),Is.SameAs(proof));Assert.That(Read(entry,"FirstFrame"),Is.EqualTo(firstFrame));
+                Assert.That(Read(entry,"RequestSequence"),Is.EqualTo(sequence));Assert.That(Read(entry,"AcquiredSequence"),Is.EqualTo(acquisition));
+                Assert.That(Read(entry,"FiniteLimit"),Is.EqualTo(originalFinite));Assert.That(Read(entry,"ExplicitRecoveryUsed"),Is.EqualTo(false));Assert.That(Read(entry,"Suspensions"),Is.EqualTo(0));
+                var q=core.QueriesConsumed(key);Assert.That(q,Is.InRange(queries,16384));queries=q;
+            }
+            void FirstStillBound()
+            {
+                SameSource();Assert.That(Read(entry,"Leg"),Is.SameAs(firstLeg));Assert.That(Flag(firstLeg,"Committed")&&Flag(firstLeg,"Bound")&&!Flag(firstLeg,"Completed"),Is.True,premise+"first Native completed before the real zero-time boundary");
+                Assert.That(Read(firstLeg,"ActorLife"),Is.SameAs(actor));Assert.That((TrafficNativeStamp)Read(firstLeg,"Stamp"),Is.EqualTo(firstStamp));
+                Assert.That(native.Contains(firstStamp.RequestId)&&byActor.Contains(actor.ActorId)&&ReferenceEquals(native[firstStamp.RequestId],byActor[actor.ActorId]),Is.True);
+                Assert.That((long)Read(visit,"RequestId"),Is.EqualTo(firstStamp.RequestId));Assert.That(Read(move,"NativeGeneration"),Is.EqualTo(firstStamp.LegGeneration));
+                Assert.That(Read(entry,"FrozenOwners"),Is.Null,premise+"new independent source cannot expand an existing wait pool");
+            }
             try
             {
-                yield return CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,6000);
-                Assert.That(customers.TrySpawn(),Is.True);var first=customers.Snapshot.Single().VisitId;Receipt(first);
-                yield return Until(()=>owner.Snapshot.Delivery.Count==1 && employees.Snapshot.All(e=>e.State==EmployeeState.Idle));
-                yield return CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,6000);
-                Assert.That(customers.TrySpawn(),Is.True);var second=customers.Snapshot.Single(v=>v.VisitId!=first).VisitId;Receipt(second);
-                yield return Until(()=>owner.Snapshot.PaidVisitIds.Contains(second) && customers.Snapshot.Any(v=>v.VisitId==second && v.State==CustomerVisitState.MovingToPickup));
-                tools.ResumeCollection();yield return Until(()=>customers.Snapshot.Any(v=>v.VisitId==first && v.State==CustomerVisitState.Exiting));
-                // Controlled owner-step boundary: the independently accepted native pickup keeps moving.
-                CafeLoopRuntimeProof.Set(owner,"stepping",true);
-                var entries=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(customers,"visits");var front=entries[first];var type=front.GetType();
-                typeof(CustomerFlowController).GetMethod("HoldVisit",flags).Invoke(customers,new object[]{front,false});
-                type.GetField("State").SetValue(front,CustomerVisitState.Exiting);type.GetField("PendingExitSegment").SetValue(front,true);type.GetField("Route").SetValue(front,null);
-                var actor=world.RegisteredActors.Single(a=>a.ActorId==first);var goal=((NavigationTarget)type.GetField("FinalTarget").GetValue(front)).Position;
-                var other=entries[second];var otherType=other.GetType();var otherActor=world.RegisteredActors.Single(a=>a.ActorId==second);
-                var originalPose=otherActor.transform.position;System.Collections.Generic.Queue<Vector3> selected=null;
-                var certificate=typeof(CustomerFlowController).GetMethod("CanWaitForIndependentPickupExitTraffic",flags);
-                var liveRequest=(long)otherType.GetField("RequestId").GetValue(other);
-                var liveGeneration=otherType.GetField("Generation").GetValue(other);
-                var nativeRequests=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(world.Service,"byId");
-                Assert.That(liveRequest,Is.GreaterThan(0),"FIXTURE: independent pickup must still have its real accepted request");
-                for(var frame=0;frame<600 && selected==null;frame++)
+                yield return Run(MatrixStart());
+                var runtime=Find<CafeLayoutRuntime>();var decor=Find<DecorationModeController>();var edit=CafeLoopRuntimeProof.Field<DecorationSession>(decor,"session");
+                var register=runtime.Layout.FurnitureInstances.Single(f=>f.Position==new GridPosition(1,5));
+                Assert.That(edit.BeginExisting(register.InstanceId).Succeeded,Is.True);Assert.That(edit.MovePreview(new GridPosition(3,5)).Succeeded,Is.True);yield return Run(MatrixConfirmFurniture());
+                var support=runtime.Layout.FurnitureInstances.Single(f=>f.Position==new GridPosition(4,6));
+                Assert.That(edit.BeginExisting(support.InstanceId).Succeeded,Is.True);Assert.That(edit.MovePreview(new GridPosition(5,7)).Succeeded,Is.True);yield return Run(MatrixConfirmFurniture());
+                var machine=runtime.FunctionalSurfaceLayout.MountedInstances.Single(m=>m.DefinitionId=="equipment.coffee-machine.01");
+                Assert.That(decor.TryBeginExistingFunctionalSurfacePreview(FunctionalSurfacePreviewKind.MountedEquipment,machine.InstanceId),Is.True);
+                Assert.That(decor.TryRotateFunctionalSurfacePreview(),Is.True);Assert.That(decor.TryConfirmFunctionalSurfacePreview(),Is.True);yield return null;
+                foreach(var pos in new[]{new GridPosition(4,7),new GridPosition(6,7),new GridPosition(5,5),new GridPosition(6,5),new GridPosition(7,5)})yield return Run(MatrixFurniture("furniture.counter.module.01",pos,0));
+                var pickupSupport=runtime.Layout.FurnitureInstances.Single(f=>f.Position==new GridPosition(6,5));var catalog=CafeLoopRuntimeProof.Field<FurnitureContentCatalog>(decor,"contentCatalog");
+                var slot=catalog.BuildSurfaceSlotCatalog(runtime.Layout.GridSettings).GetForSupport(pickupSupport.DefinitionId).First().SlotId;
+                Assert.That(decor.TryBeginFunctionalSurfacePreview(DecorationCatalogueItemKind.PickUpPoint,"pickup.point",new SurfaceSlotAddress(pickupSupport.InstanceId,slot)),Is.True);
+                Assert.That(decor.TryConfirmFunctionalSurfacePreview(),Is.True);yield return null;decor.ExitDecorationMode();
+                yield return Run(Wait(()=>owner.CanProgress&&employees.Snapshot.All(e=>e.State==EmployeeState.Idle)));yield return null;
+                core=CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic");Assert.That(core,Is.Not.Null);
+                entries=(IDictionary)Read(core,"entries");visits=(IDictionary)Read(customers,"visits");native=(IDictionary)Read(world.Service,"byId");byActor=(IDictionary)Read(world.Service,"byActor");
+                employees.IntegratedTaskEvent+=countTask;
+                cleanup=()=>
                 {
-                    Assert.That(otherType.GetField("RequestId").GetValue(other),Is.EqualTo(liveRequest),"FIXTURE: do not switch the independent request");
-                    Assert.That(otherType.GetField("Generation").GetValue(other),Is.EqualTo(liveGeneration));
-                    Assert.That(nativeRequests.Contains(liveRequest),Is.True,"FIXTURE: original accepted request must remain live");
-                    // Keep the original 600-frame bound; selection starts only after the same native request really moved.
-                    // 不换request、不改位置；真实移动前不采纳第0帧candidate，仍使用原有界窗口。
-                    if(Vector3.Distance(originalPose,otherActor.transform.position)<=.1f){yield return null;continue;}
-                    var occupied=(Vector3[])typeof(CustomerFlowController).GetMethod("RouteObstacles",flags).Invoke(customers,new object[]{first,null,false});
-                    var without=occupied.Where(p=>Vector3.Distance(p,otherActor.transform.position)>.001f).ToArray();
-                    var candidate=(System.Collections.Generic.IReadOnlyList<Vector3>)typeof(CustomerFlowController).GetMethod("PlanPickupExit",flags).Invoke(customers,new object[]{actor.transform.position,goal,without,actor.Settings});
-                    var clearance=(float)typeof(CustomerFlowController).GetMethod("RouteClearance",flags).Invoke(customers,new object[]{actor.Settings});
-                    var related=false;
-                    if(candidate!=null && !CustomerRoutePlanner.IsClear(adapter.GetCompletePath(actor.transform.position,candidate[0]),occupied,clearance))
+                    if(!alive)return;alive=false;foreach(var observer in observers)if(observer!=null)observer.Receipt=null;
+                    employees.IntegratedTaskEvent-=countTask;
+                    if(hook!=null&&ReferenceEquals(hook.GetValue(customers),holder))hook.SetValue(customers,prior);
+                    if(body!=null){if(bodyStamp.RequestId>0)world.Service.Cancel(bodyStamp.RequestId);core.Retire(bodyKey);world.Unregister(body);UnityEngine.Object.Destroy(body.gameObject);body=null;}
+                    if(shaping!=null){world.Unregister(shaping);UnityEngine.Object.Destroy(shaping.gameObject);shaping=null;}
+                    if(timeChanged){CafeLoopRuntimeProof.Set(owner,"stepping",savedStepping);Time.captureDeltaTime=savedCapture;Time.timeScale=savedScale;timeChanged=false;}
+                    if(ReferenceEquals(parkingEndpointWitnessCleanup,cleanup))parkingEndpointWitnessCleanup=previousCleanup;
+                    if(ReferenceEquals(parkingEndpointStoredEnd,cleanup))parkingEndpointStoredEnd=previousEnd;
+                    previousEnd?.Invoke();if(!ReferenceEquals(previousEnd,previousCleanup))previousCleanup?.Invoke();
+                };
+                parkingEndpointWitnessCleanup=parkingEndpointStoredEnd=cleanup;
+                yield return Run(CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,Remaining()));Assert.That(customers.TrySpawn(),Is.True);
+                var first=customers.Snapshot.Single().VisitId;Track(first);visit=visits[first];actor=(NavigationActor)Read(visit,"Actor");
+                yield return Run(Wait(()=>owner.Snapshot.Orders.Values.Any(o=>o.CustomerId==first&&o.State==OrderState.ReadyForPickup)&&employees.Snapshot.All(e=>e.State==EmployeeState.Idle)));
+                yield return Run(PreparePositiveLongService(first));Assert.That(customers.TryMoveToPickupService(first,out var reason),Is.True,reason);
+                yield return Run(Wait(()=>Flag(visit,"ServiceArrived")));Assert.That(owner.HoldCollection,Is.True);
+                var staticPoint=CafeLoopRuntimeProof.Field<Transform>(customers,"exit").position+Vector3.forward*1.3f;staticPoint.y=actor.transform.position.y;
+                shaping=Blocker(staticPoint,"collected-exit-fixed-next-leg-shaping");
+                yield return Run(Wait(()=>CafeLoopRuntimeProof.Field<TrafficWorldSnapshot>(core,"snapshot").Bodies.Any(b=>ReferenceEquals(b.ActorLife,shaping))));
+                var service=CafeLoopRuntimeProof.Field<CafeLoopService>(owner,"service");owner.HoldCollection=false;
+                try{Assert.That(service.TryCollect(first,out var collectReason),Is.True,collectReason);}finally{owner.HoldCollection=true;}
+                yield return Run(Wait(()=>
+                {
+                    move=Read(visit,"TrafficMove");if(move==null||!((TrafficIntentKey)Read(move,"Intent")).IntentId.Equals("actual-exit"))return false;
+                    var candidate=(TrafficIntentKey)Read(move,"Intent");if(!entries.Contains(candidate))return false;
+                    var current=entries[candidate];var leg=Read(current,"Leg");var issued=Read(current,"JourneyPermit") as TrafficDecision;
+                    if(leg==null||issued==null||!Flag(leg,"Bound")||!Flag(leg,"Committed"))return false;
+                    Assert.That((int)Read(leg,"Index"),Is.Zero,premise+"first Native window was not observed; do not select another leg");
+                    if(entry==null)
                     {
-                        var proposed=new System.Collections.Generic.Queue<Vector3>(candidate);type.GetField("Route").SetValue(front,proposed);
-                        try{related=(bool)certificate.Invoke(customers,new[]{front});if(related)selected=proposed;}
-                        finally{type.GetField("Route").SetValue(front,null);}
+                        key=candidate;entry=current;source=issued;proof=(TrafficRouteProof)Read(leg,"Proof");firstLeg=leg;firstStamp=(TrafficNativeStamp)Read(leg,"Stamp");
+                        Assert.That(proof.Waypoints.Count,Is.GreaterThanOrEqualTo(2),premise+"actual static-detour source must have a real second strict leg");
+                        firstFrame=(int)Read(entry,"FirstFrame");sequence=(long)Read(entry,"RequestSequence");acquisition=(long)Read(entry,"AcquiredSequence");originalFinite=(float)Read(entry,"FiniteLimit");queries=core.QueriesConsumed(key);
+                        Assert.That(acquisition,Is.GreaterThan(0));Assert.That(Flag(visit,"HasCollected"),Is.True);
+                        Assert.That(CustomerRoutePlanner.IsClear(proof.ExpandedPath,new[]{staticPoint},actor.Settings.AgentRadius+shaping.Settings.AgentRadius+Math.Max(actor.Settings.CollisionSkin+actor.Settings.Epsilon,shaping.Settings.CollisionSkin+shaping.Settings.Epsilon)),Is.True);
                     }
-                    if(!related)yield return null;
+                    FirstStillBound();var distance=Vector3.Distance(actor.transform.position,proof.Waypoints[0]);
+                    return distance<.16f&&distance>actor.Settings.ArrivalDistance+actor.Settings.Epsilon;
+                }));
+                hook=typeof(CustomerFlowController).GetField("CorridorObserver",flags);prior=hook.GetValue(customers) as Delegate;
+                Action<string,string,string,Vector3,System.Collections.Generic.IReadOnlyList<Vector3>,Vector3[],string> receipt=(operation,id,other,position,path,obstacles,result)=>
+                {
+                    if(!alive||id!=first||(operation!="segment.callback-result"&&operation!="segment.callback")||!ReferenceEquals(Read(entry,"Leg"),firstLeg))return;
+                    try
+                    {
+                        FirstStillBoundForReceipt();
+                        if(operation=="segment.callback-result")
+                        {var text=" "+result+" ";Assert.That(text.Contains(" status=Arrived ")&&text.Contains(" retry=0 ")&&text.Contains(" request="+firstStamp.RequestId+" ")&&text.Contains(" issuedGeneration="+firstStamp.LegGeneration+" "),Is.True);firstArrived=true;}
+                        else{Assert.That(firstArrived&&result=="Arrived"&&Flag(firstLeg,"Completed"),Is.True);firstCompleted=true;}
+                    }catch(Exception error){if(errors.Count<3)errors.Add(error.ToString());}
+                };
+                void FirstStillBoundForReceipt(){SameSource();Assert.That(Read(firstLeg,"ActorLife"),Is.SameAs(actor));Assert.That(Read(firstLeg,"Proof"),Is.SameAs(proof));Assert.That((TrafficNativeStamp)Read(firstLeg,"Stamp"),Is.EqualTo(firstStamp));}
+                holder=Delegate.Combine(prior,receipt);hook.SetValue(customers,holder);
+                savedStepping=CafeLoopRuntimeProof.Field<bool>(owner,"stepping");timeChanged=true;CafeLoopRuntimeProof.Set(owner,"stepping",true);Time.captureDeltaTime=0;Time.timeScale=0;
+                for(var transition=0;transition<3&&Time.deltaTime!=0;transition++){FirstStillBound();Guard();yield return null;}
+                Assert.That(Time.deltaTime,Is.Zero,premise+"actual zero-delta transition");FirstStillBound();
+                var poses=world.RegisteredActors.ToDictionary(a=>a,a=>a.transform.position);var natives=native.Keys.Cast<object>().ToDictionary(id=>id,id=>native[id]);
+                var frozenOrders=owner.Snapshot.Orders.ToDictionary(pair=>pair.Key,pair=>pair.Value.State);var frozenPaid=owner.Snapshot.PaidVisitIds.ToArray();
+                var frozenTokens=customers.Capacity.GetReservations().Select(r=>(r.Token,r.State)).ToArray();
+                void FrozenFacts()
+                {
+                    Guard();Assert.That(Time.deltaTime,Is.Zero);FirstStillBound();foreach(var pose in poses)Assert.That(pose.Key.transform.position,Is.EqualTo(pose.Value));
+                    Assert.That(native.Count,Is.EqualTo(natives.Count));foreach(var n in natives)Assert.That(native[n.Key],Is.SameAs(n.Value));
+                    CollectionAssert.AreEqual(frozenPaid,owner.Snapshot.PaidVisitIds);CollectionAssert.AreEquivalent(frozenOrders.Keys,owner.Snapshot.Orders.Keys);
+                    foreach(var order in frozenOrders)Assert.That(owner.Snapshot.Orders[order.Key].State,Is.EqualTo(order.Value));
+                    CollectionAssert.AreEqual(frozenTokens,customers.Capacity.GetReservations().Select(r=>(r.Token,r.State)));
                 }
-                Assert.That(selected,Is.Not.Null,"Real moving pickup must obstruct the complete counterfactual next leg");
-                Assert.That(Vector3.Distance(originalPose,otherActor.transform.position),Is.GreaterThan(.1f),"Independent current request really moved while owner dispatch was held");
-                var accepted=otherType.GetField("RequestId").GetValue(other);var moving=otherType.GetField("State").GetValue(other);
-                type.GetField("Route").SetValue(front,selected);Assert.That((bool)certificate.Invoke(customers,new[]{front}),Is.True);
-                try{otherType.GetField("RequestId").SetValue(other,0L);Assert.That((bool)certificate.Invoke(customers,new[]{front}),Is.False);}finally{otherType.GetField("RequestId").SetValue(other,accepted);}
-                try{otherType.GetField("State").SetValue(other,CustomerVisitState.Blocked);Assert.That((bool)certificate.Invoke(customers,new[]{front}),Is.False);}finally{otherType.GetField("State").SetValue(other,moving);}
-                var allOccupied=(Vector3[])typeof(CustomerFlowController).GetMethod("RouteObstacles",flags).Invoke(customers,new object[]{first,null,false});
-                var alternate=(System.Collections.Generic.IReadOnlyList<Vector3>)typeof(CustomerFlowController).GetMethod("PlanPickupExit",flags).Invoke(customers,new object[]{actor.transform.position,goal,allOccupied,actor.Settings});
-                Assert.That(alternate,Is.Not.Null,"The old RED replanned safely; this case specifies selected-leg wait/budget policy, not an unsafe old dispatch");
-                var physicalClearance=(float)typeof(CustomerFlowController).GetMethod("RouteClearance",flags).Invoke(customers,new object[]{actor.Settings});
-                Assert.That(CustomerRoutePlanner.IsClear(adapter.GetCompletePath(actor.transform.position,alternate[0]),allOccupied,physicalClearance),Is.True);
-                type.GetField("Route").SetValue(front,new System.Collections.Generic.Queue<Vector3>(alternate));
-                try{Assert.That((bool)certificate.Invoke(customers,new[]{front}),Is.False,"An unrelated accepted moving body cannot delay this fully safe selected next leg");}
-                finally{type.GetField("Route").SetValue(front,selected);}
-                type.GetField("Route").SetValue(front,selected);var segments=type.GetField("Segments").GetValue(front);var replans=type.GetField("Replans").GetValue(front);
-                var crossing=(bool)typeof(CustomerFlowController).GetMethod("ExitRouteConflictsWithEarlierRequest",flags).Invoke(customers,new[]{front});
-                var departing=(bool)typeof(CustomerFlowController).GetMethod("CanWaitForDepartingExitBody",flags).Invoke(customers,new[]{front});
-                Assert.That(crossing || departing,Is.False,"Both old earlier-Exit gates must be false so this reaches the independent-pickup next-leg seam");
-                TestContext.WriteLine("CONTROLLED_NEXT_EXIT_LEG_PRECONDITION blockerState="+moving+" acceptedRequest="+accepted+
-                    " actualNativeDisplacement="+Vector3.Distance(originalPose,otherActor.transform.position)+" nextPathFullGuard=False exactIndependentCertificate=True oldEarlierExitGates=False Request0/Blocked=False");
-                typeof(CustomerFlowController).GetMethod("SendRouteSegment",flags).Invoke(customers,new[]{front,(object)CustomerVisitState.Exiting});
-                TestContext.WriteLine("CONTROLLED_NEXT_EXIT_LEG_READBACK pending="+type.GetField("PendingExitSegment").GetValue(front)+" request="+type.GetField("RequestId").GetValue(front)+
-                    " segments="+segments+"->"+type.GetField("Segments").GetValue(front)+" replans="+replans+"->"+type.GetField("Replans").GetValue(front));
-                Assert.That(type.GetField("State").GetValue(front),Is.EqualTo(CustomerVisitState.Exiting));Assert.That((bool)type.GetField("PendingExitSegment").GetValue(front),Is.True);
-                Assert.That((long)type.GetField("RequestId").GetValue(front),Is.Zero);Assert.That(type.GetField("Route").GetValue(front),Is.SameAs(selected));
-                Assert.That(type.GetField("Segments").GetValue(front),Is.EqualTo(segments));Assert.That(type.GetField("Replans").GetValue(front),Is.EqualTo(replans));
-                TestContext.WriteLine("CONTROLLED_NEXT_EXIT_LEG HoldVisit/OwnerStepGuard=True actualPickupMoved=True actualNextPathFullGuard=False independentCertificate=True Request0/Blocked/UnrelatedMovingBody=False originalRoute/segment/replanBudgetRetained=True");
-                CafeLoopRuntimeProof.Set(owner,"stepping",false);
-                yield return Until(()=>customers.Snapshot.Count==0 && exits.Count==2 && employees.Snapshot.All(e=>e.State==EmployeeState.Idle));
-                Assert.That(owner.Snapshot.Orders.Count,Is.EqualTo(2));Assert.That(owner.Snapshot.Orders.Values.All(o=>o.State==OrderState.Completed),Is.True);
-                Assert.That(customers.Capacity.GetCapacities().All(c=>c.Used==0),Is.True);
+                var future=proof.ExpandedPath.Skip(proof.LegEnds[0]).Take(proof.LegEnds[1]-proof.LegEnds[0]+1).ToArray();
+                bodyStart=future.Last();bodyStart.y=actor.transform.position.y;
+                Assert.That(bodyStart,Is.EqualTo(CafeLoopRuntimeProof.Field<Transform>(customers,"exit").position),premise+"the original second leg must end at the actual business Exit; do not select a replacement leg");
+                var settings=CafeLoopRuntimeProof.Field<NavigationActor>(tools,"blockerPrefab").Settings;
+                var pairClearance=actor.Settings.AgentRadius+settings.AgentRadius+Math.Max(actor.Settings.CollisionSkin+actor.Settings.Epsilon,settings.CollisionSkin+settings.Epsilon);
+                var destination=bodyStart+Vector3.left*(2*pairClearance+settings.ArrivalDistance);destination.y=actor.transform.position.y;
+                var currentPath=(Vector3[])Read(entry,"CurrentPath");
+                var geometry="ACTUAL_EXIT_NEXT_ENDPOINT_INPUT waypoints=["+string.Join(";",proof.Waypoints.Select(point=>point.ToString("F9")))+"] legEnds=["+string.Join(",",proof.LegEnds)+"]"+
+                    " endpointBody="+bodyStart.ToString("F9")+" fixedLeftGoal="+destination.ToString("F9")+" pair="+pairClearance.ToString("R")+" bodyArrival="+settings.ArrivalDistance.ToString("R")+
+                    " static="+staticPoint.ToString("F9")+" originalNative="+firstStamp.RequestId+"/"+firstStamp.LegGeneration;
+                TestContext.WriteLine(geometry);
+                Assert.That(CustomerRoutePlanner.IsClear(currentPath,new[]{bodyStart},pairClearance),Is.True,premise+"one original business endpoint donor must clear actual current first leg: "+geometry);
+                Assert.That(CustomerRoutePlanner.IsClear(future,new[]{bodyStart},pairClearance),Is.False,premise+"donor really intersects future second leg");
+                Assert.That(CustomerRoutePlanner.IsClear(proof.ExpandedPath.Skip(proof.LegEnds[0]).ToArray(),new[]{destination},pairClearance),Is.True,premise+"donor cannot stop on retained future exit");
+                Assert.That(adapter.IsPointWalkable(bodyStart)&&adapter.IsPointWalkable(destination),Is.True,premise+"one fixed start/goal must lie on owned floor");
+                body=Blocker(bodyStart,"collected-exit-independent-moving-body");poses.Add(body,body.transform.position);CafeLoopRuntimeProof.Set(owner,"stepping",false);
+                yield return null;FrozenFacts();var worldFacts=CafeLoopRuntimeProof.Field<TrafficWorldSnapshot>(core,"snapshot");
+                var bodyFact=worldFacts.Bodies.Single(b=>ReferenceEquals(b.ActorLife,body));bodyKey=bodyFact.Owner;Assert.That(bodyFact.Enabled&&bodyFact.ActorActive,Is.True);Assert.That(entries.Contains(bodyKey),Is.False);
+                Assert.That(worldFacts.Parking.Any(p=>p.Owner.ActorId==body.ActorId),Is.False,"External body never receives a fake customer/PQS role");
+                var request=new TrafficRequest(bodyKey,Time.frameCount,worldFacts,body.transform.position,destination,body.Settings.AgentRadius,"body",
+                    finiteSeconds:body.Settings.MinimumSegmentSeconds+body.Settings.NoProgressSeconds,safetyMargin:body.Settings.CollisionSkin+body.Settings.Epsilon,planPrimaryRoute:true);
+                core.EvaluateMovement(request);bodyEntry=entries[bodyKey];
+                while(core.GetDecision(bodyKey).Kind!=TrafficDecisionKind.Granted){FrozenFacts();Assert.That(core.GetDecision(bodyKey).Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),premise+core.GetDecision(bodyKey).Reason);yield return null;}
+                bodySource=core.GetDecision(bodyKey);var bodyProof=bodySource.ProofRoutes.Single(p=>p.ResourceId=="body");Assert.That(bodyProof.Waypoints.Count,Is.EqualTo(1),premise+"no handmade multi-leg body driver");
+                Assert.That(bodyProof.Waypoints.Single(),Is.EqualTo(destination));
+                var conflict=typeof(ServiceTrafficCoordinator).GetMethod("PathsConflict",System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.NonPublic);
+                Assert.That((bool)conflict.Invoke(null,new object[]{bodyProof.ExpandedPath,(Vector3[])Read(entry,"CurrentPath"),pairClearance}),Is.False,premise+"actual public donor proof must clear the current first leg");
+                Assert.That((bool)conflict.Invoke(null,new object[]{bodyProof.ExpandedPath,future,pairClearance}),Is.True,premise+"actual donor path must cross only future leg");
+                var donorSnapshot=CafeLoopRuntimeProof.Field<TrafficWorldSnapshot>(core,"snapshot");
+                foreach(var fact in donorSnapshot.Bodies.Where(f=>f.Owner.ActorId!=body.ActorId))Assert.That(CustomerRoutePlanner.IsClear(bodyProof.ExpandedPath,new[]{fact.Position},body.Settings.AgentRadius+fact.Radius+Math.Max(body.Settings.CollisionSkin+body.Settings.Epsilon,fact.SafetyMargin)),Is.True);
+                foreach(var fact in donorSnapshot.Parking.Where(f=>f.Owner.ActorId!=body.ActorId))Assert.That(CustomerRoutePlanner.IsClear(bodyProof.ExpandedPath,new[]{fact.Position},body.Settings.AgentRadius+fact.Radius+Math.Max(body.Settings.CollisionSkin+body.Settings.Epsilon,fact.SafetyMargin)),Is.True);
+                Assert.That(core.TryCommit(bodySource),Is.True);core.PrepareLeg(bodySource,"body",0,body,1,CafeLoopRuntimeProof.Field<TrafficWorldSnapshot>(core,"snapshot"),body.transform.position,body.Settings.ArrivalDistance+body.Settings.Epsilon,Time.frameCount);
+                while(core.GetDecision(bodyKey).Kind!=TrafficDecisionKind.Granted){FrozenFacts();Assert.That(core.GetDecision(bodyKey).Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),premise+core.GetDecision(bodyKey).Reason);yield return null;}
+                FrozenFacts();Assert.That(core.TryCommit(core.GetDecision(bodyKey)),Is.True);Assert.That(core.CanIssueLeg(bodyKey,body,1),Is.True);
+                var started=world.Service.MoveTo(body.ActorId,new NavigationTarget(destination),result=>{if(!alive)return;bodyResult=result;if(result.ActorId==body.ActorId&&result.RequestId==bodyStamp.RequestId&&result.Status==MovementStatus.Arrived)bodyCompleted=core.CompleteLeg(bodyKey,body,bodyStamp,result.FinalPosition);});
+                Assert.That(started.Accepted,Is.True);Assert.That(bodyResult.HasValue,Is.False);bodyStamp=new TrafficNativeStamp(started.RequestId,1);Assert.That(core.BindLeg(bodyKey,body,bodyStamp),Is.True);
+                Assert.That(core.TryGetCommittedLegProvenance(bodyKey,body,1,out var actualBodySource,out _),Is.True);Assert.That(actualBodySource,Is.SameAs(bodySource));
+                Assert.That(byActor.Contains(body.ActorId)&&ReferenceEquals(byActor[body.ActorId],native[bodyStamp.RequestId]),Is.True);
+                TestContext.WriteLine("ACTUAL_EXIT_NEXT_BODY_INPUT endpointBody="+bodyStart.ToString("F6")+" static="+staticPoint.ToString("F6")+" fixedLeftGoal="+destination.ToString("F6")+" original="+firstStamp.RequestId+"/"+firstStamp.LegGeneration+" body="+bodyStamp.RequestId+"/"+bodyStamp.LegGeneration);
+                CafeLoopRuntimeProof.Set(owner,"stepping",savedStepping);Time.captureDeltaTime=savedCapture;Time.timeScale=savedScale;timeChanged=false;
+                while(!exits.Contains(first))
+                {
+                    Guard();
+                    if(!visits.Contains(first))
+                    {
+                        Assert.That(owner.Snapshot.Orders.Values.Single(order=>order.CustomerId==first).State,Is.EqualTo(OrderState.Completed));
+                        foreach(var token in originalTokens[first])Assert.That(customers.Capacity.GetReservations().Single(row=>ReferenceEquals(row.Token,token)).State,Is.EqualTo(ReservationState.Released));
+                        yield return null;continue; // Actual removal may precede its end-of-frame destruction receipt.
+                    }
+                    SameSource();var leg=Read(entry,"Leg");var decision=core.GetDecision(key);
+                    if(leg!=null&&(int)Read(leg,"Index")==1&&decision.Kind==TrafficDecisionKind.WaitingForTraffic&&!bodyResult.HasValue)
+                    {
+                        Assert.That(firstArrived&&firstCompleted&&Flag(firstLeg,"Completed"),Is.True);
+                        Assert.That(Read(leg,"Proof"),Is.SameAs(proof));Assert.That(Read(leg,"ActorLife"),Is.SameAs(actor));
+                        Assert.That(Flag(leg,"Committed")||Flag(leg,"Bound")||Flag(leg,"Completed"),Is.False);Assert.That((TrafficNativeStamp)Read(leg,"Stamp"),Is.EqualTo(default(TrafficNativeStamp)));
+                        Assert.That((long)Read(visit,"RequestId"),Is.Zero);Assert.That(Flag(visit,"PendingExitSegment"),Is.True);
+                        Assert.That(decision.Blockers.All(b=>b.Owner.Equals(bodyKey)&&b.ResourceId=="body"),Is.True);Assert.That(decision.Blockers.Count,Is.GreaterThan(0));
+                        if(!waited){nextLeg=leg;nextGeneration=(int)Read(leg,"Generation");Assert.That(nextGeneration,Is.GreaterThan(firstStamp.LegGeneration));frozen=Read(entry,"FrozenOwners");resources=Read(entry,"FrozenResources");debt=(float)Read(entry,"WaitRemaining");Assert.That(debt,Is.GreaterThan(0));}
+                        else{Assert.That(leg,Is.SameAs(nextLeg));Assert.That(Read(leg,"Generation"),Is.EqualTo(nextGeneration));Assert.That(Read(entry,"FrozenOwners"),Is.SameAs(frozen));Assert.That(Read(entry,"FrozenResources"),Is.SameAs(resources));}
+                        CollectionAssert.AreEquivalent(new[]{bodyKey},((IEnumerable)Read(entry,"FrozenOwners")).Cast<TrafficIntentKey>());
+                        Assert.That(((IDictionary)resources).Contains(bodyKey),Is.True);CollectionAssert.AreEquivalent(new[]{"body"},(System.Collections.Generic.IEnumerable<string>)((IDictionary)resources)[bodyKey]);
+                        var remainingDebt=(float)Read(entry,"WaitRemaining");Assert.That(remainingDebt,Is.GreaterThan(0).And.LessThanOrEqualTo(debt));debt=remainingDebt;
+                        Assert.That(Read(bodyEntry,"JourneyPermit"),Is.SameAs(bodySource));var movingLeg=Read(bodyEntry,"Leg");Assert.That(Flag(movingLeg,"Bound")&&Flag(movingLeg,"Committed")&&!Flag(movingLeg,"Completed"),Is.True);
+                        Assert.That((TrafficNativeStamp)Read(movingLeg,"Stamp"),Is.EqualTo(bodyStamp));Assert.That(native.Contains(bodyStamp.RequestId)&&byActor.Contains(body.ActorId)&&ReferenceEquals(native[bodyStamp.RequestId],byActor[body.ActorId]),Is.True);
+                        var snapshot=CafeLoopRuntimeProof.Field<TrafficWorldSnapshot>(core,"snapshot");var movingPath=(Vector3[])Read(bodyEntry,"CurrentPath");var donor=(TrafficRequest)Read(bodyEntry,"Request");
+                        foreach(var fact in snapshot.Bodies.Where(b=>b.Owner.ActorId!=body.ActorId))Assert.That(CustomerRoutePlanner.IsClear(movingPath,new[]{fact.Position},donor.Radius+fact.Radius+Math.Max(donor.SafetyMargin,fact.SafetyMargin)),Is.True);
+                        foreach(var fact in snapshot.Parking.Where(p=>p.Owner.ActorId!=body.ActorId))Assert.That(CustomerRoutePlanner.IsClear(movingPath,new[]{fact.Position},donor.Radius+fact.Radius+Math.Max(donor.SafetyMargin,fact.SafetyMargin)),Is.True);
+                        furthestBodyProgress=Math.Max(furthestBodyProgress,Vector3.Distance(body.transform.position,bodyStart));waited=true;waitFrames++;
+                    }
+                    if(leg!=null&&(int)Read(leg,"Index")==1&&Flag(leg,"Committed")&&Flag(leg,"Bound")&&!Flag(leg,"Completed"))
+                    {
+                        Assert.That(waited&&waitFrames>=2&&firstCompleted,Is.True,premise+"actual subsequent-leg WAIT was not present; initial WAIT is not a substitute");
+                        Assert.That(leg,Is.SameAs(nextLeg));var stamp=(TrafficNativeStamp)Read(leg,"Stamp");Assert.That(stamp.LegGeneration,Is.EqualTo(nextGeneration));
+                        Assert.That(native.Contains(stamp.RequestId)&&ReferenceEquals(byActor[first],native[stamp.RequestId]),Is.True);Assert.That((long)Read(visit,"RequestId"),Is.EqualTo(stamp.RequestId));
+                        Assert.That(core.TryGetCommittedLegProvenance(key,actor,stamp.LegGeneration,out var retained,out _),Is.True);Assert.That(retained,Is.SameAs(source));nextBound=true;
+                    }
+                    if(bodyResult.HasValue&&body!=null)
+                    {
+                        Assert.That(bodyResult.Value.Status,Is.EqualTo(MovementStatus.Arrived));Assert.That(bodyResult.Value.RequestId,Is.EqualTo(bodyStamp.RequestId));Assert.That(bodyResult.Value.RetryCount,Is.Zero);Assert.That(bodyCompleted,Is.True);
+                        core.Retire(bodyKey);world.Unregister(body);UnityEngine.Object.Destroy(body.gameObject);body=null;
+                    }
+                    yield return null;
+                }
+                Guard();Assert.That(waited&&waitFrames>=2&&nextBound&&bodyCompleted,Is.True,premise+"real first completion -> next finite WAIT -> same next Bound -> actual Exit required");Assert.That(furthestBodyProgress,Is.GreaterThan(.1f));
+                Assert.That(shaping!=null&&world.RegisteredActors.Contains(shaping),Is.True);
+                yield return Run(CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,Remaining()));Assert.That(customers.TrySpawn(),Is.True);
+                var second=customers.Snapshot.Single().VisitId;Assert.That(second,Is.Not.EqualTo(first));Track(second);tools.ResumeCollection();
+                yield return Run(Wait(()=>exits.Count==2&&customers.Capacity.GetCapacities().All(c=>c.Used==0)&&employees.Snapshot.All(e=>e.State==EmployeeState.Idle)));
+                Assert.That(owner.Snapshot.Orders.Count,Is.EqualTo(2));Assert.That(owner.Snapshot.PaidVisitIds.Count,Is.EqualTo(2));Assert.That(owner.Snapshot.Orders.Values.All(o=>o.State==OrderState.Completed),Is.True);
+                Assert.That(paidEvents,Is.EqualTo(2));Assert.That(preparedEvents,Is.EqualTo(2));Assert.That(deliveryEvents,Is.EqualTo(2));
+                foreach(var pair in originalTokens){CollectionAssert.AreEquivalent(pair.Value,customers.Capacity.GetReservations().Where(r=>r.OwnerId==pair.Key).Select(r=>r.Token));Assert.That(customers.Capacity.GetReservations().Where(r=>r.OwnerId==pair.Key).All(r=>r.State==ReservationState.Released),Is.True);}
+                Assert.That(errors,Is.Empty,string.Join("\n",errors));finished=true;
+                TestContext.WriteLine("ACTUAL_EXIT_NEXT_LEG movingBodyNotPickup=True originalSource=True actualFirstNativeArrived=True subsequentWaitFrames="+waitFrames+" sameNextBound=True actualOrders/Exits=2 originalTokensReleased=True noRecovery=True remainingFrames="+Remaining());
             }
-            finally{tracking=false;CafeLoopRuntimeProof.Set(owner,"stepping",false);}
+            finally
+            {
+                cleanup?.Invoke();if(!finished){alive=false;foreach(var observer in observers)if(observer!=null)observer.Receipt=null;}
+            }
         }
+
 
         private void ObserveFiniteExitDependency()
         {

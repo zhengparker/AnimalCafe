@@ -379,7 +379,10 @@ namespace AnimalCafe.Navigation
                         for (var attempt = 0; attempt < 4; attempt++)
                         {
                             candidate = rawCorners[corner] + offset;
-                            if (actor.World.CanTraverseStraight(actor, candidate))
+                            // Only the last interior correction has a fixed final outgoing endpoint.
+                            // 仅最后interior角同时认证到最终点；其他中间角仍沿用原流程。
+                            if (actor.World.CanTraverseStraight(actor, candidate) &&
+                                (corner != corners.Length - 2 || actor.World.CanTraverseStraightFrom(actor, candidate, corners[corner + 1])))
                             { corners[corner] = candidate; adjustedCorners[corner] = true; break; }
                             offset *= .5f;
                         }

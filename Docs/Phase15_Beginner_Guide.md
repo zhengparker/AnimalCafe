@@ -1,8 +1,8 @@
 # Phase 15 自动营业周期：Beginner Guide
 
-> **当前 P15 开发验收已通过，PR #15 为 Open、未合并。** Main 自动营业、真实闭店排空、Pause／2x 与现实周期分离，以及停止自动来客时释放未出生申请，已纳入最新精简 regression。EditMode 1388/1388 PASS，PlayMode 90/90 PASS，P15 自身 77 项 PlayMode 全通过。客观通过记录与 Owner 观感／移动设备验收分别保存，具体范围见[Validation Report](Phase15_Validation_Report.md)。下方旧状态保留各自时点。
+> **当前 PR #15 为 Open、未合并；本轮精简 regression 为 115/115 PASS，相关 EditMode 为 1105/1105 PASS。完整 CI 的后续状态记录在 PR／Validation Report。** 下方是 8 项手动操作步骤，可先在 P15 branch 验收。历史 EditMode 1388/1388、PlayMode 90/90 属于之前 checkpoint，不能代表本轮完整 CI；当前源码、客观测试和 Owner／设备验收的范围见[Validation Report](Phase15_Validation_Report.md)。
 
-## 0. 合并后按顺序测试（8 项）
+## 0. 按顺序手动验收（8 项）
 
 使用 Unity 6000.5.5f1 打开当前项目。每项先 Stop，再双击指定 Scene，按顶部 Play 开始。打开 Window > General > Console，清空旧记录后记录本项新增 error。只在 Play 内操作，结束后 Stop。
 

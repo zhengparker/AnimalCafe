@@ -580,7 +580,186 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             };
             parkingEndpointWitnessCleanup=finish;parkingEndpointStoredEnd=finish;Sample("second-born");return finish;
         }
-        private IEnumerator CounterWorkingTraffic(bool keepStationaryWall)
+        private Action BeginActualDeliveryFiniteProtection(string first,string second,out Action verify,out Func<bool> actualExits)
+        {
+            const string premise="DELIVERY_FINITE_PROTECTION_NOT_PROVEN: ";
+            var core=CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic");
+            var entries=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(core,"entries");
+            var cursors=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(customers,"trafficCandidates");
+            var native=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(world.Service,"byId");
+            var byActor=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(world.Service,"byActor");
+            var visits=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(customers,"visits");
+            var staff=employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista).ActorId;
+            var actor=world.RegisteredActors.Single(a=>a.ActorId==staff);
+            var employee=CafeLoopRuntimeProof.Field<System.Collections.IEnumerable>(employees,"employees").Cast<object>().Single(row=>(string)MovementRead(row,"Id")==staff);
+            var visual=MovementRead(employee,"Visual");
+            var errors=new System.Collections.Generic.List<string>();var exits=new System.Collections.Generic.HashSet<string>();
+            var observers=new System.Collections.Generic.List<CafeActualExitObserver>();var alive=true;
+            object heldEntry=null,heldCursor=null,heldContext=null,frozen=null,resources=null,cup=null;TrafficIntentKey key=default,old=default;
+            System.Collections.Generic.Dictionary<TrafficIntentKey,string[]> frozenResourceCopy=null;
+            var waiting=false;var deferred=false;var bound=false;var delivered=false;var returned=false;
+            var firstFrame=0;var sequence=0L;var queries=0;var debt=0f;CafeTaskToken taskToken=default;
+            PickupQueueService pickup=null;PickupQueueService.DeliveryLeaseClaim deliveryLease=null;
+            object Read(object value,string name)=>value.GetType().GetField(name,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic)?.GetValue(value) ??
+                value.GetType().GetProperty(name,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic)?.GetValue(value);
+            bool Flag(object value,string name)=>(bool)Read(value,name);
+            var pathsConflict=typeof(ServiceTrafficCoordinator).GetMethod("PathsConflict",System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.NonPublic);
+            void SameLedger()
+            {
+                Assert.That(entries[key],Is.SameAs(heldEntry));Assert.That(cursors[key],Is.SameAs(heldCursor));
+                Assert.That(Read(heldEntry,"FirstFrame"),Is.EqualTo(firstFrame));Assert.That(Read(heldEntry,"RequestSequence"),Is.EqualTo(sequence));
+                Assert.That(Read(heldEntry,"FrozenOwners"),Is.SameAs(frozen));Assert.That(Read(heldEntry,"FrozenResources"),Is.SameAs(resources));
+                CollectionAssert.AreEquivalent(new[]{old},((System.Collections.IEnumerable)frozen).Cast<TrafficIntentKey>());
+                var currentResources=(System.Collections.Generic.Dictionary<TrafficIntentKey,System.Collections.Generic.HashSet<string>>)resources;
+                CollectionAssert.AreEquivalent(frozenResourceCopy.Keys,currentResources.Keys);
+                foreach(var pair in frozenResourceCopy)CollectionAssert.AreEquivalent(pair.Value,currentResources[pair.Key]);
+                Assert.That(core.QueriesConsumed(key),Is.InRange(queries,16384));queries=core.QueriesConsumed(key);
+                Assert.That((float)Read(heldEntry,"WaitRemaining"),Is.InRange(0f,debt));debt=(float)Read(heldEntry,"WaitRemaining");
+                Assert.That(Read(heldCursor,"DeliveryContext"),Is.SameAs(heldContext));Assert.That(Read(heldCursor,"DeliveryOwner"),Is.SameAs(pickup));
+                Assert.That(Read(employee,"AcceptedToken"),Is.EqualTo(taskToken));Assert.That(Read(visual,"heldCup"),Is.SameAs(cup));
+            }
+            bool PublishedBound(TrafficIntentKey ownerKey,TrafficWorldSnapshot snapshot)
+            {
+                if(!entries.Contains(ownerKey))return false;var entry=entries[ownerKey];var leg=Read(entry,"Leg");
+                if(leg==null||!Flag(leg,"Committed")||!Flag(leg,"Bound")||Flag(leg,"Completed")||Flag(leg,"Suspended"))return false;
+                var bodies=snapshot.Bodies.Where(b=>b.Owner.Equals(ownerKey)&&ReferenceEquals(b.ActorLife,Read(leg,"ActorLife"))).ToArray();
+                var path=Read(entry,"CurrentPath") as Vector3[];
+                return bodies.Length==1&&bodies[0].Enabled&&bodies[0].ActorActive&&
+                    bodies[0].ActorLife is NavigationActor live&&live!=null&&bodies[0].Position==live.transform.position&&path!=null&&path.Length>1&&path[0]==bodies[0].Position;
+            }
+            Vector3[] ActualBound(TrafficIntentKey ownerKey,TrafficWorldSnapshot snapshot)
+            {
+                Assert.That(entries.Contains(ownerKey),Is.True);var entry=entries[ownerKey];var leg=Read(entry,"Leg");
+                var source=Read(entry,"JourneyPermit") as TrafficDecision;var proof=leg==null?null:Read(leg,"Proof") as TrafficRouteProof;
+                Assert.That(source,Is.Not.Null);Assert.That(source.AcquiredSequence,Is.GreaterThan(0));Assert.That(proof,Is.Not.Null);
+                Assert.That(source.ProofRoutes.Any(p=>ReferenceEquals(p,proof)),Is.True);Assert.That(Flag(entry,"Retired"),Is.False);
+                Assert.That(Flag(leg,"Committed")&&Flag(leg,"Bound")&&!Flag(leg,"Completed")&&!Flag(leg,"Suspended"),Is.True);
+                var stamp=(TrafficNativeStamp)Read(leg,"Stamp");Assert.That(stamp.RequestId,Is.GreaterThan(0));Assert.That(native.Contains(stamp.RequestId),Is.True);
+                Assert.That(byActor.Contains(ownerKey.ActorId),Is.True);Assert.That(byActor[ownerKey.ActorId],Is.SameAs(native[stamp.RequestId]));
+                var actual=native[stamp.RequestId];Assert.That(Read(actual,"Id"),Is.EqualTo(stamp.RequestId));Assert.That(Read(actual,"ActorId"),Is.EqualTo(ownerKey.ActorId));
+                Assert.That(Read(leg,"Generation"),Is.EqualTo(stamp.LegGeneration));
+                Assert.That(Read(actual,"RetryCount"),Is.EqualTo(0));Assert.That(Read(actual,"Recovering"),Is.EqualTo(false));
+                // Native retry generation and business strict-leg generation are different counters.
+                // 真实Native请求ID与业务腿stamp分别认证，不把Native内部generation冒充Core generation。
+                var movement=visits.Contains(ownerKey.ActorId)?Read(visits[ownerKey.ActorId],"TrafficMove"):
+                    ownerKey.ActorId==staff?Read(Read(employee,"Port"),"trafficMove"):null;
+                Assert.That(movement,Is.Not.Null);Assert.That(Read(movement,"Intent"),Is.EqualTo(ownerKey));
+                Assert.That(Read(movement,"Source"),Is.SameAs(source));Assert.That(Read(movement,"Proof"),Is.SameAs(proof));
+                Assert.That(Read(movement,"Index"),Is.EqualTo(Read(leg,"Index")));Assert.That(Read(movement,"NativeGeneration"),Is.EqualTo(stamp.LegGeneration));
+                var body=snapshot.Bodies.Single(b=>b.Owner.Equals(ownerKey)&&ReferenceEquals(b.ActorLife,Read(leg,"ActorLife")));
+                Assert.That(body.Enabled&&body.ActorActive,Is.True);
+                var path=(Vector3[])Read(entry,"CurrentPath");var request=(TrafficRequest)Read(entry,"Request");Assert.That(path.Length,Is.GreaterThan(1));
+                // Bound source owns finite progress; snapshot body hints can lag its publication.
+                // 有限进度认证来自真实已绑定source，body hint仅留记录。
+                Assert.That(request.IndependentlyProgressing,Is.True);Assert.That(request.FiniteSeconds,Is.GreaterThan(0));
+                TestContext.WriteLine("DELIVERY_BOUND_BODY_HINT owner="+ownerKey+" independent="+body.IndependentlyProgressing+" remaining="+body.RemainingSeconds);
+                Assert.That(body.ActorLife is NavigationActor live&&live!=null&&body.Position==live.transform.position,Is.True);
+                Assert.That(path[0],Is.EqualTo(body.Position));
+                foreach(var other in snapshot.Bodies.Where(b=>b.Owner.ActorId!=ownerKey.ActorId))
+                    Assert.That(CustomerRoutePlanner.IsClear(path,new[]{other.Position},request.Radius+other.Radius+Math.Max(request.SafetyMargin,other.SafetyMargin)),Is.True);
+                foreach(var fact in snapshot.Parking.Where(p=>p.Owner.ActorId!=ownerKey.ActorId))
+                    Assert.That(CustomerRoutePlanner.IsClear(path,new[]{fact.Position},request.Radius+fact.Radius+Math.Max(request.SafetyMargin,fact.SafetyMargin)),Is.True);
+                return path;
+            }
+            void Observe(CafeLoopSnapshot ignored)
+            {
+                if(!alive)return;
+                try
+                {
+                    foreach(var candidate in entries.Keys.Cast<TrafficIntentKey>().Where(k=>k.ActorId==staff&&k.IntentId=="employee-pickup-journey").ToArray())
+                    {
+                        var entry=entries[candidate];if(Flag(entry,"Retired")||!cursors.Contains(candidate))continue;
+                        var cursor=cursors[candidate];var context=Read(cursor,"DeliveryContext");
+                        if(context==null||((CafeWorkCheckpoint)Read(context,"checkpoint")).VisitId!=second)continue;
+                        var decision=core.GetDecision(candidate);var snapshot=(TrafficWorldSnapshot)Read(core,"snapshot");
+                        if(!waiting && decision.Kind==TrafficDecisionKind.WaitingForTraffic)
+                        {
+                            var owners=((System.Collections.IEnumerable)Read(entry,"FrozenOwners")).Cast<TrafficIntentKey>().ToArray();
+                            if(owners.Length!=1||owners[0].IntentId!="actual-exit"||owners[0].ActorId!=first)continue;
+                            Assert.That(decision.Blockers.Any(b=>b.Owner.Equals(owners[0])&&b.Proof=="current-conflict-segment"),Is.True);
+                            if(!PublishedBound(owners[0],snapshot))continue; // A real WAIT may precede the normal body publication after Bind.
+                            ActualBound(owners[0],snapshot);key=candidate;old=owners[0];heldEntry=entry;heldCursor=cursor;heldContext=context;
+                            frozen=Read(entry,"FrozenOwners");resources=Read(entry,"FrozenResources");firstFrame=(int)Read(entry,"FirstFrame");
+                            frozenResourceCopy=((System.Collections.Generic.Dictionary<TrafficIntentKey,System.Collections.Generic.HashSet<string>>)resources)
+                                .ToDictionary(pair=>pair.Key,pair=>pair.Value.ToArray());
+                            sequence=decision.RequestSequence;queries=core.QueriesConsumed(key);debt=(float)Read(entry,"WaitRemaining");Assert.That(debt,Is.GreaterThan(0));
+                            pickup=(PickupQueueService)Read(cursor,"DeliveryOwner");Assert.That(pickup,Is.Not.Null);
+                            taskToken=(CafeTaskToken)Read(context,"token");cup=Read(visual,"heldCup");Assert.That(cup,Is.Not.Null);waiting=true;
+                        }
+                        if(!waiting||!candidate.Equals(key))continue;
+                        if(!bound)SameLedger(); // Keep the original task/ledger through normal queued/Prepared gaps.
+                        if(!deferred&&decision.Reason=="delivery-preparation-issued-advance-revalidation")
+                        {
+                            SameLedger();Assert.That(decision.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));Assert.That(decision.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));
+                            Assert.That(decision.AcquiredSequence,Is.Zero);Assert.That(core.HasActiveGrant(key),Is.False);Assert.That(Read(entry,"Leg"),Is.Null);Assert.That(Read(entry,"JourneyPermit"),Is.Null);
+                            Assert.That(byActor.Contains(staff),Is.False);Assert.That(pickup.TryGetServiceLease(staff,out _),Is.False);
+                            var request=(TrafficRequest)Read(entry,"Request");Assert.That(request.Requirements.Count(r=>r.SelectedJourney),Is.EqualTo(1));
+                            Assert.That(request.Snapshot,Is.SameAs(snapshot)); // Only the unacquired full-job witness requires this current snapshot.
+                            Assert.That(request.Requirements.Single(r=>r.SelectedJourney).ResourceId,Is.EqualTo("selected-home"));
+                            var later=decision.Blockers.Select(b=>b.Owner).Where(k=>!k.Equals(old)).Distinct().ToArray();Assert.That(later,Has.Length.EqualTo(1));
+                            Assert.That(later[0].ActorId,Is.EqualTo(second));Assert.That(later[0].IntentId,Is.EqualTo("pickup-advance"));
+                            ActualBound(old,snapshot);var moving=ActualBound(later[0],snapshot);
+                            var fact=snapshot.Parking.Single(p=>p.Owner.Equals(later[0]));Assert.That(fact.CanonicalOwner,Is.SameAs(pickup));
+                            Assert.That(fact.SemanticCheckpoint is PickupQueueService.ReservationClaim claim&&claim.IsCurrent,Is.True);
+                            Assert.That(fact.BusinessOwner,Is.SameAs(visits[second]));Assert.That(fact.ReleaseObligation,Is.SameAs(Read(visits[second],"Admission")));
+                            var jobs=(System.Collections.IList)Read(entry,"Jobs");Assert.That(jobs.Count,Is.GreaterThan(0));Assert.That(Read(entry,"JobIndex"),Is.EqualTo(jobs.Count));
+                            var full=(Vector3[])Read(jobs[0],"ExpandedPath");var movingRequest=(TrafficRequest)Read(entries[later[0]],"Request");
+                            var clearance=request.Radius+movingRequest.Radius+Math.Max(request.SafetyMargin,movingRequest.SafetyMargin);
+                            var selected=new System.Collections.Generic.List<Vector3[]>{full};
+                            for(var i=0;i<request.Requirements.Count;i++)if(request.Requirements[i].SelectedJourney)selected.Add((Vector3[])Read(jobs[i+1],"ExpandedPath"));
+                            Assert.That(selected.Any(path=>(bool)pathsConflict.Invoke(null,new object[]{path,moving,clearance})),Is.True,
+                                premise+"actual outward or selected-home route, not an arbitrary staff-origin query");
+                            deferred=true;
+                        }
+                        if(deferred&&!bound&&Read(entry,"JourneyPermit") is TrafficDecision source&&source.AcquiredSequence>0&&Read(entry,"Leg")!=null&&Flag(Read(entry,"Leg"),"Bound"))
+                        {
+                            if(!PublishedBound(key,snapshot))continue; // Observe the later normal snapshot; never manufacture finite motion at Bind.
+                            SameLedger();ActualBound(key,snapshot);Assert.That(source.ProofRoutes.Any(p=>p.ResourceId=="selected-home"),Is.True);
+                            Assert.That(pickup.TryCaptureDeliveryLease(staff,out deliveryLease),Is.True);Assert.That(deliveryLease.IsCurrent,Is.True);
+                            Assert.That(deliveryLease.Position,Is.EqualTo(((TrafficRequest)Read(entry,"JourneyRequest")).Target));bound=true;
+                        }
+                    }
+                }
+                catch(Exception error){if(errors.Count<3)errors.Add(error.ToString());}
+            }
+            void OnTask(CafeTaskEvent value)
+            {
+                if(!alive||value.ActorId!=staff||value.Checkpoint.VisitId!=second)return;
+                try
+                {
+                    if(value.Kind==CafeTaskEventKind.DeliveryArrived){Assert.That(bound,Is.True,premise+"real lease/Native issue before cup delivery");Assert.That(value.Token,Is.EqualTo(taskToken));delivered=true;}
+                    if(value.Kind==CafeTaskEventKind.Returned){Assert.That(delivered,Is.True);Assert.That(value.Token,Is.EqualTo(taskToken));returned=true;}
+                }
+                catch(Exception error){if(errors.Count<3)errors.Add(error.ToString());}
+            }
+            foreach(var id in new[]{first,second})
+            {
+                var body=(NavigationActor)Read(visits[id],"Actor");var observer=body.gameObject.AddComponent<CafeActualExitObserver>();observer.VisitId=id;
+                observer.Receipt=(visit,pose)=>{if(!alive)return;try{Assert.That(Vector3.Distance(pose,CafeLoopRuntimeProof.Field<Transform>(customers,"exit").position),Is.LessThanOrEqualTo(.081f));Assert.That(exits.Add(visit),Is.True);Assert.That(customers.Capacity.GetReservations().Where(r=>r.OwnerId==visit).All(r=>r.State==ReservationState.Released),Is.True);}catch(Exception error){errors.Add(error.ToString());}};
+                observers.Add(observer);
+            }
+            owner.SnapshotChanged+=Observe;employees.IntegratedTaskEvent+=OnTask;
+            verify=()=>
+            {
+                Assert.That(errors,Is.Empty,string.Join("\n",errors));Assert.That(waiting&&deferred&&bound&&delivered&&returned,Is.True,premise+"actual WAIT / same-source finite preparation / lease / Bound / delivery / return");
+                CollectionAssert.AreEquivalent(new[]{first,second},exits);Assert.That(deliveryLease.HasRetiredLifetime,Is.True);
+                Assert.That(pickup.TryGetServiceLease(staff,out _),Is.False);Assert.That(Read(visual,"heldCup"),Is.Null);
+                TestContext.WriteLine("REAL_DELIVERY_FINITE_PROTECTION originalWait=True frozenNotExpanded=True actualIssuedContributor=True samePreparedTask=True actualDeliveryAndReturn=True twoActualExits=True");
+            };
+            actualExits=()=>exits.Count==2;
+            var previousCleanup=parkingEndpointWitnessCleanup;var previousEnd=parkingEndpointStoredEnd;Action cleanup=null;
+            cleanup=()=>
+            {
+                if(!alive)return;alive=false;owner.SnapshotChanged-=Observe;employees.IntegratedTaskEvent-=OnTask;
+                foreach(var observer in observers)if(observer!=null)observer.Receipt=null;
+                if(ReferenceEquals(parkingEndpointWitnessCleanup,cleanup))parkingEndpointWitnessCleanup=previousCleanup;
+                if(ReferenceEquals(parkingEndpointStoredEnd,cleanup))parkingEndpointStoredEnd=previousEnd;
+                previousEnd?.Invoke();if(!ReferenceEquals(previousEnd,previousCleanup))previousCleanup?.Invoke();
+            };
+            parkingEndpointWitnessCleanup=parkingEndpointStoredEnd=cleanup;return cleanup;
+        }
+
+        private IEnumerator CounterWorkingTraffic(bool keepStationaryWall,bool requireOriginalDeliveryWait=false)
         {
             var fees=0;var preparations=0;var deliveries=0;
             NavigationTarget[] selectedReturn=null;
@@ -647,6 +826,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             Assert.That(MovementRead(cashierRow,"AcceptedToken"),Is.EqualTo(firstCashierToken));
             Assert.That(customers.TrySpawn(),Is.True,customers.Status);var second=customers.Snapshot.Single(v=>v.VisitId!=first).VisitId;
             var endWorkingTrace=BeginCounterWorkingWindowTrace(first,second,out var pollWorkingTrace);
+            Action endDeliveryProtection=null,verifyDeliveryProtection=null;Func<bool> protectedActualExits=null;
             try
             {
             var originalTokens=customers.Capacity.GetReservations().Select(r=>r.Token).ToArray();
@@ -703,19 +883,73 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 yield return Until(()=>employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista).State==EmployeeState.Blocked,true);
                 Assert.That(owner.Snapshot.Orders[firstKey].State,Is.EqualTo(OrderState.Preparing));Assert.That(owner.Snapshot.Delivery,Is.Empty);
                 Assert.That(owner.Snapshot.Employees.Single(e=>e.Role==EmployeeRole.Barista).Stage,Is.EqualTo(CafeWorkStage.Prepared));
-                Assert.That(employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista).Failure,Does.Contain("送杯通道堵塞"));
+                Assert.That(employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista).Failure,Does.Contain("PlanningFailed: bounded-route-proof-failed"),"Permanent wall must retain the actual typed bounded spatial failure / 永久墙保留真实有限空间失败分类");
                 WriteMatrixRecipe("L-14",1,"EXPECTED_BOUNDED_BLOCKED_WITH_STATIONARY_WALL");
             }
             foreach(var blocker in barriers){world.Unregister(blocker);blocker.gameObject.SetActive(false);UnityEngine.Object.Destroy(blocker.gameObject);}
             if(keepStationaryWall)tools.ResumeBlockedFlow();
             yield return Until(()=>owner.Snapshot.Orders[firstKey].State==OrderState.ReadyForPickup && employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista).State==EmployeeState.Idle);
-            tools.ResumeCollection();yield return Until(()=>owner.Snapshot.Orders.Count==2 && owner.Snapshot.Orders.Values.All(o=>o.State==OrderState.Completed) && customers.Capacity.GetCapacities().All(c=>c.Used==0) && employees.Snapshot.All(e=>e.State==EmployeeState.Idle));
+            if(requireOriginalDeliveryWait)endDeliveryProtection=BeginActualDeliveryFiniteProtection(first,second,out verifyDeliveryProtection,out protectedActualExits);
+            tools.ResumeCollection();yield return Until(()=>owner.Snapshot.Orders.Count==2 && owner.Snapshot.Orders.Values.All(o=>o.State==OrderState.Completed) && customers.Capacity.GetCapacities().All(c=>c.Used==0) && employees.Snapshot.All(e=>e.State==EmployeeState.Idle) && (!requireOriginalDeliveryWait||protectedActualExits()));
+            verifyDeliveryProtection?.Invoke();
             WriteMatrixRecipe(keepStationaryWall?"L-14":"L-12",keepStationaryWall?1:0,"PASS_WITH_CONTROLLED_REGISTERED_CORRIDOR");
             Assert.That(fees,Is.EqualTo(2));Assert.That(preparations,Is.EqualTo(2));Assert.That(deliveries,Is.EqualTo(2));
             CollectionAssert.AreEqual(originalTokens,customers.Capacity.GetReservations().Select(r=>r.Token));
             }
-            finally {endWorkingTrace();}
+            finally {endDeliveryProtection?.Invoke();endWorkingTrace();}
         }
+        // Compatibility input only: initialize the old empty canonical queue before the first customer proposal.
+        // 只保留本例旧yield拓扑；新默认geometry仍由Photo/Five验证，发布后不改owner/slots。
+        private void InitializeLegacySingleSideHeldReadyInput()
+        {
+            Assert.That(TestContext.CurrentContext.Test.Name==nameof(SingleSideHeldReadyStartsSafeCollectionBeforeActualMachineReturn) ||
+                TestContext.CurrentContext.Test.Name==nameof(SingleSideSelectedUnissuedDeliverySegmentRecognizesFiniteMovingBodyAndKeepsOriginalWork),Is.True);
+            Assert.That(customers.Snapshot,Is.Empty);Assert.That(owner.Snapshot.Orders,Is.Empty);Assert.That(owner.Snapshot.PaidVisitIds,Is.Empty);
+            Assert.That(customers.CounterAssignments,Is.Empty);Assert.That(customers.Capacity.GetReservations(),Is.Empty);
+            Assert.That(CafeLoopRuntimeProof.Field<long>(customers,"nextVisit"),Is.Zero);
+            Assert.That(CafeLoopRuntimeProof.Field<IDictionary>(customers,"visits").Count,Is.Zero);
+            Assert.That(CafeLoopRuntimeProof.Field<IDictionary>(customers,"trafficCandidates").Count,Is.Zero);
+            Assert.That(CafeLoopRuntimeProof.Field<object>(customers,"pendingAdmissionAnchor"),Is.Null);
+            Assert.That(CafeLoopRuntimeProof.Field<PickupQueueService>(customers,"pickupQueue"),Is.Null);
+            var facts=MovementAdmissionFacts();var nextRequest=CafeLoopRuntimeProof.Field<long>(world.Service,"nextId");
+            var runtime=Find<CafeLayoutRuntime>();var pickupId=runtime.FunctionalSurfaceLayout.PickUpPoints.Single().InstanceId;
+            Assert.That(customers.TryConfigurePickupFromLayout(pickupId,out var reason),Is.True,reason);
+            Assert.That(CafeLoopRuntimeProof.Field<object>(customers,"pickupBlueprint"),Is.Null);
+            var sides=customers.GetPickupServiceTargets(pickupId).ToArray();Assert.That(sides.Length,Is.EqualTo(1));
+            var side=sides.Single();Assert.That(side.Facing.HasValue,Is.True);var outward=-side.Facing.Value;
+            var head=side.Position+outward*1.1f;
+            Assert.That(Vector3.Distance(head,new Vector3(1.4f,0,2.5f)),Is.LessThan(.001f),"Original SharedPickup head must follow its actual formal side/facing");
+            var prefabs=CafeLoopRuntimeProof.Field<NavigationActor[]>(customers,"prefabs");
+            var clearance=prefabs.Max(actor=>2*actor.Settings.AgentRadius+actor.Settings.CollisionSkin+actor.Settings.Epsilon+actor.Settings.ArrivalDistance);
+            var shared=Vector3.Distance(side.Position,CafeLoopRuntimeProof.Field<Vector3>(customers,"pickupEmployee"))<clearance;
+            Assert.That(shared,Is.True,"The original SharedPickup input must retain shared customer/employee service semantics");
+            var arrival=prefabs.Min(actor=>actor.Settings.ArrivalDistance+actor.Settings.Epsilon);
+            var grid=CafeLoopRuntimeProof.Field<Transform>(customers,"gridRoot");var size=runtime.Layout.GridSettings.CellSize;
+            bool InEntrance(Vector3 point)
+            {
+                var local=grid.InverseTransformPoint(point);
+                return runtime.Layout.Reservations.Any(row=>row.Type==LayoutReservationType.EntranceClearance &&
+                    local.x>=row.Origin.X*size-.46f && local.x<=(row.Origin.X+row.Size.Width)*size+.46f &&
+                    local.z>=row.Origin.Y*size-.46f && local.z<=(row.Origin.Y+row.Size.Height)*size+.46f);
+            }
+            var exit=CafeLoopRuntimeProof.Field<Transform>(customers,"exit").position;
+            var slots=new CounterQueuePlanner(1.1f,preserveStraightPrefix:true).Build(head,outward,customers.Capacity.Limits.PickUp,
+                (point,previous)=>adapter.IsPointArrivable(point,arrival) && !InEntrance(point) && Vector3.Distance(point,exit)>=1.2f &&
+                    sides.All(target=>Vector3.Distance(point,target.Position)>=clearance) &&
+                    world.RegisteredActors.All(actor=>actor==null || Vector3.Distance(actor.transform.position,point)>=clearance) &&
+                    (previous==null || adapter.HasClearPath(previous.Value,point)) && adapter.HasClearPath(point,side.Position),
+                sampleEdge:(from,to)=>{var path=adapter.GetCompletePath(from,to);return path==null || path.Count==0?(Vector3?)null:path[path.Count-1];}).ToArray();
+            Assert.That(slots,Is.Not.Empty,"The original legacy head must be a real feasible empty input, without a fallback head");
+            Assert.That(slots[0],Is.EqualTo(head));var cached=new PickupQueueService(slots,side.Position,shared);
+            Assert.That(CafeLoopRuntimeProof.Field<IDictionary>(cached,"reservations").Count,Is.Zero);
+            Assert.That(cached.Snapshot,Is.Empty);Assert.That(cached.ServiceLeases,Is.Empty);Assert.That(cached.Version,Is.Zero);
+            CafeLoopRuntimeProof.Set(customers,"pickupWaitSlots",slots);CafeLoopRuntimeProof.Set(customers,"pickupQueue",cached);
+            Assert.That(CafeLoopRuntimeProof.Field<object>(customers,"pickupBlueprint"),Is.Null);
+            Assert.That(MovementAdmissionFacts(),Is.EqualTo(facts));Assert.That(CafeLoopRuntimeProof.Field<long>(world.Service,"nextId"),Is.EqualTo(nextRequest));
+            TestContext.WriteLine("LEGACY_SINGLE_SIDE_HELD_READY_INPUT pickup="+pickupId+" head="+head.ToString("F6")+
+                " slotCount="+slots.Length+" shared="+shared+" beforeFirstProposal=True rows=0 leases=0 blueprint=NULL noPublishedOwnerRewrite=True");
+        }
+
         // One real unborn proposal; preserve the following original TrySpawn/assert as first canonical birth.
         // 只用普通 frames 等同一个实际 anchor/key；不额外 pump 或重复提交。
         private IEnumerator PrimePickupFamilyAdmission()
@@ -748,6 +982,8 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         {
             var paid=0;var prepared=0;
             employees.IntegratedTaskEvent+=e=>{if(e.Kind==CafeTaskEventKind.ServiceFinished)paid++;if(e.Kind==CafeTaskEventKind.Prepared)prepared++;};
+            if(TestContext.CurrentContext.Test.Name==nameof(SingleSideHeldReadyStartsSafeCollectionBeforeActualMachineReturn))
+                InitializeLegacySingleSideHeldReadyInput();
             yield return PrimePickupFamilyAdmission();
             Assert.That(customers.TrySpawn(),Is.True,customers.Status);var id=customers.Snapshot.Single().VisitId;
             yield return Until(()=>owner.Snapshot.Orders.Count==1);
@@ -800,6 +1036,41 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             TestContext.WriteLine("OWNER_YIELD_STARTED canProgress="+owner.CanProgress+" revision="+adapter.Revision+" published="+adapter.PublishedRevision+
                 " speed="+time.CurrentSpeed+" block="+time.ResumeBlockReason+" staff="+employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista).State);
             var actualYield=false;var actualReturn=false;var issuedBeforeReturn=false;var lifecycleObserved=false;
+            object earlyCollectionVisit=null,earlyCollectionMove=null;TrafficDecision earlyCollectionSource=null;
+            ServiceTrafficCoordinator earlyCollectionCore=null;TrafficIntentKey earlyCollectionKey=default;
+            bool ObserveOriginalEarlyCollectionNative(int frame)
+            {
+                if(earlyCollectionSource==null || issuedBeforeReturn)return false;
+                var live=CafeLoopRuntimeProof.Field<IDictionary>(customers,"visits")[id];
+                Assert.That(live,Is.SameAs(earlyCollectionVisit));Assert.That(MovementRead(live,"TrafficMove"),Is.SameAs(earlyCollectionMove));
+                Assert.That(MovementRead(earlyCollectionMove,"Source"),Is.SameAs(earlyCollectionSource));
+                Assert.That((TrafficIntentKey)MovementRead(earlyCollectionMove,"Intent"),Is.EqualTo(earlyCollectionKey));
+                Assert.That(earlyCollectionCore.TryGetCommittedJourney(earlyCollectionKey,out var retained),Is.True);
+                Assert.That(retained,Is.SameAs(earlyCollectionSource));
+                var earlyRequest=(long)MovementRead(live,"RequestId");if(earlyRequest==0)return false;
+                var staff=employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista);
+                var returning=world.RegisteredActors.Single(a=>a.ActorId==staff.ActorId);
+                Assert.That(staff.State,Is.EqualTo(EmployeeState.Returning),"Actual Native issue, not canonical acquisition, must precede machine return");
+                Assert.That(employees.TryGetBinding(EmployeeRole.Barista,out var beforeReturnBinding),Is.True);
+                Assert.That(Vector3.Distance(returning.transform.position,beforeReturnBinding.WorkTarget.Position),Is.GreaterThan(.081f));
+                Assert.That(owner.Snapshot.Orders[key].State,Is.EqualTo(OrderState.ReadyForPickup));
+                var generation=(int)MovementRead(earlyCollectionMove,"NativeGeneration");
+                Assert.That(earlyCollectionCore.TryGetCommittedLegProvenance(earlyCollectionKey,body,generation,out var source,out _),Is.True);
+                Assert.That(source,Is.SameAs(earlyCollectionSource));
+                var entry=CafeLoopRuntimeProof.Field<IDictionary>(earlyCollectionCore,"entries")[earlyCollectionKey];
+                var leg=MovementRead(entry,"Leg");Assert.That(MovementRead(leg,"Committed"),Is.EqualTo(true));
+                Assert.That(MovementRead(leg,"Bound"),Is.EqualTo(true));Assert.That(MovementRead(leg,"Completed"),Is.EqualTo(false));
+                var stamp=(TrafficNativeStamp)MovementRead(leg,"Stamp");Assert.That(stamp.RequestId,Is.EqualTo(earlyRequest));
+                Assert.That(stamp.LegGeneration,Is.EqualTo(generation));
+                var earlyNative=CafeLoopRuntimeProof.Field<IDictionary>(world.Service,"byId");
+                Assert.That(earlyRequest,Is.GreaterThan(0),"Early collection requires a real submitted Native leg, not a prepared proposal");
+                Assert.That(earlyNative.Contains(earlyRequest),Is.True);Assert.That((string)MovementRead(earlyNative[earlyRequest],"ActorId"),Is.EqualTo(id));
+                TestContext.WriteLine("HELD_READY_SAFE_ACQUIRE frame="+frame+" staff="+staff.State+" staffPose="+returning.transform.position.ToString("F9")+
+                    " workTarget="+beforeReturnBinding.WorkTarget.Position.ToString("F9")+" distance="+Vector3.Distance(returning.transform.position,beforeReturnBinding.WorkTarget.Position).ToString("R")+
+                    " exitQualified=True sameOriginalSource=True strictBound=True request="+earlyRequest);
+                return true;
+            }
+
             var continuationNativeObserved=false;ServiceTrafficCoordinator continuationCore=null;
             object originalYieldEntry=null,originalYieldParent=null,originalYieldPlan=null,originalParentEntry=null,originalParentContext=null;
             TrafficIntentKey originalYieldKey=default,continuationKey=default,originalParentKey=default;
@@ -966,7 +1237,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     }
                 }
                 if(Vector3.Distance(body.transform.position,original.Position)>.9f) actualYield=true;
-                if(collectBeforeMachineReturn && !issuedBeforeReturn && staff.State==EmployeeState.Returning && owner.Snapshot.Orders[key].State==OrderState.ReadyForPickup)
+                if(collectBeforeMachineReturn && earlyCollectionSource==null && !issuedBeforeReturn && staff.State==EmployeeState.Returning && owner.Snapshot.Orders[key].State==OrderState.ReadyForPickup)
                 {
                     var queue=CafeLoopRuntimeProof.Field<PickupQueueService>(customers,"pickupQueue");
                     var returning=world.RegisteredActors.Single(a=>a.ActorId==staff.ActorId);
@@ -1013,18 +1284,20 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                             var accepted=customers.TryMoveToPickupService(id,out var why);
                             if(!accepted){yield return null;continue;}
                             Assert.That(accepted,Is.True,"A held Ready head with a fully safe collection route must not wait for CM: "+why);
-                            var earlyRequest=(long)privateVisit.GetType().GetField("RequestId").GetValue(privateVisit);
-                            var earlyNative=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(world.Service,"byId");
-                            Assert.That(earlyRequest,Is.GreaterThan(0),"Early collection requires a real submitted Native leg, not a prepared proposal");
-                            Assert.That(earlyNative.Contains(earlyRequest),Is.True);
-                            Assert.That((string)MovementRead(earlyNative[earlyRequest],"ActorId"),Is.EqualTo(id));
-                            TestContext.WriteLine("HELD_READY_SAFE_ACQUIRE frame="+frame+" staff="+staff.State+" staffPose="+returning.transform.position.ToString("F9")+
-                                " workTarget="+beforeReturnBinding.WorkTarget.Position.ToString("F9")+" distance="+Vector3.Distance(returning.transform.position,beforeReturnBinding.WorkTarget.Position).ToString("R")+
-                                " exitQualified=True request="+privateVisit.GetType().GetField("RequestId").GetValue(privateVisit));
-                            issuedBeforeReturn=true;tools.ResumeCollection();
+                            // Canonical acquire may queue the first strict leg; ordinary frames must issue the SAME source.
+                            // 仅一次public acquire，继续原3000帧窗口；不再重入yield资格、不额外pump或续时。
+                            earlyCollectionVisit=privateVisit;earlyCollectionMove=MovementRead(privateVisit,"TrafficMove");
+                            Assert.That(earlyCollectionMove,Is.Not.Null);
+                            earlyCollectionCore=(ServiceTrafficCoordinator)MovementRead(earlyCollectionMove,"Coordinator");
+                            earlyCollectionSource=(TrafficDecision)MovementRead(earlyCollectionMove,"Source");
+                            Assert.That(earlyCollectionSource,Is.Not.Null);Assert.That(earlyCollectionSource.AcquiredSequence,Is.GreaterThan(0));
+                            earlyCollectionKey=(TrafficIntentKey)MovementRead(earlyCollectionMove,"Intent");
+                            Assert.That(earlyCollectionKey.IntentId,Is.EqualTo("pickup-service"));Assert.That(earlyCollectionKey.ActorId,Is.EqualTo(id));
                         }
                     }
                 }
+                if(earlyCollectionSource!=null && !issuedBeforeReturn && ObserveOriginalEarlyCollectionNative(frame))
+                {issuedBeforeReturn=true;tools.ResumeCollection();}
                 actualReturn=(owner.Snapshot.Orders[key].State==OrderState.ReadyForPickup || owner.Snapshot.Orders[key].State==OrderState.Completed) && staff.State==EmployeeState.Idle;
                 yield return null;
             }

@@ -139,9 +139,50 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             internal readonly TrafficNativeStamp OldStamp=new TrafficNativeStamp(4101,4),NextStamp=new TrafficNativeStamp(4102,6);
             internal TrafficWorldSnapshot World;internal TrafficPhaseHandoff Handoff;internal CounterReadinessArrival Receipt;
             internal TrafficRequest FollowerRequest;internal int Calls;internal bool ProducerCurrent=true;
+            internal Action ReadinessPredecessorRead; // Test-only producer callback; default null leaves existing fixtures unchanged.
             private Vector3 priorPose;private TrafficIntentKey bodyOwner;private bool progress,headPresent=true;private long worldVersion;
-            internal CapturedCounterAdvanceReadinessFixture(bool clearWaiterCache=false,bool captureBody=false)
+            private bool lateFollowerMode;
+            internal CapturedCounterAdvanceReadinessFixture(bool clearWaiterCache=false,bool captureBody=false,bool lateFollower=false,bool attachLateReadiness=true)
             {
+                if(lateFollower)
+                {
+                    lateFollowerMode=true;priorPose=Start;bodyOwner=Old;
+                    foreach(var id in new[]{head.ActorId,"removed-middle",Old.ActorId}){Assert.That(Counter.TryJoin(id),Is.True);Assert.That(Counter.Complete(id,1),Is.True);}
+                    Assert.That(Counter.Remove("removed-middle"),Is.True);Refresh(false);
+                    Core=Coordinator(World,waitSeconds:30,query:(a,b)=>{Calls++;return new[]{new Vector3(a.x,.0125f,a.z),new Vector3(b.x,.0125f,b.z)};});
+                    Assert.That(Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,Old.ActorId,Counter.Version,out var lateFirst),Is.True);
+                    Assert.That(lateFirst.Assignment.Position,Is.EqualTo(End));
+                    Core.EvaluateParking(new TrafficRequest(Old,1,World,Start,End,.4f,"counter/"+Old.ActorId,finiteSeconds:30,planPrimaryRoute:true));Core.ProcessReady(1);
+                    OldSource=Core.GetDecision(Old);Assert.That(OldSource.Kind,Is.EqualTo(TrafficDecisionKind.Granted));Assert.That(Core.TryCommit(OldSource,lateFirst),Is.True);Refresh();
+                    Core.PrepareLeg(OldSource,"counter/"+Old.ActorId,0,Actor,4,World,Start,.05f,2);Core.ProcessReady(2);
+                    Assert.That(Core.TryCommit(Core.GetDecision(Old)),Is.True);Assert.That(Core.BindLeg(Old,Actor,OldStamp),Is.True);
+                    var lateSaved=((TrafficRequest)D1Read(Core,Old,"Request")).Snapshot.Parking.Single(p=>p.Owner.Equals(Old)&&p.ResourceId=="counter/"+Old.ActorId);
+                    priorPose=End;progress=false;Refresh();
+                    Assert.That(Core.CompleteLegAndBeginHandoff(Old,Actor,OldStamp,Arrival(Old,OldStamp,End),()=>
+                    {Assert.That(Counter.Complete(Old.ActorId,lateFirst.Assignment.Generation),Is.True);return Receipt=new CounterReadinessArrival(this,Old,OldSource,lateSaved);},out Handoff),Is.True);Refresh();
+                    var lateTable=(System.Collections.IDictionary)D3ReadField(Core,"entries");var lateState=D1Read(Core,Old,"PendingHandoff");
+                    Assert.That(((System.Collections.IDictionary)D3ReadField(lateState,"Dependencies")).Count,Is.Zero);
+                    Assert.That(lateTable.Contains(Follower),Is.False);Assert.That(Counter.Snapshot.Any(row=>row.VisitId==Follower.ActorId),Is.False);
+                    // The real CQ member and its body enter only after the owner's real Arrived handoff exists.
+                    // 原Arrived receipt已真实发布之后才公开加入CQ；不伪造历史Frozen/dependency。
+                    Assert.That(Counter.TryJoin(Follower.ActorId),Is.True);Assert.That(Counter.Complete(Follower.ActorId,1),Is.True);
+                    Assert.That(Counter.TryCaptureAssignment(Follower.ActorId,out OriginalFollowerClaim),Is.True);
+                    Assert.That(OriginalFollowerClaim.Assignment.Position,Is.EqualTo(Start));Refresh();
+                    Assert.That(Counter.Remove(head.ActorId),Is.True);headPresent=false;Refresh();
+                    Assert.That(Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,Old.ActorId,Counter.Version,out var lateSecond),Is.True);
+                    Assert.That(lateSecond.Assignment.Position,Is.EqualTo(NextEnd));
+                    Core.EvaluateParking(new TrafficRequest(Next,4,World,End,NextEnd,.4f,"counter/"+Old.ActorId,finiteSeconds:30,planPrimaryRoute:true));Core.ProcessReady(4);
+                    NextSource=Core.GetDecision(Next);Assert.That(NextSource.Kind,Is.EqualTo(TrafficDecisionKind.Granted));Assert.That(Core.TryCommit(NextSource,lateSecond),Is.True);Refresh();
+                    Assert.That(Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,Follower.ActorId,Counter.Version,out var latePreview),Is.True);
+                    Assert.That(latePreview.Assignment.Position,Is.EqualTo(End));
+                    FollowerRequest=new TrafficRequest(Follower,5,World,Start,End,.4f,"counter/"+Follower.ActorId,finiteSeconds:30,planPrimaryRoute:true);
+                    Core.EvaluateParking(FollowerRequest);if(attachLateReadiness)Attach();
+                    Assert.That(Core.PrepareLeg(NextSource,"counter/"+Old.ActorId,0,Actor,6,World,End,.05f,5).Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));
+                    Assert.That(D3ReadField(D1Read(Core,Next,"Leg"),"NeedsQuery"),Is.EqualTo(true));
+                    Assert.That(((System.Collections.IDictionary)D3ReadField(lateState,"Dependencies")).Contains(lateTable[Follower]),Is.False);
+                    Assert.That(D1Read(Core,Follower,"FrozenOwners"),Is.Null);Assert.That(D1Read(Core,Follower,"WaitingBlockers"),Is.Empty);
+                    return;
+                }
                 priorPose=Start;bodyOwner=Old;
                 foreach(var id in new[]{head.ActorId,"removed-middle",Old.ActorId,Follower.ActorId}){Assert.That(Counter.TryJoin(id),Is.True);Assert.That(Counter.Complete(id,1),Is.True);}
                 Assert.That(Counter.Remove("removed-middle"),Is.True);Assert.That(Counter.TryCaptureAssignment(Follower.ActorId,out OriginalFollowerClaim),Is.True);
@@ -211,7 +252,9 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 businessOwner:owner.ActorId==Follower.ActorId?FollowerBusiness:Business,releaseObligation:owner.ActorId==Follower.ActorId?FollowerRelease:Release,semanticCheckpoint:claim);
             private void Refresh(bool install=true)
             {
-                var bodies=new List<TrafficBodyFact>{new TrafficBodyFact(bodyOwner,priorPose,.4f,true,progress,progress?30:0,actorLife:Actor),new TrafficBodyFact(followerBody,FollowerStart,.4f,actorLife:FollowerLife)};
+                var bodies=new List<TrafficBodyFact>{new TrafficBodyFact(bodyOwner,priorPose,.4f,true,progress,progress?30:0,actorLife:Actor)};
+                if(!lateFollowerMode || Counter.TryCaptureAssignment(Follower.ActorId,out _))
+                    bodies.Add(new TrafficBodyFact(followerBody,lateFollowerMode?Start:FollowerStart,.4f,actorLife:FollowerLife));
                 if(headPresent)bodies.Add(new TrafficBodyFact(head,NextEnd,.4f,actorLife:HeadLife));
                 var parking=new List<TrafficParkingFact>();foreach(var id in new[]{Old.ActorId,Follower.ActorId,head.ActorId})if(Counter.TryCaptureAssignment(id,out var claim))parking.Add(Claim(id==Old.ActorId?bodyOwner:id==Follower.ActorId?followerBody:head,claim));
                 World=ServiceTrafficCoordinatorTests.World(++worldVersion,worldVersion,bodies.ToArray(),parking.ToArray());if(install)Core.SetSnapshot(World);
@@ -220,7 +263,7 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             {
                 var type=typeof(ServiceTrafficCoordinator).Assembly.GetType("AnimalCafe.Navigation.TrafficCounterAdvanceReadiness");
                 var descriptor=Activator.CreateInstance(type,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,null,
-                    new object[]{Follower,(Func<bool>)(()=>ProducerCurrent && OriginalFollowerClaim.IsCurrent),(Func<TrafficIntentKey,float>)(owner=>ProducerCurrent && Receipt!=null && Receipt.IsCurrent && NextSource!=null && (owner.Equals(Old)||owner.Equals(Next))?1:0)},null);
+                    new object[]{Follower,(Func<bool>)(()=>ProducerCurrent && OriginalFollowerClaim.IsCurrent),(Func<TrafficIntentKey,float>)(owner=>{ReadinessPredecessorRead?.Invoke();return ProducerCurrent && Receipt!=null && Receipt.IsCurrent && NextSource!=null && (owner.Equals(Old)||owner.Equals(Next))?1:0;})},null);
                 var port=typeof(ServiceTrafficCoordinator).GetMethod("TrySetCounterAdvanceReadiness",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
                 Assert.That((bool)port.Invoke(Core,new[]{(object)Core.GetDecision(Follower),descriptor}),Is.True);
             }
@@ -247,6 +290,25 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 {Assert.That(Counter.Complete(Old.ActorId,current.Assignment.Generation),Is.True);return new CounterReadinessArrival(this,Next,NextSource,saved);},out _),Is.True);Refresh();
                 Core.NotifyChanged(Next,"body");FollowerRequest=D2FreshRequest(FollowerRequest,World);Assert.That(CfcReprepare(Core,Core.GetDecision(Follower),FollowerRequest,out _),Is.True);Core.ProcessReady(7);
             }
+            internal void TransferLateFollowerAndActuallyArriveNext()
+            {
+                var ready=Core.GetDecision(Next);Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);
+                var state=D1Read(Core,Old,"PendingHandoff");var deps=(System.Collections.IDictionary)D3ReadField(state,"Dependencies");
+                Assert.That(deps.Count,Is.Zero);Assert.That(D1Read(Core,Follower,"FrozenOwners"),Is.Null);
+                Assert.That(Core.TryCommitPhaseHandoff(Handoff,ready,Receipt,publish:()=>{bodyOwner=Next;Refresh();}),Is.True);
+                Assert.That(deps.Count,Is.Zero,"Real publication cannot invent a historical captured dependency");
+                Assert.That(D1Read(Core,Follower,"FrozenOwners"),Is.Null);
+                Assert.That(Core.BindLeg(Next,Actor,NextStamp),Is.True);progress=true;Refresh();
+                FollowerRequest=D2FreshRequest(FollowerRequest,World);Assert.That(CfcReprepare(Core,Core.GetDecision(Follower),FollowerRequest,out _),Is.True);Core.ProcessReady(6);
+                Assert.That(Core.GetDecision(Follower).Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),"Only genuine Bound motion may now justify a new ordinary finite WAIT");
+                Assert.That(((HashSet<TrafficIntentKey>)D1Read(Core,Follower,"FrozenOwners")),Is.EquivalentTo(new[]{Next}));
+                var saved=((TrafficRequest)D1Read(Core,Next,"Request")).Snapshot.Parking.Single(p=>p.Owner.Equals(Next)&&p.ResourceId=="counter/"+Next.ActorId);
+                priorPose=NextEnd;progress=false;Refresh();Assert.That(Counter.TryCaptureAssignment(Old.ActorId,out var current),Is.True);
+                Assert.That(Core.CompleteLegAndBeginHandoff(Next,Actor,NextStamp,Arrival(Next,NextStamp,NextEnd),()=>
+                {Assert.That(Counter.Complete(Old.ActorId,current.Assignment.Generation),Is.True);return new CounterReadinessArrival(this,Next,NextSource,saved);},out _),Is.True);Refresh();
+                Core.NotifyChanged(Next,"body");FollowerRequest=D2FreshRequest(FollowerRequest,World);
+                Assert.That(CfcReprepare(Core,Core.GetDecision(Follower),FollowerRequest,out _),Is.True);Core.ProcessReady(7);
+            }
             internal sealed class CounterReadinessArrival:ITrafficPhaseMilestone
             {
                 private readonly CapturedCounterAdvanceReadinessFixture f;private readonly TrafficIntentKey owner;
@@ -259,6 +321,94 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 public bool AuthorizesSuccessor(TrafficIntentKey successor,TrafficDecision source,int firstFrame)=>owner.Equals(f.Old) && IsCurrent && successor.Equals(f.Next) && ReferenceEquals(source,f.NextSource) && firstFrame==4;
             }
         }
+        [Test] public void LateCounterFollowerDefersAfterRealArrivedHandoffWithoutInventingCapturedWait()
+        {
+            var f=new CapturedCounterAdvanceReadinessFixture(lateFollower:true);
+            var entries=(System.Collections.IDictionary)D3ReadField(f.Core,"entries");var entry=entries[f.Follower];
+            var state=D1Read(f.Core,f.Old,"PendingHandoff");var deps=(System.Collections.IDictionary)D3ReadField(state,"Dependencies");
+            Assert.That(D3InvokeBool(f.Core,"IsCurrentPhaseHandoff",f.Handoff,f.OldSource,f.Actor),Is.True);
+            Assert.That(D3ReadField(state,"CheckpointKind"),Is.EqualTo(TrafficPhaseMilestoneKind.Arrived));
+            var oldLeg=D1Read(f.Core,f.Old,"Leg");
+            foreach(var field in new[]{"Committed","Bound","Completed"})Assert.That(D3ReadField(oldLeg,field),Is.EqualTo(true),"PREMISE: real original Native completed leg "+field);
+            Assert.That((TrafficNativeStamp)D3ReadField(oldLeg,"Stamp"),Is.EqualTo(f.OldStamp));
+            Assert.That(deps.Count,Is.Zero);Assert.That(deps.Contains(entry),Is.False);
+            Assert.That(D1Read(f.Core,f.Follower,"FrozenOwners"),Is.Null);Assert.That(D1Read(f.Core,f.Follower,"FrozenResources"),Is.Null);
+            Assert.That(D1Read(f.Core,f.Follower,"WaitingBlockers"),Is.Empty);Assert.That(f.Core.QueriesConsumed(f.Follower),Is.Zero);
+            Assert.That(f.OriginalFollowerClaim.IsCurrent&&f.OriginalFollowerClaim.Assignment.Arrived,Is.True);
+            Assert.That(f.Counter.Snapshot.Select(row=>row.VisitId),Is.EqualTo(new[]{f.Old.ActorId,f.Follower.ActorId}));
+            Assert.That(f.Receipt.IsCurrent,Is.True);Assert.That(f.NextSource.AcquiredSequence,Is.GreaterThan(f.OldSource.AcquiredSequence));
+            Assert.That(D1Read(f.Core,f.Follower,"CounterAdvanceReadiness"),Is.Not.Null);
+            var hook=typeof(ServiceTrafficCoordinator).GetField("WaitFailureObserver",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+            var previous=hook.GetValue(f.Core);var events=new List<string>();Action<string> observer=text=>events.Add(text);
+            var installed=Delegate.Combine(previous as Delegate,observer);hook.SetValue(f.Core,installed);
+            try{f.Core.ProcessReady(5);}finally{if(ReferenceEquals(hook.GetValue(f.Core),installed))hook.SetValue(f.Core,previous);}
+            var held=f.Core.GetDecision(f.Follower);
+            TestContext.WriteLine("LATE_COUNTER_HANDOFF firstFrame="+D1Read(f.Core,f.Follower,"FirstFrame")+" decision="+held.Kind+"/"+held.Reason+" original=["+string.Join(";",events)+"]");
+            Assert.That(held.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),
+                "FEATURE_RED: real arrived predecessor's same authenticated strict handoff may hold a genuinely new unacquired follower without claiming an original WAIT dependency: "+held.Reason);
+            Assert.That(held.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));Assert.That(held.AcquiredSequence,Is.Zero);
+            Assert.That(f.Core.HasActiveGrant(f.Follower),Is.False);Assert.That(f.Core.TryCommit(held),Is.False);
+            Assert.That(D1Read(f.Core,f.Follower,"Leg"),Is.Null);Assert.That(D1Read(f.Core,f.Follower,"JourneyPermit"),Is.Null);
+            Assert.That(D1Read(f.Core,f.Follower,"FrozenOwners"),Is.Null);Assert.That(D1Read(f.Core,f.Follower,"FrozenResources"),Is.Null);
+            Assert.That(D1Read(f.Core,f.Follower,"WaitingBlockers"),Is.Empty);Assert.That(deps.Count,Is.Zero);
+            Assert.That(D3ReadField(state,"CompletedBodyWakeups"),Is.Empty);
+            Assert.That(D1Read(f.Core,f.Follower,"CounterAdvanceReadinessWaitStarted"),Is.EqualTo(true));
+            var remaining=(float)D1Read(f.Core,f.Follower,"WaitRemaining");Assert.That(remaining,Is.GreaterThan(0).And.LessThanOrEqualTo(30));
+            var sequence=held.RequestSequence;var age=D1Read(f.Core,f.Follower,"FirstFrame");Assert.That(sequence,Is.GreaterThan(0));
+            f.Core.Tick(100,true);Assert.That(D1Read(f.Core,f.Follower,"WaitRemaining"),Is.EqualTo(remaining));
+            f.Core.Tick(0,false);Assert.That(D1Read(f.Core,f.Follower,"WaitRemaining"),Is.EqualTo(remaining));
+            f.Core.Tick(.25f,false);var spent=(float)D1Read(f.Core,f.Follower,"WaitRemaining");Assert.That(spent,Is.EqualTo(remaining-.25f).Within(.0001));
+            Assert.That(f.Core.QueriesConsumed(f.Follower),Is.Zero);Assert.That(deps.Count,Is.Zero);
+            f.TransferLateFollowerAndActuallyArriveNext();var ready=f.Core.GetDecision(f.Follower);
+            Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);
+            Assert.That(ready.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(f.Core,f.Follower,"FirstFrame"),Is.EqualTo(age));
+            Assert.That(((float)D1Read(f.Core,f.Follower,"WaitRemaining")),Is.LessThanOrEqualTo(spent));Assert.That(f.Core.QueriesConsumed(f.Follower),Is.GreaterThan(0));
+            Assert.That(entries[f.Follower],Is.SameAs(entry));Assert.That(ready.AcquiredSequence,Is.Zero);
+            Assert.That(f.Counter.TryPrepareMutation(CounterQueueService.MutationKind.Advance,f.Follower.ActorId,f.Counter.Version,out var actual),Is.True);
+            Assert.That(actual.Assignment.Position,Is.EqualTo(f.End));Assert.That(f.Core.TryCommit(ready,actual),Is.True);
+        }
+
+        [TestCase("false-producer")][TestCase("real-expiry")][TestCase("untyped")][TestCase("reentry")]
+        public void LateCounterFollowerCannotDeferWithoutItsCurrentProducerAndLiveRealHandoff(string mode)
+        {
+            var f=new CapturedCounterAdvanceReadinessFixture(lateFollower:true,attachLateReadiness:mode!="untyped");
+            var entries=(System.Collections.IDictionary)D3ReadField(f.Core,"entries");var entry=entries[f.Follower];
+            var state=D1Read(f.Core,f.Old,"PendingHandoff");var dependencies=(System.Collections.IDictionary)D3ReadField(state,"Dependencies");
+            Assert.That(D3InvokeBool(f.Core,"IsCurrentPhaseHandoff",f.Handoff,f.OldSource,f.Actor),Is.True);
+            Assert.That(dependencies.Count,Is.Zero);Assert.That(dependencies.Contains(entry),Is.False);
+            Assert.That(D1Read(f.Core,f.Follower,"FrozenOwners"),Is.Null);Assert.That(D1Read(f.Core,f.Follower,"FrozenResources"),Is.Null);
+            Assert.That(D1Read(f.Core,f.Follower,"WaitingBlockers"),Is.Empty);Assert.That(f.Core.QueriesConsumed(f.Follower),Is.Zero);
+            Assert.That(f.OriginalFollowerClaim.IsCurrent&&f.OriginalFollowerClaim.Assignment.Arrived,Is.True);
+            var first=D1Read(f.Core,f.Follower,"FirstFrame");var assignment=f.OriginalFollowerClaim.Assignment;
+            Assert.That(D1Read(f.Core,f.Follower,"CounterAdvanceReadiness")!=null,Is.EqualTo(mode!="untyped"));
+            var predecessorReads=0;
+            if(mode=="reentry")f.ReadinessPredecessorRead=()=>
+            {
+                // Only one public reentry attempt: the unsafe implementation can fail a bounded test, never overflow the process stack.
+                // 最多一次公开ProcessReady重入；不让未加保护的draft导致无限递归/崩溃。
+                if(++predecessorReads==1)f.Core.ProcessReady(5);
+            };
+            if(mode=="false-producer")f.ProducerCurrent=false; // Actual typed callback changes; no Entry/permit mutation.
+            if(mode=="real-expiry")
+            {
+                f.Core.Tick(31,false); // Original real handoff clock expires; no private Remaining/phase write.
+                Assert.That(D3InvokeBool(f.Core,"IsCurrentPhaseHandoff",f.Handoff,f.OldSource,f.Actor),Is.False);
+                Assert.That((float)D3ReadField(state,"Remaining"),Is.LessThanOrEqualTo(0));
+            }
+            f.Core.ProcessReady(5);var refused=f.Core.GetDecision(f.Follower);
+            Assert.That(refused.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),"No bounded hold may disguise invalid producer/source/default policy: "+refused.Kind+"/"+refused.Reason);
+            Assert.That(refused.Kind,Is.Not.EqualTo(TrafficDecisionKind.Granted));Assert.That(refused.Kind,Is.Not.EqualTo(TrafficDecisionKind.WaitingForTraffic));
+            Assert.That(refused.AcquiredSequence,Is.Zero);Assert.That(f.Core.TryCommit(refused),Is.False);Assert.That(f.Core.HasActiveGrant(f.Follower),Is.False);
+            Assert.That(f.Core.QueriesConsumed(f.Follower),Is.Zero);Assert.That(D1Read(f.Core,f.Follower,"FirstFrame"),Is.EqualTo(first));
+            Assert.That(D1Read(f.Core,f.Follower,"Leg"),Is.Null);Assert.That(D1Read(f.Core,f.Follower,"JourneyPermit"),Is.Null);
+            Assert.That(D1Read(f.Core,f.Follower,"FrozenOwners"),Is.Null);Assert.That(D1Read(f.Core,f.Follower,"FrozenResources"),Is.Null);
+            Assert.That(dependencies.Count,Is.Zero);Assert.That(entries[f.Follower],Is.SameAs(entry));
+            if(mode=="reentry")Assert.That(predecessorReads,Is.EqualTo(1),"Fresh producer reentry must fail before recursively reading that producer again");
+            Assert.That(D1Read(f.Core,f.Follower,"CounterPaidTraversalInspecting"),Is.EqualTo(false),"Original receiver reentry latch is always restored");
+            Assert.That(f.Counter.TryCaptureAssignment(f.Follower.ActorId,out var current)&&current.IsCurrent,Is.True);
+            Assert.That(current.Assignment,Is.EqualTo(assignment),"Refusing readiness cannot publish a new Counter position or fake-release the actual business claim");
+        }
+
         [Test]
         public void CapturedCounterReadinessWithholdsOnlyUntilOriginalStrictHandoffThenReprovesSameFollower()
             =>AssertCapturedCounterReadinessContinuation(false);
@@ -404,14 +554,18 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             internal readonly CounterQueueService Queue=new CounterQueueService(new[]{Origin,P(-2)});
             internal readonly ServiceTrafficCoordinator Core;internal TrafficWorldSnapshot Snapshot;internal object Descriptor;
             internal bool Current=true,Capability,Blocked=true;internal int Calls;internal TrafficRequest Original;
-            internal UnpaidEligibilityModel(bool capability=false,int budget=16384,bool attach=true,Func<Vector3,Vector3,IReadOnlyList<Vector3>> queryFault=null,int frameBudget=128,Func<object> nativeContext=null)
+            internal readonly TrafficInitialQueueGeometry InitialGeometry;
+            internal UnpaidEligibilityModel(bool capability=false,int budget=16384,bool attach=true,Func<Vector3,Vector3,IReadOnlyList<Vector3>> queryFault=null,int frameBudget=128,Func<object> nativeContext=null,
+                TrafficInitialQueueGeometry initialGeometry=null,TrafficRouteRequirement[] initialRoles=null,int candidateCount=1,bool initiallyBlocked=true)
             {
-                Capability=capability;Assert.That(Queue.TryJoin(Key.ActorId),Is.True);Assert.That(Queue.Complete(Key.ActorId,1),Is.True);
+                InitialGeometry=initialGeometry;Blocked=initiallyBlocked;Capability=capability;Assert.That(Queue.TryJoin(Key.ActorId),Is.True);Assert.That(Queue.Complete(Key.ActorId,1),Is.True);
                 Snapshot=MakeWorld(1);Func<Vector3,Vector3,IReadOnlyList<Vector3>> query=(from,to)=>
                 {Calls++;if(queryFault!=null)return queryFault(from,to);return Capability && Blocked && from==P(0,2)?null:new[]{from,to};};
                 Core=nativeContext==null?Coordinator(Snapshot,query:query,intentBudget:budget,frameBudget:frameBudget):
                     NativeContextCoordinator(Snapshot,query,frameBudget,budget,nativeContext);
-                Original=RequestNow();var initial=Core.EvaluateParking(Original);
+                Original=initialRoles==null?RequestNow():new TrafficRequest(Key,11,Snapshot,Origin,P(2),.4f,"pickup/"+Key.ActorId,
+                    requirements:initialRoles,finiteSeconds:20,planPrimaryRoute:true);
+                var initial=Core.EvaluateParking(Original,0,candidateCount);
                 if(attach)Attach(initial);
             }
             internal TrafficWorldSnapshot MakeWorld(int version,bool replaceLife=false)
@@ -432,7 +586,8 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 var type=typeof(ServiceTrafficCoordinator).Assembly.GetType("AnimalCafe.Navigation.TrafficUnpaidParkingEligibility");
                 if(type==null)return; // Baseline still executes the original behavior, rather than faking eligibility.
                 Descriptor=Activator.CreateInstance(type,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,
-                    null,new object[]{Key,Life,Queue,Business,Admission,(Func<bool>)(()=>Current)},null);
+                    null,InitialGeometry==null?new object[]{Key,Life,Queue,Business,Admission,(Func<bool>)(()=>Current)}:
+                        new object[]{Key,Life,Queue,Business,Admission,(Func<bool>)(()=>Current),InitialGeometry},null);
                 Assert.That(D3InvokeBool(Core,"TrySetUnpaidParkingEligibility",initial,Descriptor),Is.True);
             }
             internal TrafficDecision Run(int frame=11){Core.ProcessReady(frame);return Core.GetDecision(Key);}
@@ -441,13 +596,251 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             internal bool Refresh(out TrafficDecision next)=>CfcReprepare(Core,Core.GetDecision(Key),RequestNow(),out next);
         }
 
+        private static TrafficRouteRequirement InitialGeometryRole(string id,Vector3 start,Vector3 goal,IEnumerable<TrafficRouteObstacle> local=null)
+            =>new TrafficRouteRequirement("queue-geometry/"+id,start,goal,.8f,avoidProposedParking:false,localObstacles:local);
+        private static TrafficInitialQueueGeometry InitialGeometry(object owner,params TrafficInitialQueueMember[] members)
+            =>new TrafficInitialQueueGeometry(owner,members);
+        [TestCase(false)] [TestCase(true)]
+        public void InitialQueueGeometryLastMemberFailureIsTerminalWhileDefaultUnpaidStillHolds(bool blueprint)
+        {
+            var bad=InitialGeometryRole("only/head-service",P(0,2),P(4,2));
+            var family=InitialGeometry(new object(),new TrafficInitialQueueMember(P(2),new[]{bad}));
+            var m=new UnpaidEligibilityModel(initialGeometry:blueprint?family:null,initialRoles:new[]{bad},initiallyBlocked:false,
+                queryFault:(from,to)=>from==bad.Start?null:new[]{from,to});
+            Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var originalClaim),Is.True);Assert.That(originalClaim.Assignment.SlotIndex,Is.Zero);
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];var d=m.Run();
+            if(!blueprint)
+            {
+                Assert.That(d.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),d.Reason);
+                Assert.That(D3InvokeBool(m.Core,"IsUnpaidParkingEligibilityHeld",d,m.Descriptor),Is.True);
+            }
+            else
+            {
+                Assert.That(d.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),
+                    "FEATURE: the last exact static geometry member ends its finite family, never permanent unpaid Hold: "+d.Reason);
+                Assert.That(d.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed));
+            }
+            Assert.That(d.AcquiredSequence,Is.Zero);Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);Assert.That(m.Core.TryCommit(d),Is.False);
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));
+            Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(11));Assert.That(m.Core.QueriesConsumed(m.Key),Is.GreaterThan(0).And.LessThanOrEqualTo(16384));
+            Assert.That(originalClaim.IsCurrent,Is.True);Assert.That(m.Queue.Snapshot.Single().Arrived,Is.True);
+        }
+        [TestCase("target")] [TestCase("role")] [TestCase("local-obstacle")]
+        public void InitialQueueGeometryCannotAttachAMismatchedTargetOrStaticProof(string mismatch)
+        {
+            var local=new TrafficRouteObstacle(P(12,12),.25f);
+            var declared=InitialGeometryRole("member/head-service",P(0,2),P(4,2),new[]{local});
+            var actual=mismatch=="role"?InitialGeometryRole("member/head-service",P(0,2),P(5,2),new[]{local}):
+                mismatch=="local-obstacle"?InitialGeometryRole("member/head-service",P(0,2),P(4,2),new[]{new TrafficRouteObstacle(local.Position,.5f)}):declared;
+            var family=InitialGeometry(new object(),new TrafficInitialQueueMember(mismatch=="target"?P(3):P(2),new[]{declared}));
+            var m=new UnpaidEligibilityModel(attach:false,initialRoles:new[]{actual},initiallyBlocked:false);
+            var initial=m.Core.GetDecision(m.Key);var type=typeof(ServiceTrafficCoordinator).Assembly.GetType("AnimalCafe.Navigation.TrafficUnpaidParkingEligibility",true);
+            var descriptor=Activator.CreateInstance(type,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,
+                null,new object[]{m.Key,m.Life,m.Queue,m.Business,m.Admission,(Func<bool>)(()=>m.Current),family},null);
+            Assert.That(D3InvokeBool(m.Core,"TrySetUnpaidParkingEligibility",initial,descriptor),Is.False,
+                "FEATURE: complete original static member binding is mandatory: "+mismatch);
+            Assert.That(m.Core.GetDecision(m.Key),Is.SameAs(initial));Assert.That(m.Core.QueriesConsumed(m.Key),Is.Zero);
+            Assert.That(initial.AcquiredSequence,Is.Zero);Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var claim)&&claim.IsCurrent,Is.True);
+        }
+        [Test]
+        public void InitialQueueGeometryAdvancesOneOriginalBadMemberToGoodWithoutRenewingItsSource()
+        {
+            var bad=InitialGeometryRole("first/head-service",P(0,2),P(4,2));var good=InitialGeometryRole("second/head-service",P(0,4),P(4,4));
+            var family=InitialGeometry(new object(),new TrafficInitialQueueMember(P(2),new[]{bad}),new TrafficInitialQueueMember(P(4),new[]{good}));
+            var m=new UnpaidEligibilityModel(initialGeometry:family,initialRoles:new[]{bad},candidateCount:2,initiallyBlocked:false,
+                queryFault:(from,to)=>from==bad.Start?null:new[]{from,to});
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];var first=m.Run();
+            Assert.That(first.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.AlternateAllowed),first.Reason);
+            Assert.That(first.AcquiredSequence,Is.Zero);var sequence=first.RequestSequence;var queries=m.Core.QueriesConsumed(m.Key);
+            var age=D1Read(m.Core,m.Key,"FirstFrame");var debt=D1Read(m.Core,m.Key,"WaitRemaining");
+            // A dynamic work role is additional original full-space proof, never part of the static family descriptor.
+            // 正常动态proof可追加；蓝图只匹配其静态queue-geometry角色，不能改真实头/身体合同。
+            var work=new TrafficRouteRequirement("work-home",P(8,8),P(9,8),.8f);
+            var request=new TrafficRequest(m.Key,11,m.Snapshot,Origin,P(4),.4f,"pickup/"+m.Key.ActorId,
+                requirements:new[]{good,work},finiteSeconds:20,planPrimaryRoute:true);
+            Assert.That(m.Core.TryAdvanceCandidate(first,1,request,out var pending),Is.True);
+            Assert.That(pending.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));Assert.That(pending.AcquiredSequence,Is.Zero);
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(queries));Assert.That(pending.RequestSequence,Is.EqualTo(sequence));
+            Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            Assert.That(m.Core.TryAdvanceCandidate(first,0,m.Original,out _),Is.False,"Spent decision/member cannot replay");
+            var ready=m.Run(12);Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));
+            Assert.That(ready.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));
+            Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));Assert.That(m.Core.QueriesConsumed(m.Key),Is.GreaterThan(queries).And.LessThanOrEqualTo(16384));
+            Assert.That(D1Read(m.Core,m.Key,"UnpaidEligibility"),Is.SameAs(m.Descriptor));
+            var pickup=new PickupQueueService(new[]{P(4)},new[]{P(6)});
+            Assert.That(pickup.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,m.Key.ActorId,pickup.Version,out var reserve),Is.True);
+            Assert.That(reserve.Assignment.Position,Is.EqualTo(request.Target));Assert.That(m.Core.TryCommit(ready,reserve),Is.True);
+            Assert.That(pickup.TryGetReservation(m.Key.ActorId,out var actual)&&actual.Equals(reserve.Assignment),Is.True);
+            Assert.That(pickup.Snapshot.Count,Is.Zero,"Standing geometry joint commit is still unpaid");Assert.That(ready.AcquiredSequence,Is.GreaterThan(0));
+            Assert.That(D1Read(m.Core,m.Key,"Leg"),Is.Null,"No Native dispatch is manufactured by the static family");
+        }
+
+        [TestCase("target")] [TestCase("role")] [TestCase("producer")]
+        public void InitialQueueGeometryAlternateRejectsChangedNextMemberOrProducerWithoutConsumingItsCookie(string fault)
+        {
+            var bad=InitialGeometryRole("first/head-service",P(0,2),P(4,2));var good=InitialGeometryRole("next/head-service",P(0,4),P(4,4));
+            var family=InitialGeometry(new object(),new TrafficInitialQueueMember(P(2),new[]{bad}),new TrafficInitialQueueMember(P(4),new[]{good}));
+            var m=new UnpaidEligibilityModel(initialGeometry:family,initialRoles:new[]{bad},candidateCount:2,initiallyBlocked:false,
+                queryFault:(from,to)=>from==bad.Start?null:new[]{from,to});
+            var first=m.Run();Assert.That(first.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.AlternateAllowed),first.Reason);
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];var age=D1Read(m.Core,m.Key,"FirstFrame");
+            var debt=D1Read(m.Core,m.Key,"WaitRemaining");var queries=m.Core.QueriesConsumed(m.Key);var sequence=first.RequestSequence;
+            var cookie=D1Read(m.Core,m.Key,"InitialGeometryAlternate");Assert.That(cookie,Is.SameAs(first));
+            var changed=fault=="role"?InitialGeometryRole("next/head-service",good.Start,P(5,4)):good;
+            var wrong=new TrafficRequest(m.Key,11,m.Snapshot,Origin,fault=="target"?P(5):P(4),.4f,"pickup/"+m.Key.ActorId,
+                requirements:new[]{changed},finiteSeconds:20,planPrimaryRoute:true);
+            if(fault=="producer")m.Current=false;
+            Assert.That(m.Core.TryAdvanceCandidate(first,1,wrong,out _),Is.False,"No changed member/current producer can consume a finite geometry alternate");
+            Assert.That(m.Core.GetDecision(m.Key),Is.SameAs(first));Assert.That(D1Read(m.Core,m.Key,"InitialGeometryAlternate"),Is.SameAs(cookie));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));
+            Assert.That(D1Read(m.Core,m.Key,"CurrentIndex"),Is.EqualTo(0));Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(queries));
+            Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            Assert.That(first.RequestSequence,Is.EqualTo(sequence));Assert.That(first.AcquiredSequence,Is.Zero);
+            m.Current=true;
+            var correct=new TrafficRequest(m.Key,11,m.Snapshot,Origin,P(4),.4f,"pickup/"+m.Key.ActorId,
+                requirements:new[]{good},finiteSeconds:20,planPrimaryRoute:true);
+            Assert.That(m.Core.TryAdvanceCandidate(first,1,correct,out var pending),Is.True,"The exact original cookie remains consumable once after a refused call");
+            Assert.That(pending.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));Assert.That(D1Read(m.Core,m.Key,"InitialGeometryAlternate"),Is.Null);
+            Assert.That(pending.RequestSequence,Is.EqualTo(sequence));Assert.That(pending.AcquiredSequence,Is.Zero);
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(queries));Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));
+            Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));Assert.That(m.Core.TryAdvanceCandidate(first,1,correct,out _),Is.False);
+            Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var claim)&&claim.IsCurrent&&claim.Assignment.Arrived,Is.True);
+        }
+        [TestCase("throw")] [TestCase("malformed")] [TestCase("budget")] [TestCase("dynamic")]
+        public void InitialQueueGeometryFaultAndBudgetAreTerminalWhileDynamicCurrentRoleKeepsUnpaidHold(string fault)
+        {
+            var good=InitialGeometryRole("first/head-service",P(0,4),P(4,4));var next=InitialGeometryRole("next/head-service",P(0,6),P(4,6));
+            var dynamicRole=new TrafficRouteRequirement("queue-current/head-service",P(0,2),P(4,2),.8f,avoidProposedParking:false);
+            var family=InitialGeometry(new object(),new TrafficInitialQueueMember(P(2),new[]{good}),new TrafficInitialQueueMember(P(4),new[]{next}));
+            var failingStart=fault=="dynamic"?dynamicRole.Start:good.Start;
+            var m=new UnpaidEligibilityModel(initialGeometry:family,initialRoles:fault=="dynamic"?new[]{good,dynamicRole}:new[]{good},
+                candidateCount:2,initiallyBlocked:false,budget:fault=="budget"?1:16384,queryFault:(from,to)=>
+                {
+                    if(from==failingStart)
+                    {
+                        if(fault=="throw")throw new InvalidOperationException("original Native provider failure");
+                        if(fault=="malformed")return new[]{new Vector3(float.NaN,0,0)};
+                        if(fault=="dynamic")return null;
+                    }
+                    return new[]{from,to};
+                });
+            var d=m.Run();
+            if(fault=="dynamic")
+            {
+                Assert.That(d.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),d.Reason);
+                Assert.That(d.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));
+                Assert.That(D3InvokeBool(m.Core,"IsUnpaidParkingEligibilityHeld",d,m.Descriptor),Is.True);
+                Assert.That(D1Read(m.Core,m.Key,"CurrentIndex"),Is.EqualTo(0));
+            }
+            else
+            {
+                Assert.That(d.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),"Provider fault/budget is not a geometry alternate: "+fault+"/"+d.Reason);
+                if(fault=="budget"){Assert.That(d.Reason,Does.Contain("budget"));Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(1));Assert.That(m.Calls,Is.EqualTo(1));}
+                else Assert.That(D1Read(m.Core,m.Key,"UnpaidEligibilityQueryFault"),Is.EqualTo(true));
+            }
+            Assert.That(D1Read(m.Core,m.Key,"InitialGeometryAlternate"),Is.Null);Assert.That(d.AcquiredSequence,Is.Zero);
+            Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);Assert.That(m.Core.TryCommit(d),Is.False);
+            var request=new TrafficRequest(m.Key,11,m.Snapshot,Origin,P(4),.4f,"pickup/"+m.Key.ActorId,requirements:new[]{next},finiteSeconds:20,planPrimaryRoute:true);
+            Assert.That(m.Core.TryAdvanceCandidate(d,1,request,out _),Is.False);
+            Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var claim)&&claim.IsCurrent&&claim.Assignment.Arrived,Is.True);
+        }
+
+        [TestCase("head-service","alternate")]
+        [TestCase("service-exit","alternate")]
+        [TestCase("service-exit","mismatch")]
+        [TestCase("service-exit","last")]
+        [TestCase("service-exit","default")]
+        [TestCase("service-exit","larger-clearance")]
+        [TestCase("service-exit","omit-obstacle")]
+        [TestCase("service-exit","omit-local")]
+        [TestCase("service-exit","smaller-local")]
+        [TestCase("service-exit","lower-clearance")]
+        public void InitialQueueCurrentCounterpartUsesOnlyRemainingOriginalMembers(string suffix,string mode)
+        {
+            var declaredLocal=mode=="omit-local" || mode=="smaller-local"?new[]{new TrafficRouteObstacle(P(20,20),.5f)}:null;
+            var declared=new TrafficRouteRequirement("queue-geometry/"+suffix,P(0,2),P(4,2),.8f,
+                mode=="omit-obstacle"?new[]{P(20,20)}:null,avoidProposedParking:false,localObstacles:declaredLocal);
+            var next=InitialGeometryRole(suffix,P(0,4),P(4,4));
+            var currentClearance=mode=="larger-clearance"?.9f:mode=="lower-clearance"?.7f:.8f;
+            var currentLocal=mode=="smaller-local"?new[]{new TrafficRouteObstacle(P(20,20),.25f)}:null;
+            var current=new TrafficRouteRequirement("queue-current/"+suffix,declared.Start,
+                mode=="mismatch"?P(5,2):declared.Goal,currentClearance,new[]{P(2,2)},avoidProposedParking:false,localObstacles:currentLocal);
+            var count=mode=="last"?1:2;
+            var members=new[]{new TrafficInitialQueueMember(P(2),new[]{declared}),new TrafficInitialQueueMember(P(4),new[]{next})};
+            var family=InitialGeometry(new object(),members.Take(count).ToArray());
+            var staticDirectCalls=0;
+            var m=new UnpaidEligibilityModel(initialGeometry:mode=="default"?null:family,
+                initialRoles:new[]{declared,current},candidateCount:count,initiallyBlocked:false,queryFault:(from,to)=>
+                {
+                    // A straight, narrow Native corridor: static proof succeeds; its added current obstacle closes it.
+                    // 原静态通道可达；现实额外障碍封住此 member，其他 member 仍须完整证明。
+                    if(from==declared.Start && to==declared.Goal)staticDirectCalls++;
+                    bool OffCorridor(Vector3 p)=>p.z!=0 && p.z!=2 && p.z!=4;
+                    return OffCorridor(from)||OffCorridor(to)?null:new[]{from,to};
+                });
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];
+            var age=D1Read(m.Core,m.Key,"FirstFrame");var debt=D1Read(m.Core,m.Key,"WaitRemaining");
+            TrafficDecision first=null;var frame=11;
+            for(;frame<100;frame++)
+            {
+                first=m.Run(frame);
+                if(first.Kind!=TrafficDecisionKind.DeferredByBudget ||
+                    D3InvokeBool(m.Core,"IsUnpaidParkingEligibilityHeld",first,m.Descriptor))break;
+            }
+            Assert.That(frame,Is.LessThan(100),"PREMISE: original bounded provider must finish, not exhaust the test's frame window");
+            Assert.That(staticDirectCalls,Is.GreaterThan(0),"PREMISE: declared static corridor was actually queried");
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.GreaterThan(0).And.LessThan(16384));
+            Assert.That(first.AcquiredSequence,Is.Zero);Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));
+            Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            var sequence=first.RequestSequence; // Original sequence is assigned by the first actual batch.
+            Assert.That(sequence,Is.GreaterThan(0));
+            if(mode=="default")
+            {
+                Assert.That(first.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.AlternateAllowed),
+                    "CONTROL: original null-family policy already allows another ordinary candidate");
+                Assert.That(first.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed));
+                Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);Assert.That(m.Core.TryCommit(first),Is.False);
+                Assert.That(D1Read(m.Core,m.Key,"InitialGeometryAlternate"),Is.Null);return;
+            }
+            if(mode!="alternate" && mode!="lower-clearance")
+            {
+                Assert.That(first.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),first.Reason);
+                Assert.That(D3InvokeBool(m.Core,"IsUnpaidParkingEligibilityHeld",first,m.Descriptor),Is.True);
+                Assert.That(first.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));
+                Assert.That(D1Read(m.Core,m.Key,"CurrentIndex"),Is.EqualTo(0));
+                Assert.That(D1Read(m.Core,m.Key,"InitialGeometryAlternate"),Is.Null);
+                Assert.That(m.Core.TryCommit(first),Is.False);return;
+            }
+            Assert.That(first.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.AlternateAllowed),
+                "FEATURE: the exact current counterpart can consume one remaining original member: "+first.Reason);
+            var queries=m.Core.QueriesConsumed(m.Key);
+            var nextCurrent=new TrafficRouteRequirement("queue-current/"+suffix,next.Start,next.Goal,.8f,avoidProposedParking:false);
+            var request=new TrafficRequest(m.Key,11,m.Snapshot,Origin,P(4),.4f,"pickup/"+m.Key.ActorId,
+                requirements:new[]{next,nextCurrent},finiteSeconds:20,planPrimaryRoute:true);
+            Assert.That(m.Core.TryAdvanceCandidate(first,1,request,out var pending),Is.True);
+            Assert.That(pending.RequestSequence,Is.EqualTo(sequence));Assert.That(pending.AcquiredSequence,Is.Zero);
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(queries));
+            Assert.That(m.Core.TryAdvanceCandidate(first,1,request,out _),Is.False,"Original cookie is single-use");
+            var ready=m.Run(frame+1);Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));
+            Assert.That(ready.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));
+            Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.GreaterThanOrEqualTo(queries).And.LessThanOrEqualTo(16384));
+            var pickup=new PickupQueueService(new[]{P(4)},new[]{P(6)});
+            Assert.That(pickup.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,m.Key.ActorId,pickup.Version,out var reserve),Is.True);
+            Assert.That(reserve.Assignment.Position,Is.EqualTo(request.Target));Assert.That(m.Core.TryCommit(ready,reserve),Is.True);
+            Assert.That(ready.AcquiredSequence,Is.GreaterThan(0));Assert.That(pickup.TryGetReservation(m.Key.ActorId,out _),Is.True);
+            Assert.That(pickup.Snapshot.Count,Is.Zero);Assert.That(D1Read(m.Core,m.Key,"Leg"),Is.Null);
+        }
+
         // Core contract fixture, NOT a forged EmployeeFlow PreparedDeliveryContext.
         // reader阶段是模型输入；PQS reserve/TryCommit是实际public API，Entry只读不注入。
         private sealed class DeliveryPreparationABModel
         {
             internal readonly UnpaidEligibilityModel Model;
             internal readonly TrafficIntentKey Employee=Key("publication-barista","employee-pickup-journey",2);
-            internal readonly PickupQueueService Pickup=new PickupQueueService(new[]{P(2)},new[]{P(6)});
+            internal readonly PickupQueueService Pickup;
             internal int Stage=1,Reads; // enum contract: Invalid=0, PublicationPending=1, WorkingOrPaidPending=2.
             internal bool Current=true,ThrowReader;
             internal TrafficDecision Source,PaidSource;
@@ -455,11 +848,13 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             internal object WorkingSeal=new object();
             internal PickupQueueService.ReservationClaim OverrideReservation;
             internal DeliveryPreparationABModel(bool ownerTyped=true,bool receiverTyped=true,
-                Func<Vector3,Vector3,IReadOnlyList<Vector3>> query=null,bool canonicalBeforeReceiver=false)
+                Func<Vector3,Vector3,IReadOnlyList<Vector3>> query=null,bool canonicalBeforeReceiver=false,bool workingPrimary=false)
             {
+                Pickup=new PickupQueueService(new[]{P(2)},new[]{workingPrimary?P(-2,2):P(6)});
+                var employeeStart=workingPrimary?P(-2,-2):P(1,4);var employeeTarget=workingPrimary?P(-2,2):P(1);
                 Model=new UnpaidEligibilityModel(attach:ownerTyped,queryFault:query);Model.Blocked=false;
                 var basis=Model.MakeWorld(2);
-                Model.Snapshot=World(2,2,basis.Bodies.Concat(new[]{new TrafficBodyFact(Key("publication-barista","body"),P(1,4),.4f,
+                Model.Snapshot=World(2,2,basis.Bodies.Concat(new[]{new TrafficBodyFact(Key("publication-barista","body"),employeeStart,.4f,
                     actorLife:new object())}).ToArray(),basis.Parking.ToArray());
                 Model.Core.SetSnapshot(Model.Snapshot);
                 Assert.That(CfcReprepare(Model.Core,Model.Core.GetDecision(Model.Key),Model.RequestNow(),out _),Is.True);
@@ -478,8 +873,8 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                             semanticCheckpoint:claim)}).ToArray());
                     Model.Core.SetSnapshot(Model.Snapshot);Stage=2;
                 }
-                var initial=Model.Core.EvaluateParking(new TrafficRequest(Employee,12,Model.Snapshot,P(1,4),P(1),.4f,
-                    "pickup/"+Employee.ActorId,requirements:new[]{new TrafficRouteRequirement("selected-home",P(1),P(1,4),.8f,
+                var initial=Model.Core.EvaluateParking(new TrafficRequest(Employee,12,Model.Snapshot,employeeStart,employeeTarget,.4f,
+                    "pickup/"+Employee.ActorId,requirements:new[]{new TrafficRouteRequirement("selected-home",employeeTarget,employeeStart,.8f,
                         selectedJourney:true,avoidProposedParking:false)},finiteSeconds:20,planPrimaryRoute:true));
                 Assert.That(initial.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));
                 if(!receiverTyped)return;
@@ -578,6 +973,100 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 Assert.That(D1Read(Model.Core,Employee,"FrozenOwners"),Is.Null);Assert.That(D1Read(Model.Core,Employee,"Leg"),Is.Null);
                 Assert.That((float)D1Read(Model.Core,Employee,"WaitRemaining"),Is.EqualTo(10f));return first;
             }
+        }
+
+        [TestCase("working")][TestCase("no-working")][TestCase("untyped")]
+        [TestCase("expiry")][TestCase("counter-replaced")][TestCase("reader-throw")]
+        public void DeliveryPrimaryCounterWorkingUsesRealReservationBeforeFullSpaceProof(string mode)
+        {
+            var primaryPhase=false;
+            var f=new DeliveryPreparationABModel(receiverTyped:mode!="untyped",canonicalBeforeReceiver:true,workingPrimary:true,
+                query:(from,to)=>primaryPhase?new[]{from,Origin,to}:new[]{from,to});
+            var m=f.Model;var core=m.Core;primaryPhase=true;
+            Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var counter),Is.True);
+            Assert.That(counter.IsCurrent&&counter.Assignment.Arrived&&counter.Assignment.SlotIndex==0,Is.True);
+            Assert.That(f.Pickup.TryCaptureReservation(m.Key.ActorId,out var reservation),Is.True);
+            Assert.That(reservation.IsCurrent,Is.True);Assert.That(f.Source.AcquiredSequence,Is.GreaterThan(0));
+            Assert.That(core.TryGetCommittedJourney(m.Key,out var original),Is.True);Assert.That(original,Is.SameAs(f.Source));
+            var request=(TrafficRequest)D1Read(core,f.Employee,"Request");
+            Assert.That(request.Target,Is.EqualTo(P(-2,2)));
+            Assert.That(Vector3.Distance(request.Target,counter.Assignment.Position),Is.GreaterThan(.8f));
+            Assert.That(Vector3.Distance(request.Target,reservation.Assignment.Position),Is.GreaterThan(.8f));
+            Assert.That(m.Snapshot.Parking.Any(p=>ReferenceEquals(p.SemanticCheckpoint,counter)||
+                p.CanonicalOwner==m.Queue&&p.Position.Equals(counter.Assignment.Position)),Is.True);
+            // Real CQ and acquired PQS are distinct owners. The provider's complete primary passes through the CQ.
+            // 同一真实顾客的CQ事实与已提交PQS保持各自身份，不伪造endpoint blocker或任何Native权限。
+            Assert.That(m.BodyKey,Is.Not.EqualTo(m.Key));
+            if(mode=="no-working"){f.Stage=0;f.WorkingSeal=null;}
+            var stored=((System.Collections.IDictionary)D3ReadField(core,"entries"))[f.Employee];
+            var age=D1Read(core,f.Employee,"FirstFrame");var queries=core.QueriesConsumed(f.Employee);
+            var first=f.Run(12);
+            for(var frame=13;frame<100&&first.Kind==TrafficDecisionKind.DeferredByBudget&&!(bool)D1Read(core,f.Employee,"DeliveryPreparationStarted");frame++)first=f.Run(frame);
+            if(mode=="no-working" || mode=="untyped")
+            {
+                Assert.That(first.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),first.Reason);
+                Assert.That(first.AcquiredSequence,Is.Zero);Assert.That(core.HasActiveGrant(f.Employee),Is.False);
+                Assert.That(D1Read(core,f.Employee,"FrozenOwners"),Is.Null);return;
+            }
+            Assert.That(first.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),
+                "FEATURE: genuine CQ Working with an acquired reserved PU withholds this original delivery preparation; "+first.Reason);
+            Assert.That(f.Reads,Is.GreaterThan(0));Assert.That(core.QueriesConsumed(f.Employee),Is.EqualTo(queries));
+            Assert.That(first.AcquiredSequence,Is.Zero);Assert.That(D1Read(core,f.Employee,"FrozenOwners"),Is.Null);
+            Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries"))[f.Employee],Is.SameAs(stored));
+            Assert.That(D1Read(core,f.Employee,"FirstFrame"),Is.EqualTo(age));
+            var sequence=first.RequestSequence;var debt=(float)D1Read(core,f.Employee,"WaitRemaining");
+            Assert.That(debt,Is.GreaterThan(0));core.Tick(.25f,false);
+            Assert.That((float)D1Read(core,f.Employee,"WaitRemaining"),Is.EqualTo(debt-.25f).Within(.00001f));
+            if(mode=="expiry" || mode=="counter-replaced" || mode=="reader-throw")
+            {
+                // Only public canonical mutation or the original readonly producer fault is injected.
+                // 不写Entry/claim身份；原source、年龄、query与单次有限债务保持。
+                if(mode=="expiry")core.Tick(debt,false);
+                else if(mode=="reader-throw")f.ThrowReader=true;
+                else
+                {
+                    Assert.That(m.Queue.Remove(m.Key.ActorId),Is.True);Assert.That(m.Queue.TryJoin(m.Key.ActorId),Is.True);
+                    Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var joined),Is.True);
+                    Assert.That(m.Queue.Complete(m.Key.ActorId,joined.Assignment.Generation),Is.True);
+                    Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var replacement),Is.True);
+                    Assert.That(replacement.Assignment,Is.EqualTo(counter.Assignment),"Same public values do not preserve the removed CQ Entry");
+                    Assert.That(counter.IsSameReservation(replacement),Is.False);
+                    var freshCounter=new TrafficParkingFact(m.BodyKey,m.Queue,m.Queue.Version,"counter/"+m.Key.ActorId,
+                        replacement.Assignment.Position,.4f,businessOwner:m.Business,releaseObligation:m.Admission,semanticCheckpoint:replacement);
+                    m.Snapshot=World(4,4,m.Snapshot.Bodies.ToArray(),m.Snapshot.Parking.Where(p=>!ReferenceEquals(p.CanonicalOwner,m.Queue))
+                        .Concat(new[]{freshCounter}).ToArray());
+                    f.PublishWorld(5,Origin,m.BodyKey);
+                }
+                var rejected=f.Run(13);
+                Assert.That(rejected.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),rejected.Reason);
+                Assert.That(rejected.Reason,Is.EqualTo(mode=="expiry"?"wait-budget-exhausted":
+                    mode=="reader-throw"?"delivery-preparation-reader-failed":"delivery-preparation-counter-changed"));
+                Assert.That(rejected.AcquiredSequence,Is.Zero);Assert.That(core.HasActiveGrant(f.Employee),Is.False);
+                Assert.That(core.TryCommit(rejected),Is.False);Assert.That(D1Read(core,f.Employee,"Leg"),Is.Null);
+                Assert.That(D1Read(core,f.Employee,"FrozenOwners"),Is.Null);Assert.That(core.QueriesConsumed(f.Employee),Is.EqualTo(queries));
+                Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries"))[f.Employee],Is.SameAs(stored));
+                Assert.That(rejected.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(core,f.Employee,"FirstFrame"),Is.EqualTo(age));
+                Assert.That((float)D1Read(core,f.Employee,"WaitRemaining"),Is.LessThanOrEqualTo(debt-.25f));
+                Assert.That(D1Read(core,f.Employee,"DeliveryPreparationCounterFact"),Is.Null);
+                Assert.That(f.Run(14),Is.SameAs(rejected),"No next normal batch may revive this original failed preparation");
+                Assert.That(core.QueriesConsumed(f.Employee),Is.EqualTo(queries));return;
+            }
+            f.CommitPaidStrict();Assert.That(core.BindLeg(f.PaidIntent.Value,m.Life,new TrafficNativeStamp(96,31)),Is.True);
+            f.Stage=3;var stillAtCounter=f.Run(16);
+            Assert.That(stillAtCounter.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),"First Native acceptance does not release the real CQ claim");
+            Assert.That(core.QueriesConsumed(f.Employee),Is.EqualTo(queries));Assert.That(stillAtCounter.AcquiredSequence,Is.Zero);
+            Assert.That(m.Queue.Remove(m.Key.ActorId),Is.True);Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out _),Is.False);
+            m.Snapshot=World(5,5,m.Snapshot.Bodies.ToArray(),m.Snapshot.Parking.Where(p=>!ReferenceEquals(p.CanonicalOwner,m.Queue)).ToArray());
+            f.PublishWorld(6,P(2),f.PaidIntent.Value);
+            Assert.That(core.CompleteLeg(f.PaidIntent.Value,m.Life,new TrafficNativeStamp(96,31),P(2)),Is.True);
+            var ready=f.Run(17);Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);
+            Assert.That(core.QueriesConsumed(f.Employee),Is.GreaterThan(queries));Assert.That(ready.RequestSequence,Is.EqualTo(sequence));
+            Assert.That(D1Read(core,f.Employee,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(core,f.Employee,"FrozenOwners"),Is.Null);
+            Assert.That((float)D1Read(core,f.Employee,"WaitRemaining"),Is.LessThanOrEqualTo(debt-.25f));
+            Assert.That(ready.ProofRoutes.Any(p=>p.ResourceId=="selected-home"),Is.True);
+            Assert.That(f.Pickup.TryPrepareMutation(PickupQueueService.MutationKind.DeliveryLease,f.Employee.ActorId,
+                f.Pickup.Version,out var delivery,request.Target),Is.True);
+            Assert.That(core.TryCommit(ready,delivery),Is.True);Assert.That(ready.AcquiredSequence,Is.GreaterThan(0));
         }
 
         [TestCase(true)][TestCase(false)]
@@ -1007,6 +1496,503 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             args=args.Concat(parameters.Skip(args.Length).Select(parameter=>parameter.DefaultValue)).ToArray();
             return (ServiceTrafficCoordinator)constructor.Invoke(args);
         }
+        [Test] public void UnpaidNonselectedCapabilityFinishesItsFirstCompleteNativeChainBeforeUnusedNeighbors()
+        {
+            var start=P(10,10);var goal=P(14,10);var keepout=P(12,10);const float clearance=.8f;
+            var radius=clearance/Mathf.Cos(Mathf.PI/8)+.06f;var angle=3*Mathf.PI/4;
+            // This exact original BuildNodes seed is reached through real public query calls, never written into a Job.
+            // 与现有BuildNodes公式相同的一个真实候选；不私写node/cost/parent或任何许可。
+            var via=keepout+new Vector3(Mathf.Cos(angle)*radius,0,Mathf.Sin(angle)*radius);var bend=P(12,12);
+            var trace=new List<(Vector3 From,Vector3 To,IReadOnlyList<Vector3> Path)>();
+            IReadOnlyList<Vector3> first=null,second=null;var firstCall=0;var goalCall=0;var tailCalls=0;
+            var capability=new TrafficRouteRequirement("existing-goal/first-complete/exit-capability",start,goal,clearance,new[]{keepout},avoidProposedParking:false);
+            var tail=new TrafficRouteRequirement("must-still-prove-other-role",P(20,20),P(22,20),clearance,avoidProposedParking:false);
+            var m=new UnpaidEligibilityModel(initialRoles:new[]{capability,tail},initiallyBlocked:false,budget:20,queryFault:(from,to)=>
+            {
+                IReadOnlyList<Vector3> path;
+                if(from==start && to==goal)path=new[]{from,to}; // Actual Native direct result exists but crosses the declared disk.
+                else if(from==start)
+                {
+                    path=to==via?new[]{from,to}:null;
+                    if(path!=null){first=path;firstCall=trace.Count+1;}
+                }
+                else if(from==via)
+                {
+                    path=to==goal?new[]{from,bend,to}:null;
+                    if(path!=null){second=path;goalCall=trace.Count+1;}
+                }
+                else {path=new[]{from,to};if(from==tail.Start&&to==tail.Goal)tailCalls++;}
+                trace.Add((from,to,path));return path;
+            });
+            Assert.That(m.Descriptor,Is.Not.Null);Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var counter),Is.True);
+            Assert.That(counter.IsCurrent&&counter.Assignment.Arrived&&counter.Assignment.SlotIndex==0,Is.True);
+            Assert.That(D1Read(m.Core,m.Key,"Parking"),Is.EqualTo(true));Assert.That(D1Read(m.Core,m.Key,"AcquiredSequence"),Is.EqualTo(0L));
+            Assert.That(D1Read(m.Core,m.Key,"Leg"),Is.Null);Assert.That(D1Read(m.Core,m.Key,"JourneyPermit"),Is.Null);
+            Assert.That(capability.SelectedJourney,Is.False);Assert.That(CustomerRoutePlanner.IsClear(new[]{start,goal},new[]{keepout},clearance),Is.False);
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];var age=D1Read(m.Core,m.Key,"FirstFrame");var debt=D1Read(m.Core,m.Key,"WaitRemaining");
+            var pickup=new PickupQueueService(new[]{P(2)},new[]{P(6)});
+            Assert.That(pickup.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,m.Key.ActorId,pickup.Version,out var reserve),Is.True);
+            var result=m.Run();
+            // All premises precede FEATURE_RED: provider actually completed both parts and their entire joined geometry is clear.
+            // 所有前提先通过；不把任意provider返回、partial链或被阻接缝算作完整路径。
+            Assert.That(first,Is.Not.Null,"PREMISE: original graph really queried S->A");Assert.That(second,Is.Not.Null,"PREMISE: original graph really queried A->G before exhaustion");
+            var complete=new[]{start}.Concat(first).Concat(second).Concat(new[]{goal}).ToArray();
+            Assert.That(CustomerRoutePlanner.IsClear(first,new[]{keepout},clearance),Is.True);
+            Assert.That(CustomerRoutePlanner.IsClear(second,new[]{keepout},clearance),Is.True);
+            Assert.That(CustomerRoutePlanner.IsClear(complete,new[]{keepout},clearance),Is.True,"PREMISE: original Finish input incl. joins is genuinely clear");
+            Assert.That(firstCall,Is.GreaterThan(0).And.LessThan(goalCall));Assert.That(goalCall,Is.LessThanOrEqualTo(20));
+            Assert.That(trace.Any(edge=>edge.From==start&&edge.To==goal),Is.True);
+            TestContext.WriteLine("FIRST_COMPLETE_NATIVE_CHAIN firstCall="+firstCall+" goalCall="+goalCall+" calls="+m.Calls+" result="+result.Kind+"/"+result.Reason+
+                " chain=["+string.Join(";",complete.Select(p=>p.ToString("F9")))+"] trace=["+string.Join(";",trace.Select((e,i)=>(i+1)+":"+e.From.ToString("F6")+"->"+e.To.ToString("F6")+"/"+(e.Path==null?"NULL":"COMPLETE")))+"]");
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(m.Calls).And.LessThanOrEqualTo(20));Assert.That(trace.Count,Is.EqualTo(m.Calls));
+            Assert.That(result.AcquiredSequence,Is.Zero);Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);
+            Assert.That(pickup.Snapshot,Is.Empty);Assert.That(reserve.IsCurrent,Is.True);
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));
+            Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            Assert.That(D1Read(m.Core,m.Key,"FrozenOwners"),Is.Null);Assert.That(D1Read(m.Core,m.Key,"FrozenResources"),Is.Null);
+            Assert.That(result.RequestSequence,Is.GreaterThan(0));
+            Assert.That(result.Kind,Is.EqualTo(TrafficDecisionKind.Granted),
+                "FEATURE_RED: exact typed unpaid nonselected capability already has a complete clear Native chain; unused neighbor scans must not consume its remaining original budget: "+result.Reason);
+            Assert.That(tailCalls,Is.EqualTo(1),"All later original roles remain mandatory before the Entry can prepare");
+            Assert.That(result.ProofRoutes.Count,Is.EqualTo(3));
+            Assert.That(result.ProofRoutes.Any(route=>route.ResourceId==tail.ResourceId&&route.ExpandedPath.Count>1),Is.True);
+            var proof=result.ProofRoutes.Single(p=>p.ResourceId==capability.ResourceId);
+            Assert.That(CustomerRoutePlanner.IsClear(new[]{start}.Concat(proof.ExpandedPath).Concat(new[]{goal}).ToArray(),new[]{keepout},clearance),Is.True);
+            Assert.That(m.Core.TryCommit(result,reserve),Is.True,"Only all actual original proofs plus the unchanged real PQS mutation can commit");
+            Assert.That(pickup.TryCaptureReservation(m.Key.ActorId,out var claim)&&claim.IsCurrent,Is.True);
+            Assert.That(pickup.Snapshot,Is.Empty,"Reserve does not publish a paid FIFO row");Assert.That(pickup.CanReserve,Is.False);
+            var reservations=(System.Collections.IDictionary)D3ReadField(pickup,"reservations");
+            Assert.That(reservations.Count,Is.EqualTo(1));Assert.That(reservations.Contains(m.Key.ActorId),Is.True);
+            var paidField=reservations[m.Key.ActorId].GetType().GetField("Paid",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public);
+            Assert.That(paidField,Is.Not.Null);Assert.That(paidField.GetValue(reservations[m.Key.ActorId]),Is.EqualTo(false));
+            Assert.That(claim.Assignment.Position,Is.EqualTo(reserve.Assignment.Position));Assert.That(counter.IsCurrent,Is.True);
+        }
+
+        [TestCase("default")][TestCase("selected")][TestCase("seam")]
+        [TestCase("throw")][TestCase("unknown")][TestCase("new-body")]
+        public void FirstCompleteCapabilityNeverBorrowsDefaultSelectedBrokenOrStaleAuthority(string mode)
+        {
+            var start=P(10,10);var goal=P(14,10);var keepout=P(12,10);const float clearance=.8f;
+            var radius=clearance/Mathf.Cos(Mathf.PI/8)+.06f;var angle=3*Mathf.PI/4;
+            var via=keepout+new Vector3(Mathf.Cos(angle)*radius,0,Mathf.Sin(angle)*radius);var bend=P(12,12);
+            // A tiny local disk leaves the real seed valid; two independently clear sampled endpoints have an unsafe join.
+            // local几何不分配body/权利；仅seam负控保留原Finish必须拒绝的真实连接线。
+            var seamCenter=via+P(0,-.04f);var firstEnd=via+P(-.05f,-.04f);var secondStart=via+P(.05f,-.04f);
+            var local=mode=="seam"?new[]{new TrafficRouteObstacle(seamCenter,.03f)}:null;
+            var cap=new TrafficRouteRequirement("existing-goal/first-complete/exit-capability",start,goal,clearance,new[]{keepout},
+                selectedJourney:mode=="selected",avoidProposedParking:false,localObstacles:local);
+            var tail=new TrafficRouteRequirement("must-still-prove-other-role",P(20,20),P(22,20),clearance,avoidProposedParking:false);
+            IReadOnlyList<Vector3> first=null,second=null;var goalCalled=false;var tailCalls=0;
+            var budget=mode=="seam"||mode=="new-body"?128:20;var attach=mode!="default"&&mode!="selected";
+            var m=new UnpaidEligibilityModel(initialRoles:new[]{cap,tail},initiallyBlocked:false,attach:attach,budget:budget,queryFault:(from,to)=>
+            {
+                if(from==start&&to==goal)return new[]{from,to};
+                if(from==start)
+                {
+                    if(to!=via)return null;
+                    return first=new[]{from,mode=="seam"?firstEnd:to};
+                }
+                if(from==via)
+                {
+                    if(to!=goal)return null;goalCalled=true;
+                    if(mode=="throw")throw new InvalidOperationException("original complete-path provider fault");
+                    if(mode=="unknown")return null;
+                    return second=mode=="seam"?new[]{secondStart,bend,to}:new[]{from,bend,to};
+                }
+                if(from==tail.Start&&to==tail.Goal)tailCalls++;
+                return new[]{from,to};
+            });
+            Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var counter)&&counter.IsCurrent&&counter.Assignment.Arrived,Is.True);
+            if(mode=="selected")
+            {
+                // The real current typed contract forbids any selected role; never forge a typed-selected Entry for the control.
+                // 原合同就拒绝selected安装；通过真实typed入口验证false，不写Entry冒充合法状态。
+                var type=typeof(ServiceTrafficCoordinator).Assembly.GetType("AnimalCafe.Navigation.TrafficUnpaidParkingEligibility",true);
+                var descriptor=Activator.CreateInstance(type,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,
+                    null,new object[]{m.Key,m.Life,m.Queue,m.Business,m.Admission,(Func<bool>)(()=>true)},null);
+                Assert.That(D3InvokeBool(m.Core,"TrySetUnpaidParkingEligibility",m.Core.GetDecision(m.Key),descriptor),Is.False);
+            }
+            if(!attach)Assert.That(D1Read(m.Core,m.Key,"UnpaidEligibility"),Is.Null);
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];var age=D1Read(m.Core,m.Key,"FirstFrame");var debt=D1Read(m.Core,m.Key,"WaitRemaining");
+            var pickup=new PickupQueueService(new[]{P(2)},new[]{P(6)});
+            Assert.That(pickup.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,m.Key.ActorId,pickup.Version,out var reserve),Is.True);
+            var result=m.Run();
+            Assert.That(first,Is.Not.Null,"PREMISE: original Native seed S->A must actually be queried");
+            Assert.That(goalCalled,Is.True,"PREMISE: original A->G query, not an unrelated early refusal");
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(m.Calls).And.LessThanOrEqualTo(budget));Assert.That(result.AcquiredSequence,Is.Zero);
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));
+            Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            Assert.That(pickup.Snapshot,Is.Empty);Assert.That(reserve.IsCurrent,Is.True);
+            if(mode=="new-body")
+            {
+                Assert.That(result.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"CONTROL PREMISE: original larger bounded search actually finishes every role");
+                Assert.That(tailCalls,Is.EqualTo(1));Assert.That(result.ProofRoutes.Count,Is.EqualTo(3));
+                var calls=m.Calls;var basis=m.MakeWorld(2);var late=Key("first-complete-new-endpoint-body");
+                m.Snapshot=World(2,2,basis.Bodies.Concat(new[]{new TrafficBodyFact(late,P(2),.4f,actorLife:new object())}).ToArray(),basis.Parking.ToArray());m.Core.SetSnapshot(m.Snapshot);
+                var request=new TrafficRequest(m.Key,11,m.Snapshot,Origin,P(2),.4f,"pickup/"+m.Key.ActorId,requirements:new[]{cap,tail},finiteSeconds:20,planPrimaryRoute:true);
+                Assert.That(CfcReprepare(m.Core,m.Core.GetDecision(m.Key),request,out _),Is.True);
+                var blocked=m.Run(12);Assert.That(blocked.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));
+                Assert.That(D3InvokeBool(m.Core,"IsUnpaidParkingEligibilityHeld",blocked,m.Descriptor),Is.True);
+                Assert.That(m.Core.TryCommit(result,reserve),Is.False);Assert.That(m.Core.TryCommit(blocked,reserve),Is.False);
+                Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);Assert.That(m.Calls,Is.EqualTo(calls),"Current occupied endpoint refuses before another Native query");
+                Assert.That(pickup.Snapshot,Is.Empty);Assert.That(pickup.CanReserve,Is.True);
+                Assert.That(((System.Collections.IDictionary)D3ReadField(pickup,"reservations")).Count,Is.Zero);Assert.That(reserve.IsCurrent,Is.True);return;
+            }
+            Assert.That(result.Kind,Is.Not.EqualTo(TrafficDecisionKind.Granted));Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);
+            Assert.That(m.Core.TryCommit(result,reserve),Is.False);Assert.That(pickup.CanReserve,Is.True);
+            Assert.That(((System.Collections.IDictionary)D3ReadField(pickup,"reservations")).Count,Is.Zero);
+            if(mode=="default"||mode=="selected")
+            {
+                Assert.That(second,Is.Not.Null);Assert.That(CustomerRoutePlanner.IsClear(new[]{start}.Concat(first).Concat(second).Concat(new[]{goal}).ToArray(),new[]{keepout},clearance),Is.True);
+                Assert.That(result.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+                Assert.That(result.Reason,Is.EqualTo("intent-query-budget-exhausted"));Assert.That(m.Calls,Is.EqualTo(20));
+            }
+            else if(mode=="seam")
+            {
+                Assert.That(second,Is.Not.Null);
+                Assert.That(Vector3.Distance(via,firstEnd),Is.LessThan(.15f));Assert.That(Vector3.Distance(via,secondStart),Is.LessThan(.15f));
+                Assert.That(CustomerRoutePlanner.IsClear(first,new[]{keepout},clearance)&&CustomerRoutePlanner.IsClear(second,new[]{keepout},clearance),Is.True);
+                Assert.That(CustomerRoutePlanner.IsClear(first,new[]{seamCenter},.03f)&&CustomerRoutePlanner.IsClear(second,new[]{seamCenter},.03f),Is.True);
+                Assert.That(CustomerRoutePlanner.IsClear(new[]{start}.Concat(first).Concat(second).Concat(new[]{goal}).ToArray(),new[]{seamCenter},.03f),Is.False,
+                    "PREMISE: only the retained full Native join crosses the local keepout; individual positive query results do not authorize Finish");
+                Assert.That(result.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));Assert.That(m.Calls,Is.LessThan(128));
+                Assert.That(D3InvokeBool(m.Core,"IsUnpaidParkingEligibilityHeld",result,m.Descriptor),Is.True);
+            }
+            else
+            {
+                Assert.That(second,Is.Null);Assert.That(result.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+                Assert.That(D1Read(m.Core,m.Key,"UnpaidEligibilityQueryFault"),Is.EqualTo(mode=="throw"),"A null original result remains unknown geometry, not a fabricated provider exception or complete proof");
+            }
+        }
+
+        [TestCase(true)] [TestCase(false)]
+        public void UnpaidPrimaryFirstCompleteChainPreservesTypedBoundaryAndJointCommit(bool typed)
+        {
+            var start=Origin;var goal=P(2);var keepout=P(0,2);const float clearance=.8f;
+            var radius=clearance/Mathf.Cos(Mathf.PI/8)+.06f;var angle=3*Mathf.PI/4;
+            var via=keepout+new Vector3(Mathf.Cos(angle)*radius,0,Mathf.Sin(angle)*radius);
+            var tail=new TrafficRouteRequirement("primary-first-complete/mandatory-tail",P(20,20),P(22,20),clearance,avoidProposedParking:false);
+            IReadOnlyList<Vector3> first=null,second=null;var firstCall=0;var goalCall=0;var calls=0;var tailCalls=0;
+            // Public graph discovers these Native chunks; no Job, parent, cost or permission is injected.
+            // 只提供真实查询结果；完整链与接缝先作前提验证，不私写图或权限。
+            var m=new UnpaidEligibilityModel(capability:true,initialRoles:new[]{tail},initiallyBlocked:true,attach:typed,budget:20,queryFault:(from,to)=>
+            {
+                calls++;
+                if(from==start&&to==goal)return new[]{from,keepout,to};
+                if(from==start)
+                {
+                    if(to!=via)return null;firstCall=calls;return first=new[]{from,P(-2),to};
+                }
+                if(from==via)
+                {
+                    if(to!=goal)return null;goalCall=calls;return second=new[]{from,P(-2,4),P(2,4),to};
+                }
+                if(from==tail.Start&&to==tail.Goal){tailCalls++;return new[]{from,to};}
+                return null;
+            });
+            Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var counter)&&counter.IsCurrent&&counter.Assignment.Arrived,Is.True);
+            Assert.That(m.Original.PlanPrimaryRoute,Is.True);Assert.That(D1Read(m.Core,m.Key,"Parking"),Is.EqualTo(true));
+            Assert.That(D1Read(m.Core,m.Key,"UnpaidEligibility")!=null,Is.EqualTo(typed));
+            Assert.That(m.Snapshot.Parking.Any(fact=>fact.Position==keepout&&ReferenceEquals(fact.CanonicalOwner,m.OlderOwner)),Is.True);
+            Assert.That(CustomerRoutePlanner.IsClear(new[]{start,keepout,goal},new[]{keepout},clearance),Is.False);
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];
+            var age=D1Read(m.Core,m.Key,"FirstFrame");var debt=D1Read(m.Core,m.Key,"WaitRemaining");
+            var pickup=new PickupQueueService(new[]{goal},new[]{P(6)});
+            Assert.That(pickup.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,m.Key.ActorId,pickup.Version,out var reserve),Is.True);
+            var result=m.Run();
+            Assert.That(first,Is.Not.Null,"PREMISE: actual primary graph queried S->A");
+            Assert.That(second,Is.Not.Null,"PREMISE: actual primary graph queried A->G within the original budget");
+            var complete=new[]{start}.Concat(first).Concat(second).Concat(new[]{goal}).ToArray();
+            Assert.That(CustomerRoutePlanner.IsClear(first,new[]{keepout},clearance),Is.True);
+            Assert.That(CustomerRoutePlanner.IsClear(second,new[]{keepout},clearance),Is.True);
+            Assert.That(CustomerRoutePlanner.IsClear(complete,new[]{keepout},clearance),Is.True,"PREMISE: full original Finish geometry including joins is clear");
+            Assert.That(firstCall,Is.GreaterThan(0).And.LessThan(goalCall));Assert.That(goalCall,Is.LessThan(20));
+            TestContext.WriteLine("PRIMARY_FIRST_COMPLETE typed="+typed+" firstCall="+firstCall+" goalCall="+goalCall+" calls="+calls+" result="+result.Kind+"/"+result.Reason);
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(calls).And.LessThanOrEqualTo(20));Assert.That(m.Calls,Is.EqualTo(calls));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));
+            Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            Assert.That(D1Read(m.Core,m.Key,"FrozenOwners"),Is.Null);Assert.That(D1Read(m.Core,m.Key,"FrozenResources"),Is.Null);
+            Assert.That(result.RequestSequence,Is.GreaterThan(0));Assert.That(result.AcquiredSequence,Is.Zero);Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);
+            Assert.That(reserve.IsCurrent,Is.True);Assert.That(pickup.Snapshot,Is.Empty);
+            if(!typed)
+            {
+                Assert.That(result.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed));Assert.That(result.Reason,Is.EqualTo("intent-query-budget-exhausted"));
+                Assert.That(result.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(calls,Is.EqualTo(20));Assert.That(tailCalls,Is.Zero);
+                Assert.That(m.Core.TryCommit(result,reserve),Is.False);Assert.That(pickup.CanReserve,Is.True);return;
+            }
+            Assert.That(result.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"FEATURE_RED: authenticated unpaid Primary already has a whole clear Native chain; unrelated neighbor scans must not exhaust the original budget: "+result.Reason);
+            Assert.That(tailCalls,Is.EqualTo(1));Assert.That(result.ProofRoutes.Count,Is.EqualTo(2));
+            Assert.That(result.ProofRoutes.Any(proof=>proof.ResourceId==tail.ResourceId&&proof.ExpandedPath.Count>1),Is.True);
+            var primary=result.ProofRoutes.Single(proof=>proof.ResourceId==m.Original.ResourceId);
+            Assert.That(CustomerRoutePlanner.IsClear(new[]{start}.Concat(primary.ExpandedPath).Concat(new[]{goal}).ToArray(),new[]{keepout},clearance),Is.True);
+            Assert.That(m.Core.TryCommit(result,reserve),Is.True);Assert.That(m.Core.HasActiveGrant(m.Key),Is.True);
+            Assert.That(pickup.TryCaptureReservation(m.Key.ActorId,out var claim)&&claim.IsCurrent,Is.True);
+            Assert.That(claim.Assignment.Position,Is.EqualTo(goal));Assert.That(counter.IsCurrent,Is.True);
+            Assert.That(pickup.Snapshot,Is.Empty);Assert.That(pickup.CanReserve,Is.False);
+        }
+
+        [Test] public void UnpaidPrimaryEarlyFinishDoesNotSealMoreThanTwentyFourVirtualWaypoints()
+        {
+            var keepouts=new[]{P(0,2),P(6,2)};const float clearance=.8f;
+            var radius=clearance/Mathf.Cos(Mathf.PI/8)+.06f;var candidates=new List<Vector3>();
+            foreach(var obstacle in keepouts)foreach(var ring in new[]{radius,radius*2})for(var i=0;i<8;i++)
+            {var angle=i*Mathf.PI/4;candidates.Add(obstacle+new Vector3(Mathf.Cos(angle)*ring,0,Mathf.Sin(angle)*ring));}
+            var chain=new[]{Origin}.Concat(candidates.Take(25)).Concat(new[]{P(2)}).ToArray();
+            var chunks=new List<IReadOnlyList<Vector3>>();var goalQueried=false;
+            // Public Native graph discovery only. Leave unused real nodes after the over-limit candidate.
+            // 25个真实候选中间点后仍有未搜索节点；逐frame观察，不私写parent或complete。
+            var m=new UnpaidEligibilityModel(capability:true,initialRoles:Array.Empty<TrafficRouteRequirement>(),initiallyBlocked:true,
+                frameBudget:1,budget:4096,queryFault:(from,to)=>
+            {
+                if(from==Origin&&to==P(2))return new[]{from,keepouts[0],to};
+                var at=Array.IndexOf(chain,from);
+                if(at<0||at>=chain.Length-1||to!=chain[at+1])return null;
+                IReadOnlyList<Vector3> path=at==16?new[]{from,P(3,-2),P(8,-2),P(8,2),to}:
+                    at==chain.Length-2?new[]{from,P(8,2),P(8,-2),to}:new[]{from,to};
+                chunks.Add(path);if(at==chain.Length-2)goalQueried=true;return path;
+            });
+            var basis=m.MakeWorld(2);var extra=Key("primary-limit-second-parking");
+            m.Snapshot=World(2,2,basis.Bodies.ToArray(),basis.Parking.Concat(new[]{new TrafficParkingFact(extra,new object(),0,"pickup/primary-limit-second",keepouts[1],.4f)}).ToArray());
+            m.Core.SetSnapshot(m.Snapshot);
+            var request=new TrafficRequest(m.Key,11,m.Snapshot,Origin,P(2),.4f,"pickup/"+m.Key.ActorId,finiteSeconds:20,planPrimaryRoute:true);
+            Assert.That(CfcReprepare(m.Core,m.Core.GetDecision(m.Key),request,out _),Is.True);
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];var age=D1Read(m.Core,m.Key,"FirstFrame");var debt=D1Read(m.Core,m.Key,"WaitRemaining");
+            var pickup=new PickupQueueService(new[]{P(2)},new[]{P(6)});
+            Assert.That(pickup.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,m.Key.ActorId,pickup.Version,out var reserve),Is.True);
+            TrafficDecision result=null;
+            for(var frame=11;frame<2059&&!goalQueried;frame++)result=m.Run(frame);
+            Assert.That(goalQueried,Is.True,"PREMISE: original public graph actually returns the over-limit goal chain");
+            Assert.That(chunks.Count,Is.EqualTo(26));
+            foreach(var chunk in chunks)Assert.That(CustomerRoutePlanner.IsClear(chunk,keepouts,clearance),Is.True);
+            Assert.That(CustomerRoutePlanner.IsClear(new[]{Origin}.Concat(chunks.SelectMany(chunk=>chunk)).Concat(new[]{P(2)}).ToArray(),keepouts,clearance),Is.True);
+            Assert.That(result.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),"The over-24 early candidate must continue the original frontier, not prepare or fail the Entry");
+            Assert.That(result.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));Assert.That(result.AcquiredSequence,Is.Zero);
+            var jobs=(System.Collections.IList)D1Read(m.Core,m.Key,"Jobs");Assert.That(jobs.Count,Is.EqualTo(1));
+            Assert.That(D3ReadField(jobs[0],"complete"),Is.EqualTo(false));
+            Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);Assert.That(m.Core.TryCommit(result,reserve),Is.False);Assert.That(reserve.IsCurrent,Is.True);
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(m.Calls).And.LessThan(4096));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));
+            Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            Assert.That(D1Read(m.Core,m.Key,"FrozenOwners"),Is.Null);Assert.That(pickup.Snapshot,Is.Empty);
+        }
+
+        private static TrafficRouteRequirement OccupiedGoalCapability(bool local,Vector3? obstacle)
+            =>new TrafficRouteRequirement("queue-current/goal-probe/goal-service",P(4),P(6),.8f,
+                obstacles:!local && obstacle.HasValue?new[]{obstacle.Value}:null,avoidProposedParking:false,
+                localObstacles:local && obstacle.HasValue?new[]{new TrafficRouteObstacle(obstacle.Value,.8f)}:null);
+        [TestCase(false)] [TestCase(true)]
+        public void UnpaidCapabilityCoveredGoalHoldsBeforeGraphAndReprovesSameEntryAfterActualRelease(bool local)
+        {
+            var role=OccupiedGoalCapability(local,P(6));
+            var m=new UnpaidEligibilityModel(initialRoles:new[]{role},initiallyBlocked:false,budget:10);
+            var externalKey=Key("actual-service-owner");var externalLife=new object();
+            var queue=new CounterQueueService(new[]{P(6)});Assert.That(queue.TryJoin(externalKey.ActorId),Is.True);
+            Assert.That(queue.Complete(externalKey.ActorId,1),Is.True);Assert.That(queue.TryCaptureAssignment(externalKey.ActorId,out var claim),Is.True);
+            var original=m.MakeWorld(2);
+            m.Snapshot=World(2,2,original.Bodies.Concat(new[]{new TrafficBodyFact(externalKey,P(6),.4f,actorLife:externalLife)}).ToArray(),
+                original.Parking.Concat(new[]{new TrafficParkingFact(externalKey,queue,queue.Version,claim.ResourceId,P(6),.4f,semanticCheckpoint:claim)}).ToArray());
+            m.Core.SetSnapshot(m.Snapshot);
+            TrafficRequest Request(TrafficRouteRequirement current)=>new TrafficRequest(m.Key,11,m.Snapshot,Origin,P(2),.4f,"pickup/"+m.Key.ActorId,
+                requirements:new[]{current},finiteSeconds:20,planPrimaryRoute:true);
+            Assert.That(CfcReprepare(m.Core,m.Core.GetDecision(m.Key),Request(role),out _),Is.True);
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];var held=m.Run();
+            Assert.That(held.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),"FEATURE: declared goal lies strictly inside the current capability keepout: "+held.Reason);
+            Assert.That(held.Reason,Is.EqualTo("unpaid-eligibility/route-capability-unavailable"));
+            Assert.That(D3InvokeBool(m.Core,"IsUnpaidParkingEligibilityHeld",held,m.Descriptor),Is.True);
+            Assert.That(m.Calls,Is.EqualTo(1),"Only the clear primary was queried; no impossible role graph/query is needed");
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(1));Assert.That(held.AcquiredSequence,Is.Zero);Assert.That(m.Core.TryCommit(held),Is.False);
+            var sequence=held.RequestSequence;var age=D1Read(m.Core,m.Key,"FirstFrame");var debt=D1Read(m.Core,m.Key,"WaitRemaining");
+            for(var frame=12;frame<16;frame++){m.Core.Tick(.01f,false);m.Run(frame);}
+            Assert.That(m.Calls,Is.EqualTo(1));Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            Assert.That(queue.Remove(externalKey.ActorId),Is.True);Assert.That(claim.IsCurrent,Is.False);
+            m.Snapshot=m.MakeWorld(3);m.Core.SetSnapshot(m.Snapshot); // Actual external body and canonical occupancy are now absent.
+            Assert.That(CfcReprepare(m.Core,m.Core.GetDecision(m.Key),Request(OccupiedGoalCapability(local,null)),out _),Is.True);
+            var ready=m.Run(16);Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);
+            Assert.That(m.Calls,Is.GreaterThan(1).And.LessThanOrEqualTo(10));Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(m.Calls));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));
+            Assert.That(ready.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));
+            Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));Assert.That(ready.AcquiredSequence,Is.Zero);
+            var proof=ready.ProofRoutes.Single(p=>p.ResourceId==role.ResourceId);Assert.That(proof.ExpandedPath.Count,Is.GreaterThan(1));
+            Assert.That(proof.ExpandedPath.First(),Is.EqualTo(role.Start));Assert.That(proof.ExpandedPath.Last(),Is.EqualTo(role.Goal));
+            Assert.That(m.Core.TryCommit(ready),Is.True);
+        }
+        [TestCase(false,.8f)] [TestCase(true,.8f)] [TestCase(false,.9f)] [TestCase(true,.9f)]
+        public void UnpaidCapabilityGoalAtOrOutsideKeepoutStillRequiresRealNativeProof(bool local,float distance)
+        {
+            var point=P(6,distance);var role=OccupiedGoalCapability(local,point);
+            Assert.That(Vector3.Distance(role.Goal,point).CompareTo(.8f),Is.GreaterThanOrEqualTo(0));
+            var m=new UnpaidEligibilityModel(initialRoles:new[]{role},initiallyBlocked:false,budget:10);
+            var ready=m.Run();Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);
+            Assert.That(m.Calls,Is.EqualTo(2));Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(2));
+            Assert.That(CustomerRoutePlanner.IsClear(ready.ProofRoutes.Single(p=>p.ResourceId==role.ResourceId).ExpandedPath,new[]{point},.8f),Is.True);
+            Assert.That(m.Core.TryCommit(ready),Is.True);
+        }
+        [TestCase(false)] [TestCase(true)]
+        public void UnpaidCoveredGoalDoesNotInventANativeFaultButUncoveredRoleKeepsActualFault(bool covered)
+        {
+            var role=OccupiedGoalCapability(true,covered?P(6):P(6,2));var roleCalls=0;
+            var m=new UnpaidEligibilityModel(initialRoles:new[]{role},initiallyBlocked:false,budget:10,
+                queryFault:(from,to)=>{if(from==role.Start){roleCalls++;throw new InvalidOperationException("actual capability provider failure");}return new[]{from,to};});
+            var result=m.Run();Assert.That(result.AcquiredSequence,Is.Zero);Assert.That(m.Core.TryCommit(result),Is.False);
+            if(covered)
+            {
+                Assert.That(result.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),result.Reason);
+                Assert.That(roleCalls,Is.Zero);Assert.That(m.Calls,Is.EqualTo(1));
+                Assert.That(D1Read(m.Core,m.Key,"UnpaidEligibilityQueryFault"),Is.EqualTo(false));
+                Assert.That(D3InvokeBool(m.Core,"IsUnpaidParkingEligibilityHeld",result,m.Descriptor),Is.True);
+            }
+            else
+            {
+                Assert.That(result.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+                Assert.That(roleCalls,Is.EqualTo(1));Assert.That(m.Calls,Is.EqualTo(2));
+                Assert.That(D1Read(m.Core,m.Key,"UnpaidEligibilityQueryFault"),Is.EqualTo(true));
+            }
+        }
+        [Test]
+        public void UnpaidCoveredGoalShortcutCannotChangeUntypedParkingSearchPolicy()
+        {
+            var m=new UnpaidEligibilityModel(initialRoles:new[]{OccupiedGoalCapability(true,P(6))},initiallyBlocked:false,attach:false,budget:10);
+            var failed=m.Run();Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            Assert.That(failed.Reason,Is.EqualTo("intent-query-budget-exhausted"));Assert.That(m.Calls,Is.EqualTo(10));
+            Assert.That(m.Core.TryCommit(failed),Is.False);Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);
+        }
+
+        private sealed class QueuedNativeChunksModel
+        {
+            internal readonly UnpaidEligibilityModel M;
+            internal readonly TrafficIntentKey Other=Key("queued-chunk-body","body");
+            internal readonly object OtherLife=new object();internal object Token=new object();
+            internal int Frame=10,Version=1,DirectCalls;internal bool ThrowProvider,ThrowContext;
+            internal Vector3 Pose=P(6,6);
+            internal QueuedNativeChunksModel(bool missingContext=false)
+            {
+                M=new UnpaidEligibilityModel(budget:10,frameBudget:1,initiallyBlocked:false,nativeContext:()=>{if(ThrowContext)throw new InvalidOperationException("queued context read failure");return missingContext?null:Token;},
+                    queryFault:(from,to)=>{if(ThrowProvider)throw new InvalidOperationException("original provider failure");
+                        if(from==P(4,6)&&to==P(8,6))DirectCalls++;return new[]{from,to};});
+                Assert.That(Refresh(),Is.True);
+                Step();Step();Step();
+                Assert.That(M.Core.QueriesConsumed(M.Key),Is.EqualTo(3));Assert.That(DirectCalls,Is.EqualTo(1));
+                Assert.That(D1Read(M.Core,M.Key,"JobIndex"),Is.EqualTo(2));
+                Assert.That(D1Read(M.Core,M.Key,"Queued"),Is.EqualTo(true));
+                Assert.That(D1Read(M.Core,M.Key,"UnpaidEligibilityHeld"),Is.EqualTo(false));
+            }
+            internal TrafficDecision Step()
+            {
+                var decision=M.Run(++Frame);
+                var steps=(int)typeof(ServiceTrafficCoordinator).GetProperty("ProofStepsThisFrame",
+                    System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(M.Core);
+                Assert.That(steps,Is.InRange(0,1),"Raw Native memo hits must consume the original one-step frame allowance");
+                return decision;
+            }
+            internal bool Refresh(bool occupyTarget=false)
+            {
+                var original=M.MakeWorld(++Version);
+                var bodies=original.Bodies.Concat(new[]{new TrafficBodyFact(Other,occupyTarget?P(2):Pose,.4f,actorLife:OtherLife)}).ToArray();
+                M.Snapshot=World(Version,Version,bodies,original.Parking.ToArray());M.Core.SetSnapshot(M.Snapshot);
+                var roles=new[]{new TrafficRouteRequirement("work-outward",P(4,4),P(6,4),.8f,avoidProposedParking:false),
+                    new TrafficRouteRequirement("queue-current/model/service-exit",P(4,6),P(8,6),.8f,
+                        avoidProposedParking:false,localObstacles:new[]{new TrafficRouteObstacle(occupyTarget?P(2):Pose,.8f)})};
+                var request=new TrafficRequest(M.Key,11,M.Snapshot,Origin,P(2),.4f,"pickup/"+M.Key.ActorId,
+                    requirements:roles,finiteSeconds:20,planPrimaryRoute:true);
+                return CfcReprepare(M.Core,M.Core.GetDecision(M.Key),request,out _);
+            }
+        }
+        [TestCase(false)] [TestCase(true)]
+        public void QueuedUnpaidBodyRefreshReusesOnlyOriginalNativeChunksWithoutRefillingBudget(bool missingContext)
+        {
+            var f=new QueuedNativeChunksModel(missingContext);var m=f.M;
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];var seq=m.Core.GetDecision(m.Key).RequestSequence;
+            var age=D1Read(m.Core,m.Key,"FirstFrame");var debt=D1Read(m.Core,m.Key,"WaitRemaining");
+            var d=m.Core.GetDecision(m.Key);var before=m.Core.QueriesConsumed(m.Key);
+            for(var n=0;n<12 && d.FailureDisposition!=TrafficFailureDisposition.Terminal;n++)
+            {
+                f.Pose=P(6,6+(n%2==0?.02f:-.02f));Assert.That(f.Refresh(),Is.True);d=f.Step();
+                Assert.That(m.Core.QueriesConsumed(m.Key),Is.GreaterThanOrEqualTo(before));before=m.Core.QueriesConsumed(m.Key);
+                Assert.That(m.Core.QueriesThisFrame,Is.LessThanOrEqualTo(1));
+                Assert.That(d.AcquiredSequence,Is.Zero);Assert.That(m.Core.TryCommit(d),Is.False);
+            }
+            if(missingContext)
+            {
+                Assert.That(d.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+                Assert.That(d.Reason,Is.EqualTo("intent-query-budget-exhausted"));Assert.That(m.Calls,Is.EqualTo(10));return;
+            }
+            Assert.That(d.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None),
+                "FEATURE: same authenticated queued source must not re-query the same owned Native edge until its unchanged lifetime budget is exhausted: "+d.Reason);
+            Assert.That(d.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));Assert.That(f.DirectCalls,Is.EqualTo(1));
+            Assert.That(m.Calls,Is.EqualTo(3));Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(3));
+            Assert.That(D1Read(m.Core,m.Key,"UnpaidEligibilityHeld"),Is.EqualTo(false),"No old Hold may enable this control's cache");
+            f.Pose=P(6,9);Assert.That(f.Refresh(),Is.True);var ready=f.Step();
+            Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);Assert.That(m.Calls,Is.EqualTo(3));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));Assert.That(ready.RequestSequence,Is.EqualTo(seq));
+            Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            var role=ready.ProofRoutes.Single(p=>p.ResourceId=="queue-current/model/service-exit");
+            Assert.That(CustomerRoutePlanner.IsClear(role.ExpandedPath,new[]{f.Pose},.8f),Is.True);
+            Assert.That(m.Core.TryCommit(ready),Is.True);
+        }
+        [TestCase("body")] [TestCase("context-provider-fault")] [TestCase("producer")]
+        public void QueuedUnpaidNativeChunksNeverReplaceCurrentBodyProducerOrOwnedContext(string change)
+        {
+            var f=new QueuedNativeChunksModel();var m=f.M;
+            f.Pose=P(6,6.02f);Assert.That(f.Refresh(),Is.True);var calls=m.Calls;
+            if(change=="body")
+            {
+                Assert.That(f.Refresh(occupyTarget:true),Is.True);var held=f.Step();
+                Assert.That(D1Read(m.Core,m.Key,"UnpaidEligibilityHeld"),Is.EqualTo(true));
+                Assert.That(held.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));Assert.That(m.Calls,Is.EqualTo(calls));
+                Assert.That(m.Core.TryCommit(held),Is.False);
+            }
+            else
+            {
+                if(change=="producer")m.Current=false;
+                else {f.Token=new object();f.ThrowProvider=true;}
+                var failed=f.Step();Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),failed.Reason);
+                Assert.That(m.Calls,Is.EqualTo(change=="producer"?calls:calls+1));Assert.That(m.Core.TryCommit(failed),Is.False);
+            }
+            Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);
+        }
+
+        [Test]
+        public void QueuedUnpaidRefreshContextReadFailureStopsBeforeAnotherNativeQuery()
+        {
+            var f=new QueuedNativeChunksModel();var m=f.M;var calls=m.Calls;
+            f.Pose=P(6,6.02f);f.ThrowContext=true;
+            Assert.That(f.Refresh(),Is.True);
+            var failed=m.Core.GetDecision(m.Key);
+            Assert.That(failed.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            Assert.That(failed.Reason,Is.EqualTo("native-query-context-read-failed"));
+            Assert.That(m.Calls,Is.EqualTo(calls));Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(3));
+            Assert.That(D1Read(m.Core,m.Key,"NativeChunks"),Is.Null);
+            Assert.That(D1Read(m.Core,m.Key,"NativeChunkReadAllowed"),Is.EqualTo(false));
+            Assert.That(m.Core.TryCommit(failed),Is.False);Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);
+        }
+        [Test]
+        public void QueuedUnpaidRefreshNewOwnedContextQueriesOnceBeforeItsOwnChunkCanBeReused()
+        {
+            var f=new QueuedNativeChunksModel();var m=f.M;
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];
+            var seq=m.Core.GetDecision(m.Key).RequestSequence;var age=D1Read(m.Core,m.Key,"FirstFrame");
+            var debt=D1Read(m.Core,m.Key,"WaitRemaining");var oldToken=f.Token;
+            f.Token=new object();f.Pose=P(6,6.02f);Assert.That(f.Refresh(),Is.True);
+            Assert.That(D1Read(m.Core,m.Key,"NativeChunks"),Is.Null);
+            Assert.That(D1Read(m.Core,m.Key,"NativeChunkContext"),Is.Null);
+            Assert.That(D1Read(m.Core,m.Key,"NativeChunkReadAllowed"),Is.EqualTo(false));
+            Assert.That(m.Calls,Is.EqualTo(3),"Refresh itself cannot query the provider");
+            Assert.That(f.Step().Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));
+            Assert.That(m.Calls,Is.EqualTo(4));Assert.That(f.DirectCalls,Is.EqualTo(2));
+            Assert.That(D1Read(m.Core,m.Key,"NativeChunkContext"),Is.SameAs(f.Token).And.Not.SameAs(oldToken));
+            f.Pose=P(6,5.98f);Assert.That(f.Refresh(),Is.True);
+            Assert.That(f.Step().Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));
+            Assert.That(m.Calls,Is.EqualTo(4),"Only the newly queried context may now supply its raw chunk");
+            f.Pose=P(6,9);Assert.That(f.Refresh(),Is.True);var ready=f.Step();
+            Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);
+            Assert.That(m.Calls,Is.EqualTo(4));Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(4));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));
+            Assert.That(ready.RequestSequence,Is.EqualTo(seq));Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));
+            Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            var role=ready.ProofRoutes.Single(p=>p.ResourceId=="queue-current/model/service-exit");
+            Assert.That(CustomerRoutePlanner.IsClear(role.ExpandedPath,new[]{f.Pose},.8f),Is.True);
+            Assert.That(m.Core.TryCommit(ready),Is.True);
+        }
         private sealed class NativeChunkMemoModel
         {
             internal readonly UnpaidEligibilityModel M;internal object Token=new object();
@@ -1217,6 +2203,54 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             Assert.That(ready.RequestSequence,Is.EqualTo(old.RequestSequence));Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var current),Is.True);Assert.That(claim.IsSameCurrentClaim(current),Is.True);
             Assert.That(m.Core.TryCommit(ready),Is.True);
         }
+        [Test] public void QueuedUnpaidDoubleRefreshRetainsCompletedPrimaryAndRoleBeforeAnyBatchAdvance()
+        {
+            var f=new QueuedUnpaidRolesModel();var m=f.M;var original=m.Core.GetDecision(m.Key);
+            var entry=((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key];
+            var age=D1Read(m.Core,m.Key,"FirstFrame");var debt=D1Read(m.Core,m.Key,"WaitRemaining");var sequence=original.RequestSequence;
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(2));Assert.That(D1Read(m.Core,m.Key,"JobIndex"),Is.EqualTo(2));
+            Assert.That(m.Queue.TryCaptureAssignment(m.Key.ActorId,out var counter)&&counter.IsCurrent,Is.True);
+            var farKey=Key("double-refresh-far-body");var farLife=new object();var firstFar=P(-8,-8);var secondFar=P(-9,-8);
+            var basis=m.MakeWorld(3);
+            m.Snapshot=World(3,3,basis.Bodies.Concat(new[]{new TrafficBodyFact(farKey,firstFar,.4f,actorLife:farLife)}).ToArray(),basis.Parking.ToArray());m.Core.SetSnapshot(m.Snapshot);
+            var firstA=new TrafficRouteRequirement("work-outward",f.AStart,f.AGoal,.8f,new[]{firstFar});
+            Assert.That(CfcReprepare(m.Core,original,f.Request(f.Changed(firstA)),out var firstRefresh),Is.True);
+            var firstJobs=(System.Collections.IList)D1Read(m.Core,m.Key,"Jobs");
+            Assert.That(firstJobs.Count,Is.EqualTo(4));Assert.That(D1Read(m.Core,m.Key,"JobIndex"),Is.EqualTo(0));
+            Assert.That(D3ReadField(firstJobs[0],"complete"),Is.EqualTo(true),"PREMISE: first real refresh retained complete Primary");
+            Assert.That(D3ReadField(firstJobs[2],"complete"),Is.EqualTo(true),"PREMISE: role reorder retained complete A at its new index");
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(2));Assert.That(firstRefresh.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));
+            // A second real current-world/role refresh occurs before any ProcessReady or new Native query.
+            // 连续正常refresh之间不推进batch；原完整path必须按新union/Rights重验，不能依赖已重置的游标。
+            basis=m.MakeWorld(4);
+            m.Snapshot=World(4,4,basis.Bodies.Concat(new[]{new TrafficBodyFact(farKey,secondFar,.4f,actorLife:farLife)}).ToArray(),basis.Parking.ToArray());m.Core.SetSnapshot(m.Snapshot);
+            var secondA=new TrafficRouteRequirement("work-outward",f.AStart,f.AGoal,.8f,new[]{secondFar});
+            Assert.That(CfcReprepare(m.Core,firstRefresh,f.Request(f.Changed(secondA)),out var secondRefresh),Is.True);
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(2));Assert.That(f.Calls.Count,Is.EqualTo(2));
+            Assert.That(secondRefresh.AcquiredSequence,Is.Zero);Assert.That(m.Core.HasActiveGrant(m.Key),Is.False);
+            Assert.That(CustomerRoutePlanner.IsClear(new[]{Origin,P(2)},new[]{secondFar},.8f),Is.True);
+            Assert.That(CustomerRoutePlanner.IsClear(new[]{f.AStart,f.AGoal},new[]{secondFar},.8f),Is.True);
+            var pickup=new PickupQueueService(new[]{P(2)},new[]{P(6)});
+            Assert.That(pickup.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,m.Key.ActorId,pickup.Version,out var reserve),Is.True);
+            var ready=f.Finish();
+            TestContext.WriteLine("DOUBLE_REFRESH completedBeforeSecond=True queries="+m.Core.QueriesConsumed(m.Key)+" primaryCalls="+f.Calls.Count(pair=>pair[0]==Origin&&pair[1]==P(2))+" aCalls="+f.AQueries+" result="+ready.Kind+"/"+ready.Reason);
+            Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"FEATURE_RED: two current safe refreshes before a batch must not discard completed Primary/A and exhaust the same four-query lifetime: "+ready.Reason);
+            Assert.That(m.Core.QueriesConsumed(m.Key),Is.EqualTo(4));Assert.That(f.Calls.Count,Is.EqualTo(4));
+            Assert.That(f.Calls.Count(pair=>pair[0]==Origin&&pair[1]==P(2)),Is.EqualTo(1));Assert.That(f.AQueries,Is.EqualTo(1));
+            Assert.That(f.Calls.Count(pair=>pair[0]==f.BStart&&pair[1]==P(7,6)),Is.EqualTo(1));
+            Assert.That(f.Calls.Count(pair=>pair[0]==P(4,8)&&pair[1]==P(6,8)),Is.EqualTo(1));
+            CollectionAssert.AreEqual(new[]{"pickup/"+m.Key.ActorId,"work-home","work-outward","waiting-exit-capability"},ready.ProofRoutes.Select(proof=>proof.ResourceId));
+            Assert.That(CustomerRoutePlanner.IsClear(ready.ProofRoutes[0].ExpandedPath,new[]{secondFar},.8f),Is.True);
+            Assert.That(CustomerRoutePlanner.IsClear(ready.ProofRoutes[2].ExpandedPath,new[]{secondFar},.8f),Is.True);
+            Assert.That(ready.ProofRoutes[1].Waypoints.Last(),Is.EqualTo(P(7,6)));Assert.That(ready.ProofRoutes[3].Waypoints.Last(),Is.EqualTo(P(6,8)));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(m.Core,"entries"))[m.Key],Is.SameAs(entry));Assert.That(ready.RequestSequence,Is.EqualTo(sequence));
+            Assert.That(D1Read(m.Core,m.Key,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(m.Core,m.Key,"WaitRemaining"),Is.EqualTo(debt));
+            Assert.That(D1Read(m.Core,m.Key,"FrozenOwners"),Is.Null);Assert.That(D1Read(m.Core,m.Key,"FrozenResources"),Is.Null);
+            Assert.That(ready.AcquiredSequence,Is.Zero);Assert.That(reserve.IsCurrent,Is.True);Assert.That(pickup.Snapshot,Is.Empty);
+            Assert.That(m.Core.TryCommit(ready,reserve),Is.True);Assert.That(pickup.TryCaptureReservation(m.Key.ActorId,out var reserved)&&reserved.IsCurrent,Is.True);
+            Assert.That(reserved.Assignment.Position,Is.EqualTo(P(2)));Assert.That(counter.IsCurrent,Is.True);Assert.That(pickup.CanReserve,Is.False);
+        }
+
         [TestCase("goal")][TestCase("start")][TestCase("clearance")][TestCase("avoid-parking")]
         public void QueuedUnpaidCompletedRoleCannotReuseChangedEndpointsOrFlags(string change)
         {
@@ -1932,10 +2966,13 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             internal readonly TrafficIntentKey Earlier=Key("counter-earlier","counter-advance",201);
             internal readonly object EarlierLife=new object(),EarlierBusiness=new object(),EarlierAdmission=new object();
             internal Vector3 HeadPose;internal long PreviewVersion=1;
-            internal CounterAdvanceReadinessModel(bool ownerBeforeIncoming=true,Vector3? candidate=null,bool previewPriority=false)
+            internal readonly bool UncommittedHead;
+            internal PickupQueueService HeadQueue;internal PickupQueueService.PreparedMutation HeadReserve;
+            internal TrafficDecision HeadPrepared;
+            internal CounterAdvanceReadinessModel(bool ownerBeforeIncoming=true,Vector3? candidate=null,bool previewPriority=false,bool uncommittedHead=false)
             {
                 // Head already at slot0; a removed middle reservation leaves follower's real Advance gap.
-                PreviewPriority=previewPriority;HeadPose=previewPriority?P(-1,1):P(0,1);
+                UncommittedHead=uncommittedHead;PreviewPriority=previewPriority;HeadPose=previewPriority?P(-1,1):P(0,1);
                 Queue=new CounterQueueService(previewPriority?new[]{HeadPose,P(-3,3),candidate??Origin,P(0,-1)}:new[]{P(0,1),candidate??Origin,P(0,-1)});
                 Assert.That(Queue.TryJoin("counter-head"),Is.True);Assert.That(Queue.Complete("counter-head",1),Is.True);
                 if(previewPriority){Assert.That(Queue.TryJoin(Earlier.ActorId),Is.True);Assert.That(Queue.Complete(Earlier.ActorId,1),Is.True);}
@@ -1959,8 +2996,19 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             {
                 // Exact future route intersects follower target; its physical Counter body remains elsewhere.
                 var request=new TrafficRequest(HeadPickup,0,Snapshot,HeadPose,P(2,0),.45f,"pickup/counter-head",safetyMargin:.011f,planPrimaryRoute:true);
-                Core.EvaluateParking(request);Core.ProcessReady(0);
+                var initial=Core.EvaluateParking(request);
+                if(UncommittedHead)
+                {
+                    HeadQueue=new PickupQueueService(new[]{P(2,0)},new[]{P(3,0)});
+                    Assert.That(HeadQueue.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,HeadPickup.ActorId,HeadQueue.Version,out HeadReserve),Is.True);
+                    var type=typeof(ServiceTrafficCoordinator).Assembly.GetType("AnimalCafe.Navigation.TrafficUnpaidParkingEligibility",true);
+                    var eligibility=Activator.CreateInstance(type,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,
+                        null,new object[]{HeadPickup,HeadLife,Queue,HeadBusiness,HeadAdmission,(Func<bool>)(()=>Current)},null);
+                    Assert.That(D3InvokeBool(Core,"TrySetUnpaidParkingEligibility",initial,eligibility),Is.True);
+                }
+                Core.ProcessReady(0);
                 var prepared=Core.GetDecision(HeadPickup);Assert.That(prepared.Kind,Is.EqualTo(TrafficDecisionKind.Granted));
+                if(UncommittedHead){HeadPrepared=prepared;return;}
                 Assert.That(Core.TryCommit(prepared),Is.True);Assert.That(Core.HasActiveGrant(HeadPickup),Is.True);
                 Assert.That(Core.TryGetCommittedJourney(HeadPickup,out var source),Is.True);Assert.That(source,Is.SameAs(prepared));
             }
@@ -2014,6 +3062,97 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             }
             internal void CancelUnusedParking()
             {WorkingSeconds=0;Core.Retire(HeadPickup);} // Does not remove/move the real declared Counter body or claim.
+        }
+
+        [TestCase("resume")] [TestCase("legacy")] [TestCase("stale-preview")] [TestCase("expiry")] [TestCase("throw")] [TestCase("reentry")]
+        public void CounterRealUncommittedHeadReserveHasOnlyBoundedPreparationReadiness(string mode)
+        {
+            var f=new CounterAdvanceReadinessModel(uncommittedHead:true);var reads=0;var reentered=false;
+            Assert.That(f.Queue.TryCaptureAssignment(f.HeadPickup.ActorId,out var head),Is.True);
+            Assert.That(head.Assignment.Arrived && head.Assignment.SlotIndex==0,Is.True);
+            Assert.That(f.Queue.TryPrepareMutation(CounterQueueService.MutationKind.Advance,f.Incoming.ActorId,f.Queue.Version,out var advance),Is.True);
+            Assert.That(advance.Assignment.Position,Is.EqualTo(f.Request.Target));
+            Assert.That(f.HeadReserve.IsCurrent,Is.True);Assert.That(f.HeadReserve.Assignment.VisitId,Is.EqualTo(f.HeadPickup.ActorId));
+            Assert.That(f.HeadReserve.Assignment.Position,Is.EqualTo(f.HeadPrepared.ProofRoutes.Single().Waypoints.Last()));
+            Assert.That(f.HeadQueue.TryCaptureReservation(f.HeadPickup.ActorId,out _),Is.False);
+            Assert.That(f.HeadPrepared.AcquiredSequence,Is.Zero);Assert.That(f.Core.HasActiveGrant(f.HeadPickup),Is.False);
+            Assert.That(f.Core.TryGetCommittedJourney(f.HeadPickup,out _),Is.False);Assert.That(D1Read(f.Core,f.HeadPickup,"Leg"),Is.Null);
+            Assert.That(D1Read(f.Core,f.HeadPickup,"Prepared"),Is.EqualTo(true));Assert.That(D1Read(f.Core,f.HeadPickup,"UnpaidEligibility"),Is.Not.Null);
+            Assert.That(CustomerRoutePlanner.IsClear(f.HeadPrepared.ProofRoutes.Single().ExpandedPath,new[]{f.Request.Target},.911f),Is.False,
+                "PREMISE: proposed Counter endpoint conflicts with actual complete prepared head path");
+            Assert.That(Vector3.Distance(f.HeadPose,f.Request.Target),Is.GreaterThan(.911f));
+            Func<TrafficIntentKey,TrafficDecision,TrafficCounterUncommittedPreparationObservation> read=(key,source)=>
+            {
+                reads++;
+                if(!f.Current || !key.Equals(f.HeadPickup) || !ReferenceEquals(source,f.HeadPrepared) || !f.Queue.TryCaptureAssignment(key.ActorId,out var claim))return null;
+                if(mode=="throw")throw new InvalidOperationException("controlled-uncommitted-reader");
+                if(mode=="reentry" && !reentered){reentered=true;f.Core.ProcessReady(1);}
+                return (TrafficCounterUncommittedPreparationObservation)Activator.CreateInstance(typeof(TrafficCounterUncommittedPreparationObservation),
+                    System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,null,
+                    new object[]{f.HeadLife,f.HeadBusiness,f.HeadAdmission,claim,f.HeadQueue,f.HeadReserve,source},null);
+            };
+            var type=typeof(ServiceTrafficCoordinator).Assembly.GetType("AnimalCafe.Navigation.TrafficCounterAdvanceReadiness",true);
+            var args=mode=="legacy"?new object[]{f.Incoming,(Func<bool>)(()=>f.Current),(Func<TrafficIntentKey,float>)(_=>0)}:
+                new object[]{f.Incoming,(Func<bool>)(()=>f.Current),(Func<TrafficIntentKey,float>)(_=>0),null,read};
+            Assert.That(f.Attach(Activator.CreateInstance(type,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,null,args,null)),Is.True);
+            if(mode=="stale-preview"){Assert.That(f.HeadQueue.TryReserve("other-reservation",out _),Is.True);Assert.That(f.HeadReserve.IsCurrent,Is.False);}
+            var entry=((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Incoming];var calls=f.Calls;
+            var first=D1Read(f.Core,f.Incoming,"FirstFrame");var decision=f.Run();var sequence=decision.RequestSequence;
+            Assert.That(sequence,Is.GreaterThan(0));Assert.That(decision.AcquiredSequence,Is.Zero);Assert.That(f.Core.HasActiveGrant(f.Incoming),Is.False);
+            Assert.That(f.Core.TryCommit(decision,advance),Is.False);Assert.That(f.Core.QueriesConsumed(f.Incoming),Is.Zero);Assert.That(f.Calls,Is.EqualTo(calls));
+            Assert.That(D1Read(f.Core,f.Incoming,"FrozenOwners"),Is.Null);
+            if(mode=="legacy" || mode=="stale-preview" || mode=="throw" || mode=="reentry")
+            {
+                Assert.That(D1Read(f.Core,f.Incoming,"CounterAdvanceReadinessWaitStarted"),Is.EqualTo(false));
+                Assert.That(decision.Reason,Is.Not.EqualTo("counter-advance-uncommitted-head-preparation-held"));
+                if(mode=="throw" || mode=="reentry")
+                {
+                    Assert.That(reads,Is.EqualTo(1),"The real typed reader was reached once; recursive read is forbidden");
+                    Assert.That(reentered,Is.EqualTo(mode=="reentry"));
+                    Assert.That(D1Read(f.Core,f.Incoming,"CounterPaidTraversalInspecting"),Is.EqualTo(false),"finally releases the reader latch");
+                    Assert.That(((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Incoming],Is.SameAs(entry));
+                    Assert.That(D1Read(f.Core,f.Incoming,"FirstFrame"),Is.EqualTo(first));
+                }
+                return;
+            }
+            Assert.That(decision.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),"FEATURE: exact uncommitted head readiness: "+decision.Reason);
+            Assert.That(decision.Reason,Is.EqualTo("counter-advance-uncommitted-head-preparation-held"));Assert.That(reads,Is.GreaterThan(0));
+            var debt=(float)D1Read(f.Core,f.Incoming,"WaitRemaining");Assert.That(debt,Is.EqualTo(10));
+            f.Core.Tick(3,true);f.Core.Tick(0,false);Assert.That((float)D1Read(f.Core,f.Incoming,"WaitRemaining"),Is.EqualTo(debt));
+            f.Core.Tick(.25f,false);f.Run(2);Assert.That((float)D1Read(f.Core,f.Incoming,"WaitRemaining"),Is.EqualTo(debt-.25f).Within(.0001));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Incoming],Is.SameAs(entry));
+            Assert.That(f.Core.GetDecision(f.Incoming).RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(f.Core,f.Incoming,"FirstFrame"),Is.EqualTo(first));
+            Assert.That(f.Core.QueriesConsumed(f.Incoming),Is.Zero);Assert.That(D1Read(f.Core,f.Incoming,"FrozenOwners"),Is.Null);
+            if(mode=="expiry")
+            {
+                f.Core.Tick(debt,false);var stopped=f.Core.GetDecision(f.Incoming);
+                Assert.That(stopped.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(stopped.Reason,Is.EqualTo("wait-budget-exhausted"));
+                f.Core.ProcessReady(3);f.Core.Tick(0,false);Assert.That(f.Core.GetDecision(f.Incoming),Is.SameAs(stopped));
+                Assert.That(f.Core.TryCommit(stopped,advance),Is.False);Assert.That(f.Core.HasActiveGrant(f.Incoming),Is.False);
+                Assert.That(f.Core.QueriesConsumed(f.Incoming),Is.Zero);Assert.That(f.Calls,Is.EqualTo(calls));
+                Assert.That(D1Read(f.Core,f.Incoming,"FrozenOwners"),Is.Null);Assert.That(stopped.RequestSequence,Is.EqualTo(sequence));
+                Assert.That(D1Read(f.Core,f.Incoming,"FirstFrame"),Is.EqualTo(first));
+                Assert.That(((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Incoming],Is.SameAs(entry));return;
+            }
+            // Actual public Reserve commit, then explicit public source withdrawal (not a simulated paid Native journey).
+            // 保留头客真实身体/CQ与新PQS claim，原receiver仍须完整proof和真实CQ联合提交。
+            Assert.That(f.Core.TryCommit(f.HeadPrepared,f.HeadReserve),Is.True);
+            Assert.That(f.HeadQueue.TryCaptureReservation(f.HeadPickup.ActorId,out var reservation),Is.True);
+            Assert.That(f.HeadPrepared.AcquiredSequence,Is.GreaterThan(0));Assert.That(f.HeadQueue.Snapshot,Is.Empty);
+            f.Core.Retire(f.HeadPickup);var old=f.Snapshot;
+            f.Snapshot=World(2,2,old.Bodies.ToArray(),old.Parking.Concat(new[]{new TrafficParkingFact(f.HeadPickup,f.HeadQueue,f.HeadQueue.Version,
+                "pickup/"+f.HeadPickup.ActorId,reservation.Assignment.Position,.45f,.011f,f.HeadBusiness,f.HeadAdmission,reservation)}).ToArray());
+            f.Core.SetSnapshot(f.Snapshot);
+            f.Core.EvaluateParking(new TrafficRequest(f.Incoming,1,f.Snapshot,f.Request.Start,f.Request.Target,.45f,f.Request.ResourceId,safetyMargin:.011f,planPrimaryRoute:true));
+            var ready=f.Run(3);Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);Assert.That(ready.AcquiredSequence,Is.Zero);
+            Assert.That(ready.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(f.Core,f.Incoming,"FirstFrame"),Is.EqualTo(first));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Incoming],Is.SameAs(entry));
+            Assert.That(f.Core.QueriesConsumed(f.Incoming),Is.GreaterThan(0));Assert.That(D1Read(f.Core,f.Incoming,"FrozenOwners"),Is.Null);
+            Assert.That((float)D1Read(f.Core,f.Incoming,"WaitRemaining"),Is.EqualTo(debt-.25f).Within(.0001));
+            Assert.That(reservation.IsCurrent && head.IsCurrent,Is.True);
+            Assert.That(f.Queue.TryPrepareMutation(CounterQueueService.MutationKind.Advance,f.Incoming.ActorId,f.Queue.Version,out var currentAdvance),Is.True);
+            Assert.That(f.Core.TryCommit(ready,currentAdvance),Is.True);Assert.That(f.Core.HasActiveGrant(f.Incoming),Is.True);
+            Assert.That(f.Queue.Snapshot.Single(row=>row.VisitId==f.Incoming.ActorId).Position,Is.EqualTo(f.Request.Target));
         }
 
         [Test] public void CounterDeferredMissingFifoPreviewRetainsOriginalEntryAndResumesAfterEarlierJointAdvance()
@@ -3174,6 +4313,315 @@ namespace AnimalCafe.Tests.EditMode.Phase14
 
         // Analytic model. Public Core operations create every owned source and stamped strict leg.
         // 模型只用公开提交/到站/分腿接口；Native fixture 另证真实顾客与 canonical Queue。
+        // Public lifecycle model: both Native-provider answers are complete and static-clear.
+        // 原完整detour仍安全时，不应因canonical元数据刷新改选撞新owner的直线；不是Native场景证明。
+        [Test]
+        public void FrozenActualExitRetainsCurrentSafeCompleteCandidateAcrossLaterCanonicalCounterRefresh()
+            =>ObserveFrozenExitCompleteCandidateThroughProducer(false);
+        [Test]
+        public void FrozenActualExitRetainsCurrentSafeCompleteCandidateThroughQueuedProducerRefresh()
+            =>ObserveFrozenExitCompleteCandidateThroughProducer(true);
+        [TestCase("body")][TestCase("parking")][TestCase("life")][TestCase("expiry")]
+        public void FrozenActualExitRejectsUnsafeOrChangedCompleteCandidateWithoutRenewingItsSource(string fault)
+            =>ObserveFrozenExitCompleteCandidateThroughProducer(false,fault);
+        private static void ObserveFrozenExitCompleteCandidateThroughProducer(bool throughQueuedPort,string fault="none")
+        {
+            var paid=Key("retained-exit-paid","pickup-paid-movement",30);var exit=Key("retained-exit","actual-exit",40);
+            var counter=Key("retained-exit-counter","counter-advance",50);
+            var paidLife=new object();var exitLife=new object();var counterLife=new object();var business=new object();var admission=new object();
+            var paidStart=P(2,-1);var paidGoal=P(5,-1);var start=P(4,4);var bend=P(4,-2);var goal=P(0,-4);
+            var counterStart=P(1,-2);var counterGoal=P(-1,-2);var paidPose=paidStart;var counterPose=counterStart;
+            var pickup=new PickupQueueService(new[]{paidGoal},new[]{P(8)});
+            var queue=new CounterQueueService(new[]{counterGoal,counterStart});
+            Assert.That(pickup.TryReserve(paid.ActorId,out _),Is.True);
+            var paidBound=false;var counterPresent=false;var counterBound=false;var directAnswer=false;long version=0;var calls=0;var exitDirectCalls=0;
+            var injectFault=false;var changedLife=new object();var obstacleLife=new object();var obstacleKey=Key("retained-exit-current-obstacle","body",60);
+            var obstacleQueue=new PickupQueueService(new[]{bend},new[]{P(8,-4)});
+            TrafficWorldSnapshot snapshot=null;
+            TrafficWorldSnapshot Facts()
+            {
+                var bodies=new List<TrafficBodyFact>{new TrafficBodyFact(exit,start,.4f,actorLife:injectFault && fault=="life"?changedLife:exitLife),
+                    new TrafficBodyFact(paid,paidPose,.4f,independentlyProgressing:paidBound,remainingSeconds:paidBound?13:0,actorLife:paidLife)};
+                Assert.That(pickup.TryCaptureReservation(paid.ActorId,out var held),Is.True);
+                var parking=new List<TrafficParkingFact>{new TrafficParkingFact(paid,pickup,pickup.Version,"pickup/"+paid.ActorId,held.Assignment.Position,.4f,
+                    businessOwner:business,releaseObligation:admission,semanticCheckpoint:held)};
+                if(counterPresent)
+                {
+                    bodies.Add(new TrafficBodyFact(counter,counterPose,.4f,independentlyProgressing:counterBound,remainingSeconds:counterBound?13:0,actorLife:counterLife));
+                    Assert.That(queue.TryCaptureAssignment(counter.ActorId,out var claim),Is.True);
+                    parking.Add(new TrafficParkingFact(counter,queue,queue.Version,"counter/"+counter.ActorId,claim.Assignment.Position,.4f,
+                        businessOwner:business,releaseObligation:admission,semanticCheckpoint:claim));
+                }
+                if(injectFault && fault=="body")bodies.Add(new TrafficBodyFact(obstacleKey,bend,.4f,actorLife:obstacleLife));
+                if(injectFault && fault=="parking")
+                {
+                    Assert.That(obstacleQueue.TryCaptureReservation(obstacleKey.ActorId,out var obstacleClaim),Is.True);
+                    parking.Add(new TrafficParkingFact(obstacleKey,obstacleQueue,obstacleQueue.Version,"pickup/"+obstacleKey.ActorId,bend,.4f,
+                        semanticCheckpoint:obstacleClaim));
+                }
+                return World(++version,version,bodies.ToArray(),parking.ToArray());
+            }
+            snapshot=Facts();
+            var core=Coordinator(snapshot,frameBudget:4000,intentBudget:16384,waitSeconds:30,query:(a,b)=>
+            {
+                calls++;
+                if(a.Equals(start) && b.Equals(goal))
+                {exitDirectCalls++;return directAnswer?new[]{a,b}:new[]{a,bend,b};}
+                return new[]{a,b};
+            });
+            void Publish(){snapshot=Facts();core.SetSnapshot(snapshot);}
+            TrafficRequest ExitRequest(int frame)=>new TrafficRequest(exit,frame,snapshot,start,goal,.4f,"pickup/"+exit.ActorId,finiteSeconds:30,planPrimaryRoute:true);
+            Assert.That(pickup.TryPrepareMutation(PickupQueueService.MutationKind.Transfer,paid.ActorId,pickup.Version,out var transfer),Is.True);
+            core.EvaluateMovement(Request(paid,paidStart,paidGoal,snapshot,frame:1,resource:"pickup/"+paid.ActorId,seconds:13));core.ProcessReady(1);
+            var paidSource=core.GetDecision(paid);Assert.That(paidSource.Kind,Is.EqualTo(TrafficDecisionKind.Granted),paidSource.Reason);
+            Assert.That(core.TryCommit(paidSource,transfer),Is.True);Publish();
+            var leg=core.PrepareLeg(paidSource,"pickup/"+paid.ActorId,0,paidLife,1,snapshot,paidStart,.08f,2);
+            if(leg.Kind==TrafficDecisionKind.DeferredByBudget){core.ProcessReady(2);leg=core.GetDecision(paid);}
+            Assert.That(leg.Kind,Is.EqualTo(TrafficDecisionKind.Granted),leg.Reason);Assert.That(core.TryCommit(leg),Is.True);
+            var paidStamp=new TrafficNativeStamp(9301,1);Assert.That(core.BindLeg(paid,paidLife,paidStamp),Is.True);paidBound=true;Publish();
+            if(throughQueuedPort){paidPose=P(4,-1);Publish();} // Actual point on the same public Bound leg, making body a genuine original WAIT resource.
+            core.EvaluateMovement(ExitRequest(3));core.ProcessReady(3);var original=core.GetDecision(exit);
+            Assert.That(original.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),original.Reason);
+            Assert.That(original.Blockers.Count,Is.GreaterThan(0));Assert.That(original.Blockers.All(b=>b.Owner.Equals(paid)),Is.True);
+            Assert.That(original.Blockers.Any(b=>b.Proof=="current-conflict-segment"),Is.True,"PREMISE: genuine Bound original paid route blocks complete detour");
+            var entry=((System.Collections.IDictionary)D3ReadField(core,"entries"))[exit];var jobs=(System.Collections.IList)D1Read(core,exit,"Jobs");
+            var oldPrimary=jobs.Count>0?jobs[0]:null;
+            Vector3[] CompletedPath(object job)=>job==null?Array.Empty<Vector3>():((Vector3[])job.GetType().GetProperty("ExpandedPath",
+                System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic).GetValue(job)).ToArray();
+            var oldPath=CompletedPath(oldPrimary);
+            TestContext.WriteLine("FROZEN_EXIT_ORIGINAL_PROOF reason="+original.Reason+" jobs="+jobs.Count+" index="+D1Read(core,exit,"JobIndex")+
+                " current=["+string.Join(";",((Vector3[])D1Read(core,exit,"CurrentPath")).Select(p=>p.ToString("F9")))+"] primaryRef="+
+                (oldPrimary==null?"UNKNOWN_NULL":System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(oldPrimary).ToString())+
+                " primary=["+string.Join(";",oldPath.Select(p=>p.ToString("F9")))+"]");
+            Assert.That(jobs.Count,Is.EqualTo(1));Assert.That(D1Read(core,exit,"JobIndex"),Is.EqualTo(1));
+            Assert.That((Vector3[])D1Read(core,exit,"CurrentPath"),Is.Empty,"PREMISE: real WaitOrFail clears current movement authority while retaining its complete Jobs proof");
+            Assert.That(oldPath,Is.EqualTo(new[]{start,bend,goal}),"PREMISE: completed original Native-provider candidate is the detour");
+            var frozen=D1Read(core,exit,"FrozenOwners");var resources=D1Read(core,exit,"FrozenResources");var first=D1Read(core,exit,"FirstFrame");
+            var remaining=(float)D1Read(core,exit,"WaitRemaining");var spent=core.QueriesConsumed(exit);var sequence=original.RequestSequence;
+            Assert.That((IEnumerable<TrafficIntentKey>)frozen,Is.EquivalentTo(new[]{paid}));Assert.That(core.HasActiveGrant(exit),Is.False);
+            // A later real Counter Advance, with its public canonical claim and actual Bound leg.
+            Assert.That(queue.TryJoin("retained-counter-front"),Is.True);Assert.That(queue.Complete("retained-counter-front",1),Is.True);
+            Assert.That(queue.TryJoin(counter.ActorId),Is.True);Assert.That(queue.Complete(counter.ActorId,1),Is.True);
+            Assert.That(queue.Remove("retained-counter-front"),Is.True);counterPresent=true;Publish();
+            Assert.That(queue.TryPrepareMutation(CounterQueueService.MutationKind.Advance,counter.ActorId,queue.Version,out var advance),Is.True);
+            Assert.That(advance.Assignment.Position,Is.EqualTo(counterGoal));
+            core.EvaluateParking(new TrafficRequest(counter,4,snapshot,counterStart,counterGoal,.4f,"counter/"+counter.ActorId,finiteSeconds:30,planPrimaryRoute:true));
+            core.ProcessReady(4);var counterSource=core.GetDecision(counter);
+            Assert.That(counterSource.Kind,Is.EqualTo(TrafficDecisionKind.Granted),counterSource.Reason);Assert.That(core.TryCommit(counterSource,advance),Is.True);
+            Assert.That(counterSource.RequestSequence,Is.GreaterThan(sequence));Publish();
+            var counterLeg=core.PrepareLeg(counterSource,"counter/"+counter.ActorId,0,counterLife,1,snapshot,counterStart,.08f,5);
+            if(counterLeg.Kind==TrafficDecisionKind.DeferredByBudget){core.ProcessReady(5);counterLeg=core.GetDecision(counter);}
+            Assert.That(counterLeg.Kind,Is.EqualTo(TrafficDecisionKind.Granted),counterLeg.Reason);Assert.That(core.TryCommit(counterLeg),Is.True);
+            var counterStamp=new TrafficNativeStamp(9302,1);Assert.That(core.BindLeg(counter,counterLife,counterStamp),Is.True);counterBound=true;Publish();
+            var counterProof=counterSource.ProofRoutes.Single();
+            Assert.That(CustomerRoutePlanner.IsClear(oldPath,counterProof.ExpandedPath,.8f),Is.True,"PREMISE: old detour clears every point of this straight owned Counter path");
+            Assert.That(CustomerRoutePlanner.IsClear(oldPath,new[]{counterStart,counterGoal},.8f),Is.True);
+            Assert.That(CustomerRoutePlanner.IsClear(new[]{start,goal},new[]{counterStart},.8f),Is.False,"PREMISE: unnecessary new direct candidate would meet a new owner");
+            var nonselfBodies=snapshot.Bodies.Where(b=>b.Owner.ActorId!=exit.ActorId && !b.Owner.Equals(paid)).Select(b=>b.Position);
+            var allClaims=snapshot.Parking.Where(p=>p.Owner.ActorId!=exit.ActorId).Select(p=>p.Position);
+            Assert.That(CustomerRoutePlanner.IsClear(oldPath,nonselfBodies.Concat(allClaims).ToArray(),.8f),Is.True,"PREMISE: all current non-original bodies and ALL actual canonical claims clear old candidate");
+            Assert.That(core.GetDecision(exit),Is.SameAs(original));Assert.That(D3ReadField(D1Read(core,paid,"Leg"),"Bound"),Is.True);
+            if(throughQueuedPort)
+            {
+                Assert.That(original.Blockers.Any(b=>b.Owner.Equals(paid) && b.ResourceId=="body"),Is.True,
+                    "PREMISE: normal body notification names a genuinely captured original WAIT resource");
+                core.NotifyChanged(paid,"body");Assert.That(D1Read(core,exit,"Queued"),Is.True);
+                var beforePort=(System.Collections.IList)D1Read(core,exit,"Jobs");var beforePortCount=beforePort.Count;
+                Assert.That(beforePort.Count,Is.EqualTo(1));Assert.That(CompletedPath(beforePort[0]),Is.EqualTo(oldPath),
+                    "PREMISE: original complete candidate survived the real Notify wakeup before producer port");
+                Assert.That(D2Refresh(core,core.GetDecision(exit),ExitRequest(3),out var portDecision),Is.True,
+                    "PREMISE: real existing producer refresh API accepts same queued source; no private graph writes");
+                Assert.That(portDecision,Is.SameAs(core.GetDecision(exit)));
+                var afterPort=(System.Collections.IList)D1Read(core,exit,"Jobs");
+                TestContext.WriteLine("FROZEN_EXIT_QUEUED_PORT beforeJobs="+beforePortCount+" afterJobs="+afterPort.Count+
+                    " index="+D1Read(core,exit,"JobIndex")+" reason="+portDecision.Reason+" path=["+
+                    (afterPort.Count==0?"UNKNOWN_CLEARED":string.Join(";",CompletedPath(afterPort[0]).Select(p=>p.ToString("F9"))))+"]");
+            }
+            if(fault=="expiry")
+            {
+                var queries=core.QueriesConsumed(exit);core.Tick(remaining+.01f,false);var terminal=core.GetDecision(exit);
+                Assert.That(terminal.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(terminal.Reason,Is.EqualTo("wait-budget-exhausted"));
+                directAnswer=true;core.EvaluateMovement(ExitRequest(6));core.ProcessReady(6);
+                Assert.That(core.GetDecision(exit),Is.SameAs(terminal));Assert.That(core.QueriesConsumed(exit),Is.EqualTo(queries));
+                Assert.That(core.TryCommit(terminal),Is.False);Assert.That(core.HasActiveGrant(exit),Is.False);
+                Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries"))[exit],Is.SameAs(entry));
+                Assert.That(D1Read(core,exit,"FirstFrame"),Is.EqualTo(first));Assert.That(terminal.RequestSequence,Is.EqualTo(sequence));
+                Assert.That(D1Read(core,exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(core,exit,"FrozenResources"),Is.SameAs(resources));return;
+            }
+            if(fault!="none")
+            {
+                if(fault=="parking")Assert.That(obstacleQueue.TryReserve(obstacleKey.ActorId,out _),Is.True,"PREMISE: real current public PQS reservation occupies old bend");
+                injectFault=true;Publish();
+                if(fault=="body" || fault=="parking")Assert.That(CustomerRoutePlanner.IsClear(oldPath,new[]{bend},.8f),Is.False);
+                else Assert.That(snapshot.Bodies.Single(b=>b.Owner.Equals(exit)).ActorLife,Is.Not.SameAs(exitLife));
+            }
+            directAnswer=true;var submitted=core.EvaluateMovement(ExitRequest(6));
+            if(fault!="none")
+            {
+                var currentJobs=(System.Collections.IList)D1Read(core,exit,"Jobs");
+                Assert.That(currentJobs.Count==0 || !CompletedPath(currentJobs[0]).SequenceEqual(oldPath),Is.True,
+                    "CACHE CONTROL: invalid old geometry/actor identity cannot preserve the old completed primary before any new search");
+                var beforeSearch=exitDirectCalls;core.ProcessReady(6);var currentDecision=core.GetDecision(exit);
+                Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries"))[exit],Is.SameAs(entry));
+                Assert.That(D1Read(core,exit,"FirstFrame"),Is.EqualTo(first));Assert.That(currentDecision.RequestSequence,Is.EqualTo(sequence));
+                Assert.That(D1Read(core,exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(core,exit,"FrozenResources"),Is.SameAs(resources));
+                Assert.That(core.QueriesConsumed(exit),Is.GreaterThanOrEqualTo(spent));Assert.That(currentDecision.AcquiredSequence,Is.Zero);
+                Assert.That((float)D1Read(core,exit,"WaitRemaining"),Is.LessThanOrEqualTo(remaining));Assert.That(core.HasActiveGrant(exit),Is.False);
+                if(currentDecision.Kind==TrafficDecisionKind.Granted)
+                {
+                    Assert.That(exitDirectCalls,Is.GreaterThan(beforeSearch),"A successful alternative requires actual fresh original provider work");
+                    var proof=currentDecision.ProofRoutes.Single();Assert.That(proof.ExpandedPath.SequenceEqual(oldPath),Is.False);
+                    Assert.That(CustomerRoutePlanner.IsClear(proof.ExpandedPath,snapshot.Bodies.Where(b=>b.Owner.ActorId!=exit.ActorId).Select(b=>b.Position)
+                        .Concat(snapshot.Parking.Where(p=>p.Owner.ActorId!=exit.ActorId).Select(p=>p.Position)).ToArray(),.8f),Is.True);
+                }
+                else Assert.That(core.TryCommit(currentDecision),Is.False);
+                return;
+            }
+            core.ProcessReady(6);var retained=core.GetDecision(exit);
+            Assert.That(retained.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),
+                "FEATURE RED: retain/revalidate original complete current-safe candidate; do not discard it for an avoidable late-owner direct conflict: "+retained.Reason);
+            Assert.That(retained.Blockers.All(b=>b.Owner.Equals(paid)),Is.True);Assert.That(retained.AcquiredSequence,Is.Zero);
+            Assert.That((Vector3[])D1Read(core,exit,"CurrentPath"),Is.Empty,"Finite WAIT retains geometry in Jobs, never current movement rights");
+            var retainedJobs=(System.Collections.IList)D1Read(core,exit,"Jobs");Assert.That(retainedJobs.Count,Is.EqualTo(1));
+            Assert.That(CompletedPath(retainedJobs[0]),Is.EqualTo(oldPath));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries"))[exit],Is.SameAs(entry));Assert.That(retained.RequestSequence,Is.EqualTo(sequence));
+            Assert.That(D1Read(core,exit,"FirstFrame"),Is.EqualTo(first));Assert.That(D1Read(core,exit,"FrozenOwners"),Is.SameAs(frozen));
+            Assert.That(D1Read(core,exit,"FrozenResources"),Is.SameAs(resources));Assert.That((float)D1Read(core,exit,"WaitRemaining"),Is.EqualTo(remaining));
+            Assert.That(core.QueriesConsumed(exit),Is.GreaterThanOrEqualTo(spent));Assert.That(core.TryCommit(retained),Is.False);
+            core.Tick(.25f,false);Assert.That((float)D1Read(core,exit,"WaitRemaining"),Is.EqualTo(remaining-.25f));
+            paidPose=paidGoal;Publish();Assert.That(core.CompleteLeg(paid,paidLife,paidStamp,paidGoal),Is.True);paidBound=false;Publish();
+            core.NotifyChanged(paid,"body");core.EvaluateMovement(ExitRequest(7));core.ProcessReady(7);var ready=core.GetDecision(exit);
+            Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);Assert.That(ready.RequestSequence,Is.EqualTo(sequence));
+            var current=ready.ProofRoutes.Single();Assert.That(current.ExpandedPath,Is.EqualTo(oldPath));
+            Assert.That(CustomerRoutePlanner.IsClear(current.ExpandedPath,snapshot.Bodies.Where(b=>b.Owner.ActorId!=exit.ActorId).Select(b=>b.Position)
+                .Concat(snapshot.Parking.Where(p=>p.Owner.ActorId!=exit.ActorId).Select(p=>p.Position)).ToArray(),.8f),Is.True);
+            Assert.That(D1Read(core,exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That((float)D1Read(core,exit,"WaitRemaining"),Is.EqualTo(remaining-.25f));
+            Assert.That(core.TryCommit(ready),Is.True,"Only current complete original candidate may acquire after actual original owner clears");
+        }
+
+        // A completed original Native leg is a temporary source checkpoint, not an obstacle-free permission.
+        // 原腿实际完成后的静止采样只保留 dormant几何；下一腿真Bound前不授Exit/新WAIT权利。
+        [TestCase(false)][TestCase(true)]
+        public void FrozenActualExitKeepsDormantCompleteCandidateThroughOriginalPaidCompletedLegGap(bool offExactStop)
+            =>ObserveFrozenPaidCompletedGap(offExactStop,false,"none");
+
+        [TestCase("none")][TestCase("counter-rejoin")][TestCase("pickup-replacement")]
+        public void FrozenActualExitAuthenticatesReleasedCounterAndSurvivingRealPickupClaimsAtPaidGap(string claimChange)
+            =>ObserveFrozenPaidCompletedGap(false,true,claimChange);
+
+        private static void ObserveFrozenPaidCompletedGap(bool offExactStop,bool canonicalPaidClaims,string claimChange)
+        {
+            var f=new OriginalExitSelectedSuffixFixture(paidCheckpointAtExit:true,freezeOnBoundPaidCheckpoint:true,
+                canonicalPaidClaims:canonicalPaidClaims,canonicalPaidClaimChange:claimChange);
+            using(f.PaidAdmission)
+            {
+            var entry=((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Exit];
+            var source=f.Core.GetDecision(f.Exit);var sourceSequence=source.RequestSequence;var age=D1Read(f.Core,f.Exit,"FirstFrame");
+            var frozen=D1Read(f.Core,f.Exit,"FrozenOwners");var resources=D1Read(f.Core,f.Exit,"FrozenResources");
+            var eligibility=D1Read(f.Core,f.Exit,"FrozenSelectedRouteEligibility") as System.Collections.IDictionary;
+            Assert.That(eligibility,Is.Not.Null);Assert.That(eligibility.Contains(f.Paid),Is.True);
+            var captured=eligibility[f.Paid];var oldLeg=D1Read(f.Core,f.Paid,"Leg");var life=D3ReadField(oldLeg,"ActorLife");
+            Assert.That(D3ReadField(captured,"Source"),Is.SameAs(f.PaidSource));Assert.That(D3ReadField(captured,"Proof"),Is.SameAs(f.PaidProof));
+            Assert.That(D3ReadField(captured,"ActorLife"),Is.SameAs(life));Assert.That(D3ReadField(oldLeg,"Bound"),Is.True);
+            Assert.That((IEnumerable<TrafficIntentKey>)frozen,Is.EquivalentTo(new[]{f.Paid}));
+            var oldJobs=(System.Collections.IList)D1Read(f.Core,f.Exit,"Jobs");Assert.That(oldJobs.Count,Is.EqualTo(1));
+            Vector3[] Path(object j)=>((Vector3[])j.GetType().GetProperty("ExpandedPath",System.Reflection.BindingFlags.Instance|
+                System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic).GetValue(j)).ToArray();
+            var oldPath=Path(oldJobs[0]);Assert.That(oldPath.Length,Is.GreaterThan(1));
+            Assert.That(oldPath.First(),Is.EqualTo(f.ExitStart));Assert.That(oldPath.Last(),Is.EqualTo(f.ExitGoal));
+            Assert.That(CustomerRoutePlanner.IsClear(oldPath,new[]{f.Crossing},.8f),Is.False,
+                "PREMISE: the true intermediate paid waypoint lies on original complete Exit candidate");
+            var debt=(float)D1Read(f.Core,f.Exit,"WaitRemaining");var queries=f.Core.QueriesConsumed(f.Exit);
+            var originalArrivalTolerance=(float)D3ReadField(oldLeg,"ArrivalTolerance");Assert.That(originalArrivalTolerance,Is.GreaterThan(0));
+            f.CompleteFirstPaidLegIntoCacheGap(offExactStop?originalArrivalTolerance*.5f:0);
+            var completed=D1Read(f.Core,f.Paid,"Leg");Assert.That(completed,Is.SameAs(oldLeg));
+            Assert.That(D3ReadField(completed,"Committed"),Is.True);Assert.That(D3ReadField(completed,"Bound"),Is.True);
+            Assert.That(D3ReadField(completed,"Completed"),Is.True);Assert.That(D1Read(f.Core,f.Paid,"Active"),Is.False);
+            Assert.That(D1Read(f.Core,f.Paid,"Prepared"),Is.False);Assert.That(D1Read(f.Core,f.Paid,"PendingHandoff"),Is.Null);
+            Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));Assert.That(D3ReadField(completed,"Proof"),Is.SameAs(f.PaidProof));
+            var body=f.Snapshot.Bodies.Single(v=>v.Owner.Equals(f.Paid));Assert.That(body.ActorLife,Is.SameAs(life));
+            Assert.That(Vector3.Distance(body.Position,f.Crossing),Is.LessThanOrEqualTo(originalArrivalTolerance));
+            if(offExactStop)Assert.That(body.Position.Equals(f.Crossing),Is.False,"CONTROL: real public completion is legal within the original tolerance without exact waypoint equality");
+            else Assert.That(body.Position,Is.EqualTo(f.Crossing));
+            Assert.That(body.IndependentlyProgressing,Is.False);Assert.That(body.RemainingSeconds,Is.Zero);
+            Assert.That(D1Read(f.Core,f.Exit,"Queued"),Is.True,"PREMISE: actual original leg completion woke its original finite waiter");
+            if(canonicalPaidClaims)f.AssertCanonicalPaidGapReceipts();
+            var expected=f.Core.GetDecision(f.Exit);var request=(TrafficRequest)D1Read(f.Core,f.Exit,"Request");
+            var refreshed=new TrafficRequest(f.Exit,(int)age,f.Snapshot,request.Start,request.Target,request.Radius,request.ResourceId,
+                request.SelectedJourney,request.Requirements,request.NativeStamp,request.IndependentlyProgressing,request.FiniteSeconds,
+                request.ProvenFailure,request.SafetyMargin,request.PlanPrimaryRoute);
+            Assert.That(D2Refresh(f.Core,expected,refreshed,out var gapDecision),Is.True,
+                "PREMISE: same queued producer port authenticated only receiver identity, not an independent release promise");
+            var gapJobs=(System.Collections.IList)D1Read(f.Core,f.Exit,"Jobs");
+            TestContext.WriteLine("FROZEN_EXIT_COMPLETED_LEG_GAP jobs="+gapJobs.Count+" originalQueries="+queries+" currentQueries="+f.Core.QueriesConsumed(f.Exit)+
+                " ownerCompleted="+D3ReadField(completed,"Completed")+" ownerActive="+D1Read(f.Core,f.Paid,"Active")+" ownerPrepared="+D1Read(f.Core,f.Paid,"Prepared")+
+                " bodyFinite="+body.IndependentlyProgressing+" gapDecision="+gapDecision.Kind+"/"+gapDecision.Reason);
+            if(canonicalPaidClaims && claimChange!="none")
+            {
+                Assert.That(gapJobs.Count,Is.Zero,"CONTROL: a newly joined Counter or replaced PQS reservation cannot authenticate original dormant geometry");
+                Assert.That(D1Read(f.Core,f.Exit,"FrozenExitCandidateDormant"),Is.False);
+                Assert.That(gapDecision.AcquiredSequence,Is.Zero);Assert.That(f.Core.TryCommit(gapDecision),Is.False);
+                Assert.That(f.Core.HasActiveGrant(f.Exit),Is.False);Assert.That(D1Read(f.Core,f.Exit,"Leg"),Is.Null);
+                Assert.That(f.Core.QueriesConsumed(f.Exit),Is.EqualTo(queries));Assert.That(D1Read(f.Core,f.Exit,"FirstFrame"),Is.EqualTo(age));
+                Assert.That(gapDecision.RequestSequence,Is.EqualTo(sourceSequence));Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));
+                Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(resources));Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.EqualTo(debt));
+                return; // No forced terminal: normal fresh full proof remains the only route to any later Grant.
+            }
+            Assert.That(gapJobs.Count,Is.EqualTo(1),
+                "FEATURE RED: keep the original complete geometry dormant through a genuine original completed-leg checkpoint; revalidate before ordinary ready/authority");
+            Assert.That(Path(gapJobs[0]),Is.EqualTo(oldPath));Assert.That(gapDecision.AcquiredSequence,Is.Zero);
+            Assert.That(f.Core.HasActiveGrant(f.Exit),Is.False);Assert.That(f.Core.TryCommit(gapDecision),Is.False);
+            Assert.That(f.Core.QueriesConsumed(f.Exit),Is.EqualTo(queries));Assert.That(D1Read(f.Core,f.Exit,"FirstFrame"),Is.EqualTo(age));
+            Assert.That(gapDecision.RequestSequence,Is.EqualTo(sourceSequence));Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(resources));Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.EqualTo(debt));
+            f.Core.Tick(0,false);f.PumpPaidCacheGapWithoutPreparation();var bareHeld=f.Core.GetDecision(f.Exit);
+            Assert.That(bareHeld.Kind==TrafficDecisionKind.DeferredByBudget || bareHeld.Kind==TrafficDecisionKind.WaitingForTraffic,Is.True,
+                "GAP CONTROL: ordinary ready processing must honestly withhold preparation before the same original owner has a next leg");
+            Assert.That(bareHeld.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));Assert.That(bareHeld.AcquiredSequence,Is.Zero);
+            Assert.That(f.Core.HasActiveGrant(f.Exit),Is.False);Assert.That(f.Core.TryCommit(bareHeld),Is.False);
+            Assert.That(D1Read(f.Core,f.Exit,"Leg"),Is.Null);Assert.That(f.Core.QueriesConsumed(f.Exit),Is.EqualTo(queries));
+            Assert.That(D1Read(f.Core,f.Paid,"Leg"),Is.SameAs(completed));Assert.That(D3ReadField(completed,"Completed"),Is.True);
+            Assert.That(D1Read(f.Core,f.Paid,"Active"),Is.False);Assert.That(D1Read(f.Core,f.Paid,"Prepared"),Is.False);
+            Assert.That(f.Core.CanIssueLeg(f.Paid,life,(int)D3ReadField(completed,"Generation")),Is.False);
+            Assert.That(D1Read(f.Core,f.Paid,"PendingHandoff"),Is.Null,"No synthetic typed handoff may fill the bare intermediate-leg gap");
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(resources));
+            Assert.That((IEnumerable<TrafficIntentKey>)frozen,Is.EquivalentTo(new[]{f.Paid}));
+            Assert.That(D1Read(f.Core,f.Exit,"FirstFrame"),Is.EqualTo(age));Assert.That(bareHeld.RequestSequence,Is.EqualTo(sourceSequence));
+            var dormantJobs=(System.Collections.IList)D1Read(f.Core,f.Exit,"Jobs");Assert.That(dormantJobs.Count,Is.EqualTo(1));
+            Assert.That(Path(dormantJobs[0]),Is.EqualTo(oldPath));
+            f.Core.Tick(.1f,false);var afterTick=f.Core.GetDecision(f.Exit);
+            Assert.That(afterTick.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));Assert.That(afterTick.AcquiredSequence,Is.Zero);
+            Assert.That(afterTick.Kind==TrafficDecisionKind.DeferredByBudget || afterTick.Kind==TrafficDecisionKind.WaitingForTraffic,Is.True);
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.EqualTo(debt-.1f));
+            Assert.That(f.Core.QueriesConsumed(f.Exit),Is.EqualTo(queries));Assert.That(f.Core.TryCommit(afterTick),Is.False);
+            f.PrepareAndBindNextPaidAfterCacheGap();var nextLeg=D1Read(f.Core,f.Paid,"Leg");
+            Assert.That(D3ReadField(nextLeg,"Index"),Is.EqualTo(1));Assert.That(D3ReadField(nextLeg,"Generation"),Is.EqualTo(2));
+            Assert.That(D3ReadField(nextLeg,"Bound"),Is.True);Assert.That(D3ReadField(nextLeg,"Proof"),Is.SameAs(f.PaidProof));
+            Assert.That(D3ReadField(nextLeg,"ActorLife"),Is.SameAs(life));Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));
+            var waiting=f.Core.GetDecision(f.Exit);Assert.That(waiting.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),waiting.Reason);
+            Assert.That(waiting.Blockers.All(v=>v.Owner.Equals(f.Paid)),Is.True);Assert.That(f.Core.TryCommit(waiting),Is.False);
+            var currentJobs=(System.Collections.IList)D1Read(f.Core,f.Exit,"Jobs");Assert.That(Path(currentJobs[0]),Is.EqualTo(oldPath));
+            f.FinishPaid();var ready=f.Core.GetDecision(f.Exit);Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);
+            Assert.That(ready.ProofRoutes.Single().ExpandedPath,Is.EqualTo(oldPath));Assert.That(ready.RequestSequence,Is.EqualTo(sourceSequence));
+            Assert.That(((System.Collections.IDictionary)D3ReadField(f.Core,"entries"))[f.Exit],Is.SameAs(entry));
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(resources));
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.EqualTo(debt-.1f));Assert.That(f.Core.TryCommit(ready),Is.True);
+            if(canonicalPaidClaims)
+            {
+                Assert.That(f.PaidPickup.TryGetReservation(f.Paid.ActorId,out var arrived),Is.True);
+                Assert.That(f.PaidPickup.MarkArrived(f.Paid.ActorId,arrived.Generation),Is.True);
+                Assert.That(f.PaidAdmission.MarkPickupWaiting(),Is.True);
+                Assert.That(f.PaidPickup.TryCaptureReservation(f.Paid.ActorId,out var currentClaim),Is.True);
+                Assert.That(f.OriginalPaidPickupClaim.IsSameReservation(currentClaim),Is.True);
+                Assert.That(currentClaim.Assignment.Arrived,Is.True);Assert.That(currentClaim.Assignment.Position,Is.EqualTo(f.PaidProof.Waypoints.Last()));
+                Assert.That(f.PaidCapacity.GetReservations().Single(v=>v.Kind==AnimalCafe.Capacity.CapacityKind.CounterQueue).State,
+                    Is.EqualTo(AnimalCafe.Capacity.ReservationState.Released));
+                Assert.That(f.PaidCapacity.GetReservations().Where(v=>v.Kind!=AnimalCafe.Capacity.CapacityKind.CounterQueue).All(v=>
+                    v.State==AnimalCafe.Capacity.ReservationState.Occupied),Is.True,"The paid customer still genuinely owns Total/Pickup; successful original Exit is another actor");
+            }
+            } // Admission.Dispose is fixture teardown only, after every original lifecycle assertion.
+        }
+
         private sealed class OriginalExitSelectedSuffixFixture
         {
             internal readonly TrafficIntentKey Exit=Key("original-suffix-exit","actual-exit",40);
@@ -3194,10 +4642,44 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             private TrafficNativeStamp paidStamp;private readonly TrafficNativeStamp gateStamp=new TrafficNativeStamp(8201,1);
             internal readonly CounterQueueService CanonicalCounter;
             private readonly object counterBusiness=new object(),counterAdmission=new object();
+            internal readonly CounterQueueService PaidOriginCounter;
+            internal readonly PickupQueueService PaidPickup;
+            internal readonly AnimalCafe.Capacity.CapacityService PaidCapacity;
+            internal readonly CustomerAdmission PaidAdmission;
+            internal readonly CounterQueueService.AssignmentClaim OriginalPaidCounterClaim;
+            internal readonly PickupQueueService.ReservationClaim OriginalPaidPickupClaim;
+            private readonly object paidBusiness=new object();
+            private readonly string canonicalPaidClaimChange;
+            private AnimalCafe.Capacity.CapacityToken originalCounterToken,originalTotalToken,originalPickupToken;
             internal string PaidResource=>(CanonicalCounter==null?"pickup/":"counter/")+Paid.ActorId;
 
-            internal OriginalExitSelectedSuffixFixture(bool throwingDiagnostic=false,bool counterEndpointFreeze=false,bool counterFirstLegUnboundAtFreeze=false)
+            internal OriginalExitSelectedSuffixFixture(bool throwingDiagnostic=false,bool counterEndpointFreeze=false,bool counterFirstLegUnboundAtFreeze=false,
+                bool paidEndpointFreeze=false,bool paidFirstLegUnboundAtFreeze=false,bool paidCheckpointAtExit=false,bool freezeOnBoundPaidCheckpoint=false,
+                bool canonicalPaidClaims=false,string canonicalPaidClaimChange="none")
             {
+                this.canonicalPaidClaimChange=canonicalPaidClaimChange;
+                if(canonicalPaidClaims)
+                {
+                    Assert.That(counterEndpointFreeze,Is.False);Assert.That(freezeOnBoundPaidCheckpoint,Is.True);
+                    PaidCapacity=new AnimalCafe.Capacity.CapacityService(64);
+                    Assert.That(CustomerAdmission.TryCreate(PaidCapacity,Paid.ActorId,out var admission),Is.True);PaidAdmission=admission;
+                    Assert.That(PaidAdmission.MarkInside(),Is.True);Assert.That(PaidAdmission.MarkQueued(),Is.True);
+                    var tokens=PaidCapacity.GetReservations();
+                    originalCounterToken=tokens.Single(v=>v.Kind==AnimalCafe.Capacity.CapacityKind.CounterQueue).Token;
+                    originalTotalToken=tokens.Single(v=>v.Kind==AnimalCafe.Capacity.CapacityKind.TotalCustomers).Token;
+                    originalPickupToken=tokens.Single(v=>v.Kind==AnimalCafe.Capacity.CapacityKind.PickUp).Token;
+                    PaidOriginCounter=new CounterQueueService(new[]{Origin});
+                    Assert.That(PaidOriginCounter.TryJoin(Paid.ActorId),Is.True);
+                    Assert.That(PaidOriginCounter.TryCaptureAssignment(Paid.ActorId,out var joining),Is.True);
+                    Assert.That(PaidOriginCounter.Complete(Paid.ActorId,joining.Assignment.Generation),Is.True);
+                    Assert.That(PaidOriginCounter.TryCaptureAssignment(Paid.ActorId,out var counterClaim),Is.True);OriginalPaidCounterClaim=counterClaim;
+                    Assert.That(counterClaim.IsCurrent,Is.True);Assert.That(counterClaim.Assignment.Arrived,Is.True);
+                    PaidPickup=new PickupQueueService(new[]{P(6)},P(6,2),false);
+                    Assert.That(PaidPickup.TryReserve(Paid.ActorId,out _),Is.True);
+                    Assert.That(PaidPickup.TryBeginTransfer(Paid.ActorId,out var transfer),Is.True);Assert.That(transfer.Position,Is.EqualTo(P(6)));
+                    Assert.That(PaidPickup.TryCaptureReservation(Paid.ActorId,out var pickupClaim),Is.True);OriginalPaidPickupClaim=pickupClaim;
+                    Assert.That(pickupClaim.IsCurrent,Is.True);Assert.That(PaidPickup.Snapshot.Single().VisitId,Is.EqualTo(Paid.ActorId));
+                }
                 if(counterEndpointFreeze)
                 {
                     Paid=Key("original-suffix-counter","counter-advance",30);
@@ -3220,9 +4702,10 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 PaidProof=PaidSource.ProofRoutes.Single();
                 Assert.That(PaidProof.Waypoints.Count,Is.GreaterThan(1),"FIXTURE: the real analytic planner must split around the static pillar");
                 var lastStart=PaidProof.Waypoints[PaidProof.Waypoints.Count-2];
-                Crossing=(lastStart+PaidProof.Waypoints.Last())*.5f;
-                ExitStart=Crossing+Vector3.back*4;ExitGoal=Crossing+Vector3.forward*4;
-                gatePosition=counterEndpointFreeze?ExitGoal:Crossing+Vector3.forward*3;GateEnd=gatePosition+Vector3.right*3;
+                Crossing=paidCheckpointAtExit?lastStart:(lastStart+PaidProof.Waypoints.Last())*.5f;
+                ExitStart=Crossing+(freezeOnBoundPaidCheckpoint?Vector3.left:Vector3.back)*4;
+                ExitGoal=Crossing+(freezeOnBoundPaidCheckpoint?Vector3.right:Vector3.forward)*4;
+                gatePosition=!freezeOnBoundPaidCheckpoint && (counterEndpointFreeze || paidEndpointFreeze)?ExitGoal:Crossing+Vector3.forward*3;GateEnd=gatePosition+Vector3.right*3;
                 if(counterEndpointFreeze)Assert.That(CustomerRoutePlanner.IsClear(new[]{ExitStart,ExitGoal},new[]{P(6)},.8f),Is.True,
                     "PREMISE: Counter canonical final goal itself is clear; the owned original moving route crosses the Exit");
                 if(!counterFirstLegUnboundAtFreeze)
@@ -3231,8 +4714,15 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                     Assert.That(Core.GetDecision(Paid).Kind,Is.EqualTo(TrafficDecisionKind.Granted));
                     Assert.That(D1Read(Core,Paid,"Prepared"),Is.EqualTo(true));
                     Assert.That(D3ReadField(D1Read(Core,Paid,"Leg"),"Bound"),Is.EqualTo(false));
-                    Assert.That(((Vector3[])D1Read(Core,Paid,"CurrentPath")).Max(p=>p.x),Is.LessThan(Crossing.x-.8f),
-                        "FIXTURE: initial current paid leg is entirely clear of the exit path, while its owned suffix crosses it");
+                    if(!paidCheckpointAtExit)
+                        Assert.That(((Vector3[])D1Read(Core,Paid,"CurrentPath")).Max(p=>p.x),Is.LessThan(Crossing.x-.8f),
+                            "FIXTURE: initial current paid leg is entirely clear of the exit path, while its owned suffix crosses it");
+                    else
+                    {
+                        Assert.That(PaidProof.Waypoints[0],Is.EqualTo(Crossing),"PREMISE: checkpoint is the real first owned waypoint");
+                        Assert.That(((Vector3[])D1Read(Core,Paid,"CurrentPath")).Last(),Is.EqualTo(Crossing),
+                            "PREMISE: original first strict leg really ends at the later Prepared checkpoint");
+                    }
                     Assert.That(CustomerRoutePlanner.IsClear(new[]{ExitStart,ExitGoal},new[]{Crossing},.8f),Is.False);
                 }
                 if(CanonicalCounter!=null&&!counterFirstLegUnboundAtFreeze)
@@ -3253,6 +4743,12 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                     Assert.That(D1Read(Core,Paid,"Prepared"),Is.EqualTo(true));
                 }
                 else Assert.That(Core.HasActiveGrant(Paid),Is.True);
+                if((paidEndpointFreeze || freezeOnBoundPaidCheckpoint) && !paidFirstLegUnboundAtFreeze)
+                {
+                    Assert.That(CanonicalCounter,Is.Null);
+                    Assert.That(Core.TryCommit(Core.GetDecision(Paid)),Is.True);paidStamp=new TrafficNativeStamp(8301,1);
+                    Assert.That(Core.BindLeg(Paid,paidLife,paidStamp),Is.True);paidMoving=true;Refresh();
+                }
                 if(throwingDiagnostic)
                 {
                     var observer=typeof(ServiceTrafficCoordinator).GetField("WaitFailureObserver",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
@@ -3275,9 +4771,18 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 Core.EvaluateMovement(Request(Exit,ExitStart,ExitGoal,Snapshot,frame:frame++,resource:"pickup/"+Exit.ActorId,seconds:30));
                 Core.ProcessReady(frame++);InitialWait=Core.GetDecision(Exit);
                 Assert.That(InitialWait.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),InitialWait.Reason);
-                Assert.That(InitialWait.Blockers.Any(b=>b.Owner.Equals(Gate)),Is.True);
-                Assert.That(InitialWait.Blockers.All(b=>b.Owner.Equals(Gate)),Is.True,
-                    "FIXTURE: a relevant original suffix is eligibility, not a newly fabricated current WAIT edge");
+                if(freezeOnBoundPaidCheckpoint)
+                {
+                    Assert.That(InitialWait.Blockers.Count,Is.GreaterThan(0));Assert.That(InitialWait.Blockers.All(v=>v.Owner.Equals(Paid)),Is.True);
+                    Assert.That(InitialWait.Blockers.Any(v=>v.ResourceId==PaidResource && v.Proof=="current-conflict-segment"),Is.True,
+                        "PREMISE: first complete primary actually waits for the already Bound original paid leg");
+                }
+                else
+                {
+                    Assert.That(InitialWait.Blockers.Any(b=>b.Owner.Equals(Gate)),Is.True);
+                    Assert.That(InitialWait.Blockers.All(b=>b.Owner.Equals(Gate)),Is.True,
+                        "FIXTURE: a relevant original suffix is eligibility, not a newly fabricated current WAIT edge");
+                }
                 Assert.That(D1Read(Core,Paid,"JourneyPermit"),Is.SameAs(PaidSource));
                 Core.DrainReady();
             }
@@ -3296,11 +4801,27 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                     claims=new[]{new TrafficParkingFact(Paid,CanonicalCounter,CanonicalCounter.Version,PaidResource,claim.Assignment.Position,.4f,
                         businessOwner:counterBusiness,releaseObligation:counterAdmission,semanticCheckpoint:claim)};
                 }
+                if(PaidPickup!=null)
+                {
+                    var actual=new List<TrafficParkingFact>();
+                    Assert.That(PaidPickup.TryCaptureReservation(Paid.ActorId,out var pickupClaim),Is.True);Assert.That(pickupClaim.IsCurrent,Is.True);
+                    actual.Add(new TrafficParkingFact(Paid,PaidPickup,PaidPickup.Version,PaidResource,pickupClaim.Assignment.Position,.4f,
+                        businessOwner:paidBusiness,releaseObligation:PaidAdmission,semanticCheckpoint:pickupClaim));
+                    if(PaidOriginCounter.TryCaptureAssignment(Paid.ActorId,out var counterClaim))
+                    {
+                        Assert.That(counterClaim.IsCurrent,Is.True);
+                        actual.Add(new TrafficParkingFact(Paid,PaidOriginCounter,PaidOriginCounter.Version,"counter/"+Paid.ActorId,counterClaim.Assignment.Position,.4f,
+                            businessOwner:paidBusiness,releaseObligation:PaidAdmission,semanticCheckpoint:counterClaim));
+                    }
+                    claims=actual.ToArray();
+                }
                 return World(++version,version,bodies.ToArray(),claims);
             }
             private void Refresh(){Snapshot=MakeWorld();Core.SetSnapshot(Snapshot);}
             internal void BindFirstPaidLeg()
             {
+                if(CanonicalCounter==null && (bool)D3ReadField(D1Read(Core,Paid,"Leg"),"Bound"))
+                {Assert.That(Core.HasActiveGrant(Paid),Is.True);return;}
                 if(CanonicalCounter!=null)
                 {
                     if(!(bool)D3ReadField(D1Read(Core,Paid,"Leg"),"Bound"))
@@ -3332,6 +4853,115 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                     Core.NotifyChanged(Gate,"body");Core.ProcessReady(frame++);
                 }
             }
+            internal void PreparePaidLastLegAtExitCheckpoint()
+            {
+                BindFirstPaidLeg();
+                Assert.That(PaidProof.Waypoints.Count,Is.GreaterThanOrEqualTo(2),"PREMISE: real completed first leg has an original next leg");
+                for(paidLeg=0;paidLeg<PaidProof.Waypoints.Count-1;paidLeg++)
+                {
+                    var last=paidLeg==PaidProof.Waypoints.Count-2;
+                    if(last)
+                    {
+                        // The already Bound preceding leg first becomes a real full-primary WAIT dependency.
+                        // 先让已发前腿进入真实完整 Exit 路径冲突，再到站并准备下一腿。
+                        FinishGate();var prior=Core.GetDecision(Exit);
+                        Assert.That(prior.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),"PREMISE: original Bound route already accepted: "+prior.Reason);
+                        Assert.That(prior.Blockers.Any(b=>b.Owner.Equals(Paid)&&b.Proof=="current-conflict-segment"),Is.True);
+                        Assert.That(Core.QueriesConsumed(Exit),Is.GreaterThan(0));
+                    }
+                    paidPosition=PaidProof.Waypoints[paidLeg];paidMoving=false;Refresh();
+                    Assert.That(Core.CompleteLeg(Paid,paidLife,paidStamp,paidPosition),Is.True);
+                    Core.PrepareLeg(PaidSource,PaidResource,paidLeg+1,paidLife,paidLeg+2,Snapshot,paidPosition,.05f,frame++);
+                    Core.ProcessReady(frame++);var prepared=Core.GetDecision(Paid);
+                    Assert.That(prepared.Kind,Is.EqualTo(TrafficDecisionKind.Granted),prepared.Reason);
+                    if(last)return; // No TryCommit/Bind: body remains stationary at its actually completed prior waypoint.
+                    Assert.That(Core.TryCommit(prepared),Is.True);paidStamp=new TrafficNativeStamp(8302+paidLeg,paidLeg+2);
+                    Assert.That(Core.BindLeg(Paid,paidLife,paidStamp),Is.True);paidMoving=true;Refresh();
+                }
+            }
+            internal void CommitPreparedLastPaidLeg()
+            {
+                Assert.That(Core.TryCommit(Core.GetDecision(Paid)),Is.True);
+                paidStamp=new TrafficNativeStamp(8302+paidLeg,paidLeg+2);
+                Assert.That(Core.BindLeg(Paid,paidLife,paidStamp),Is.True);paidMoving=true;Refresh();
+            }
+            internal void CompleteFirstPaidLegIntoCacheGap(float stopShort=0)
+            {
+                Assert.That(PaidProof.Waypoints.Count,Is.GreaterThanOrEqualTo(2));
+                Assert.That(PaidProof.Waypoints[0],Is.EqualTo(Crossing));
+                var native=PaidProof.ExpandedPath.Take(PaidProof.LegEnds[0]+1).ToArray();var endpoint=native.Last();
+                var previous=native.Take(native.Length-1).Last(v=>!v.Equals(endpoint));
+                // Sample the actual owned Native final segment, within the already-authenticated arrival tolerance.
+                // 沿原Native末段到站；不改变Source/半径/tolerance，也不私写Core完成标志。
+                paidPosition=Crossing-(endpoint-previous).normalized*stopShort;paidMoving=true;Refresh();
+                if(PaidPickup!=null)
+                {
+                    Assert.That(Vector3.Distance(paidPosition,OriginalPaidCounterClaim.Assignment.Position),Is.GreaterThan(.8f),
+                        "PREMISE: the actual still-Bound owned actor has physically left the old Counter pair-clearance range");
+                    Assert.That((bool)D3ReadField(D1Read(Core,Paid,"Leg"),"Bound"),Is.True);
+                    Assert.That((bool)D3ReadField(D1Read(Core,Paid,"Leg"),"Completed"),Is.False);
+                    PaidAdmission.LeaveQueue();Assert.That(PaidOriginCounter.Remove(Paid.ActorId),Is.True);
+                    Assert.That(PaidOriginCounter.TryCaptureAssignment(Paid.ActorId,out _),Is.False,
+                        "Public canonical Remove, not omission from a snapshot, establishes that this actor has no current Counter entry");
+                    if(canonicalPaidClaimChange=="counter-rejoin")
+                    {
+                        Assert.That(PaidOriginCounter.TryJoin(Paid.ActorId),Is.True);
+                        Assert.That(PaidOriginCounter.TryCaptureAssignment(Paid.ActorId,out var replacement),Is.True);
+                        Assert.That(OriginalPaidCounterClaim.IsSameReservation(replacement),Is.False);
+                        Assert.That(replacement.Assignment.Position,Is.EqualTo(OriginalPaidCounterClaim.Assignment.Position));
+                    }
+                    else if(canonicalPaidClaimChange=="pickup-replacement")
+                    {
+                        Assert.That(PaidPickup.Remove(Paid.ActorId),Is.True);
+                        Assert.That(PaidPickup.TryReserve(Paid.ActorId,out _),Is.True);Assert.That(PaidPickup.TryBeginTransfer(Paid.ActorId,out _),Is.True);
+                        Assert.That(PaidPickup.TryCaptureReservation(Paid.ActorId,out var replacement),Is.True);
+                        Assert.That(OriginalPaidPickupClaim.IsSameReservation(replacement),Is.False);
+                    }
+                    Refresh();
+                }
+                Assert.That(Core.CompleteLeg(Paid,paidLife,paidStamp,paidPosition),Is.True);
+                paidMoving=false;Refresh(); // Same actual actor is stopped after its public completion, before next Prepare.
+            }
+            internal void AssertCanonicalPaidGapReceipts()
+            {
+                var request=(TrafficRequest)D1Read(Core,Paid,"Request");
+                var before=request.Snapshot.Parking.Where(v=>v.Owner.ActorId==Paid.ActorId).ToArray();
+                var now=Snapshot.Parking.Where(v=>v.Owner.ActorId==Paid.ActorId).ToArray();
+                Assert.That(before.Length,Is.EqualTo(2));Assert.That(before.Any(v=>ReferenceEquals(v.CanonicalOwner,PaidOriginCounter)),Is.True);
+                Assert.That(before.Any(v=>ReferenceEquals(v.CanonicalOwner,PaidPickup)),Is.True);
+                Assert.That(before.Concat(now).All(v=>v.Owner.Equals(Paid) && ReferenceEquals(v.BusinessOwner,paidBusiness) && ReferenceEquals(v.ReleaseObligation,PaidAdmission)),Is.True);
+                Assert.That(PaidPickup.TryCaptureReservation(Paid.ActorId,out var pickup),Is.True);Assert.That(pickup.IsCurrent,Is.True);
+                Assert.That(OriginalPaidPickupClaim.IsSameReservation(pickup),Is.EqualTo(canonicalPaidClaimChange!="pickup-replacement"));
+                if(canonicalPaidClaimChange=="counter-rejoin")Assert.That(now.Length,Is.EqualTo(2));
+                else
+                {
+                    Assert.That(PaidOriginCounter.TryCaptureAssignment(Paid.ActorId,out _),Is.False);Assert.That(now.Length,Is.EqualTo(1));
+                    Assert.That(now.Single().CanonicalOwner,Is.SameAs(PaidPickup));
+                }
+                var tokens=PaidCapacity.GetReservations();Assert.That(tokens.Count,Is.EqualTo(3));
+                var counter=tokens.Single(v=>v.Kind==AnimalCafe.Capacity.CapacityKind.CounterQueue);
+                var total=tokens.Single(v=>v.Kind==AnimalCafe.Capacity.CapacityKind.TotalCustomers);
+                var waiting=tokens.Single(v=>v.Kind==AnimalCafe.Capacity.CapacityKind.PickUp);
+                Assert.That(counter.Token,Is.SameAs(originalCounterToken));Assert.That(counter.State,Is.EqualTo(AnimalCafe.Capacity.ReservationState.Released));
+                Assert.That(total.Token,Is.SameAs(originalTotalToken));Assert.That(total.State,Is.EqualTo(AnimalCafe.Capacity.ReservationState.Occupied));
+                Assert.That(waiting.Token,Is.SameAs(originalPickupToken));Assert.That(waiting.State,Is.EqualTo(AnimalCafe.Capacity.ReservationState.Reserved));
+            }
+            internal void PumpPaidCacheGapWithoutPreparation()
+            {
+                Core.EvaluateMovement(Request(Exit,ExitStart,ExitGoal,Snapshot,frame:frame++,resource:"pickup/"+Exit.ActorId,seconds:30));
+                Core.ProcessReady(frame++);
+            }
+            internal void PrepareAndBindNextPaidAfterCacheGap()
+            {
+                Core.PrepareLeg(PaidSource,PaidResource,1,paidLife,2,Snapshot,paidPosition,.05f,frame++);Core.ProcessReady(frame++);
+                var next=Core.GetDecision(Paid);Assert.That(next.Kind,Is.EqualTo(TrafficDecisionKind.Granted),next.Reason);
+                Assert.That(Core.TryCommit(next),Is.True);paidLeg=1;paidStamp=new TrafficNativeStamp(8302,2);
+                Assert.That(Core.BindLeg(Paid,paidLife,paidStamp),Is.True);paidMoving=true;Refresh();
+                Core.NotifyChanged(Paid,"body");Core.ProcessReady(frame++);
+            }
+            internal void RecheckPaidCheckpoint()
+            {Core.NotifyChanged(Paid,"body");Core.ProcessReady(frame++);}
+
             internal void FinishGate()
             {
                 gatePosition=GateEnd;gateMoving=false;Refresh();
@@ -3359,6 +4989,142 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 Assert.That(Core.TryCommit(Core.GetDecision(Late)),Is.True);
                 Assert.That(Core.BindLeg(Late,lateLife,new TrafficNativeStamp(8401,1)),Is.True);lateMoving=true;Refresh();
             }
+        }
+        [TestCase("continue")] [TestCase("discard")] [TestCase("expire")]
+        public void ActualExitOriginalBoundPaidSourceRetainsItsRealPreparedNextCheckpoint(string after)
+        {
+            var f=new OriginalExitSelectedSuffixFixture(paidEndpointFreeze:true,paidCheckpointAtExit:true);
+            var frozen=D1Read(f.Core,f.Exit,"FrozenOwners");var pool=D1Read(f.Core,f.Exit,"FrozenResources");
+            var age=D1Read(f.Core,f.Exit,"FirstFrame");var seq=f.InitialWait.RequestSequence;
+            var originalLeg=D1Read(f.Core,f.Paid,"Leg");var life=D3ReadField(originalLeg,"ActorLife");
+            var index=(int)D3ReadField(originalLeg,"Index");var generation=(int)D3ReadField(originalLeg,"Generation");
+            f.Core.Tick(.25f,false);var debt=(float)D1Read(f.Core,f.Exit,"WaitRemaining");
+            f.PreparePaidLastLegAtExitCheckpoint();
+            var leg=D1Read(f.Core,f.Paid,"Leg");var request=(TrafficRequest)D1Read(f.Core,f.Paid,"Request");
+            Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));
+            Assert.That(D3ReadField(leg,"Proof"),Is.SameAs(f.PaidProof));Assert.That(D3ReadField(leg,"ActorLife"),Is.SameAs(life));
+            Assert.That((int)D3ReadField(leg,"Index"),Is.GreaterThan(index));Assert.That((int)D3ReadField(leg,"Generation"),Is.GreaterThan(generation));
+            Assert.That(D1Read(f.Core,f.Paid,"Prepared"),Is.EqualTo(true));Assert.That(D1Read(f.Core,f.Paid,"Active"),Is.EqualTo(false));
+            Assert.That(D3ReadField(leg,"Committed"),Is.EqualTo(false));Assert.That(D3ReadField(leg,"Bound"),Is.EqualTo(false));
+            Assert.That(D3ReadField(leg,"Stamp"),Is.EqualTo(default(TrafficNativeStamp)));
+            var body=f.Snapshot.Bodies.Single(b=>b.Owner.Equals(f.Paid));
+            Assert.That(body.Position,Is.EqualTo(request.Start));Assert.That(body.Position,Is.EqualTo(f.Crossing));
+            Assert.That(body.IndependentlyProgressing,Is.False);Assert.That(body.RemainingSeconds,Is.Zero);
+            var waiting=f.Core.GetDecision(f.Exit);
+            Assert.That(waiting.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),
+                "FEATURE: original Bound source reached its real next Prepared checkpoint without becoming a new owner: "+waiting.Reason);
+            Assert.That(waiting.Blockers.Any(b=>b.Owner.Equals(f.Paid)&&b.ResourceId=="body"&&b.Proof=="live-body-checkpoint"),Is.True);
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(pool));
+            CollectionAssert.AreEquivalent(new[]{f.Gate},(IEnumerable<TrafficIntentKey>)frozen);
+            Assert.That(waiting.RequestSequence,Is.EqualTo(seq));Assert.That(D1Read(f.Core,f.Exit,"FirstFrame"),Is.EqualTo(age));
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo(debt));Assert.That(waiting.AcquiredSequence,Is.Zero);
+            Assert.That(f.Core.TryCommit(waiting),Is.False);
+            if(after=="discard")
+            {Assert.That(f.Core.DiscardPrepared(f.Paid),Is.True);f.RecheckPaidCheckpoint();}
+            else if(after=="expire")f.Core.Tick(31,false);
+            else
+            {
+                f.CommitPreparedLastPaidLeg();f.FinishPaid();var ready=f.Core.GetDecision(f.Exit);
+                Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);Assert.That(f.Core.TryCommit(ready),Is.True);return;
+            }
+            var refused=f.Core.GetDecision(f.Exit);
+            if(after=="discard")
+            {
+                Assert.That(refused.Kind,Is.EqualTo(TrafficDecisionKind.Granted),refused.Reason);
+                Assert.That(refused.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));Assert.That(refused.Blockers,Is.Empty);
+                Assert.That(refused.AcquiredSequence,Is.Zero);Assert.That(D1Read(f.Core,f.Exit,"Prepared"),Is.EqualTo(true));
+                Assert.That(f.Core.HasActiveGrant(f.Exit),Is.False);
+                var actual=f.Snapshot.Bodies.Single(b=>b.Owner.Equals(f.Paid));
+                Assert.That(actual.Position,Is.EqualTo(f.Crossing));Assert.That(actual.IndependentlyProgressing,Is.False);Assert.That(actual.RemainingSeconds,Is.Zero);
+                Assert.That(D1Read(f.Core,f.Paid,"Discarded"),Is.EqualTo(true));Assert.That(f.Core.HasActiveGrant(f.Paid),Is.False);
+                Assert.That(f.Core.CanIssueLeg(f.Paid,life,(int)D3ReadField(leg,"Generation")),Is.False);
+                Assert.That(f.Core.TryCommit(f.PaidSource),Is.False,"The discarded original source cannot be recommitted");
+                var exitRequest=(TrafficRequest)D1Read(f.Core,f.Exit,"Request");var path=(Vector3[])D1Read(f.Core,f.Exit,"CurrentPath");
+                var proof=refused.ProofRoutes.Single(p=>p.ResourceId==exitRequest.ResourceId);
+                Assert.That(path.Length,Is.GreaterThan(1));CollectionAssert.AreEqual(proof.ExpandedPath,path);
+                var complete=new[]{exitRequest.Start}.Concat(path).Concat(new[]{exitRequest.Target}).ToArray();
+                foreach(var obstacle in f.Snapshot.Bodies.Where(b=>!b.Owner.Equals(f.Exit)))
+                    Assert.That(CustomerRoutePlanner.IsClear(complete,new[]{obstacle.Position},exitRequest.Radius+obstacle.Radius+
+                        Mathf.Max(exitRequest.SafetyMargin,obstacle.SafetyMargin)),Is.True,"New full proof must clear every actual nonself body: "+obstacle.Owner.ActorId);
+                foreach(var claim in f.Snapshot.Parking.Where(p=>!p.Owner.Equals(f.Exit)))
+                    Assert.That(CustomerRoutePlanner.IsClear(complete,new[]{claim.Position},exitRequest.Radius+claim.Radius+
+                        Mathf.Max(exitRequest.SafetyMargin,claim.SafetyMargin)),Is.True,"New full proof must clear every actual nonself claim");
+                Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(pool));
+                CollectionAssert.AreEquivalent(new[]{f.Gate},(IEnumerable<TrafficIntentKey>)frozen);
+                Assert.That(refused.RequestSequence,Is.EqualTo(seq));Assert.That(D1Read(f.Core,f.Exit,"FirstFrame"),Is.EqualTo(age));
+                Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo(debt));
+                Assert.That(f.Core.TryCommit(refused),Is.True,"Only the independently reproved safe Exit may commit");return;
+            }
+            Assert.That(refused.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),refused.Kind+"/"+refused.Reason);
+            Assert.That(refused.AcquiredSequence,Is.Zero);Assert.That(f.Core.TryCommit(refused),Is.False);
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(pool));
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo(debt));
+        }
+
+        [Test]
+        public void ActualExitEndpointFirstFreezeCapturesAlreadyBoundPaidBeforePrimaryProof()
+        {
+            var f=new OriginalExitSelectedSuffixFixture(paidEndpointFreeze:true);
+            var entry=D1Read(f.Core,f.Exit,"Request");var first=D1Read(f.Core,f.Exit,"FirstFrame");
+            var frozen=D1Read(f.Core,f.Exit,"FrozenOwners");var resources=D1Read(f.Core,f.Exit,"FrozenResources");
+            var sequence=f.InitialWait.RequestSequence;var debt=(float)D1Read(f.Core,f.Exit,"WaitRemaining");
+            Assert.That(f.Core.QueriesConsumed(f.Exit),Is.Zero,"PREMISE: endpoint body installs the first WAIT before any primary query");
+            Assert.That(((System.Collections.ICollection)D1Read(f.Core,f.Exit,"Jobs")).Count,Is.Zero);
+            Assert.That((Vector3[])D1Read(f.Core,f.Exit,"CurrentPath"),Is.Empty);
+            Assert.That(f.InitialWait.Blockers.All(b=>b.Owner.Equals(f.Gate)&&b.ResourceId=="body"),Is.True);
+            CollectionAssert.AreEquivalent(new[]{f.Gate},(IEnumerable<TrafficIntentKey>)frozen);
+            var ownerLeg=D1Read(f.Core,f.Paid,"Leg");var originalLife=D3ReadField(ownerLeg,"ActorLife");
+            Assert.That(f.Paid.IntentId,Is.EqualTo("pickup-paid-movement"));Assert.That(f.PaidSource.AcquiredSequence,Is.GreaterThan(0));
+            Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));Assert.That(D1Read(f.Core,f.Paid,"Active"),Is.EqualTo(true));
+            Assert.That(D3ReadField(ownerLeg,"Committed"),Is.EqualTo(true));Assert.That(D3ReadField(ownerLeg,"Bound"),Is.EqualTo(true));
+            Assert.That(D3ReadField(ownerLeg,"Completed"),Is.EqualTo(false));
+            var originalStamp=(TrafficNativeStamp)D3ReadField(ownerLeg,"Stamp");Assert.That(originalStamp.RequestId,Is.GreaterThan(0));
+            f.Core.Tick(.25f,false);debt-=.25f;f.AdvancePaidToLastLeg();f.FinishGate();
+            var waiting=f.Core.GetDecision(f.Exit);
+            Assert.That(waiting.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),
+                "FEATURE: completing the original primary discovers an already-Bound original paid source, not a later owner: "+waiting.Reason);
+            Assert.That(waiting.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));Assert.That(waiting.AcquiredSequence,Is.Zero);
+            Assert.That(waiting.Blockers.Any(b=>b.Owner.Equals(f.Paid)&&b.ResourceId==f.PaidResource&&b.Proof=="current-conflict-segment"),Is.True);
+            Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));Assert.That(D3ReadField(D1Read(f.Core,f.Paid,"Leg"),"ActorLife"),Is.SameAs(originalLife));
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(resources));
+            CollectionAssert.AreEquivalent(new[]{f.Gate},(IEnumerable<TrafficIntentKey>)frozen);
+            Assert.That(waiting.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(f.Core,f.Exit,"FirstFrame"),Is.EqualTo(first));
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.EqualTo(debt).Within(.0001));Assert.That(f.Core.QueriesConsumed(f.Exit),Is.GreaterThan(0));
+            f.MovePaidBodyOntoOriginalCrossing(true,notifyOwnedRoute:true);waiting=f.Core.GetDecision(f.Exit);
+            Assert.That(waiting.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),waiting.Reason);
+            Assert.That(waiting.Blockers.Any(b=>b.Owner.Equals(f.Paid)&&b.ResourceId=="body"),Is.True);
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(f.Core.TryCommit(waiting),Is.False);
+            f.FinishPaid();var clear=f.Core.GetDecision(f.Exit);Assert.That(clear.Kind,Is.EqualTo(TrafficDecisionKind.Granted),clear.Reason);
+            Assert.That(clear.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo(debt));Assert.That(f.Core.TryCommit(clear),Is.True);
+        }
+        [Test]
+        public void ActualExitEndpointFreezeCannotAdoptPaidFirstLegBoundOnlyAfterFreeze()
+        {
+            var f=new OriginalExitSelectedSuffixFixture(paidEndpointFreeze:true,paidFirstLegUnboundAtFreeze:true);
+            var frozen=D1Read(f.Core,f.Exit,"FrozenOwners");var resources=D1Read(f.Core,f.Exit,"FrozenResources");
+            var first=D1Read(f.Core,f.Exit,"FirstFrame");var sequence=f.InitialWait.RequestSequence;
+            Assert.That(f.Core.QueriesConsumed(f.Exit),Is.Zero);
+            Assert.That((Vector3[])D1Read(f.Core,f.Exit,"CurrentPath"),Is.Empty);
+            Assert.That(f.InitialWait.Blockers.All(b=>b.Owner.Equals(f.Gate)&&b.ResourceId=="body"),Is.True);
+            CollectionAssert.AreEquivalent(new[]{f.Gate},(IEnumerable<TrafficIntentKey>)frozen);
+            Assert.That(f.PaidSource.AcquiredSequence,Is.GreaterThan(0),"PREMISE: original paid source really committed before freeze");
+            Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));
+            Assert.That(D1Read(f.Core,f.Paid,"Prepared"),Is.EqualTo(true));
+            var leg=D1Read(f.Core,f.Paid,"Leg");
+            Assert.That(D3ReadField(leg,"Committed"),Is.EqualTo(false));Assert.That(D3ReadField(leg,"Bound"),Is.EqualTo(false));
+            f.Core.Tick(.25f,false);var remaining=(float)D1Read(f.Core,f.Exit,"WaitRemaining");
+            f.AdvancePaidToLastLeg();
+            Assert.That(D1Read(f.Core,f.Paid,"JourneyPermit"),Is.SameAs(f.PaidSource));
+            Assert.That(D3ReadField(D1Read(f.Core,f.Paid,"Leg"),"Bound"),Is.EqualTo(true));
+            f.FinishGate();var refused=f.Core.GetDecision(f.Exit);
+            Assert.That(refused.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed),refused.Reason);
+            Assert.That(refused.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            Assert.That(refused.AcquiredSequence,Is.Zero);Assert.That(f.Core.TryCommit(refused),Is.False);
+            Assert.That(refused.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(f.Core,f.Exit,"FirstFrame"),Is.EqualTo(first));
+            Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(resources));
+            CollectionAssert.AreEquivalent(new[]{f.Gate},(IEnumerable<TrafficIntentKey>)frozen);
+            Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo(remaining));
         }
         [Test]
         public void ActualExitEndpointFirstFreezeCapturesAlreadyBoundCanonicalCounterBeforePrimaryProof()
@@ -3508,10 +5274,10 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             Assert.That(D1Read(f.Core,f.Exit,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(f.Core,f.Exit,"FrozenResources"),Is.SameAs(pool));
             Assert.That((float)D1Read(f.Core,f.Exit,"WaitRemaining"),Is.LessThanOrEqualTo(remaining));
         }
-        [Test]
-        public void ActualExitOriginalSuffixEligibilityCannotAdoptAnOwnerCommittedAfterFirstFreeze()
+        [TestCase(false)] [TestCase(true)]
+        public void ActualExitOriginalSuffixEligibilityCannotAdoptAnOwnerCommittedAfterFirstFreeze(bool endpointFirst)
         {
-            var f=new OriginalExitSelectedSuffixFixture();var frozen=D1Read(f.Core,f.Exit,"FrozenOwners");
+            var f=new OriginalExitSelectedSuffixFixture(paidEndpointFreeze:endpointFirst);var frozen=D1Read(f.Core,f.Exit,"FrozenOwners");
             f.Core.Tick(.25f,false);var remaining=(float)D1Read(f.Core,f.Exit,"WaitRemaining");
             f.AddActuallyBoundLateOwner();f.FinishGate();var refused=f.Core.GetDecision(f.Exit);
             Assert.That(refused.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed));Assert.That(refused.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
@@ -3706,6 +5472,88 @@ namespace AnimalCafe.Tests.EditMode.Phase14
         private static TrafficIntentKey Key(string actor, string phase = "journey", int generation = 1,
             int layout = 7, long epoch = 1, string session = "scene")
             => new TrafficIntentKey(session, epoch, actor, phase, generation, layout, "order.1");
+        [TestCase("blocked")] [TestCase("clear")] [TestCase("body-only")]
+        public void FiniteBodyHintCannotOverrideCurrentBoundRouteBlockedByAPhysicalBody(string mode)
+        {
+            var known=mode!="body-only";
+            var owner=Key("authoritative-finite-owner",known?"pickup-paid-movement":"body");
+            var incoming=Key("authoritative-fallback-waiter","parking");var obstacle=Key("authoritative-route-obstacle","body");
+            var ownerLife=new object();var waiterLife=new object();var obstacleLife=new object();
+            var from=known?P(2,-3):P(2);var goal=P(2,3);var target=P(2);
+            var resource=known?"pickup/"+owner.ActorId:"body";
+            TrafficWorldSnapshot Snapshot(int version,bool changed)
+            {
+                var pose=from+(changed?Vector3.forward*.1f:Vector3.zero);
+                var bodies=new List<TrafficBodyFact>{
+                    new TrafficBodyFact(owner,pose,.4f,independentlyProgressing:true,remainingSeconds:changed?12.5f:13f,actorLife:ownerLife),
+                    new TrafficBodyFact(incoming,Origin,.4f,actorLife:waiterLife)};
+                if(changed)bodies.Add(new TrafficBodyFact(obstacle,mode=="blocked"?P(2,1):P(5,1),.4f,actorLife:obstacleLife));
+                return World(version,version,bodies.ToArray());
+            }
+            var world=Snapshot(1,false);var calls=0;
+            var core=Coordinator(world,waitSeconds:30,query:(a,b)=>{calls++;return new[]{a,b};});
+            TrafficDecision source=null;object originalLeg=null;var stamp=new TrafficNativeStamp(9711,1);
+            if(known)
+            {
+                source=Grant(core,Request(owner,from,goal,world,frame:1,resource:resource,seconds:13));
+                core.PrepareLeg(source,resource,0,ownerLife,1,world,from,.05f,2);core.ProcessReady(2);
+                Assert.That(core.TryCommit(core.GetDecision(owner)),Is.True);Assert.That(core.BindLeg(owner,ownerLife,stamp),Is.True);
+                originalLeg=D1Read(core,owner,"Leg");
+                Assert.That(D3ReadField(originalLeg,"Committed"),Is.EqualTo(true));Assert.That(D3ReadField(originalLeg,"Bound"),Is.EqualTo(true));
+                Assert.That(D3ReadField(originalLeg,"Completed"),Is.EqualTo(false));Assert.That(core.HasActiveGrant(owner),Is.True);
+            }
+            else Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries")).Contains(owner),Is.False,
+                "CONTROL: caller-owned finite business/body facts have no known Core route to contradict");
+            var request=Request(incoming,Origin,target,world,frame:11,resource:"prospective-parking",seconds:20);
+            core.EvaluateParking(request);core.ProcessReady(11);var original=core.GetDecision(incoming);
+            Assert.That(original.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),"PREMISE: initial clear source supplies the real original finite WAIT: "+original.Reason);
+            Assert.That(original.Blockers.Any(b=>b.Owner.Equals(owner)&&b.ResourceId==resource),Is.True);
+            var entry=((System.Collections.IDictionary)D3ReadField(core,"entries"))[incoming];
+            var frozen=D1Read(core,incoming,"FrozenOwners");var pool=D1Read(core,incoming,"FrozenResources");
+            var age=D1Read(core,incoming,"FirstFrame");var sequence=original.RequestSequence;
+            CollectionAssert.AreEquivalent(new[]{owner},(IEnumerable<TrafficIntentKey>)frozen);
+            core.Tick(.5f,false);var debt=(float)D1Read(core,incoming,"WaitRemaining");
+            var queries=core.QueriesConsumed(incoming);var ownerQueries=core.QueriesConsumed(owner);var beforeCalls=calls;
+            world=Snapshot(2,true);core.SetSnapshot(world);
+            if(known)
+            {
+                Assert.That(D1Read(core,owner,"JourneyPermit"),Is.SameAs(source));Assert.That(D1Read(core,owner,"Leg"),Is.SameAs(originalLeg));
+                Assert.That(D3ReadField(originalLeg,"Stamp"),Is.EqualTo(stamp));Assert.That(D3ReadField(originalLeg,"Bound"),Is.EqualTo(true));
+                Assert.That(core.HasActiveGrant(owner),Is.True);
+                var actualPath=(Vector3[])D1Read(core,owner,"CurrentPath");var physical=world.Bodies.Single(b=>b.Owner.Equals(obstacle));
+                Assert.That(actualPath.Length,Is.GreaterThan(1));
+                Assert.That(CustomerRoutePlanner.IsClear(actualPath,new[]{physical.Position},.8f),Is.EqualTo(mode!="blocked"),
+                    "PREMISE: the new stationary body blocks the SAME currently Bound route, not an old prefix or another source");
+                Assert.That(CustomerRoutePlanner.IsClear(new[]{target},new[]{physical.Position},.8f),Is.True,
+                    "PREMISE: obstacle does not directly occupy the waiter's endpoint");
+            }
+            var hint=world.Bodies.Single(b=>b.Owner.Equals(owner));
+            Assert.That(hint.Enabled&&hint.ActorActive&&hint.IndependentlyProgressing,Is.True);Assert.That(hint.RemainingSeconds,Is.GreaterThan(0));
+            // The same production reprepare seam refreshes metadata only; the related owner event wakes the old wait.
+            // 正常重证入口只刷新原snapshot；再用原owner/resource事件唤醒，不重建Entry或Frozen。
+            Assert.That(CfcReprepare(core,original,Request(incoming,Origin,target,world,frame:11,resource:"prospective-parking",seconds:20),out var refreshed),Is.True);
+            Assert.That(refreshed,Is.SameAs(original));
+            core.NotifyChanged(owner,resource);core.ProcessReady(12);var actual=core.GetDecision(incoming);
+            Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries"))[incoming],Is.SameAs(entry));
+            Assert.That(D1Read(core,incoming,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(core,incoming,"FrozenResources"),Is.SameAs(pool));
+            Assert.That(D1Read(core,incoming,"FirstFrame"),Is.EqualTo(age));Assert.That(actual.RequestSequence,Is.EqualTo(sequence));
+            Assert.That((float)D1Read(core,incoming,"WaitRemaining"),Is.LessThanOrEqualTo(debt));
+            Assert.That(core.QueriesConsumed(incoming),Is.EqualTo(queries));Assert.That(core.QueriesConsumed(owner),Is.EqualTo(ownerQueries));Assert.That(calls,Is.EqualTo(beforeCalls));
+            Assert.That(actual.AcquiredSequence,Is.Zero);Assert.That(core.TryCommit(actual),Is.False);Assert.That(core.HasActiveGrant(incoming),Is.False);
+            if(mode=="blocked")
+            {
+                Assert.That(actual.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed),
+                    "FEATURE: a known original Bound route fails current independent clearance; its own finite body hint cannot restore that release promise: "+actual.Reason);
+                Assert.That(actual.Reason,Is.EqualTo("no-independent-finite-release-or-cycle"));Assert.That(actual.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+            }
+            else
+            {
+                Assert.That(actual.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),actual.Reason);
+                Assert.That(actual.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));Assert.That(actual.Blockers.Any(b=>b.Owner.Equals(owner)),Is.True);
+            }
+        }
+
+
         private static TrafficWorldSnapshot World(long version = 1, long bodies = 1,
             TrafficBodyFact[] actors = null, TrafficParkingFact[] parking = null)
             => new TrafficWorldSnapshot(version, bodies, actors, parking);
@@ -5374,6 +7222,105 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             Assert.That(D1Read(coordinator,key,"WaitingBlockers"),Is.SameAs(edges));Assert.That(D1Read(coordinator,key,"Queued"),Is.EqualTo(queued));
             Assert.That(D1Read(coordinator,key,"Prepared"),Is.EqualTo(ready));
             CollectionAssert.AreEqual(jobs,((System.Collections.IList)D1Read(coordinator,key,"Jobs")).Cast<object>().ToArray());
+        }
+
+        [TestCase("future-capability")]
+        [TestCase("selected-route")]
+        [TestCase("fresh-primary-body")]
+        [TestCase("changed-required-keepout")]
+        [TestCase("new-canonical-claim")]
+        [TestCase("later-prepared-parking")]
+        public void CfcBodyRefreshDistinguishesFutureCapabilityFromCurrentSelectedRights(string change)
+        {
+            var key=Key("future-capability-candidate");var walker=Key("future-capability-walker");var walkerLife=new object();
+            var walkerStart=P(6,2);var walkerGoal=P(6,6);var capabilityStart=P(4,4);var capabilityGoal=P(8,4);
+            var world=World(17,1,new[]{new TrafficBodyFact(walker,walkerStart,.4f,true,true,8,actorLife:walkerLife)});
+            var calls=0;var core=Coordinator(world,query:(from,to)=>{calls++;return new[]{from,to};});
+            // The other right is an actual public committed and Bound strict leg, not a synthetic finite flag.
+            // 真正公开 commit/PrepareLeg/Bind 建立移动源；不写 Entry、Proof 或 Native stamp。
+            var walking=Grant(core,Request(walker,walkerStart,walkerGoal,world,resource:"walker-route"));
+            Assert.That(core.PrepareLeg(walking,"walker-route",0,walkerLife,1,world,walkerStart,.05f,2).Kind,
+                Is.EqualTo(TrafficDecisionKind.DeferredByBudget));
+            core.ProcessReady(2);var walkerLeg=core.GetDecision(walker);
+            Assert.That(walkerLeg.Kind,Is.EqualTo(TrafficDecisionKind.Granted));Assert.That(core.TryCommit(walkerLeg),Is.True);
+            Assert.That(core.BindLeg(walker,walkerLife,new TrafficNativeStamp(51,1)),Is.True);
+            Assert.That(core.TryGetCommittedLegProvenance(walker,walkerLife,1,out var actualSource,out var provenance),Is.True);
+            Assert.That(actualSource,Is.SameAs(walking));Assert.That(provenance,Is.SameAs(world));
+            CollectionAssert.AreEqual(new[]{walkerStart,walkerGoal},(Vector3[])D1Read(core,walker,"CurrentPath"));
+
+            var incoming=new CounterQueueService(new[]{P(4)});var version=incoming.Version;
+            Assert.That(incoming.TryPrepareMutation(CounterQueueService.MutationKind.Join,key.ActorId,version,out var birth),Is.True);
+            var selected=change=="selected-route";
+            var role=new TrafficRouteRequirement("collection-exit-capability",capabilityStart,capabilityGoal,.8f,
+                selectedJourney:selected,avoidProposedParking:false);
+            core.EvaluateParking(CfcAnchorRequest(key,world,birth.Assignment.Position,requirements:new[]{role}));core.ProcessReady(11);
+            var original=core.GetDecision(key);
+            Assert.That(CustomerRoutePlanner.IsClear(new[]{Origin,P(4)},new[]{walkerStart,walkerGoal},.8f),Is.True,
+                "PREMISE: current primary and endpoints are physically separated from the actual moving owner");
+            Assert.That(CustomerRoutePlanner.IsClear(new[]{capabilityStart,capabilityGoal},new[]{walkerStart},.8f),Is.True,
+                "PREMISE: current body is clear of the future capability; only its Bound path crosses at (6,4)");
+            if(selected)
+            {
+                Assert.That(original.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),original.Reason);
+                Assert.That(original.Blockers.Any(b=>b.Owner.Equals(walker) && b.Proof=="current-conflict-segment"),Is.True);
+                Assert.That(core.TryCommit(original,birth),Is.False);Assert.That(incoming.Version,Is.EqualTo(version));return;
+            }
+            Assert.That(original.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"PREMISE: initial future capability does not acquire the crossing path: "+original.Reason);
+            var primary=original.ProofRoutes.Single(r=>r.ResourceId=="canonical/"+key.ActorId);
+            var capability=original.ProofRoutes.Single(r=>r.ResourceId==role.ResourceId);
+            CollectionAssert.AreEqual(new[]{Origin,P(4)},primary.ExpandedPath);
+            CollectionAssert.AreEqual(new[]{capabilityStart,capabilityGoal},capability.ExpandedPath);
+            Assert.That((Vector3[])D1Read(core,key,"Journey"),Is.Empty,"Nonselected capability is not protected movement");
+            var entry=D1Read(core,key,"Request");var jobs=((System.Collections.IList)D1Read(core,key,"Jobs")).Cast<object>().ToArray();
+            var queries=core.QueriesConsumed(key);var callsBefore=calls;var debt=D1Read(core,key,"WaitRemaining");
+            var sequence=original.RequestSequence;var frozen=D1Read(core,key,"FrozenOwners");
+            if(change=="later-prepared-parking")
+            {
+                // A real other producer prepares parking after the original proof; no fake grant or canonical claim.
+                // 真正公开prepared right，目标只占未来capability，不占primary或已Bound移动源。
+                var later=Key("later-prepared-capability-parking");var laterQueue=new CounterQueueService(new[]{P(5,4)});
+                Assert.That(laterQueue.TryPrepareMutation(CounterQueueService.MutationKind.Join,later.ActorId,laterQueue.Version,out var laterPreview),Is.True);
+                core.EvaluateParking(Request(later,laterPreview.Assignment.Position,laterPreview.Assignment.Position,world,frame:12,resource:"later-parking"));
+                core.ProcessReady(12);var prepared=core.GetDecision(later);
+                Assert.That(prepared.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"PREMISE: actual public parking preparation");
+                Assert.That(prepared.AcquiredSequence,Is.Zero);Assert.That(core.HasActiveGrant(later),Is.False);
+                Assert.That(D1Read(core,later,"Prepared"),Is.EqualTo(true));Assert.That(laterQueue.Snapshot,Is.Empty);
+                Assert.That(laterPreview.IsCurrent,Is.True);
+                Assert.That(CustomerRoutePlanner.IsClear(primary.ExpandedPath,new[]{laterPreview.Assignment.Position},.8f),Is.True);
+                Assert.That(CustomerRoutePlanner.IsClear(capability.ExpandedPath,new[]{laterPreview.Assignment.Position},.8f),Is.False);
+                callsBefore=calls; // Count only the following refresh; the other producer's preparation is separate work.
+            }
+            var bodies=new List<TrafficBodyFact>{new TrafficBodyFact(walker,P(6,2.1f),.4f,true,true,8,actorLife:walkerLife)};
+            if(change=="fresh-primary-body")bodies.Add(new TrafficBodyFact(Key("fresh-physical-body"),P(2),.4f,actorLife:new object()));
+            var parking=Array.Empty<TrafficParkingFact>();
+            if(change=="new-canonical-claim")
+            {
+                var foreign=Key("new-real-canonical");var owner=new CounterQueueService(new[]{P(4)});
+                Assert.That(owner.TryJoin(foreign.ActorId),Is.True);Assert.That(owner.TryCaptureAssignment(foreign.ActorId,out var claim),Is.True);
+                parking=new[]{new TrafficParkingFact(foreign,owner,owner.Version,"counter/"+foreign.ActorId,claim.Assignment.Position,.4f,semanticCheckpoint:claim)};
+            }
+            var currentRole=change=="changed-required-keepout"?new TrafficRouteRequirement(role.ResourceId,role.Start,role.Goal,role.Clearance,
+                new[]{P(6,4)},avoidProposedParking:false):role;
+            world=World(change=="new-canonical-claim"?18:17,2,bodies.ToArray(),parking);core.SetSnapshot(world);
+            Assert.That(CfcReprepare(core,original,CfcAnchorRequest(key,world,birth.Assignment.Position,99,new[]{currentRole}),out var refreshed),Is.True);
+            Assert.That(core.QueriesConsumed(key),Is.EqualTo(queries));Assert.That(calls,Is.EqualTo(callsBefore),"Refresh performs no Native queries");
+            Assert.That(refreshed.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(core,key,"FirstFrame"),Is.EqualTo(11));
+            Assert.That(D1Read(core,key,"WaitRemaining"),Is.EqualTo(debt));Assert.That(D1Read(core,key,"FrozenOwners"),Is.SameAs(frozen));
+            Assert.That(refreshed.AcquiredSequence,Is.Zero);Assert.That(incoming.Version,Is.EqualTo(version));
+            if(change!="future-capability")
+            {
+                Assert.That(refreshed.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),"Unsafe or changed declared facts require ordinary reproof");
+                Assert.That(refreshed,Is.Not.SameAs(original));Assert.That(core.TryCommit(original,birth),Is.False);
+                Assert.That(incoming.Snapshot,Is.Empty);Assert.That(birth.IsCurrent,Is.True);return;
+            }
+            Assert.That(refreshed,Is.SameAs(original),"FEATURE: future nonselected capability alone must not become a current route mutex after a body refresh");
+            Assert.That(refreshed.Kind,Is.EqualTo(TrafficDecisionKind.Granted));Assert.That(refreshed.ProofRoutes.Single(r=>r.ResourceId==role.ResourceId),Is.SameAs(capability));
+            CollectionAssert.AreEqual(jobs,((System.Collections.IList)D1Read(core,key,"Jobs")).Cast<object>().ToArray());
+            Assert.That(D1Read(core,key,"Request"),Is.Not.SameAs(entry));Assert.That(core.TryCommit(refreshed,birth),Is.True);
+            Assert.That(incoming.Version,Is.EqualTo(version+1));Assert.That(incoming.Snapshot.Single().VisitId,Is.EqualTo(key.ActorId));
+            Assert.That((Vector3[])D1Read(core,key,"Journey"),Is.Empty);Assert.That(D1Read(core,key,"Leg"),Is.Null);
+            Assert.That(core.CanIssueLeg(key,new object(),1),Is.False,"A capability certificate still cannot issue any Native leg");
+            Assert.That(core.GetDecision(walker),Is.SameAs(walkerLeg));Assert.That(core.HasActiveGrant(walker),Is.True);
         }
 
         [Test] public void CfcBodyOnlySafeWalkingAllowsBoundedCanonicalConsumptionAfterPostPumpRefresh()
@@ -12824,6 +14771,104 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 Core.EvaluateParking(Proposal(20),0,1);Core.ProcessReady(20);
             }
         }
+        // Existing producer-hold protocol, not the CFC hook's Feature RED.
+        // 实际 CollectionLease preview 暂缺只暂停原 WAIT；不新增 Frozen/预算/权限。
+        [TestCase(false)][TestCase(true)]
+        public void RealCollectionPreviewUnavailableDuringDeliveryLeasePreservesOriginalWaitUntilRelease(bool expire)
+        {
+            var f=new CollectionIssuedAdvanceDebtModel();
+            var staff=Key("collection-preview-staff","employee-pickup-journey",45);var staffLife=new object();
+            var staffStart=P(4,5);var staffPose=staffStart;var oldPose=f.Snapshot.Bodies.Single(b=>b.Owner.Equals(f.Old)).Position;
+            var oldPresent=true;var oldCompleted=false;var staffMoving=false;var version=f.Snapshot.Version;
+            void Publish()
+            {
+                var bodies=f.Snapshot.Bodies.Where(b=>!b.Owner.Equals(f.Old) && !b.Owner.Equals(staff)).ToList();
+                if(oldPresent)bodies.Add(new TrafficBodyFact(f.Old,oldPose,.4f,independentlyProgressing:!oldCompleted,
+                    remainingSeconds:oldCompleted?0:13,actorLife:f.OldLife));
+                bodies.Add(new TrafficBodyFact(staff,staffPose,.4f,independentlyProgressing:staffMoving,
+                    remainingSeconds:staffMoving?13:0,actorLife:staffLife));
+                var parking=new List<TrafficParkingFact>();
+                foreach(var id in new[]{f.Head.ActorId,"collection-debt-unused-gap",f.Advance.ActorId})
+                {
+                    Assert.That(f.Pickup.TryCaptureReservation(id,out var claim),Is.True);
+                    parking.Add(new TrafficParkingFact(id==f.Head.ActorId?f.HeadBody:id==f.Advance.ActorId?f.AdvanceBody:Key(id,"reserved-gap"),
+                        f.Pickup,f.Pickup.Version,"pickup/"+id,claim.Assignment.Position,.4f,
+                        businessOwner:f.Business,releaseObligation:f.Obligation,semanticCheckpoint:claim));
+                }
+                if(f.Pickup.TryGetServiceLease(staff.ActorId,out var side))
+                    parking.Add(new TrafficParkingFact(staff,f.Pickup,f.Pickup.Version,"service/"+staff.ActorId,side,.4f,
+                        semanticCheckpoint:ActualServiceLeaseModelCheckpoint.Capture(f.Pickup,staff.ActorId)));
+                f.Snapshot=World(++version,version,bodies.ToArray(),parking.ToArray());f.Core.SetSnapshot(f.Snapshot);
+            }
+            void BindStaff(TrafficDecision source,string resource,int generation,int frame,TrafficNativeStamp stamp)
+            {
+                var leg=f.Core.PrepareLeg(source,resource,0,staffLife,generation,f.Snapshot,staffPose,.08f,frame);
+                if(leg.Kind==TrafficDecisionKind.DeferredByBudget){f.Core.ProcessReady(frame);leg=f.Core.GetDecision(staff);}
+                Assert.That(leg.Kind,Is.EqualTo(TrafficDecisionKind.Granted),leg.Reason);
+                Assert.That(f.Core.TryCommit(leg),Is.True);Assert.That(f.Core.BindLeg(staff,staffLife,stamp),Is.True);
+            }
+            Publish();
+            var request=new TrafficRequest(staff,10,f.Snapshot,staffStart,f.Side,.4f,"pickup/"+staff.ActorId,
+                requirements:new[]{new TrafficRouteRequirement("selected-home",f.Side,staffStart,.8f,selectedJourney:true,avoidProposedParking:false)},
+                finiteSeconds:13,planPrimaryRoute:true);
+            Assert.That(f.Pickup.TryPrepareMutation(PickupQueueService.MutationKind.DeliveryLease,staff.ActorId,f.Pickup.Version,out var delivery,f.Side),Is.True);
+            f.Core.EvaluateParking(request);f.Core.ProcessReady(10);var staffSource=f.Core.GetDecision(staff);
+            Assert.That(staffSource.Kind,Is.EqualTo(TrafficDecisionKind.Granted),staffSource.Reason);
+            Assert.That(f.Core.TryCommit(staffSource,delivery),Is.True,"PREMISE: actual Core/PQS joint delivery lease commit");
+            Assert.That(f.Pickup.TryCaptureDeliveryLease(staff.ActorId,out var lease),Is.True);Assert.That(lease.IsCurrent,Is.True);
+            Assert.That(f.OriginalPreview.IsCurrent,Is.False);
+            Assert.That(f.Pickup.TryPrepareMutation(PickupQueueService.MutationKind.CollectionLease,f.Head.ActorId,f.Pickup.Version,out _,f.Side),Is.False);
+            Publish();var outgoing=new TrafficNativeStamp(9101,9);BindStaff(staffSource,"pickup/"+staff.ActorId,9,11,outgoing);
+            staffMoving=true;Publish();
+            var expected=f.Core.GetDecision(f.Head);Assert.That(expected,Is.SameAs(f.OriginalWait));
+            var queries=f.Core.QueriesConsumed(f.Head);var calls=f.Calls;
+            Assert.That(HoldProducerPreview(f.Core,expected),Is.True,"PROTOCOL: existing hold API accepts this genuine missing CollectionLease preview");
+            Assert.That(D1Read(f.Core,f.Head,"ProducerPreviewHeld"),Is.True);
+            // Retire the actual original Bound exit, then send the normal original owner notification.
+            oldPose=f.OldEnd;Publish();Assert.That(f.Core.CompleteLeg(f.Old,f.OldLife,f.OldStamp,f.OldEnd),Is.True);
+            oldCompleted=true;oldPresent=false;Publish();f.Core.Retire(f.Old);f.Core.NotifyChanged(f.Old,"body");
+            f.Core.Tick(.25f,false);f.Core.ProcessReady(12);
+            Assert.That(f.Core.GetDecision(f.Head),Is.SameAs(expected));Assert.That(D1Read(f.Core,f.Head,"Queued"),Is.False);
+            Assert.That(f.Core.QueriesConsumed(f.Head),Is.EqualTo(queries));Assert.That(f.Calls,Is.EqualTo(calls));
+            Assert.That(f.Entry,Is.SameAs(f.OriginalEntry));Assert.That(D1Read(f.Core,f.Head,"FirstFrame"),Is.EqualTo(f.Age));
+            Assert.That(D1Read(f.Core,f.Head,"FrozenOwners"),Is.SameAs(f.FrozenOwners));
+            Assert.That(D1Read(f.Core,f.Head,"FrozenResources"),Is.SameAs(f.FrozenResources));
+            Assert.That((IEnumerable<TrafficIntentKey>)f.FrozenOwners,Is.EquivalentTo(new[]{f.Old}));
+            Assert.That((float)D1Read(f.Core,f.Head,"WaitRemaining"),Is.EqualTo(f.Remaining-.25f));
+            Assert.That(expected.AcquiredSequence,Is.Zero);Assert.That(f.Core.HasActiveGrant(f.Head),Is.False);
+            Assert.That(f.Core.TryCommit(expected),Is.False);Assert.That(f.Pickup.ServiceLeases.Keys,Is.EquivalentTo(new[]{staff.ActorId}));
+            if(expire)
+            {
+                f.Core.Tick(f.Remaining,false);var terminal=f.Core.GetDecision(f.Head);
+                Assert.That(terminal.Reason,Is.EqualTo("wait-budget-exhausted"));
+                Assert.That(terminal.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));
+                Assert.That(HoldProducerPreview(f.Core,terminal),Is.False);Assert.That(lease.IsCurrent,Is.True);return;
+            }
+            // Real public outgoing completion and selected return completion precede physical lease release.
+            staffPose=f.Side;Publish();Assert.That(f.Core.CompleteLeg(staff,staffLife,outgoing,f.Side),Is.True);
+            staffMoving=false;Publish();var returning=new TrafficNativeStamp(9102,10);
+            BindStaff(staffSource,"selected-home",10,13,returning);staffMoving=true;Publish();
+            staffPose=staffStart;Publish();Assert.That(f.Core.CompleteLeg(staff,staffLife,returning,staffStart),Is.True);
+            staffMoving=false;f.Pickup.ReleaseServicePosition(staff.ActorId);Publish();
+            Assert.That(lease.HasRetiredLifetime,Is.True);Assert.That(f.Pickup.ServiceLeases,Is.Empty);
+            Assert.That(f.Pickup.TryPrepareMutation(PickupQueueService.MutationKind.CollectionLease,f.Head.ActorId,f.Pickup.Version,out var restored,f.Side),Is.True);
+            Assert.That(CfcReprepare(f.Core,expected,f.Proposal(14),out var queued),Is.True);
+            Assert.That(queued.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget));Assert.That(D1Read(f.Core,f.Head,"ProducerPreviewHeld"),Is.False);
+            Assert.That(f.Core.QueriesConsumed(f.Head),Is.EqualTo(queries));f.Core.ProcessReady(14);var grant=f.Core.GetDecision(f.Head);
+            Assert.That(grant.Kind,Is.EqualTo(TrafficDecisionKind.Granted),grant.Reason);Assert.That(grant.AcquiredSequence,Is.Zero);
+            Assert.That(grant.RequestSequence,Is.EqualTo(expected.RequestSequence));Assert.That(f.Entry,Is.SameAs(f.OriginalEntry));
+            Assert.That(D1Read(f.Core,f.Head,"FirstFrame"),Is.EqualTo(f.Age));Assert.That(D1Read(f.Core,f.Head,"FrozenOwners"),Is.SameAs(f.FrozenOwners));
+            Assert.That(D1Read(f.Core,f.Head,"FrozenResources"),Is.SameAs(f.FrozenResources));
+            Assert.That((float)D1Read(f.Core,f.Head,"WaitRemaining"),Is.EqualTo(f.Remaining-.25f));
+            Assert.That(((TrafficRequest)D1Read(f.Core,f.Head,"Request")).Snapshot,Is.SameAs(f.Snapshot));
+            Assert.That(grant.ProofRoutes.Count,Is.EqualTo(2));
+            var occupied=f.Snapshot.Bodies.Where(b=>b.Owner.ActorId!=f.Head.ActorId).Select(b=>b.Position)
+                .Concat(f.Snapshot.Parking.Where(p=>p.Owner.ActorId!=f.Head.ActorId).Select(p=>p.Position)).Distinct().ToArray();
+            foreach(var proof in grant.ProofRoutes)Assert.That(CustomerRoutePlanner.IsClear(proof.ExpandedPath,occupied,.8f),Is.True);
+            Assert.That(f.Core.TryCommit(grant,restored),Is.True);Assert.That(f.Pickup.TryCaptureReservation(f.Head.ActorId,out var collected),Is.True);
+            Assert.That(collected.IsCurrentCollectionLease,Is.True);Assert.That(f.Pickup.ServiceLeases.Keys,Is.EquivalentTo(new[]{f.Head.ActorId}));
+        }
+
         [TestCase(false)][TestCase(true)]
         public void CollectionPreparationKeepsDebtAcrossOriginalExitPreparedNextLegOnlyWhenItIsNoCurrentBlocker(bool oldStillConflicts)
         {
@@ -12924,6 +14969,97 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             Assert.That(f.Core.TryCommit(grant,ready),Is.True);Assert.That(f.Pickup.TryCaptureReservation(f.Head.ActorId,out var lease),Is.True);Assert.That(lease.IsCurrentCollectionLease,Is.True);
         }
 
+        // Reproduce the normal owner order: snapshot publication precedes Tick's resume transition.
+        // 真实公开Bind后只改变公开snapshot/时钟；reader是模型输入，不伪造Entry或Native权限。
+        [TestCase("current")][TestCase("null")][TestCase("throw")][TestCase("native-replaced")][TestCase("ahead-body")][TestCase("reentry")][TestCase("pause-in-reader")][TestCase("positive-reentry")]
+        public void BoundNativeCursorResumeRefreshesCurrentSnapshotBeforeNewExitPreparation(string receipt)
+        {
+            var mover=Key("resume-owner","actual-exit");var follower=Key("resume-follower","actual-exit");
+            var life=new object();var followerLife=new object();var stamp=new TrafficNativeStamp(911,3);
+            var start=Origin;var goal=P(0,4);var pose=start;var followerPose=P(4,-2);
+            var debtKey=Key("resume-debt","actual-exit");var debtLife=new object();
+            ServiceTrafficCoordinator core=null;
+            var queries=0;var reads=0;var nativeCurrent=true;var throwRead=false;
+            IReadOnlyList<Vector3> remainder=null;
+            TrafficWorldSnapshot Facts(long version)=>World(version,version,new[]{
+                new TrafficBodyFact(mover,pose,.4f,true,true,13,actorLife:life),
+                new TrafficBodyFact(follower,followerPose,.4f,actorLife:followerLife),
+                new TrafficBodyFact(debtKey,P(4,4),.4f,actorLife:debtLife)});
+            IReadOnlyList<Vector3> Read(TrafficRequest issued,TrafficNativeStamp native,object actor,Vector3 actual)
+            {
+                reads++;Assert.That(issued.Intent,Is.EqualTo(mover));Assert.That(native,Is.EqualTo(stamp));
+                Assert.That(actor,Is.SameAs(life));Assert.That(actual,Is.EqualTo(pose));
+                if(reads==2 && receipt=="reentry"){core.Tick(0,true);core.Tick(0,false);}
+                if(reads==2 && receipt=="pause-in-reader")core.Tick(0,true);
+                if(reads==2 && receipt=="positive-reentry"){core.Tick(0,true);core.Tick(.25f,false);}
+                if(throwRead)throw new InvalidOperationException("MODELED unknown Native read");
+                return nativeCurrent?remainder:null; // A replaced Native request cannot authenticate the original stamp.
+            }
+            var world=Facts(1);
+            core=new ServiceTrafficCoordinator("scene",1,7,world,(a,b)=>{queries++;return new[]{a,b};},getCurrentNativeRemainder:Read);
+            var source=Grant(core,Request(mover,start,goal,world,frame:1,resource:"exit/owner"));
+            core.PrepareLeg(source,"exit/owner",0,life,stamp.LegGeneration,world,start,.05f,2);core.ProcessReady(2);
+            Assert.That(core.TryCommit(core.GetDecision(mover)),Is.True);Assert.That(core.BindLeg(mover,life,stamp),Is.True);
+            var leg=D1Read(core,mover,"Leg");var proof=D3ReadField(leg,"Proof");var path=D3ReadField(leg,"Path");
+            var original=((Vector3[])D1Read(core,mover,"CurrentPath")).ToArray();
+            var age=D1Read(core,mover,"FirstFrame");var sequence=core.GetDecision(mover).RequestSequence;
+            var acquired=core.GetDecision(mover).AcquiredSequence;var debt=D1Read(core,mover,"WaitRemaining");
+            pose=P(0,2);remainder=Array.AsReadOnly(new[]{pose,goal});world=Facts(2);core.SetSnapshot(world);
+            Assert.That(reads,Is.EqualTo(1));var good=remainder.ToArray();
+            Assert.That((Vector3[])D1Read(core,mover,"CurrentPath"),Is.EqualTo(good),"PREMISE: original bound source has a successful shortened Native receipt");
+            object waitingDebt=null;
+            if(receipt=="pause-in-reader" || receipt=="positive-reentry")
+            {
+                core.EvaluateMovement(Request(debtKey,P(4,4),P(0,3),world,frame:3,resource:"exit/debt"));core.ProcessReady(3);
+                Assert.That(core.GetDecision(debtKey).Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),"PREMISE: real public WAIT debt before pause");
+                waitingDebt=D1Read(core,debtKey,"WaitRemaining");Assert.That((float)waitingDebt,Is.GreaterThan(0));
+            }
+            core.Tick(0,true);followerPose=receipt=="ahead-body"?P(0,3.25f):start;
+            if(receipt=="null")remainder=null;if(receipt=="throw")throwRead=true;if(receipt=="native-replaced")nativeCurrent=false;
+            world=Facts(3);var before=queries;core.SetSnapshot(world);
+            var fallback=original.Concat(good).ToArray();
+            Assert.That(reads,Is.EqualTo(1),"PREMISE: publication while paused does not invoke the Native reader");
+            Assert.That((Vector3[])D1Read(core,mover,"CurrentPath"),Is.EqualTo(fallback));
+            core.Tick(receipt=="pause-in-reader" || receipt=="positive-reentry"?.25f:0,false);Assert.That(queries,Is.EqualTo(before),"Resume must not query a new Native route");
+            Assert.That(D1Read(core,mover,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(core,mover,"WaitRemaining"),Is.EqualTo(debt));
+            Assert.That(core.GetDecision(mover).RequestSequence,Is.EqualTo(sequence));Assert.That(core.GetDecision(mover).AcquiredSequence,Is.EqualTo(acquired));
+            Assert.That(D1Read(core,mover,"JourneyPermit"),Is.SameAs(source));Assert.That(D1Read(core,mover,"Leg"),Is.SameAs(leg));
+            Assert.That(D3ReadField(leg,"Proof"),Is.SameAs(proof));Assert.That(D3ReadField(leg,"Path"),Is.SameAs(path));Assert.That(D3ReadField(leg,"Stamp"),Is.EqualTo(stamp));
+            if(receipt=="pause-in-reader")
+            {
+                Assert.That(reads,Is.EqualTo(2));Assert.That(D3ReadField(core,"refreshingResumeNativeRemainder"),Is.EqualTo(false));Assert.That(D3ReadField(core,"paused"),Is.EqualTo(true));
+                Assert.That(D1Read(core,debtKey,"WaitRemaining"),Is.EqualTo(waitingDebt),"A genuine callback pause stops the outer positive-delta Tick before debt charging");
+                Assert.That(core.GetDecision(debtKey).Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic));return;
+            }
+            if(receipt=="current" || receipt=="reentry" || receipt=="positive-reentry")
+            {
+                Assert.That((Vector3[])D1Read(core,mover,"CurrentPath"),Is.EqualTo(good),
+                    "FEATURE: resume must refresh the already-published current snapshot before new exit preparation sees the passed origin");
+                Assert.That(reads,Is.EqualTo(2));
+                if(receipt=="reentry" || receipt=="positive-reentry")Assert.That(D3ReadField(core,"refreshingResumeNativeRemainder"),Is.EqualTo(false));
+                if(receipt=="positive-reentry")
+                {
+                    Assert.That(D1Read(core,debtKey,"WaitRemaining"),Is.EqualTo((float)waitingDebt-.25f),
+                        "A readonly Native reader's nested positive Tick cannot charge the original public WAIT twice");
+                    Assert.That(core.GetDecision(debtKey).Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic));
+                    core.Tick(.25f,false); // Outside the reader, an ordinary subsequent Tick still consumes its own delta.
+                    Assert.That(D1Read(core,debtKey,"WaitRemaining"),Is.EqualTo((float)waitingDebt-.5f));
+                    Assert.That(reads,Is.EqualTo(2));Assert.That(queries,Is.EqualTo(before));
+                }
+            }
+            else if(receipt!="ahead-body")Assert.That((Vector3[])D1Read(core,mover,"CurrentPath"),Is.EqualTo(fallback),"Unknown/replaced Native provenance retains the conservative full original geometry");
+            core.EvaluateMovement(Request(follower,followerPose,P(0,3.25f),world,frame:3,resource:"exit/follower"));core.ProcessReady(3);
+            var decision=core.GetDecision(follower);Assert.That(decision.AcquiredSequence,Is.Zero);Assert.That(core.HasActiveGrant(follower),Is.False);
+            Assert.That(core.TryCommit(decision),Is.False);Assert.That(D1Read(core,follower,"Leg"),Is.Null);
+            if(receipt=="current" || receipt=="reentry" || receipt=="positive-reentry")
+            {
+                Assert.That(decision.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),decision.Reason);
+                Assert.That(decision.Blockers.Any(block=>block.Owner.Equals(mover)),Is.True);
+                Assert.That((IEnumerable<TrafficIntentKey>)D1Read(core,follower,"FrozenOwners"),Is.EquivalentTo(new[]{mover}));
+            }
+            else Assert.That(decision.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),"No finite permission from unknown provenance or a real body ahead: "+decision.Reason);
+        }
+
         // One analytic Core lifecycle model; reader payload is a test double, not Native evidence.
         // 用原公开Bind腿和只读receipt输入；不写Entry/路径/cursor，不调用driver推进。
         [TestCase("current")][TestCase("null")][TestCase("throw")]
@@ -12993,6 +15129,176 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             Assert.That(core.GetDecision(future).Blockers.Any(block=>block.Owner.Equals(mover)&&block.Proof=="selected-journey-parking-protection"),Is.True);
         }
 
+        [Test]
+        public void AcquiredPaidNextLegDefersForLaterSamePickupExitWithoutReplacingOriginalFrozenDebt()
+            =>ObserveAcquiredPaidNextLegIssuedExit("current");
+
+        [TestCase("expiry")][TestCase("foreign-pqs")][TestCase("blocked-exit")]
+        public void AcquiredPaidNextLegIssuedExitRequiresOriginalDeadlineAndRealIndependentQueueLineage(string mode)
+            =>ObserveAcquiredPaidNextLegIssuedExit(mode);
+
+        private static void ObserveAcquiredPaidNextLegIssuedExit(string mode)
+        {
+            // Real canonical service/Exit fixture; the receiver independently owns its real PQS Transfer.
+            // 真实已收集source交接，不以普通Grant或无acq Paid准备冒充次腿。
+            var paid=Key("acquired-paid-next","pickup-paid-movement",60);var old=Key("acquired-paid-old","actual-exit",59);
+            var life=new object();var oldLife=new object();var business=new object();var admission=new object();
+            var paidStart=P(-2,4);var paidGoal=P(6,-2);var paidPose=paidStart;
+            var oldStart=P(0,6);var oldGoal=P(0,1);var oldPose=oldStart;var oldPresent=true;var paidMoving=false;var obstructExit=false;var obstructionLife=new object();
+            var pillar=new TrafficBodyFact(Key("acquired-paid-pillar","body"),P(-1,3),.4f,actorLife:new object());
+            var f=new CanonicalSuccessorPreparationFixture(extraBody:pillar);var core=f.Core;
+            var paidPickup=mode=="foreign-pqs"?new PickupQueueService(new[]{paidGoal},new[]{Origin,P(6)}):f.Pickup;
+            if(mode=="foreign-pqs")Assert.That(paidPickup,Is.Not.SameAs(f.Pickup),"A coincident real waiting target does not identify the Exit's queue");
+            var counter=new CounterQueueService(new[]{paidStart});Assert.That(counter.TryJoin(paid.ActorId),Is.True);
+            Assert.That(counter.TryCaptureAssignment(paid.ActorId,out var initialCounter),Is.True);
+            Assert.That(counter.Complete(paid.ActorId,initialCounter.Assignment.Generation),Is.True);
+            Assert.That(paidPickup.TryReserve(paid.ActorId,out var parking),Is.True);Assert.That(parking.Position,Is.EqualTo(paidGoal));
+            IEnumerable<TrafficBodyFact> Bodies()
+            {
+                yield return new TrafficBodyFact(paid,paidPose,.4f,independentlyProgressing:paidMoving,remainingSeconds:paidMoving?30:0,actorLife:life);
+                if(oldPresent)yield return new TrafficBodyFact(old,oldPose,.4f,independentlyProgressing:true,remainingSeconds:13,actorLife:oldLife);
+                if(obstructExit)yield return new TrafficBodyFact(Key("issued-exit-static-obstruction","body"),P(2),.4f,actorLife:obstructionLife);
+            }
+            IEnumerable<TrafficParkingFact> Claims()
+            {
+                if(counter.TryCaptureAssignment(paid.ActorId,out var cq))yield return new TrafficParkingFact(paid,counter,counter.Version,"counter/"+paid.ActorId,
+                    cq.Assignment.Position,.4f,businessOwner:business,releaseObligation:admission,semanticCheckpoint:cq);
+                Assert.That(paidPickup.TryCaptureReservation(paid.ActorId,out var pq),Is.True);
+                yield return new TrafficParkingFact(paid,paidPickup,paidPickup.Version,"pickup/"+paid.ActorId,pq.Assignment.Position,.4f,
+                    businessOwner:business,releaseObligation:admission,semanticCheckpoint:pq);
+            }
+            f.CounterModelBodies=Bodies;f.CounterModelClaims=Claims;f.CounterModelPublish();
+            var oldSource=Grant(core,Request(old,oldStart,oldGoal,f.World,frame:3,resource:"pickup/"+old.ActorId,seconds:13));
+            var oldStamp=new TrafficNativeStamp(9101,1);
+            core.PrepareLeg(oldSource,"pickup/"+old.ActorId,0,oldLife,1,f.World,oldStart,.05f,4);core.ProcessReady(4);
+            Assert.That(core.TryCommit(core.GetDecision(old)),Is.True);Assert.That(core.BindLeg(old,oldLife,oldStamp),Is.True);
+            var frame=5;
+            TrafficDecision Pump(TrafficIntentKey key,int stopBefore)
+            {
+                TrafficDecision result=null;
+                while(frame<stopBefore)
+                {
+                    core.ProcessReady(frame++);result=core.GetDecision(key);
+                    if(result.Kind!=TrafficDecisionKind.DeferredByBudget)return result;
+                }
+                Assert.Fail("PREMISE: original bounded preparation must settle before the existing fixture's frame-20 handoff: "+result?.Reason);return result;
+            }
+            core.EvaluateMovement(Request(paid,paidStart,paidGoal,f.World,frame:frame,resource:"pickup/"+paid.ActorId,seconds:30));
+            var waiting=Pump(paid,12);Assert.That(waiting.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),"PREMISE: "+waiting.Reason);
+            var frozen=D1Read(core,paid,"FrozenOwners");var resources=D1Read(core,paid,"FrozenResources");
+            Assert.That((IEnumerable<TrafficIntentKey>)frozen,Is.EquivalentTo(new[]{old}));
+            core.Tick(.25f,false);var debt=(float)D1Read(core,paid,"WaitRemaining");Assert.That(debt,Is.EqualTo(12.75f));
+            oldPose=oldGoal;f.CounterModelPublish();Assert.That(core.CompleteLeg(old,oldLife,oldStamp,oldGoal),Is.True);
+            oldPresent=false;f.CounterModelPublish();core.Retire(old);core.NotifyChanged(old,"pickup/"+old.ActorId);core.NotifyChanged(old,"body");
+            core.EvaluateMovement(Request(paid,paidStart,paidGoal,f.World,frame:frame,resource:"pickup/"+paid.ActorId,seconds:30));
+            var source=Pump(paid,18);Assert.That(source.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"PREMISE: "+source.Reason);
+            Assert.That(paidPickup.TryPrepareMutation(PickupQueueService.MutationKind.Transfer,paid.ActorId,paidPickup.Version,out var transfer),Is.True);
+            Assert.That(core.TryCommit(source,transfer),Is.True,"Actual same-PQS Transfer and permission commit together");f.CounterModelPublish();
+            var proof=source.ProofRoutes.Single(p=>p.ResourceId=="pickup/"+paid.ActorId);
+            Assert.That(proof.Waypoints.Count,Is.GreaterThan(1),"PREMISE: actual analytic proof contains a later leg");
+            var nextIndex=-1;var crossing=default(Vector3);
+            for(var index=1;index<proof.Waypoints.Count && nextIndex<0;index++)
+            {
+                var from=proof.LegEnds[index-1];var to=proof.LegEnds[index];
+                for(var point=from+1;point<=to;point++)
+                {
+                    var a=proof.ExpandedPath[point-1];var b=proof.ExpandedPath[point];
+                    if(a.z==b.z || (a.z>0 && b.z>0) || (a.z<0 && b.z<0))continue;
+                    var candidate=Vector3.Lerp(a,b,-a.z/(b.z-a.z));
+                    if(candidate.x<0 || candidate.x>4)continue;
+                    nextIndex=index;crossing=candidate;break;
+                }
+            }
+            Assert.That(nextIndex,Is.GreaterThan(0),"PREMISE: a real nonfirst Native leg crosses the existing fixture's Exit segment");
+            Assert.That(source.AcquiredSequence,Is.GreaterThan(0));Assert.That(D1Read(core,paid,"JourneyPermit"),Is.SameAs(source));
+            for(var index=0;index<nextIndex;index++)
+            {
+                var generation=index+2;var stamp=new TrafficNativeStamp(9102+index,generation);
+                core.PrepareLeg(source,proof.ResourceId,index,life,generation,f.World,paidPose,.05f,frame);var prepared=Pump(paid,20);
+                Assert.That(prepared.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"PREMISE: "+prepared.Reason);
+                Assert.That(core.TryCommit(prepared),Is.True);Assert.That(core.BindLeg(paid,life,stamp),Is.True);paidMoving=true;f.CounterModelPublish();
+                paidPose=proof.Waypoints[index];f.CounterModelPublish();Assert.That(core.CompleteLeg(paid,life,stamp,paidPose),Is.True);
+                paidMoving=false;if(index==0)Assert.That(counter.Remove(paid.ActorId),Is.True);f.CounterModelPublish();
+                Assert.That(D3ReadField(D1Read(core,paid,"Leg"),"Completed"),Is.True);
+                Assert.That(core.CanIssueLeg(paid,life,generation),Is.False);
+            }
+            var nextGeneration=nextIndex+2;
+            Assert.That(frame,Is.LessThanOrEqualTo(20),"PREMISE: all real prefix legs fit the original bounded pre-handoff window");
+            Assert.That(D1Read(core,paid,"FrozenOwners"),Is.SameAs(frozen));
+            // The real collected owner may issue across a future leg, not across a currently issued movement.
+            var handle=f.Begin();f.Collect();var initialExit=f.SubmitExit();Assert.That(f.Bind(handle,initialExit),Is.True);
+            core.ProcessReady(20);var exitSource=core.GetDecision(f.Exit);Assert.That(exitSource.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"PREMISE: "+exitSource.Reason);
+            f.CommitExit(handle,exitSource);
+            Assert.That(D3ReadField(D1Read(core,f.Exit,"Leg"),"Bound"),Is.True);Assert.That(D1Read(core,f.Owner,"Retired"),Is.True);
+            Assert.That(exitSource.AcquiredSequence,Is.GreaterThan(source.AcquiredSequence));
+            var exitPath=(Vector3[])D1Read(core,f.Exit,"CurrentPath");
+            Assert.That(CustomerRoutePlanner.IsClear(exitPath,f.World.Bodies.Where(b=>b.Owner.ActorId!=f.Exit.ActorId).Select(b=>b.Position)
+                .Concat(f.World.Parking.Where(p=>p.Owner.ActorId!=f.Exit.ActorId).Select(p=>p.Position)).ToArray(),.8f),Is.True,
+                "PREMISE: the real later Bound Exit is independently clear of every current nonself body/claim");
+            Assert.That(crossing.x,Is.InRange(0f,4f));
+            Assert.That(CustomerRoutePlanner.IsClear(exitPath,new[]{crossing},.001f),Is.False,"PREMISE: exact crossing point lies on the real issued Exit path");
+            Assert.That(CustomerRoutePlanner.IsClear(proof.ExpandedPath.Skip(proof.LegEnds[nextIndex-1]).Take(proof.LegEnds[nextIndex]-proof.LegEnds[nextIndex-1]+1).ToArray(),new[]{crossing},.8f),Is.False,
+                "PREMISE: the actual unissued second leg intersects the actual Exit segment, not a new stationary endpoint");
+            Assert.That(f.World.Bodies.Any(b=>b.Owner.ActorId==old.ActorId),Is.False);Assert.That(f.World.Parking.Any(p=>p.Owner.ActorId==old.ActorId),Is.False);
+            Assert.That(D1Read(core,old,"Retired"),Is.True);
+            if(mode=="blocked-exit")
+            {
+                obstructExit=true;f.CounterModelPublish();
+                Assert.That(CustomerRoutePlanner.IsClear(exitPath,new[]{P(2)},.8f),Is.False,"The genuine issued Exit now has an actual stationary body in its current path");
+                Assert.That(D3ReadField(D1Read(core,f.Exit,"Leg"),"Bound"),Is.True);
+            }
+            var queriesBefore=core.QueriesConsumed(paid);
+            var entry=((System.Collections.IDictionary)D3ReadField(core,"entries"))[paid];var age=D1Read(core,paid,"FirstFrame");var seq=D1Read(core,paid,"RequestSequence");var acquired=source.AcquiredSequence;
+            core.PrepareLeg(source,proof.ResourceId,nextIndex,life,nextGeneration,f.World,paidPose,.05f,25);var secondLeg=D1Read(core,paid,"Leg");
+            Assert.That(D3ReadField(secondLeg,"Index"),Is.EqualTo(nextIndex));Assert.That(D3ReadField(secondLeg,"Proof"),Is.SameAs(proof));
+            Assert.That(D3ReadField(secondLeg,"Bound"),Is.False);core.ProcessReady(25);var held=core.GetDecision(paid);
+            if(mode=="foreign-pqs" || mode=="blocked-exit")
+            {
+                Assert.That(held.Reason,Is.Not.EqualTo("retained-paid-leg-issued-exit-revalidation"));
+                Assert.That(held.Kind,Is.Not.EqualTo(TrafficDecisionKind.Granted),"The original still-crossing strict path has no new movement permission");
+                Assert.That(core.CanIssueLeg(paid,life,nextGeneration),Is.False);
+                Assert.That(D3ReadField(secondLeg,"Committed"),Is.False);Assert.That(D3ReadField(secondLeg,"Bound"),Is.False);
+                Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries"))[paid],Is.SameAs(entry));
+                Assert.That(D1Read(core,paid,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(core,paid,"RequestSequence"),Is.EqualTo(seq));
+                Assert.That(D1Read(core,paid,"AcquiredSequence"),Is.EqualTo(acquired));Assert.That(D1Read(core,paid,"FrozenOwners"),Is.SameAs(frozen));
+                Assert.That(D1Read(core,paid,"FrozenResources"),Is.SameAs(resources));Assert.That((IEnumerable<TrafficIntentKey>)frozen,Is.EquivalentTo(new[]{old}));
+                Assert.That(D1Read(core,paid,"WaitRemaining"),Is.EqualTo(debt));Assert.That(core.QueriesConsumed(paid),Is.GreaterThanOrEqualTo(queriesBefore));
+                return;
+            }
+            Assert.That(held.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),"FEATURE: "+held.Reason);
+            Assert.That(held.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));Assert.That(core.TryCommit(held),Is.False);
+            Assert.That(core.CanIssueLeg(paid,life,nextGeneration),Is.False);Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries"))[paid],Is.SameAs(entry));
+            Assert.That(D1Read(core,paid,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(core,paid,"RequestSequence"),Is.EqualTo(seq));
+            Assert.That(D1Read(core,paid,"AcquiredSequence"),Is.EqualTo(acquired));Assert.That(D1Read(core,paid,"JourneyPermit"),Is.SameAs(source));
+            Assert.That(D1Read(core,paid,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(core,paid,"FrozenResources"),Is.SameAs(resources));
+            Assert.That((IEnumerable<TrafficIntentKey>)frozen,Is.EquivalentTo(new[]{old}));Assert.That(D1Read(core,paid,"WaitRemaining"),Is.EqualTo(debt));
+            var queries=core.QueriesConsumed(paid);core.Tick(3,true);core.Tick(0,false);
+            Assert.That(D1Read(core,paid,"WaitRemaining"),Is.EqualTo(debt));core.Tick(.25f,false);
+            Assert.That(D1Read(core,paid,"WaitRemaining"),Is.EqualTo(debt-.25f));Assert.That(core.QueriesConsumed(paid),Is.EqualTo(queries));
+            if(mode=="expiry")
+            {
+                core.Tick(debt,false);var expired=core.GetDecision(paid);
+                Assert.That(expired.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(expired.Reason,Is.EqualTo("wait-budget-exhausted"));
+                Assert.That(core.TryCommit(expired),Is.False);Assert.That(core.CanIssueLeg(paid,life,nextGeneration),Is.False);
+                Assert.That(core.QueriesConsumed(paid),Is.EqualTo(queries));Assert.That(D1Read(core,paid,"FrozenOwners"),Is.SameAs(frozen));
+                f.FinishExit();core.ProcessReady(26);
+                Assert.That(core.GetDecision(paid),Is.SameAs(expired),"A later real Exit release cannot revive the exhausted original source");
+                Assert.That(D1Read(core,paid,"FirstFrame"),Is.EqualTo(age));Assert.That(D1Read(core,paid,"RequestSequence"),Is.EqualTo(seq));
+                Assert.That(D1Read(core,paid,"AcquiredSequence"),Is.EqualTo(acquired));Assert.That(core.QueriesConsumed(paid),Is.EqualTo(queries));
+                Assert.That(D1Read(core,paid,"FrozenOwners"),Is.SameAs(frozen));return;
+            }
+            f.FinishExit();core.ProcessReady(26);var resumed=core.GetDecision(paid);
+            Assert.That(resumed.Kind,Is.EqualTo(TrafficDecisionKind.Granted),resumed.Reason);
+            Assert.That(D1Read(core,paid,"Leg"),Is.SameAs(secondLeg));Assert.That(D1Read(core,paid,"JourneyPermit"),Is.SameAs(source));
+            var remaining=(Vector3[])D1Read(core,paid,"CurrentPath");
+            foreach(var body in f.World.Bodies.Where(b=>b.Owner.ActorId!=paid.ActorId))
+                Assert.That(CustomerRoutePlanner.IsClear(remaining,new[]{body.Position},.4f+body.Radius+body.SafetyMargin),Is.True);
+            foreach(var claim in f.World.Parking.Where(p=>p.Owner.ActorId!=paid.ActorId))
+                Assert.That(CustomerRoutePlanner.IsClear(remaining,new[]{claim.Position},.4f+claim.Radius+claim.SafetyMargin),Is.True);
+            Assert.That(core.TryCommit(resumed),Is.True);Assert.That(core.BindLeg(paid,life,new TrafficNativeStamp(9102+nextIndex,nextGeneration)),Is.True);
+            Assert.That(D1Read(core,paid,"FrozenOwners"),Is.SameAs(frozen));Assert.That(core.QueriesConsumed(paid),Is.GreaterThanOrEqualTo(queries));
+        }
+
         private sealed class PaidReleasedExitDeferModel
         {
             internal readonly TrafficIntentKey Key=ServiceTrafficCoordinatorTests.Key("paid-defer-customer","pickup-paid-movement",30),
@@ -13001,43 +15307,145 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 New=ServiceTrafficCoordinatorTests.Key("paid-defer-new","pickup-advance",2);
             internal readonly object Actor=new object(),OldLife=new object(),NewLife=new object(),Business=new object(),Obligation=new object();
             internal readonly CounterQueueService Counter=new CounterQueueService(new[]{Origin});
-            internal readonly PickupQueueService Pickup=new PickupQueueService(new[]{P(4)},new[]{P(8,4)});
+            internal readonly PickupQueueService Pickup;
+            private readonly bool liveOriginalExit,employeeReceiver;private bool oldNativeIssued,newNativeIssued;
+            internal readonly Vector3 EmployeeHome;
+            private readonly string liveFault;private readonly object obstructionLife=new object();
+            private readonly object NewBusiness=new object(),NewObligation=new object();
+            internal TrafficDecision ActualAdvanceSource;
             internal readonly TrafficNativeStamp OldStamp=new TrafficNativeStamp(811,1),NewStamp=new TrafficNativeStamp(812,2);
             internal readonly Vector3 OldStart=P(2),OldEnd=P(2,4),NewStart=P(3,-4),NewEnd=P(3,4);
             internal readonly ServiceTrafficCoordinator Core;internal TrafficWorldSnapshot Snapshot;internal int Calls;
             internal TrafficDecision OriginalWait,Deferred;internal readonly TrafficRequest Initial;
-            internal PaidReleasedExitDeferModel()
+            internal PaidReleasedExitDeferModel(bool liveOriginalExit=false,string liveFault="none",bool employeeReceiver=false,bool offExactHome=false,string deliveryOwnerMode="current")
             {
-                Assert.That(Counter.TryJoin(Key.ActorId),Is.True);Assert.That(Counter.Complete(Key.ActorId,1),Is.True);
-                Assert.That(Pickup.TryReserve(Key.ActorId,out _),Is.True);
+                this.liveOriginalExit=liveOriginalExit;this.liveFault=liveFault;this.employeeReceiver=employeeReceiver;EmployeeHome=offExactHome?P(0,-.05f):Origin;
+                if(employeeReceiver)
+                {
+                    Assert.That(liveOriginalExit,Is.True);
+                    Key=ServiceTrafficCoordinatorTests.Key("delivery-defer-employee","employee-pickup-journey",30);
+                    BodyKey=ServiceTrafficCoordinatorTests.Key(Key.ActorId,"body",29);
+                }
+                Pickup=employeeReceiver?new PickupQueueService(new[]{NewEnd,NewStart},new[]{P(4)}):liveOriginalExit?new PickupQueueService(new[]{NewEnd,NewStart,P(4)},new[]{P(8,4)}):
+                    new PickupQueueService(new[]{P(4)},new[]{P(8,4)});
+                if(!employeeReceiver){Assert.That(Counter.TryJoin(Key.ActorId),Is.True);Assert.That(Counter.Complete(Key.ActorId,1),Is.True);}
+                if(liveOriginalExit)
+                {
+                    Assert.That(Pickup.TryReserve("paid-defer-unused-gap",out _),Is.True);
+                    Assert.That(Pickup.TryReserve(New.ActorId,out _),Is.True);
+                    Assert.That(Pickup.TryBeginTransfer(New.ActorId,out var arrived),Is.True);Assert.That(Pickup.MarkArrived(New.ActorId,arrived.Generation),Is.True);
+                }
+                if(!employeeReceiver)Assert.That(Pickup.TryReserve(Key.ActorId,out _),Is.True);
                 Snapshot=MakeWorld(1,true,OldStart,NewStart);Core=Coordinator(Snapshot,waitSeconds:30,query:(a,b)=>{Calls++;return new[]{a,b};});
                 Bind(Old,OldLife,OldStart,OldEnd,OldStamp,1);
-                Initial=Proposal(5);Core.EvaluateMovement(Initial);Core.ProcessReady(5);OriginalWait=Core.GetDecision(Key);
+                if(liveOriginalExit){oldNativeIssued=true;Snapshot=MakeWorld(2,true,OldStart,NewStart);Core.SetSnapshot(Snapshot);}
+                Initial=Proposal(5);
+                if(employeeReceiver)BindEmployeeReadiness(Core.EvaluateParking(Initial,0,2),deliveryOwnerMode);else Core.EvaluateMovement(Initial);
+                Core.ProcessReady(5);OriginalWait=Core.GetDecision(Key);
                 Assert.That(OriginalWait.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),OriginalWait.Reason);
                 Assert.That((IEnumerable<TrafficIntentKey>)D1Read(Core,Key,"FrozenOwners"),Is.EquivalentTo(new[]{Old}));
                 Assert.That((float)D1Read(Core,Key,"WaitRemaining"),Is.EqualTo(13f));Core.Tick(2,false);
-                Bind(New,NewLife,NewStart,NewEnd,NewStamp,6);
-                Snapshot=MakeWorld(2,true,OldEnd,P(3));Core.SetSnapshot(Snapshot);
-                Assert.That(Core.CompleteLeg(Old,OldLife,OldStamp,OldEnd),Is.True);
-                // Physical departure and explicit retirement happen only after genuine old-leg completion.
-                Snapshot=MakeWorld(3,false,OldEnd,P(3));Core.SetSnapshot(Snapshot);Core.Retire(Old);
-                Assert.That(D1Read(Core,Old,"Retired"),Is.EqualTo(true));
+                if(liveOriginalExit)
+                {
+                    Assert.That(Pickup.Remove("paid-defer-unused-gap"),Is.True);
+                    Snapshot=MakeWorld(3,true,OldStart,NewStart);Core.SetSnapshot(Snapshot);
+                    if(liveFault=="noncanonical-bound")
+                    {
+                        // Genuine public motion permission/Native Bind without an actual PQS Advance commit.
+                        // 真实Core移动源不等于canonical Advance；不写Granted/Native/claim字段。
+                        Bind(New,NewLife,NewStart,NewEnd,NewStamp,6);
+                        Assert.That(Core.TryGetCommittedJourney(New,out var source),Is.True);ActualAdvanceSource=source;
+                    }
+                    else
+                    {
+                        Assert.That(Pickup.TryPrepareMutation(PickupQueueService.MutationKind.Advance,New.ActorId,Pickup.Version,out var advance),Is.True);
+                        Assert.That(advance.Assignment.Position,Is.EqualTo(NewEnd));
+                        Core.EvaluateParking(new TrafficRequest(New,6,Snapshot,NewStart,NewEnd,.4f,"pickup/"+New.ActorId,finiteSeconds:13,planPrimaryRoute:true));Core.ProcessReady(6);
+                        ActualAdvanceSource=Core.GetDecision(New);Assert.That(ActualAdvanceSource.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ActualAdvanceSource.Reason);
+                        Assert.That(Core.TryCommit(ActualAdvanceSource,advance),Is.True,"The actual same-PQS Advance, not its enum/key label, is jointly committed");
+                        Snapshot=MakeWorld(4,true,OldStart,NewStart);Core.SetSnapshot(Snapshot);
+                        Core.PrepareLeg(ActualAdvanceSource,"pickup/"+New.ActorId,0,NewLife,NewStamp.LegGeneration,Snapshot,NewStart,.08f,7);Core.ProcessReady(7);
+                        Assert.That(Core.GetDecision(New).Kind,Is.EqualTo(TrafficDecisionKind.Granted));Assert.That(Core.TryCommit(Core.GetDecision(New)),Is.True);
+                        Assert.That(Core.BindLeg(New,NewLife,NewStamp),Is.True);newNativeIssued=true;
+                    }
+                    newNativeIssued=true;
+                    Snapshot=MakeWorld(5,true,OldStart,P(3));Core.SetSnapshot(Snapshot);
+                    Assert.That(D1Read(Core,Old,"Retired"),Is.False);Assert.That(D1Read(Core,Old,"Active"),Is.True);
+                    Assert.That(D3ReadField(D1Read(Core,Old,"Leg"),"Bound"),Is.True);Assert.That(D3ReadField(D1Read(Core,Old,"Leg"),"Completed"),Is.False);
+                    Assert.That(D1Read(Core,New,"JourneyPermit"),Is.SameAs(ActualAdvanceSource));Assert.That(D1Read(Core,New,"EverCanonicalAttempt"),Is.EqualTo(liveFault!="noncanonical-bound"));
+                    Assert.That(D1Read(Core,New,"JourneyParking"),Is.EqualTo(liveFault!="noncanonical-bound"));
+                    Assert.That(Pickup.TryCaptureReservation(New.ActorId,out var actualClaim),Is.True);Assert.That(actualClaim.IsCurrent,Is.True);
+                    Assert.That(actualClaim.Assignment.Position,Is.EqualTo(liveFault=="noncanonical-bound"?NewStart:NewEnd));
+                    Assert.That(actualClaim.Assignment.Arrived,Is.EqualTo(liveFault=="noncanonical-bound"));
+                    foreach(var owner in new[]{Old,New})
+                    {
+                        Assert.That(Core.GetDecision(owner).Kind,Is.EqualTo(TrafficDecisionKind.Granted),"PREMISE: neither active owner has a stored WAIT edge/cycle");
+                        var path=(Vector3[])D1Read(Core,owner,"CurrentPath");Assert.That(path.Length,Is.GreaterThan(1));
+                        var occupied=Snapshot.Bodies.Where(b=>b.Owner.ActorId!=owner.ActorId).Select(b=>b.Position)
+                            .Concat(Snapshot.Parking.Where(p=>p.Owner.ActorId!=owner.ActorId).Select(p=>p.Position)).ToArray();
+                        Assert.That(CustomerRoutePlanner.IsClear(path,occupied,.8f),Is.EqualTo(liveFault!="blocked-advance" || !owner.Equals(New)),
+                            "PREMISE: real controlled stationary body blocks only the Advance route; otherwise both strict current routes are clear");
+                    }
+                }
+                else
+                {
+                    Bind(New,NewLife,NewStart,NewEnd,NewStamp,6);
+                    Snapshot=MakeWorld(2,true,OldEnd,P(3));Core.SetSnapshot(Snapshot);
+                    Assert.That(Core.CompleteLeg(Old,OldLife,OldStamp,OldEnd),Is.True);
+                    // Physical departure and explicit retirement happen only after genuine old-leg completion.
+                    Snapshot=MakeWorld(3,false,OldEnd,P(3));Core.SetSnapshot(Snapshot);Core.Retire(Old);
+                    Assert.That(D1Read(Core,Old,"Retired"),Is.EqualTo(true));
+                }
+                if(liveOriginalExit)
+                {
+                    var pending=Core.GetDecision(Key);
+                    TestContext.WriteLine("PAID_LIVE_BEFORE_ORIGINAL_BODY_WAKE kind="+pending.Kind+" reason="+pending.Reason+" failure="+pending.FailureDisposition+
+                        " queued="+D1Read(Core,Key,"Queued")+" queries="+Core.QueriesConsumed(Key)+" remaining="+D1Read(Core,Key,"WaitRemaining"));
+                    Assert.That(pending.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),"PREMISE: no earlier ready stage may already terminalize this original paid preparation");
+                    Assert.That(pending.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));
+                    var captured=(TrafficParkingFact[])D1Read(Core,Key,"PreparationClaims");
+                    foreach(var claim in captured)
+                    {
+                        var current=Snapshot.Parking.Single(value=>value.Owner.Equals(claim.Owner) && value.ResourceId==claim.ResourceId);
+                        Assert.That(TrafficClaimCheckpoints.AreSame(claim,current),Is.True,
+                            "PREMISE: public removal of another PQS entry and its Advance did not replace this receiver's original CQ/PQS claims");
+                    }
+                    // Real progress of the original Bound owner wakes its already captured body edge.
+                    // model has no Native-remainder provider; report the actual on-owned-path body step, then its public notification.
+                    Snapshot=MakeWorld(6,true,OldStart+Vector3.forward*.1f,P(3));Core.SetSnapshot(Snapshot);Core.NotifyChanged(Old,"body");
+                    Assert.That(D1Read(Core,Key,"Queued"),Is.True,"PREMISE: original body edge, not a new owner, schedules this same pending source");
+                }
                 var expected=Core.GetDecision(Key);Assert.That(D2Refresh(Core,expected,Proposal(8),out _),Is.True,
-                    "PREMISE: unchanged real Counter/PQS identity adopts the published old-body departure");
+                    "PREMISE: unchanged real Counter/PQS identity adopts the current source facts without replacing original debt");
                 Core.ProcessReady(8);Deferred=Core.GetDecision(Key);
             }
             private TrafficWorldSnapshot MakeWorld(long version,bool includeOld,Vector3 oldPose,Vector3 newPose)
             {
-                Assert.That(Counter.TryCaptureAssignment(Key.ActorId,out var counter),Is.True);
-                Assert.That(counter.Assignment.Arrived,Is.True);Assert.That(Pickup.TryCaptureReservation(Key.ActorId,out var pickup),Is.True);
+                CounterQueueService.AssignmentClaim counter=null;PickupQueueService.ReservationClaim pickup=null;
+                if(!employeeReceiver)
+                {
+                    Assert.That(Counter.TryCaptureAssignment(Key.ActorId,out counter),Is.True);
+                    Assert.That(counter.Assignment.Arrived,Is.True);Assert.That(Pickup.TryCaptureReservation(Key.ActorId,out pickup),Is.True);
+                }
                 var bodies=new List<TrafficBodyFact>{new TrafficBodyFact(BodyKey,Origin,.4f,actorLife:Actor),
-                    new TrafficBodyFact(New,newPose,.4f,independentlyProgressing:version<4,remainingSeconds:version<4?13:0,actorLife:NewLife)};
-                if(includeOld)bodies.Add(new TrafficBodyFact(Old,oldPose,.4f,independentlyProgressing:true,remainingSeconds:13,actorLife:OldLife));
-                return ServiceTrafficCoordinatorTests.World(version,version,bodies.ToArray(),new[]{
+                    new TrafficBodyFact(New,newPose,.4f,independentlyProgressing:liveOriginalExit?newNativeIssued:version<4,
+                        remainingSeconds:(liveOriginalExit?newNativeIssued:version<4)?13:0,actorLife:NewLife)};
+                if(includeOld)bodies.Add(new TrafficBodyFact(Old,oldPose,.4f,independentlyProgressing:!liveOriginalExit || oldNativeIssued,
+                    remainingSeconds:!liveOriginalExit || oldNativeIssued?13:0,actorLife:OldLife));
+                if(liveOriginalExit && liveFault=="blocked-advance" && newNativeIssued)
+                    bodies.Add(new TrafficBodyFact(ServiceTrafficCoordinatorTests.Key("paid-live-static-obstruction","body"),P(3,2),.4f,actorLife:obstructionLife));
+                var claims=employeeReceiver?new List<TrafficParkingFact>():new List<TrafficParkingFact>{
                     new TrafficParkingFact(BodyKey,Counter,Counter.Version,"counter/"+Key.ActorId,counter.Assignment.Position,.4f,
                         businessOwner:Business,releaseObligation:Obligation,semanticCheckpoint:counter),
                     new TrafficParkingFact(BodyKey,Pickup,Pickup.Version,"pickup/"+Key.ActorId,pickup.Assignment.Position,.4f,
-                        businessOwner:Business,releaseObligation:Obligation,semanticCheckpoint:pickup)});
+                        businessOwner:Business,releaseObligation:Obligation,semanticCheckpoint:pickup)};
+                if(liveOriginalExit)
+                {
+                    foreach(var id in new[]{New.ActorId,"paid-defer-unused-gap"})if(Pickup.TryCaptureReservation(id,out var claim))
+                        claims.Add(new TrafficParkingFact(id==New.ActorId?New:ServiceTrafficCoordinatorTests.Key(id,"pickup-wait"),Pickup,Pickup.Version,
+                            "pickup/"+id,claim.Assignment.Position,.4f,businessOwner:NewBusiness,releaseObligation:NewObligation,semanticCheckpoint:claim));
+                }
+                return ServiceTrafficCoordinatorTests.World(version,version,bodies.ToArray(),claims.ToArray());
             }
             private void Bind(TrafficIntentKey key,object life,Vector3 start,Vector3 end,TrafficNativeStamp stamp,int frame)
             {
@@ -13047,11 +15455,47 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 Assert.That(Core.TryCommit(Core.GetDecision(key)),Is.True);Assert.That(Core.BindLeg(key,life,stamp),Is.True);
             }
             internal TrafficRequest Proposal(int frame)=>new TrafficRequest(Key,frame,Snapshot,Origin,P(4),.4f,"pickup/"+Key.ActorId,
+                requirements:employeeReceiver?new[]{new TrafficRouteRequirement("selected-home",P(4),EmployeeHome,.8f,selectedJourney:true,avoidProposedParking:false)}:null,
                 finiteSeconds:20,planPrimaryRoute:true);
+            private void BindEmployeeReadiness(TrafficDecision first,string mode)
+            {
+                var assembly=typeof(ServiceTrafficCoordinator).Assembly;
+                var type=assembly.GetType("AnimalCafe.Navigation.TrafficDeliveryPreparationReadiness",true);
+                var result=assembly.GetType("AnimalCafe.Navigation.TrafficDeliveryPreparationObservation",true);
+                var delegateType=typeof(Func<,,>).MakeGenericType(typeof(TrafficIntentKey),typeof(TrafficDecision),result);
+                var owner=System.Linq.Expressions.Expression.Parameter(typeof(TrafficIntentKey),"owner");
+                var source=System.Linq.Expressions.Expression.Parameter(typeof(TrafficDecision),"source");
+                var reader=System.Linq.Expressions.Expression.Lambda(delegateType,System.Linq.Expressions.Expression.Default(result),owner,source).Compile();
+                var pickupOwner=Pickup;
+                if(mode=="foreign")
+                {
+                    pickupOwner=new PickupQueueService(new[]{NewEnd,NewStart},new[]{P(4)});
+                    Assert.That(pickupOwner.TryReserve(New.ActorId,out var coincident),Is.True);
+                    Assert.That(coincident.Position,Is.EqualTo(NewEnd),"Same declared head/side geometry does not identify the actual owner");
+                    Assert.That(pickupOwner,Is.Not.SameAs(Pickup));
+                }
+                var arguments=mode=="legacy"?new object[]{Key,(Func<bool>)(()=>true),reader}:
+                    new object[]{Key,(Func<bool>)(()=>true),reader,pickupOwner};
+                var descriptor=Activator.CreateInstance(type,System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|
+                    System.Reflection.BindingFlags.NonPublic,null,arguments,null);
+                if(mode=="legacy")Assert.That(D3ReadField(descriptor,"PickupOwner"),Is.Null);
+                Assert.That(D3InvokeBool(Core,"TrySetDeliveryPreparationReadiness",first,descriptor),Is.True);
+            }
             internal void FinishNew()
             {
-                Snapshot=MakeWorld(4,false,OldEnd,NewEnd);Core.SetSnapshot(Snapshot);
-                Assert.That(Core.CompleteLeg(New,NewLife,NewStamp,NewEnd),Is.True);
+                if(liveOriginalExit)
+                {
+                    Snapshot=MakeWorld(7,true,OldEnd,NewEnd);Core.SetSnapshot(Snapshot);
+                    Assert.That(Core.CompleteLeg(New,NewLife,NewStamp,NewEnd),Is.True);newNativeIssued=false;
+                    Assert.That(Pickup.TryGetReservation(New.ActorId,out var arrived),Is.True);Assert.That(Pickup.MarkArrived(New.ActorId,arrived.Generation),Is.True);
+                    Assert.That(Core.CompleteLeg(Old,OldLife,OldStamp,OldEnd),Is.True);oldNativeIssued=false;
+                    Snapshot=MakeWorld(8,false,OldEnd,NewEnd);Core.SetSnapshot(Snapshot);Core.Retire(Old);
+                }
+                else
+                {
+                    Snapshot=MakeWorld(4,false,OldEnd,NewEnd);Core.SetSnapshot(Snapshot);
+                    Assert.That(Core.CompleteLeg(New,NewLife,NewStamp,NewEnd),Is.True);
+                }
                 var expected=Core.GetDecision(Key);Assert.That(D2Refresh(Core,expected,Proposal(13),out _),Is.True,
                     "Same original fixed target and both original typed claims must survive the actual new-owner arrival");
                 Core.ProcessReady(13);
@@ -13059,8 +15503,141 @@ namespace AnimalCafe.Tests.EditMode.Phase14
         }
         [TestCase(false)][TestCase(true)]
         public void PaidPreparationAfterActualExitReleaseDefersOnlyWithinItsOriginalDebtAndReprovesFixedTarget(bool expire)
+            =>ObservePaidPreparationIssuedAdvanceDebt(expire,false);
+
+        [Test]
+        public void PaidPreparationWithStillBoundOriginalExitDefersForRealSamePickupAdvanceWithinOriginalDebt()
+            =>ObservePaidPreparationIssuedAdvanceDebt(false,true);
+
+        [TestCase("expire")][TestCase("noncanonical-bound")][TestCase("blocked-advance")]
+        public void PaidPreparationWithLiveOriginalExitRejectsFalseAdvanceOrBlockedPathAndExpiresOriginalDebt(string control)
+            =>ObservePaidPreparationIssuedAdvanceDebt(control=="expire",true,control=="expire"?"none":control);
+
+        [TestCase(false)][TestCase(true)]
+        public void DeliveryOriginalExitAndActualSamePickupAdvancePreservePreparationDebt(bool offExactHome)
         {
-            var f=new PaidReleasedExitDeferModel();var core=f.Core;var deferred=f.Deferred;
+            var f=new PaidReleasedExitDeferModel(liveOriginalExit:true,employeeReceiver:true,offExactHome:offExactHome);var core=f.Core;var decision=f.Deferred;
+            Assert.That(f.Initial.Start,Is.EqualTo(Origin));
+            Assert.That(f.Initial.Requirements.Single(role=>role.ResourceId=="selected-home").Goal,Is.EqualTo(f.EmployeeHome));
+            Assert.That(f.EmployeeHome.Equals(f.Initial.Start),Is.EqualTo(!offExactHome),"Actual source pose need not exactly equal sealed work/home target");
+            Assert.That(((TrafficParkingFact[])D1Read(core,f.Key,"PreparationClaims")).Length,Is.Zero,"Employee has no customer claim alias");
+            Assert.That(f.Pickup.TryCaptureReservation(f.Key.ActorId,out _),Is.False);Assert.That(f.Counter.TryCaptureAssignment(f.Key.ActorId,out _),Is.False);
+            Assert.That(decision.Blockers.Any(b=>b.Owner.Equals(f.New) && b.ResourceId=="body"),Is.True);
+            Assert.That((IEnumerable<TrafficIntentKey>)D1Read(core,f.Key,"FrozenOwners"),Is.EquivalentTo(new[]{f.Old}));
+            Assert.That((float)D1Read(core,f.Key,"WaitRemaining"),Is.EqualTo(11f));
+            Assert.That(core.TryCommit(decision),Is.False);Assert.That(decision.AcquiredSequence,Is.Zero);
+            Assert.That(decision.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),"FEATURE: actual same-PQS issued Advance cannot enlarge employee Frozen; original preparation remains finite");
+            Assert.That(decision.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));
+            var entry=((System.Collections.IDictionary)D3ReadField(core,"entries"))[f.Key];var frozen=D1Read(core,f.Key,"FrozenOwners");
+            var resources=D1Read(core,f.Key,"FrozenResources");var age=D1Read(core,f.Key,"FirstFrame");var queries=core.QueriesConsumed(f.Key);var calls=f.Calls;
+            for(var frame=9;frame<=12;frame++)core.ProcessReady(frame);
+            Assert.That(core.QueriesConsumed(f.Key),Is.EqualTo(queries));Assert.That(f.Calls,Is.EqualTo(calls));
+            Assert.That(D1Read(core,f.Key,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(core,f.Key,"FrozenResources"),Is.SameAs(resources));
+            core.Tick(10,true);core.Tick(0,false);core.Tick(.25f,false);Assert.That((float)D1Read(core,f.Key,"WaitRemaining"),Is.EqualTo(10.75f));
+            f.FinishNew();var ready=core.GetDecision(f.Key);Assert.That(ready.Kind,Is.EqualTo(TrafficDecisionKind.Granted),ready.Reason);
+            Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries"))[f.Key],Is.SameAs(entry));
+            Assert.That(ready.RequestSequence,Is.EqualTo(decision.RequestSequence));Assert.That(D1Read(core,f.Key,"FirstFrame"),Is.EqualTo(age));
+            Assert.That((float)D1Read(core,f.Key,"WaitRemaining"),Is.EqualTo(10.75f));Assert.That(core.QueriesConsumed(f.Key),Is.GreaterThanOrEqualTo(queries));
+            var request=(TrafficRequest)D1Read(core,f.Key,"Request");Assert.That(request.Snapshot,Is.SameAs(f.Snapshot));
+            Assert.That(ready.ProofRoutes.Select(p=>p.ResourceId),Is.EquivalentTo(new[]{request.ResourceId,"selected-home"}));
+            foreach(var proof in ready.ProofRoutes)
+                Assert.That(CustomerRoutePlanner.IsClear(proof.ExpandedPath,f.Snapshot.Bodies.Where(b=>b.Owner.ActorId!=f.Key.ActorId).Select(b=>b.Position)
+                    .Concat(f.Snapshot.Parking.Select(p=>p.Position)).ToArray(),.8f),Is.True,"Both routes require full current spatial proof");
+            Assert.That(f.Pickup.TryPrepareMutation(PickupQueueService.MutationKind.DeliveryLease,f.Key.ActorId,f.Pickup.Version,out var lease,P(4)),Is.True);
+            Assert.That(core.TryCommit(ready,lease),Is.True);Assert.That(ready.AcquiredSequence,Is.GreaterThan(0));
+            Assert.That(f.Pickup.TryCaptureReservation(f.Key.ActorId,out _),Is.False,"Delivery lease cannot manufacture a customer reservation");
+        }
+
+        [TestCase("legacy")][TestCase("foreign")][TestCase("expiry")]
+        public void DeliveryIssuedAdvanceRequiresExactDescriptorOwnerAndExpiresOriginalDebt(string mode)
+        {
+            var f=new PaidReleasedExitDeferModel(liveOriginalExit:true,employeeReceiver:true,deliveryOwnerMode:mode=="expiry"?"current":mode);
+            var core=f.Core;var result=f.Deferred;var entry=((System.Collections.IDictionary)D3ReadField(core,"entries"))[f.Key];
+            var frozen=D1Read(core,f.Key,"FrozenOwners");var resources=D1Read(core,f.Key,"FrozenResources");
+            var age=D1Read(core,f.Key,"FirstFrame");var queries=core.QueriesConsumed(f.Key);var calls=f.Calls;
+            Assert.That((IEnumerable<TrafficIntentKey>)frozen,Is.EquivalentTo(new[]{f.Old}));
+            Assert.That((float)D1Read(core,f.Key,"WaitRemaining"),Is.EqualTo(11f));
+            Assert.That(((TrafficParkingFact[])D1Read(core,f.Key,"PreparationClaims")).Length,Is.Zero);
+            Assert.That(f.Pickup.TryCaptureReservation(f.Key.ActorId,out _),Is.False);Assert.That(f.Counter.TryCaptureAssignment(f.Key.ActorId,out _),Is.False);
+            Assert.That(result.AcquiredSequence,Is.Zero);Assert.That(core.TryCommit(result),Is.False);Assert.That(core.HasActiveGrant(f.Key),Is.False);
+            if(mode!="expiry")
+            {
+                Assert.That(result.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed),result.Reason);
+                Assert.That(result.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.AlternateAllowed),"Legacy/null or foreign owner retains the original bounded alternate policy");
+                Assert.That(result.Reason,Is.EqualTo("no-independent-finite-release-or-cycle"));
+                core.ProcessReady(9);Assert.That(core.GetDecision(f.Key),Is.SameAs(result));
+            }
+            else
+            {
+                Assert.That(result.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),result.Reason);
+                Assert.That(result.Reason,Is.EqualTo("delivery-preparation-issued-advance-revalidation"));
+                core.Tick(100,true);core.Tick(0,false);Assert.That((float)D1Read(core,f.Key,"WaitRemaining"),Is.EqualTo(11f));
+                core.Tick(11,false);var terminal=core.GetDecision(f.Key);
+                Assert.That(terminal.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(terminal.Reason,Is.EqualTo("wait-budget-exhausted"));
+                Assert.That(core.TryCommit(terminal),Is.False);Assert.That(D2Refresh(core,terminal,f.Proposal(9),out _),Is.False);
+                core.ProcessReady(9);Assert.That(core.GetDecision(f.Key),Is.SameAs(terminal));
+                Assert.That((float)D1Read(core,f.Key,"WaitRemaining"),Is.Zero);
+            }
+            Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries"))[f.Key],Is.SameAs(entry));
+            Assert.That(D1Read(core,f.Key,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(core,f.Key,"FrozenResources"),Is.SameAs(resources));
+            Assert.That(D1Read(core,f.Key,"FirstFrame"),Is.EqualTo(age));Assert.That(core.GetDecision(f.Key).RequestSequence,Is.EqualTo(result.RequestSequence));
+            Assert.That(core.QueriesConsumed(f.Key),Is.EqualTo(queries));Assert.That(f.Calls,Is.EqualTo(calls));Assert.That(core.HasActiveGrant(f.Key),Is.False);
+        }
+
+        private static void ObservePaidPreparationIssuedAdvanceDebt(bool expire,bool liveOriginalExit,string liveFault="none")
+        {
+            var f=new PaidReleasedExitDeferModel(liveOriginalExit,liveFault);var core=f.Core;var deferred=f.Deferred;
+            if(liveOriginalExit && liveFault!="none")
+            {
+                var originalEntry=((System.Collections.IDictionary)D3ReadField(core,"entries"))[f.Key];
+                var originalFrozen=D1Read(core,f.Key,"FrozenOwners");var originalResources=D1Read(core,f.Key,"FrozenResources");
+                var previousQueries=core.QueriesConsumed(f.Key);
+                // Use the original four ready frames; only honest unfinished query work may continue.
+                // 正常budget延后不是准备hold；专用hold立即失败，不重建source/预算或注入完成状态。
+                for(var frame=9;frame<=12 && deferred.Kind==TrafficDecisionKind.DeferredByBudget && deferred.Reason=="native-query-frame-budget";frame++)
+                {
+                    core.ProcessReady(frame);deferred=core.GetDecision(f.Key);
+                    Assert.That(core.QueriesConsumed(f.Key),Is.GreaterThanOrEqualTo(previousQueries));previousQueries=core.QueriesConsumed(f.Key);
+                    Assert.That(((System.Collections.IDictionary)D3ReadField(core,"entries"))[f.Key],Is.SameAs(originalEntry));
+                    Assert.That(D1Read(core,f.Key,"FrozenOwners"),Is.SameAs(originalFrozen));Assert.That(D1Read(core,f.Key,"FrozenResources"),Is.SameAs(originalResources));
+                    Assert.That(deferred.RequestSequence,Is.EqualTo(f.OriginalWait.RequestSequence));Assert.That((float)D1Read(core,f.Key,"WaitRemaining"),Is.EqualTo(11f));
+                }
+                TestContext.WriteLine("PAID_LIVE_NEGATIVE_RESULT control="+liveFault+" kind="+deferred.Kind+" reason="+deferred.Reason+
+                    " queries="+core.QueriesConsumed(f.Key)+" jobs="+D1Read(core,f.Key,"JobIndex")+"/"+((System.Collections.IList)D1Read(core,f.Key,"Jobs")).Count);
+                Assert.That(deferred.Reason,Is.Not.EqualTo("paid-preparation-issued-route-revalidation"),
+                    "A noncanonical mover or blocked current route must never authenticate this specialized hold");
+                Assert.That(deferred.Kind==TrafficDecisionKind.DeferredByBudget && deferred.Reason=="native-query-frame-budget",Is.False,
+                    "PREMISE_NOT_PROVEN: the original bounded ready window has not completed normal spatial proof");
+                Assert.That(deferred.AcquiredSequence,Is.Zero);Assert.That(core.HasActiveGrant(f.Key),Is.False);Assert.That(D1Read(core,f.Key,"Leg"),Is.Null);
+                Assert.That(deferred.RequestSequence,Is.EqualTo(f.OriginalWait.RequestSequence));Assert.That(D1Read(core,f.Key,"FirstFrame"),Is.EqualTo(f.Initial.RequestedFrame));
+                Assert.That((IEnumerable<TrafficIntentKey>)D1Read(core,f.Key,"FrozenOwners"),Is.EquivalentTo(new[]{f.Old}));
+                Assert.That((float)D1Read(core,f.Key,"WaitRemaining"),Is.EqualTo(11f));
+                if(deferred.Kind==TrafficDecisionKind.Granted)
+                {
+                    Assert.That(deferred.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));
+                    var request=(TrafficRequest)D1Read(core,f.Key,"Request");Assert.That(request.Snapshot,Is.SameAs(f.Snapshot));
+                    var proof=deferred.ProofRoutes.Single(value=>value.ResourceId==request.ResourceId);
+                    Assert.That(proof.ExpandedPath.Count,Is.GreaterThan(1));Assert.That(proof.ExpandedPath.First(),Is.EqualTo(request.Start));Assert.That(proof.ExpandedPath.Last(),Is.EqualTo(request.Target));
+                    Assert.That(proof.Waypoints.Count,Is.GreaterThan(0));Assert.That(proof.Waypoints.Last(),Is.EqualTo(request.Target));
+                    Assert.That(proof.LegEnds.Count,Is.EqualTo(proof.Waypoints.Count));Assert.That(proof.LegEnds.Last(),Is.EqualTo(proof.ExpandedPath.Count-1));
+                    var occupied=f.Snapshot.Bodies.Where(body=>body.Owner.ActorId!=f.Key.ActorId).Select(body=>body.Position)
+                        .Concat(f.Snapshot.Parking.Where(fact=>fact.Owner.ActorId!=f.Key.ActorId).Select(fact=>fact.Position)).ToArray();
+                    Assert.That(CustomerRoutePlanner.IsClear(proof.ExpandedPath,occupied,.8f),Is.True,
+                        "A genuine fresh alternative may prepare only after complete current union proof; the old blocked promise is not reused");
+                }
+                else if(deferred.Kind==TrafficDecisionKind.WaitingForTraffic)
+                {
+                    Assert.That(deferred.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));Assert.That(deferred.Blockers.Count,Is.GreaterThan(0));
+                    Assert.That(deferred.Blockers.All(block=>block.Owner.Equals(f.Old)),Is.True,"Only the original genuinely progressing Exit may remain a WAIT edge");
+                    Assert.That(core.TryCommit(deferred),Is.False);
+                }
+                else
+                {
+                    Assert.That(deferred.Kind,Is.EqualTo(TrafficDecisionKind.PlanningFailed),deferred.Reason);
+                    Assert.That(deferred.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal));Assert.That(core.TryCommit(deferred),Is.False);
+                }
+                return;
+            }
             Assert.That(deferred.Kind,Is.EqualTo(TrafficDecisionKind.DeferredByBudget),
                 "Original Native RED: a newly Bound owner cannot become new Frozen debt; preparation remains unacquired and finite");
             Assert.That(deferred.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.None));
@@ -13085,8 +15662,27 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             Assert.That(D1Read(core,f.Key,"FirstFrame"),Is.EqualTo(age));Assert.That(((TrafficRequest)D1Read(core,f.Key,"Request")).Target,Is.EqualTo(P(4)));
             Assert.That((float)D1Read(core,f.Key,"WaitRemaining"),Is.EqualTo(11f));
             Assert.That((IEnumerable<TrafficIntentKey>)D1Read(core,f.Key,"FrozenOwners"),Is.EquivalentTo(new[]{f.Old}));
-            Assert.That(core.QueriesConsumed(f.Key),Is.GreaterThan(queries),"The changed real Native body checkpoint requires full current proof");
-            Assert.That(core.TryCommit(ready),Is.True);
+            if(liveOriginalExit)
+            {
+                var request=(TrafficRequest)D1Read(core,f.Key,"Request");Assert.That(request.Snapshot,Is.SameAs(f.Snapshot));
+                Assert.That(core.QueriesConsumed(f.Key),Is.GreaterThanOrEqualTo(queries),"Unchanged canonical geometry may retain completed Native chunks; the lifetime query account cannot reset");
+                var proof=ready.ProofRoutes.Single(value=>value.ResourceId==request.ResourceId);
+                Assert.That(proof.ExpandedPath.Count,Is.GreaterThan(1));Assert.That(proof.ExpandedPath.First(),Is.EqualTo(request.Start));Assert.That(proof.ExpandedPath.Last(),Is.EqualTo(request.Target));
+                Assert.That(proof.Waypoints.Count,Is.GreaterThan(0));Assert.That(proof.Waypoints.Last(),Is.EqualTo(request.Target));
+                Assert.That(proof.LegEnds.Count,Is.EqualTo(proof.Waypoints.Count));Assert.That(proof.LegEnds.Last(),Is.EqualTo(proof.ExpandedPath.Count-1));
+                var occupied=f.Snapshot.Bodies.Where(body=>body.Owner.ActorId!=f.Key.ActorId).Select(body=>body.Position)
+                    .Concat(f.Snapshot.Parking.Where(fact=>fact.Owner.ActorId!=f.Key.ActorId).Select(fact=>fact.Position)).ToArray();
+                Assert.That(CustomerRoutePlanner.IsClear(proof.ExpandedPath,occupied,.8f),Is.True,
+                    "Actual current complete proof must clear every nonself body and canonical claim, including the stopped Advance at its existing PQS goal");
+                Assert.That(f.Pickup.TryPrepareMutation(PickupQueueService.MutationKind.Transfer,f.Key.ActorId,f.Pickup.Version,out var transfer),Is.True);
+                Assert.That(transfer.Assignment.Position,Is.EqualTo(request.Target));Assert.That(core.TryCommit(ready,transfer),Is.True);
+                Assert.That(ready.AcquiredSequence,Is.GreaterThan(0));Assert.That(f.Pickup.Snapshot.Select(value=>value.VisitId),Is.EqualTo(new[]{f.New.ActorId,f.Key.ActorId}));
+            }
+            else
+            {
+                Assert.That(core.QueriesConsumed(f.Key),Is.GreaterThan(queries),"The changed real Native body checkpoint requires full current proof");
+                Assert.That(core.TryCommit(ready),Is.True);
+            }
         }
 
         private sealed class QueuedPaidRoleFixture

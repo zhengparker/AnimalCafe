@@ -76,8 +76,16 @@ namespace AnimalCafe.Navigation
             IReadOnlyList<NavigationActor> actors, IReadOnlyList<Collider> solids)
         {
             if (actor == null || !Finite(displacement)) return Vector3.zero;
+            return ClampDisplacementFrom(actor, actor.transform.position, displacement, actors, solids);
+        }
+
+        // Same full sweep from an explicit hypothetical origin; never changes the actor pose.
+        // 显式起点复用原完整sweep；不临时移动actor或缩小碰撞规则。
+        internal Vector3 ClampDisplacementFrom(NavigationActor actor, Vector3 start, Vector3 displacement,
+            IReadOnlyList<NavigationActor> actors, IReadOnlyList<Collider> solids)
+        {
+            if (actor == null || !Finite(start) || !Finite(displacement)) return Vector3.zero;
             displacement.y = 0;
-            var start = actor.transform.position;
             if (!StaticClear(actor, start, solids) || !DynamicClear(actor, start, Vector3.zero, actors)) return Vector3.zero;
             var length = displacement.magnitude;
             if (length <= 0) return Vector3.zero;

@@ -22,10 +22,14 @@ namespace AnimalCafe.Navigation
         internal readonly TrafficIntentKey Intent;
         internal readonly object ActorLife,CounterOwner,BusinessOwner,Admission;
         internal readonly Func<bool> IsCurrent;
+        internal TrafficInitialQueueGeometry InitialQueueGeometry { get; }
         internal TrafficUnpaidParkingEligibility(TrafficIntentKey intent,object actorLife,object counterOwner,
             object businessOwner,object admission,Func<bool> isCurrent)
+            :this(intent,actorLife,counterOwner,businessOwner,admission,isCurrent,null) { }
+        internal TrafficUnpaidParkingEligibility(TrafficIntentKey intent,object actorLife,object counterOwner,
+            object businessOwner,object admission,Func<bool> isCurrent,TrafficInitialQueueGeometry initialQueueGeometry)
         {Intent=intent;ActorLife=actorLife;CounterOwner=counterOwner;BusinessOwner=businessOwner;Admission=admission;
-            IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));}
+            IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));InitialQueueGeometry=initialQueueGeometry;}
     }
 
     // Existing Counter producer only. Withholds preparation; never grants a finite WAIT/Native right.
@@ -36,13 +40,35 @@ namespace AnimalCafe.Navigation
         internal readonly Func<bool> IsCurrent;
         internal readonly Func<TrafficIntentKey,float> FiniteWorkingPredecessorSeconds;
         internal readonly Func<TrafficIntentKey,TrafficDecision,TrafficCounterPaidTraversalObservation> OriginalPaidTraversal;
+        internal readonly Func<TrafficIntentKey,TrafficDecision,TrafficCounterUncommittedPreparationObservation> UncommittedPredecessor;
         internal TrafficCounterAdvanceReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<TrafficIntentKey,float> finiteWorkingPredecessorSeconds)
             :this(intent,isCurrent,finiteWorkingPredecessorSeconds,null) { }
         internal TrafficCounterAdvanceReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<TrafficIntentKey,float> finiteWorkingPredecessorSeconds,
             Func<TrafficIntentKey,TrafficDecision,TrafficCounterPaidTraversalObservation> originalPaidTraversal)
+            :this(intent,isCurrent,finiteWorkingPredecessorSeconds,originalPaidTraversal,null) { }
+        internal TrafficCounterAdvanceReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<TrafficIntentKey,float> finiteWorkingPredecessorSeconds,
+            Func<TrafficIntentKey,TrafficDecision,TrafficCounterPaidTraversalObservation> originalPaidTraversal,
+            Func<TrafficIntentKey,TrafficDecision,TrafficCounterUncommittedPreparationObservation> uncommittedPredecessor)
         { Intent=intent;IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));
             FiniteWorkingPredecessorSeconds=finiteWorkingPredecessorSeconds??throw new ArgumentNullException(nameof(finiteWorkingPredecessorSeconds));
-            OriginalPaidTraversal=originalPaidTraversal; }
+            OriginalPaidTraversal=originalPaidTraversal;UncommittedPredecessor=uncommittedPredecessor; }
+    }
+    // Only an uncommitted real CQ-head Reserve preparation; never a finite Working or Native promise.
+    // 只认证原CQ头客尚未发布的Reserve准备，不授予占位、移动或WAIT依赖。
+    public sealed class TrafficCounterUncommittedPreparationObservation
+    {
+        public object ActorLife { get; }
+        public object BusinessOwner { get; }
+        public object Admission { get; }
+        public AnimalCafe.Customers.CounterQueueService.AssignmentClaim CounterClaim { get; }
+        public AnimalCafe.Customers.PickupQueueService PickupOwner { get; }
+        public AnimalCafe.Customers.PickupQueueService.PreparedMutation ReservePreview { get; }
+        public TrafficDecision PreparationSource { get; }
+        internal TrafficCounterUncommittedPreparationObservation(object actorLife,object businessOwner,object admission,
+            AnimalCafe.Customers.CounterQueueService.AssignmentClaim counterClaim,AnimalCafe.Customers.PickupQueueService pickupOwner,
+            AnimalCafe.Customers.PickupQueueService.PreparedMutation reservePreview,TrafficDecision preparationSource)
+        {ActorLife=actorLife;BusinessOwner=businessOwner;Admission=admission;CounterClaim=counterClaim;
+            PickupOwner=pickupOwner;ReservePreview=reservePreview;PreparationSource=preparationSource;}
     }
     // Optional original business provenance only. Core must independently authenticate the owned paid traversal.
     // No selected path, body independence, permission or WAIT edge is granted by this readonly observation.
@@ -81,9 +107,13 @@ namespace AnimalCafe.Navigation
         internal readonly TrafficIntentKey Intent;
         internal readonly Func<bool> IsCurrent;
         internal readonly Func<TrafficIntentKey,TrafficDecision,TrafficDeliveryPreparationObservation> Read;
+        internal readonly AnimalCafe.Customers.PickupQueueService PickupOwner;
         internal TrafficDeliveryPreparationReadiness(TrafficIntentKey intent,Func<bool> isCurrent,
             Func<TrafficIntentKey,TrafficDecision,TrafficDeliveryPreparationObservation> read)
-        {Intent=intent;IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));Read=read??throw new ArgumentNullException(nameof(read));}
+            :this(intent,isCurrent,read,null){}
+        internal TrafficDeliveryPreparationReadiness(TrafficIntentKey intent,Func<bool> isCurrent,
+            Func<TrafficIntentKey,TrafficDecision,TrafficDeliveryPreparationObservation> read,AnimalCafe.Customers.PickupQueueService pickupOwner)
+        {Intent=intent;IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));Read=read??throw new ArgumentNullException(nameof(read));PickupOwner=pickupOwner;}
     }
 
     public enum TrafficDecisionKind
@@ -247,6 +277,36 @@ namespace AnimalCafe.Navigation
         public float Clearance { get; }
         public TrafficRouteObstacle(Vector3 position,float clearance)
         { Position=position;Clearance=clearance; }
+    }
+
+    // Finite static geometry facts only. Core authenticates the original producer and exact member/role binding.
+    // 仅静态布局蓝图；不删除实际身体/停车权利，不授予WAIT、Native许可或新预算。
+    public sealed class TrafficInitialQueueMember
+    {
+        public Vector3 Target { get; }
+        public IReadOnlyList<TrafficRouteRequirement> GeometryRoles { get; }
+        public TrafficInitialQueueMember(Vector3 target,IEnumerable<TrafficRouteRequirement> geometryRoles)
+        {
+            if(geometryRoles==null)throw new ArgumentNullException(nameof(geometryRoles));
+            Target=target;
+            GeometryRoles=Array.AsReadOnly(geometryRoles.Select(role=>role==null?
+                throw new ArgumentException("Null geometry role.",nameof(geometryRoles)):
+                new TrafficRouteRequirement(role.ResourceId,role.Start,role.Goal,role.Clearance,role.Obstacles,
+                    role.SelectedJourney,role.AvoidProposedParking,role.LocalObstacles)).ToArray());
+        }
+    }
+    public sealed class TrafficInitialQueueGeometry
+    {
+        public object Owner { get; }
+        public IReadOnlyList<TrafficInitialQueueMember> Members { get; }
+        public TrafficInitialQueueGeometry(object owner,IEnumerable<TrafficInitialQueueMember> members)
+        {
+            Owner=owner??throw new ArgumentNullException(nameof(owner));
+            if(members==null)throw new ArgumentNullException(nameof(members));
+            Members=Array.AsReadOnly(members.Select(member=>member==null?
+                throw new ArgumentException("Null queue member.",nameof(members)):
+                new TrafficInitialQueueMember(member.Target,member.GeometryRoles)).ToArray());
+        }
     }
 
     public sealed class TrafficRouteRequirement
