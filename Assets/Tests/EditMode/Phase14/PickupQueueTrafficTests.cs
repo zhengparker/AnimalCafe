@@ -57,10 +57,12 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                     new TrafficParkingFact(CounterKey,Counter,Counter.Version,"counter/"+CounterKey.ActorId,counter.Assignment.Position,.45f,.011f,Counter,counter,counter)});
                 typeof(CustomerFlowController).GetField("trafficSnapshot",Fields).SetValue(Flow,Snapshot);
             }
+            // Reflection needs all parameter slots; Type.Missing keeps the actual optional cached=null default.
+            // 反射仍须提供完整参数槽；不构造cached蓝图或改变原默认能力范围。
             internal TrafficRouteRequirement[] Roles(object incoming=null,bool preserveExitCapability=true)=>((IEnumerable<TrafficRouteRequirement>)typeof(CustomerFlowController)
-                .GetMethod("PreservePickupGoals",Fields).Invoke(Flow,new object[]{incoming,preserveExitCapability})).ToArray();
+                .GetMethod("PreservePickupGoals",Fields).Invoke(Flow,new object[]{incoming,preserveExitCapability,Type.Missing})).ToArray();
             internal TrafficRouteRequirement[] RolesWithProductionDefault()=>((IEnumerable<TrafficRouteRequirement>)typeof(CustomerFlowController)
-                .GetMethod("PreservePickupGoals",Fields).Invoke(Flow,new object[]{null,Type.Missing})).ToArray();
+                .GetMethod("PreservePickupGoals",Fields).Invoke(Flow,new object[]{null,Type.Missing,Type.Missing})).ToArray();
             internal void SetOwner(string field,object value)=>EarlierVisit.GetType().GetField(field,Fields).SetValue(EarlierVisit,value);
             internal ServiceTrafficCoordinator Core()=>new ServiceTrafficCoordinator("exit-capability",1,7,Snapshot,NarrowMap,128,16384,10);
             private IReadOnlyList<Vector3> NarrowMap(Vector3 from,Vector3 to)

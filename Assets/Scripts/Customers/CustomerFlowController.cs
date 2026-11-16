@@ -128,6 +128,7 @@ namespace AnimalCafe.Customers
             internal readonly float Radius,Skin,Epsilon;
             internal readonly IReadOnlyList<TrafficRouteRequirement> FixedRequirements;
             internal PickupQueueService.PreparedMutation CurrentPreview;
+            internal CollectionReserveFactory ReserveFactory;
             internal CollectionReleasePrerequisite(CustomerFlowController flow,Visit visit,TrafficCandidateCursor cursor,int candidate,
                 PickupQueueService.ReservationClaim claim,PickupQueueService.DeliveryLeaseClaim lease,PickupDeliveryHistory history,
                 TrafficDecision source,CapacityToken total)
@@ -274,6 +275,7 @@ namespace AnimalCafe.Customers
             internal readonly PickupQueueService.MutationKind Operation;
             internal readonly PickupQueueService.PreparedMutation Preview;
             internal PickupQueueService.PreparedMutation CurrentPreview;
+            internal CollectionReserveFactory ReserveFactory;
             internal readonly CustomerVisitState Phase;
             internal readonly int Generation,PhaseSequence,YieldPhase,FirstFrame,CandidateIndex;
             internal readonly Vector3 Start,Target;
@@ -449,7 +451,7 @@ namespace AnimalCafe.Customers
                 }
             }
             if(!traffic.TryReprepareCanonicalAnchor(expected,CollectionReleaseRequest(p,snapshot),out next))return false;
-            p.Cursor.Source=next;return CollectionReleaseIdentityCurrent(p);
+            p.Cursor.Source=next;RefreshCollectionReserveFactory(p,next);return CollectionReleaseIdentityCurrent(p);
         }
         private bool TryCaptureCollectionRelease(Visit visit,TrafficCandidateCursor cursor,int candidate)
         {
@@ -628,7 +630,197 @@ namespace AnimalCafe.Customers
             // Original Preview remains sealed provenance; only accepted reproof installs the real current mutation.
             // forecast generation可随Queue变化，绝不替换held claim或补签已提交的missing seal。
             p.CurrentPreview=preview;if(p.Cursor!=null)p.Cursor.Source=next;
+            RefreshCollectionReserveFactory(p,next);
             return PickupFamilyPreparationCurrent(p) && PickupFamilyPreviewMatches(p,preview);
+        }
+        // A readonly view of one existing private factory, never a replacement seal or business authority.
+        // 只包装真实ordinary/release工厂；不补签缺失CollectionRelease，不制造Source/任务。
+        private sealed class CollectionReserveFactory
+        {
+            private readonly PickupFamilyPreparation ordinary;private readonly CollectionReleasePrerequisite release;
+            internal readonly Visit Visit;internal readonly NavigationActor Actor;internal readonly CustomerAdmission Admission;
+            internal readonly ServiceTrafficCoordinator Coordinator;internal readonly TrafficIntentKey Key;
+            internal readonly PickupQueueService Owner;internal readonly PickupQueueService.ReservationClaim Claim;internal readonly Vector3 Target;
+            internal TrafficCollectionReserveReadiness Readiness;
+            internal CollectionReserveFactory(PickupFamilyPreparation p)
+            {ordinary=p;Visit=p.Visit;Actor=p.Actor;Admission=p.Admission;Coordinator=p.Coordinator;Key=p.Key;Owner=p.Owner;Claim=p.Claim;Target=p.Target;}
+            internal CollectionReserveFactory(CollectionReleasePrerequisite p)
+            {release=p;Visit=p.Visit;Actor=p.Actor;Admission=p.Admission;Coordinator=p.Coordinator;Key=p.Key;Owner=p.Owner;Claim=p.Claim;Target=p.Target;}
+            internal PickupQueueService.PreparedMutation Preview=>ordinary!=null?ordinary.CurrentPreview:release.CurrentPreview;
+            internal bool Current(CustomerFlowController flow)=>ordinary!=null
+                ?ordinary.Operation==PickupQueueService.MutationKind.CollectionLease && ordinary.Cursor?.CollectionRelease==null && flow.PickupFamilyPreparationCurrent(ordinary)
+                :flow.CollectionReleaseIdentityCurrent(release);
+        }
+        private void RefreshCollectionReserveFactory(PickupFamilyPreparation p,TrafficDecision expected)
+        {
+            if(p?.Operation!=PickupQueueService.MutationKind.CollectionLease || !PickupFamilyPreparationCurrent(p))return;
+            if(p.ReserveFactory==null)p.ReserveFactory=new CollectionReserveFactory(p);
+            RefreshCollectionReserveFactory(p.ReserveFactory,expected);
+        }
+        private void RefreshCollectionReserveFactory(CollectionReleasePrerequisite p,TrafficDecision expected)
+        {
+            if(!CollectionReleaseIdentityCurrent(p))return;
+            if(p.ReserveFactory==null)p.ReserveFactory=new CollectionReserveFactory(p);
+            RefreshCollectionReserveFactory(p.ReserveFactory,expected);
+        }
+        private bool CollectionReserveCurrent(CollectionReserveFactory f,Func<string,CafeOrderKey,GameObject> provider,GameObject cup)
+        {
+            try
+            {
+                if(!CanIntegratedProgress || !f.Current(this) || provider==null || !ReferenceEquals(collectionRecoveryCup,provider) ||
+                    cup==null || !cup.activeInHierarchy)return false;
+                var paid=f.Visit.PaidPickup;
+                bool Ready()=>paid!=null && ReferenceEquals(f.Visit.PaidPickup,paid) && paid.Accepted && paid.Transferred &&
+                    !paid.Failed && !paid.RecoveryUsed && !paid.RecoveryPending && f.Claim.IsCurrent &&
+                    f.Owner.Snapshot.Count>0 && f.Owner.Snapshot[0].Equals(f.Claim.Assignment) && f.Owner.Snapshot[0].Arrived;
+                if(!Ready())return false;
+                var actual=provider(f.Visit.Id,paid.Order);
+                return ReferenceEquals(actual,cup) && cup!=null && cup.activeInHierarchy && f.Current(this) && Ready() &&
+                    ReferenceEquals(collectionRecoveryCup,provider);
+            }
+            catch(Exception){return false;}
+        }
+        private bool CollectionReservePreviewCurrent(CollectionReserveFactory f,PickupQueueService.PreparedMutation preview)
+            =>preview!=null && preview.IsCurrent && preview.BelongsTo(f.Owner) && preview.Kind==PickupQueueService.MutationKind.CollectionLease &&
+                preview.Id==f.Visit.Id && preview.Assignment.VisitId==f.Visit.Id && preview.Assignment.Position.Equals(f.Target) &&
+                pickupSides.Any(side=>side.Position.Equals(preview.Assignment.Position));
+        private void RefreshCollectionReserveFactory(CollectionReserveFactory f,TrafficDecision expected)
+        {
+            RefreshCollectionReserveWorking(f);
+            if(f.Readiness!=null || expected==null)return;
+            var provider=collectionRecoveryCup;var paid=f.Visit.PaidPickup;GameObject cup;
+            try{cup=provider==null || paid==null?null:provider(f.Visit.Id,paid.Order);}catch(Exception){return;}
+            if(!CollectionReserveCurrent(f,provider,cup) || !CollectionReservePreviewCurrent(f,f.Preview))return;
+            var readiness=new TrafficCollectionReserveReadiness(f.Key,f.Actor,f.Visit,f.Admission,f.Owner,cup,
+                ()=>CollectionReserveCurrent(f,provider,cup),(key,source,seal)=>ReadCollectionReserve(f,provider,cup,key,source,seal));
+            if(f.Coordinator.TrySetCollectionReserveReadiness(expected,readiness) && f.Current(this))f.Readiness=readiness;
+        }
+        // Normal refresh captures the actual Working token once; the Core reader never captures/updates it.
+        // 只在正常producer阶段绑定原Working token，并在每次外部读取后重核同一生产者。
+        private void RefreshCollectionReserveWorking(CollectionReserveFactory f)
+        {
+            try{RefreshCollectionReserveWorkingCore(f);}catch(Exception){ /* Unknown cannot install a new lineage. / 未知不签谱系。 */ }
+        }
+        private void RefreshCollectionReserveWorkingCore(CollectionReserveFactory f)
+        {
+            if(!CanIntegratedProgress || !f.Current(this))return;
+            foreach(var predecessor in visits.Values.ToArray())
+            {
+                var parking=predecessor.PickupParking;var a=parking?.Origin;
+                if(a==null || !ReferenceEquals(a.Owner,f.Owner) || !ReferenceEquals(a.Visit,predecessor) ||
+                    !ReferenceEquals(a.Actor,predecessor.Actor) || !ReferenceEquals(a.Admission,predecessor.Admission))continue;
+                var work=a.CollectionWorking;var paid=predecessor.PaidPickup;var actor=predecessor.Actor;if(actor==null)continue;
+                var pose=actor.transform.position;var generation=predecessor.Generation;var phase=predecessor.State;var snapshot=trafficSnapshot;
+                var radius=actor.Settings.AgentRadius;var skin=actor.Settings.CollisionSkin;var epsilon=actor.Settings.Epsilon;
+                var source=parking.Source;var proof=parking.Proof;var claimBefore=parking.Claim;var token=parking.Token;
+                var queuedLeft=predecessor.QueueLeft;var transit=predecessor.PickupInTransit;var request=predecessor.RequestId;
+                bool Same()=>CanIntegratedProgress && f.Current(this) && ReferenceEquals(trafficSnapshot,snapshot) &&
+                    visits.TryGetValue(predecessor.Id,out var live) && ReferenceEquals(live,predecessor) &&
+                    ReferenceEquals(predecessor.Actor,actor) && ReferenceEquals(predecessor.Admission,a.Admission) &&
+                    ReferenceEquals(predecessor.PickupParking,parking) && ReferenceEquals(parking.Origin,a) && ReferenceEquals(parking.Source,source) &&
+                    ReferenceEquals(parking.Proof,proof) && ReferenceEquals(parking.Claim,claimBefore) && ReferenceEquals(parking.Token,token) &&
+                    ReferenceEquals(predecessor.PaidPickup,paid) && ReferenceEquals(a.CollectionWorking,work) && predecessor.QueueLeft==queuedLeft &&
+                    predecessor.PickupInTransit==transit && predecessor.RequestId==request && !predecessor.HasCollected &&
+                    predecessor.Generation==generation && predecessor.State==phase && actor!=null && actor.transform.position.Equals(pose) &&
+                    actor.Settings.AgentRadius==radius && actor.Settings.CollisionSkin==skin && actor.Settings.Epsilon==epsilon;
+                if(work!=null)
+                {
+                    if(work.Paid==null && paid!=null && !paid.Failed && !paid.RecoveryUsed && !paid.RecoveryPending &&
+                        ReferenceEquals(paid.Parking,work.Parking) && paid.ActiveIntent.Equals(paid.Intent))
+                    {
+                        var original=work.OriginalTask(paid.Order);
+                        if(original && Same() && !paid.Failed && !paid.RecoveryUsed && !paid.RecoveryPending &&
+                            ReferenceEquals(paid.Parking,parking) && paid.ActiveIntent.Equals(paid.Intent))
+                        {work.Paid=paid;work.PaidIntent=paid.Intent;}
+                    }
+                    continue;
+                }
+                if(predecessor.State!=CustomerVisitState.Queued || !predecessor.CounterArrived || predecessor.QueueLeft || predecessor.HasCollected ||
+                    predecessor.RequestId!=0 || predecessor.PickupInTransit || paid!=null || !TrafficActorReady(actor) ||
+                    !ReferenceEquals(a.Coordinator,traffic) || !PickupParkingCurrent(predecessor,snapshot) || queue==null ||
+                    !queue.TryCaptureAssignment(predecessor.Id,out var claim) || !claim.IsCurrent || !claim.Assignment.Arrived ||
+                    claim.Assignment.SlotIndex!=0 || !SameAssignment(predecessor.Assignment,claim.Assignment) ||
+                    counterTrafficProgress==null || counterDepartureTaskCapture==null)continue;
+                var seconds=counterTrafficProgress(predecessor.Id);if(!Same() || seconds<=0)continue;
+                var read=counterDepartureTaskCapture(predecessor.Id);if(!Same() || read==null)continue;
+                var originalTask=read(null);if(!originalTask || !Same() || !claim.IsCurrent || !PickupParkingCurrent(predecessor,snapshot))continue;
+                var totals=Capacity.GetReservations().Where(row=>row.OwnerId==predecessor.Id && row.Kind==CapacityKind.TotalCustomers && row.State==ReservationState.Occupied).ToArray();
+                if(totals.Length!=1 || !Same())continue;
+                a.CollectionWorking=new CounterAdvanceWorkingPredecessor{Visit=predecessor,Actor=actor,Admission=predecessor.Admission,
+                    CounterClaim=claim,CounterAssignment=claim.Assignment,Parking=parking,ParkingSource=parking.Source,ParkingProof=parking.Proof,
+                    ParkingFact=parking.Fact,ParkingToken=parking.Token,Total=totals[0].Token,OriginalTask=read,Origin=pose,Generation=generation,
+                    Radius=actor.Settings.AgentRadius,Skin=actor.Settings.CollisionSkin,Epsilon=actor.Settings.Epsilon};
+            }
+        }
+        private TrafficCollectionReserveObservation ReadCollectionReserve(CollectionReserveFactory f,Func<string,CafeOrderKey,GameObject> provider,
+            GameObject cup,TrafficIntentKey key,TrafficDecision source,object seal)
+        {
+            if(!CollectionReserveCurrent(f,provider,cup) || source==null || !source.Intent.Equals(key) || key.IntentId!="pickup-wait" ||
+                !CollectionReservePreviewCurrent(f,f.Preview) || !visits.TryGetValue(key.ActorId,out var visit))return null;
+            var a=seal==null?visit.PendingReservationAnchor:seal as PickupReservationAnchor;
+            if(a==null || !a.Key.Equals(key) || !ReferenceEquals(a.Coordinator,f.Coordinator) || !ReferenceEquals(a.Owner,f.Owner) ||
+                !ReferenceEquals(a.Counter,queue) || !ReferenceEquals(a.Visit,visit) || !ReferenceEquals(a.Actor,visit.Actor) ||
+                !ReferenceEquals(a.Admission,visit.Admission) || !ReferenceEquals(a.World,world) || !ReferenceEquals(a.Capacity,Capacity) ||
+                visit.HasCollected || visit.State==CustomerVisitState.Blocked || !TrafficActorReady(visit.Actor))return null;
+            if(visit.PickupParking==null)
+            {
+                if(!ReferenceEquals(visit.PendingReservationAnchor,a) || !a.Submitted || !ReservationAnchorCurrent(a) ||
+                    source.AcquiredSequence!=0 || source.FailureDisposition!=TrafficFailureDisposition.None ||
+                    seal==null && source.Kind!=TrafficDecisionKind.Granted || !ReferenceEquals(f.Coordinator.GetDecision(key),source) ||
+                    visit.QueueLeft || visit.PickupAssigned || visit.PaidPickup!=null || visit.RequestId!=0 || visit.PickupInTransit || visit.TrafficMovePending ||
+                    !trafficCandidates.TryGetValue(key,out var cursor) || !ReferenceEquals(cursor.UnpaidEligibility,a.Eligibility) ||
+                    cursor.Role!=TrafficCandidateRole.Reservation || !ReferenceEquals(cursor.ActorLife,a.Actor) ||
+                    a.Preview==null || a.Preview.Consumed || !a.Preview.IsCurrent || !a.Preview.BelongsTo(f.Owner) ||
+                    a.Preview.Kind!=PickupQueueService.MutationKind.Reserve || a.Preview.Id!=visit.Id ||
+                    a.Preview.Assignment.VisitId!=visit.Id || f.Owner.TryCaptureReservation(visit.Id,out _))return null;
+                var rows=queue.Snapshot;
+                if(rows.Count==0 || rows[0].VisitId!=visit.Id || rows[0].SlotIndex!=0 || !rows[0].Arrived || !a.CounterClaim.IsCurrent)return null;
+                var uncommitted=new TrafficCounterUncommittedPreparationObservation(a.Actor,visit,a.Admission,a.CounterClaim,f.Owner,a.Preview,source);
+                return new TrafficCollectionReserveObservation(f.Claim,f.Preview,a,uncommitted,null,source,null);
+            }
+            var parking=visit.PickupParking;var paid=visit.PaidPickup;var work=a.CollectionWorking;
+            if(seal==null || !ReferenceEquals(parking.Origin,a) || !ReferenceEquals(parking.Owner,f.Owner) ||
+                !ReferenceEquals(parking.Coordinator,f.Coordinator) || !ReferenceEquals(parking.Actor,a.Actor) || !ReferenceEquals(parking.Admission,a.Admission) ||
+                parking.Source==null || !parking.Source.Intent.Equals(key) || parking.Source.AcquiredSequence<=0 ||
+                parking.Claim==null || !f.Owner.TryCaptureReservation(visit.Id,out var reservation) || !reservation.IsCurrent ||
+                !parking.Claim.IsSameReservation(reservation))return null;
+            var parkingSource=parking.Source;var paidMove=visit.TrafficMove;var paidIntent=paid==null?default:paid.ActiveIntent;
+            var transferred=paid?.Transferred;var phase=visit.State;var generation=visit.Generation;var request=visit.RequestId;var pose=visit.Actor.transform.position;
+            var workPaid=work?.Paid;var workIntent=work==null?default:work.PaidIntent;
+            var moveSource=paidMove?.Source;var moveIndex=paidMove?.Index;var moveGeneration=paidMove?.NativeGeneration;
+            var radius=visit.Actor.Settings.AgentRadius;var skin=visit.Actor.Settings.CollisionSkin;var epsilon=visit.Actor.Settings.Epsilon;
+            var left=visit.QueueLeft;var transit=visit.PickupInTransit;
+            bool SameProducer()=>CanIntegratedProgress && visits.TryGetValue(visit.Id,out var live) && ReferenceEquals(live,visit) &&
+                ReferenceEquals(visit.Actor,a.Actor) && ReferenceEquals(visit.Admission,a.Admission) && ReferenceEquals(visit.PickupOwner,f.Owner) &&
+                ReferenceEquals(visit.PickupParking,parking) && ReferenceEquals(parking.Origin,a) && ReferenceEquals(parking.Source,parkingSource) &&
+                ReferenceEquals(visit.PaidPickup,paid) && ReferenceEquals(a.CollectionWorking,work) && ReferenceEquals(visit.TrafficMove,paidMove) &&
+                (work==null || ReferenceEquals(work.Paid,workPaid) && work.PaidIntent.Equals(workIntent)) &&
+                (paidMove==null || ReferenceEquals(paidMove.Source,moveSource) && paidMove.Index==moveIndex && paidMove.NativeGeneration==moveGeneration) &&
+                visit.State==phase && visit.Generation==generation && visit.RequestId==request && visit.Actor.transform.position.Equals(pose) &&
+                visit.QueueLeft==left && visit.PickupInTransit==transit && visit.Actor.Settings.AgentRadius==radius &&
+                visit.Actor.Settings.CollisionSkin==skin && visit.Actor.Settings.Epsilon==epsilon &&
+                !visit.HasCollected && (paid==null || !paid.Failed && !paid.RecoveryUsed && !paid.RecoveryPending && paid.Accepted &&
+                    paid.Transferred==transferred && paid.ActiveIntent.Equals(paidIntent)) &&
+                f.Owner.TryCaptureReservation(visit.Id,out var now) && reservation.IsSameCurrentClaim(now);
+            TrafficDecision paidSource=null;
+            if(paid==null)
+            {
+                if(!PickupParkingIdentityCurrent(visit) || visit.State!=CustomerVisitState.Queued || !visit.CounterArrived || visit.QueueLeft ||
+                    visit.RequestId!=0 || visit.PickupInTransit || !a.CounterClaim.IsCurrent ||
+                    work!=null && ReadCounterWorkingPredecessor(work,key,f.Coordinator)==CounterWorkingPredecessorResult.Invalid)return null;
+            }
+            else
+            {
+                if(work==null || !ReferenceEquals(paid.Parking,parking) || !ReferenceEquals(work.Paid,paid) ||
+                    paid.Failed || paid.RecoveryUsed || paid.RecoveryPending || !paid.Accepted || !paid.ActiveIntent.Equals(paid.Intent) ||
+                    ReadCounterWorkingPredecessor(work,paid.Transferred?paid.Intent:key,f.Coordinator)==CounterWorkingPredecessorResult.Invalid)return null;
+                if(paidMove!=null && paidMove.Intent.Equals(paid.Intent) && ReferenceEquals(paidMove.Coordinator,f.Coordinator) &&
+                    paidMove.Source?.AcquiredSequence>0 && f.Coordinator.TryGetCommittedJourney(paidMove.Intent,out var actual) && ReferenceEquals(actual,paidMove.Source))paidSource=actual;
+            }
+            // Last Ready callback may change either side; never return the previously sampled producer after reentry.
+            // 最后Ready读取后双端重核；真实first Bound也不代表CQ身体已经离开，Core仍查全部空间。
+            return SameProducer() && CollectionReserveCurrent(f,provider,cup) && SameProducer() && CollectionReservePreviewCurrent(f,f.Preview)
+                ?new TrafficCollectionReserveObservation(f.Claim,f.Preview,a,null,reservation,parkingSource,paidSource):null;
         }
         private bool PickupDeliveryHistoryCurrent(PickupDeliveryHistory h)
         {
@@ -1388,6 +1580,7 @@ namespace AnimalCafe.Customers
             internal TrafficUnpaidParkingEligibility Eligibility;
             internal InitialPickupGeometry InitialGeometry;
             internal CachedPickupLeaderPreparation CachedLeader;
+            internal CounterAdvanceWorkingPredecessor CollectionWorking;
             internal float[] InitialActorSettings,InitialEmployeeSettings;
             internal PickupQueueService InitialChosenOwner;
             internal int InitialChosenIndex=-1;
@@ -1397,6 +1590,7 @@ namespace AnimalCafe.Customers
         // 原canonical Entry/proof只读身份；其他身体移动不会重新申请这份未付款预留。
         private sealed class PickupParkingRight
         {
+            internal PickupReservationAnchor Origin; // Set only by the real Reserve joint publication. / 只由真实共同提交盖章。
             internal ServiceTrafficCoordinator Coordinator;
             internal NavigationActor Actor;
             internal CustomerAdmission Admission;
@@ -1464,7 +1658,9 @@ namespace AnimalCafe.Customers
         }
         private sealed class PaidRecoveryCheckpoint
         {
-            internal bool BeforeTransfer;
+            internal bool BeforeTransfer,OwnerHoldPending,OwnerHoldConfirmed;
+            internal TrafficMovement OwnerHoldMovement;
+            internal int OwnerHoldGeneration;
             internal NavigationActor Actor;
             internal CustomerAdmission Admission;
             internal PickupQueueService Owner;
@@ -2696,8 +2892,7 @@ namespace AnimalCafe.Customers
             var request=new TrafficRequest(a.Key,a.FirstFrame,snapshot,a.Start,preview.Assignment.Position,a.Actor.Settings.AgentRadius,
                 "pickup/"+a.Visit.Id,requirements:proofs,safetyMargin:a.Actor.Settings.CollisionSkin+a.Actor.Settings.Epsilon,planPrimaryRoute:true);
             if(a.Eligibility==null)a.Eligibility=new TrafficUnpaidParkingEligibility(a.Key,a.Actor,a.Counter,a.Visit,a.Admission,
-                ()=>CanIntegratedProgress && a.Visit.PaidPickup==null && ReservationAnchorCurrent(a) &&
-                    (a.CachedLeader==null || CachedPickupLeaderCurrent(a,a.CachedLeader)));
+                ()=>ReservationUnpaidEligibilityCurrent(a));
             if(cursor.UnpaidEligibility==null && cursor.Source==null)cursor.UnpaidEligibility=a.Eligibility;
             if(!ReferenceEquals(cursor.UnpaidEligibility,a.Eligibility)){a.CachedLeader=previousLeader;return false;}
             if(!PrepareTrafficCandidate(cursor,request,a.Actor,index,expected,out decision))
@@ -3070,6 +3265,12 @@ namespace AnimalCafe.Customers
                 TrafficReceiptCurrent(member.Receipt) && ReferenceEquals(member.Receipt.Source,source);
             return ReferenceEquals(visit.PickupParking,member.Unpaid) && PickupParkingCurrent(visit,trafficSnapshot);
         }
+        private bool ReservationUnpaidEligibilityCurrent(PickupReservationAnchor a)
+        {
+            // Eligibility is the same unpaid owner, not the lifetime of a cached future-world proof.
+            // 身份只核本客CQ/Actor/Admission；外部cached几何仍由准备与提交的current门完整核验。
+            return CanIntegratedProgress && a.Visit.PaidPickup==null && ReservationAnchorCurrent(a);
+        }
         private bool CachedPickupLeaderCurrent(PickupReservationAnchor a,CachedPickupLeaderPreparation prepared)
         {
             if(prepared==null || !ReferenceEquals(a.CachedLeader,prepared) || !PickupBlueprintCurrent(prepared.Blueprint,a) ||
@@ -3262,7 +3463,7 @@ namespace AnimalCafe.Customers
                 visit.ReservedPickupRevision=adapter.Revision;visit.ReservedPickupPath=primary.ExpandedPath;visit.ReservedPickupRoute=primary.Waypoints;
                 PublishCustomerOwner(visit,key);visit.PickupTrafficPermit=decision;
                 var committedSnapshot=RefreshTrafficSnapshot();owner.TryCaptureReservation(visit.Id,out var claim);
-                visit.PickupParking=new PickupParkingRight{Coordinator=traffic,Actor=visit.Actor,Admission=visit.Admission,
+                visit.PickupParking=new PickupParkingRight{Origin=anchor,Coordinator=traffic,Actor=visit.Actor,Admission=visit.Admission,
                     Owner=owner,Claim=claim,Source=decision,Proof=primary,Revision=adapter.Revision,
                     CollisionSkin=visit.Actor.Settings.CollisionSkin,Epsilon=visit.Actor.Settings.Epsilon,
                     Fact=committedSnapshot.Parking.SingleOrDefault(p=>p.ResourceId=="pickup/"+visit.Id && ReferenceEquals(p.CanonicalOwner,owner) &&
@@ -3465,10 +3666,11 @@ namespace AnimalCafe.Customers
             reason="原付费移动不能恢复 / Paid recovery unavailable";
             if(!CanIntegratedProgress || !visits.TryGetValue(visitId??"",out var visit) || visit.State!=CustomerVisitState.Blocked ||
                 visit.PaidPickup==null || !visit.PaidPickup.Order.Equals(actualPaidKey) || !visit.PaidPickup.Failed ||
-                visit.PaidPickup.RecoveryUsed || visit.PaidPickup.RecoveryReceipt==null || !PaidRecoveryIdentityCurrent(visit))return false;
+                visit.PaidPickup.RecoveryUsed && visit.PaidPickup.Recovery?.OwnerHoldConfirmed!=true ||
+                visit.PaidPickup.RecoveryReceipt==null || !PaidRecoveryIdentityCurrent(visit))return false;
             var paid=visit.PaidPickup;var saved=paid.Recovery;
             if(visit.Segments!=saved.Segments || visit.Replans!=saved.Replans || visit.Segments>=32 || visit.Replans>3)return false;
-            var original=paid.Intent;
+            var ownerHold=saved.OwnerHoldConfirmed;var original=ownerHold?paid.ActiveIntent:paid.Intent;
             var key=new TrafficIntentKey(original.Session,original.Epoch,original.ActorId,original.IntentId,Math.Max(nextTrafficPhase,original.Generation)+1,
                 original.LayoutRevision,original.Context);
             var snapshot=RefreshTrafficSnapshot();
@@ -3477,8 +3679,10 @@ namespace AnimalCafe.Customers
                 safetyMargin:visit.Actor.Settings.CollisionSkin+visit.Actor.Settings.Epsilon,planPrimaryRoute:true);
             if(!traffic.TryBeginExplicitRecovery(paid.RecoveryReceipt,request,visit.Actor,out var ready))return false;
             nextTrafficPhase=key.Generation;
-            paid.RecoveryReceipt=null;paid.RecoveryUsed=true;paid.RecoveryPending=true;paid.Failed=false;paid.ActiveIntent=key;
-            trafficKeys.Add(visit.Id+"/paid-recovery/"+original.Generation,key);visit.TrafficCandidateFrames.Add(key,paid.FirstFrame);
+            paid.RecoveryReceipt=null;if(!ownerHold)paid.RecoveryUsed=true;
+            paid.RecoveryPending=true;paid.Failed=false;paid.ActiveIntent=key;
+            trafficKeys.Add(visit.Id+(ownerHold?"/paid-owner-continuation/":"/paid-recovery/")+original.Generation,key);
+            visit.TrafficCandidateFrames.Add(key,paid.FirstFrame);
             // Do not use Send/SetRouteContext: their ordinary new-phase setup resets Segments/Replans.
             visit.Generation++;visit.RequestId=0;visit.State=visit.ResumeState=CustomerVisitState.MovingToPickup;visit.Failure=null;
             visit.Route=null;visit.PendingExitSegment=visit.PendingPickupSegment=false;visit.TrafficMovePending=false;
@@ -3795,6 +3999,7 @@ namespace AnimalCafe.Customers
                     }
                 }
                 prepared=preparation.CurrentPreview;
+                RefreshCollectionReserveFactory(preparation,decision);
             }
             if(decision.Kind!=TrafficDecisionKind.Granted){reason=decision.Kind+": "+decision.Reason;return false;}
             if(release!=null)
@@ -3810,12 +4015,56 @@ namespace AnimalCafe.Customers
             if(cursor!=null && (!prepared.IsCurrent || !prepared.BelongsTo(visit.PickupOwner) || prepared.Kind!=operation ||
                 prepared.Id!=visit.Id || prepared.Assignment.VisitId!=visit.Id || primary.Waypoints.Last()!=prepared.Assignment.Position))return false;
             if(!CanCommitCustomerCanonicalSuccessor(visit,traffic,decision,movementPhase,out reason))return false;
+            var advanceCoordinator=traffic;var advanceActor=visit.Actor;var advanceOwner=visit.PickupOwner;
+            var advancePhase=visit.TrafficPhaseSequence;var advanceGeneration=visit.Generation;var advanceAssignment=visit.Assignment;
+            // Capture only the genuine current factory seal BEFORE the real Advance invalidates its claim/phase.
+            // 仅Advance前捕原合法Collection holder；缺原seal则不清理，不靠失效后的同Actor名字补签。
+            var oldCollections=operation==PickupQueueService.MutationKind.Advance
+                ?trafficCandidates.Values.Select(candidate=>candidate.PickupPreparation)
+                    .Where(p=>p!=null && p.Operation==PickupQueueService.MutationKind.CollectionLease && p.Cursor?.Role==TrafficCandidateRole.Collection &&
+                        ReferenceEquals(p.Visit,visit) && ReferenceEquals(p.Actor,advanceActor) && ReferenceEquals(p.Owner,advanceOwner) &&
+                        ReferenceEquals(p.Coordinator,advanceCoordinator) && p.PhaseSequence==advancePhase && !p.Key.Equals(key) &&
+                        PickupFamilyPreparationCurrent(p) && !p.Requirements.Any(requirement=>requirement.SelectedJourney) &&
+                        (visit.TrafficMove==null || !visit.TrafficMove.Intent.Equals(p.Key)) &&
+                        (visit.IssuedTraffic==null || !visit.IssuedTraffic.Intent.Equals(p.Key)))
+                    .Select(p=>new {Holder=p,Source=advanceCoordinator.GetDecision(p.Key)})
+                    .Where(pair=>pair.Source!=null && advanceCoordinator.ContainsIntent(pair.Holder.Key) && pair.Source.Intent.Equals(pair.Holder.Key) &&
+                        pair.Source.AcquiredSequence==0 && pair.Source.FailureDisposition==TrafficFailureDisposition.None &&
+                        pair.Source.Kind!=TrafficDecisionKind.Cancelled && !advanceCoordinator.HasActiveGrant(pair.Holder.Key) &&
+                        !advanceCoordinator.TryGetCommittedJourney(pair.Holder.Key,out _)).ToArray():null;
+            bool AdvancePublicationCurrent()=>!disposed && ReferenceEquals(traffic,advanceCoordinator) &&
+                visits.TryGetValue(visit.Id,out var live) && ReferenceEquals(live,visit) && ReferenceEquals(visit.Actor,advanceActor) &&
+                advanceActor!=null && ReferenceEquals(visit.PickupOwner,advanceOwner) && visit.Generation==advanceGeneration && visit.RequestId==0 &&
+                visit.TrafficPhaseSequence==advancePhase+1 && visit.Assignment.Equals(prepared.Assignment) &&
+                !SameAssignment(visit.Assignment,advanceAssignment) && ReferenceEquals(advanceCoordinator.GetDecision(key),decision) &&
+                decision.AcquiredSequence>0 && advanceCoordinator.HasActiveGrant(key);
             var committed=traffic.TryCommit(decision,prepared,()=>
             {
                 visit.TrafficPhaseSequence++;visit.Assignment=prepared.Assignment;visit.ServiceArrived=false;
                 visit.DeliveryYieldPhase=operation==PickupQueueService.MutationKind.BeginYield?1:operation==PickupQueueService.MutationKind.ReturnYield?3:0;
                 if(operation==PickupQueueService.MutationKind.BeginYield)
                     visit.YieldDeliverySource=FindPickupPreparation(visit,key)?.DeliveryCursor;
+                if(oldCollections!=null && oldCollections.Length>0)
+                {
+                    foreach(var old in oldCollections)
+                    {
+                        if(!AdvancePublicationCurrent())return;
+                        var p=old.Holder;var current=advanceCoordinator.GetDecision(p.Key);
+                        if(!ReferenceEquals(FindPickupPreparation(visit,p.Key),p) || !ReferenceEquals(p.Cursor?.PickupPreparation,p) ||
+                            p.OwnerLife!=pickupPreparationLife || !ReferenceEquals(p.Owner,advanceOwner) || !ReferenceEquals(p.Actor,advanceActor) ||
+                            p.PhaseSequence!=advancePhase || !ReferenceEquals(current,old.Source) || current.AcquiredSequence!=0 ||
+                            current.FailureDisposition!=TrafficFailureDisposition.None || advanceCoordinator.HasActiveGrant(p.Key) ||
+                            advanceCoordinator.TryGetCommittedJourney(p.Key,out _) ||
+                            !advanceOwner.TryCaptureReservation(visit.Id,out var actualClaim) || !p.Claim.IsSameReservation(actualClaim) ||
+                            p.Claim.IsCurrent || !actualClaim.Assignment.Equals(prepared.Assignment))continue;
+                        // This exact business phase ended by an actual canonical Advance; do not leave an unissued loser to wake later.
+                        // 真Advance结束该旧phase，只退精确未获权源；不触其它owner/已发腿或原失败诊断。
+                        advanceCoordinator.Retire(p.Key);
+                        if(ReferenceEquals(traffic,advanceCoordinator) && trafficCandidates.TryGetValue(p.Key,out var held) &&
+                            ReferenceEquals(held,p.Cursor) && ReferenceEquals(held.PickupPreparation,p))trafficCandidates.Remove(p.Key);
+                    }
+                    if(!AdvancePublicationCurrent())return;
+                }
                 ObservePickup(observation,visit,visit.PickupOwner,visit.Assignment);
                 var destination=movementPhase==CustomerVisitState.MovingToPickupService
                     ?pickupSides.First(s=>s.Position==target):PickupWaitTarget(visit.Assignment,visit.PickupOwner);
@@ -3864,6 +4113,7 @@ namespace AnimalCafe.Customers
                 {
                     if(traffic.ContainsIntent(phase) || !PrepareTrafficCandidate(cursor,CollectionReleaseRequest(release,snapshot),visit.Actor,
                         release.CandidateIndex,null,out var initial))return false;
+                    RefreshCollectionReserveFactory(release,initial);
                     reason=initial.Kind+": "+initial.Reason;return false;
                 }
                 if(!PrepareCollectionRelease(release,snapshot,out var pending))return false;
@@ -7216,6 +7466,7 @@ namespace AnimalCafe.Customers
                         visit.RequestId!=0 && visit.RequestId!=result.RequestId)return;
                     strictFinished=true;
                 }
+                if(strict!=null && phase==CustomerVisitState.MovingToPickup && CompletePaidOwnerHold(visit,strict,result,generation))return;
                 var canonicalArrival=strict!=null && final && phase!=CustomerVisitState.Exiting && result.Status==MovementStatus.Arrived;
 #if UNITY_EDITOR
                 if(!canonicalArrival && CorridorObserver!=null) ObserveCorridor("segment.callback-result",visit,target:result.FinalPosition,
@@ -7521,6 +7772,68 @@ namespace AnimalCafe.Customers
             catch(Exception){ /* Unknown original identity preserves no hold exception. */ }
             return false;
         }
+        // Whole-owner Disable is an explicit stop cause, not a failed Native movement.
+        // 只在owner停用入口封存同一付费任务；普通Cancelled不获得恢复资格。
+        private bool TryHoldPaidPickupForOwner(Visit visit)
+        {
+            var paid=visit.PaidPickup;
+            if(!integratedHeld || !integratedMode || disposed || traffic==null || paid==null)return false;
+            if(paid.Recovery?.OwnerHoldConfirmed==true && paid.Failed && !paid.RecoveryPending &&
+                paid.RecoveryReceipt!=null && visit.State==CustomerVisitState.Blocked && PaidRecoveryIdentityCurrent(visit))return true;
+            var movement=visit.TrafficMove;var issued=visit.IssuedTraffic;
+            if(paid.RecoveryPending || paid.RecoveryReceipt!=null || paid.Failed ||
+                !paid.Accepted || !paid.Transferred || visit.State!=CustomerVisitState.MovingToPickup || visit.RequestId<=0 ||
+                visit.HasCollected || visit.PickupArrived || !visit.PickupAssigned || !visit.PickupInTransit || visit.DeliveryYieldPhase!=0 ||
+                world==null || !world.isActiveAndEnabled || !world.LayoutAvailable || adapter==null || adapter.Revision!=revision ||
+                visit.Actor==null || !visit.Actor.isActiveAndEnabled || !world.RegisteredActors.Contains(visit.Actor) ||
+                movement==null || movement.Suspended || !ReferenceEquals(movement.Coordinator,traffic) || issued==null ||
+                !ReferenceEquals(issued.Coordinator,traffic) || !ReferenceEquals(issued.Source,movement.Source) ||
+                !issued.Intent.Equals(movement.Intent) || movement.NativeGeneration!=visit.Generation || issued.NativeGeneration!=visit.Generation ||
+                !paid.ActiveIntent.Equals(movement.Intent) || !ReferenceEquals(paid.Parking.Coordinator,traffic) ||
+                !ReferenceEquals(paid.Parking.Actor,visit.Actor) || !ReferenceEquals(paid.Parking.Admission,visit.Admission) ||
+                visit.PendingTraffic!=null || !TrafficSelectionCurrent(visit,visit.TrafficSelection) ||
+                !visit.PickupOwner.TryCaptureReservation(visit.Id,out var claim) || !claim.IsCurrent || claim.Assignment.Arrived ||
+                !SameAssignment(claim.Assignment,visit.Assignment))return false;
+            var tokens=Capacity.GetReservations().Where(token=>token.OwnerId==visit.Id).ToArray();
+            if(tokens.Length!=3 || !tokens.Any(token=>token.Kind==CapacityKind.TotalCustomers && token.State==ReservationState.Occupied) ||
+                !tokens.Any(token=>token.Kind==CapacityKind.PickUp && ReferenceEquals(token.Token,paid.Parking.Token) && token.State==ReservationState.Reserved))return false;
+            var saved=new PaidRecoveryCheckpoint{Actor=visit.Actor,Admission=visit.Admission,Owner=visit.PickupOwner,
+                Claim=claim,Assignment=claim.Assignment,Capacity=tokens,Segments=visit.Segments,Replans=visit.Replans,
+                OwnerHoldPending=true,OwnerHoldMovement=movement,OwnerHoldGeneration=visit.Generation};
+            // Publish the actual Transform pose before checking the original strict stamp; no planner query.
+            // owner已停用但actor仍存活；刷新真实身体事实，不调用progress许可或重算路线。
+            var request=visit.RequestId;var generation=visit.Generation;RefreshTrafficSnapshot();
+            if(!ReferenceEquals(visit.PaidPickup,paid) || !ReferenceEquals(visit.TrafficMove,movement) || visit.Generation!=generation ||
+                visit.RequestId!=request || !integratedHeld || !TrafficSelectionCurrent(visit,visit.TrafficSelection) ||
+                !traffic.TryCapturePaidOwnerHold(movement.Source,visit.Actor,new TrafficNativeStamp(request,generation),
+                    visit.Actor.transform.position,out var receipt))return false;
+            paid.Recovery=saved;paid.RecoveryReceipt=receipt;
+            try
+            {
+                var cancelled=world.Service.Cancel(request); // The real callback confirms the exact tuple below.
+                if(cancelled && ReferenceEquals(paid.Recovery,saved) && saved.OwnerHoldConfirmed && !saved.OwnerHoldPending)return true;
+                DiscardPaidRecovery(visit);return false;
+            }
+            catch {DiscardPaidRecovery(visit);throw;}
+        }
+        private bool CompletePaidOwnerHold(Visit visit,TrafficMovement movement,MovementResult result,int generation)
+        {
+            var paid=visit.PaidPickup;var saved=paid?.Recovery;
+            if(!integratedHeld || saved?.OwnerHoldPending!=true || saved.OwnerHoldConfirmed ||
+                !ReferenceEquals(saved.OwnerHoldMovement,movement) || saved.OwnerHoldGeneration!=generation || visit.Generation!=generation ||
+                !ReferenceEquals(visit.Actor,saved.Actor) || !ReferenceEquals(visit.TrafficMove,movement) ||
+                !paid.ActiveIntent.Equals(movement.Intent) || paid.RecoveryReceipt==null || !PaidRecoveryIdentityCurrent(visit))return false;
+            if(!traffic.ConfirmPaidOwnerHoldCancellation(paid.RecoveryReceipt,result))
+            {DiscardPaidRecovery(visit);return false;}
+            saved.OwnerHoldPending=false;saved.OwnerHoldConfirmed=true;saved.OwnerHoldMovement=null;
+            paid.Failed=true;paid.RecoveryPending=false;
+            visit.RequestId=0;visit.Generation++;visit.State=CustomerVisitState.Blocked;
+            visit.ResumeState=CustomerVisitState.MovingToPickup;visit.Failure="Owner暂停付费移动 / Paid movement held by owner";
+            visit.TrafficMovePending=false;visit.TrafficMove=null;visit.TrafficSelection=null;visit.IssuedTraffic=null;
+            visit.Route=null;visit.TrafficJourney=null;visit.PendingExitSegment=visit.PendingPickupSegment=false;
+            ClearOwnedRoute(visit,"paid-owner-hold-confirmed");return true;
+        }
+
         private void HoldVisits(bool preservePaidRecovery=false,bool captureYieldContinuation=false)
         {
             deliveryTrafficPaths=null;
@@ -7530,6 +7843,7 @@ namespace AnimalCafe.Customers
                 if(visit.PendingCounterAdvance!=null && !CounterAdvanceIdentityCurrent(visit.PendingCounterAdvance,requireNavigation:false))
                     RetireCounterAdvance(visit);
                 if(PreservesSameRevisionPaidPreparation(visit))continue;
+                if(TryHoldPaidPickupForOwner(visit))continue;
                 if(preservePaidRecovery && (IsActivePaidRecovery(visit) || IsActiveCollectionRecovery(visit)))continue;
                 if(!preservePaidRecovery && !PreservesSameRevisionTraffic(visit))DiscardPaidRecovery(visit);
                 visit.YieldReturnTraffic=null;

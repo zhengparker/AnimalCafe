@@ -376,16 +376,23 @@ namespace AnimalCafe.Navigation
                         // The full outward offset can leave a narrow NavMesh strip. Try only
                         // bounded shorter offsets; every actual connection keeps both guards.
                         // 完整外移点可能越出窄NavMesh；有限缩短，每条真实连接仍须完整认证。
+                        var hasStaticFallback=false;var staticFallback=rawCorners[corner];
                         for (var attempt = 0; attempt < 4; attempt++)
                         {
                             candidate = rawCorners[corner] + offset;
-                            // Only the last interior correction has a fixed final outgoing endpoint.
-                            // 仅最后interior角同时认证到最终点；其他中间角仍沿用原流程。
-                            if (actor.World.CanTraverseStraight(actor, candidate) &&
-                                (corner != corners.Length - 2 || actor.World.CanTraverseStraightFrom(actor, candidate, corners[corner + 1])))
-                            { corners[corner] = candidate; adjustedCorners[corner] = true; break; }
+                            if (actor.World.CanTraverseStraight(actor, candidate))
+                            {
+                                var staticWhole=false;
+                                if (corner != corners.Length - 2 || actor.World.CanTraverseStraightFromWithStaticProof(actor,candidate,corners[corner+1],out staticWhole))
+                                { corners[corner] = candidate; adjustedCorners[corner] = true; break; }
+                                if(!hasStaticFallback && staticWhole){hasStaticFallback=true;staticFallback=candidate;}
+                            }
                             offset *= .5f;
                         }
+                        // Prefer every original full-clear option; only then use the first static-safe future connection.
+                        // 四次候选仍优先完整动态通畅；全拒才保静态安全角，实际每步仍完整动态sweep。
+                        if(!adjustedCorners[corner] && hasStaticFallback)
+                        {corners[corner]=staticFallback;adjustedCorners[corner]=true;}
                     }
                 }
                 break; // 每次只简化一段；最终destination始终保留。

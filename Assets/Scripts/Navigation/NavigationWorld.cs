@@ -163,7 +163,14 @@ namespace AnimalCafe.Navigation
         // Read-only candidate-origin connection. Height follows real horizontal movement, not NavMesh voxel Y.
         // 只读候选起点连接；胶囊与NavMesh查询都用actor真实高度，不将胶囊抬至corner高度。
         internal bool CanTraverseStraightFrom(NavigationActor actor, Vector3 from, Vector3 target)
+            => CanTraverseStraightFromCore(actor,from,target,false,out _);
+
+        internal bool CanTraverseStraightFromWithStaticProof(NavigationActor actor, Vector3 from, Vector3 target,out bool staticWhole)
+            => CanTraverseStraightFromCore(actor,from,target,true,out staticWhole);
+
+        private bool CanTraverseStraightFromCore(NavigationActor actor, Vector3 from, Vector3 target,bool captureStatic,out bool staticWhole)
         {
+            staticWhole=false;
             if (!LayoutAvailable || actor == null || !drivers.ContainsKey(actor)) return false;
             var start = new Vector3(from.x, actor.transform.position.y, from.z);
             if (!NavigationCollisionGuard.Finite(start) || !NavigationCollisionGuard.Finite(target)) return false;
@@ -171,7 +178,9 @@ namespace AnimalCafe.Navigation
             var filter = new UnityEngine.AI.NavMeshQueryFilter
                 { agentTypeID = actor.Agent.agentTypeID, areaMask = actor.Agent.areaMask };
             if (UnityEngine.AI.NavMesh.Raycast(start, start + delta, out _, filter)) return false;
-            var approved = guard.ClampDisplacementFrom(actor, start, delta, actors, solids);
+            var approved = captureStatic
+                ? guard.ClampDisplacementFromWithStaticProof(actor,start,delta,actors,solids,out staticWhole)
+                : guard.ClampDisplacementFrom(actor,start,delta,actors,solids);
             return approved.x == delta.x && approved.z == delta.z;
         }
 

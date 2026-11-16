@@ -1,6 +1,6 @@
 # Phase 15 自动营业周期：Beginner Guide
 
-> **当前 PR #15 为 Open、未合并；本轮精简 regression 为 115/115 PASS，相关 EditMode 为 1105/1105 PASS。完整 CI 的后续状态记录在 PR／Validation Report。** 下方是 8 项手动操作步骤，可先在 P15 branch 验收。历史 EditMode 1388/1388、PlayMode 90/90 属于之前 checkpoint，不能代表本轮完整 CI；当前源码、客观测试和 Owner／设备验收的范围见[Validation Report](Phase15_Validation_Report.md)。
+> **本地精简回归已完成：EditMode 1459通过；PlayMode 179通过、0失败、1项既有SKIP。** P15营业周期77项全部通过；SKIP仍是未捕获指定状态的覆盖缺口，不算通过。Unity CI已配置为同范围compact，full可手动选择；本地结果不代替云端结果，PR本次仅更新不合并，P15尚未正式关闭。下方8项手动步骤保留；证据见 [Validation Report](Phase15_Validation_Report.md) 顶部。
 
 ## 0. 按顺序手动验收（8 项）
 

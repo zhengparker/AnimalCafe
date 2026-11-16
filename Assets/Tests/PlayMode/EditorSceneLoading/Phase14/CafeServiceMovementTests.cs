@@ -1259,7 +1259,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             PickupQueueService.ReservationClaim claim=null;QueueAssignment assignment=default;
             TrafficDecision source=null;TrafficIntentKey phase=default;TrafficNativeStamp originalStamp=default;
             CafeOrderKey orderKey=default;CapacityToken[] tokens=null;CapacityToken total=null;
-            string id=null,originalCallback=null;string[] fifo=null;Vector3 exitPose=default;
+            string id=null,originalCallback=null;string[] fifo=null;Vector3 exitPose=default,blockerInitialPose=default;
             var originalRequest=0L;var firstFrame=-1;var transfers=0;var originalCallbacks=0;var acceptedRequests=new HashSet<long>();
             var resumed=false;var canonicalArrival=false;var nativePickupArrival=false;var realExit=false;var removalSeen=false;
             var ownerResumeCalls=0;var repeatedResumeAttempted=false;var repeatedResumePreserved=false;
@@ -1388,7 +1388,12 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                             " claim="+System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(claim)+" tokens="+
                             string.Join(";",tokens.Select(t=>System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(t).ToString())));
                         blocker=Blocker(target,"paid-native-recovery-obstacle");
-                        Assert.That(blocker.transform.position,Is.EqualTo(target));Assert.That(world.RegisteredActors.Contains(blocker),Is.True);
+                        // The body was born once at the owned sampled start, not teleported to the nominal goal.
+                        // 原Native target/Source不改；实际出生点在原arrival内且物理覆盖该目标。
+                        blockerInitialPose=blocker.transform.position;
+                        Assert.That(Vector3.Distance(blockerInitialPose,target),Is.LessThanOrEqualTo(actor.Settings.ArrivalDistance));
+                        Assert.That(Vector3.Distance(blockerInitialPose,target),Is.LessThan(blocker.Settings.AgentRadius));
+                        Assert.That(blocker.transform.position,Is.EqualTo(blockerInitialPose));Assert.That(world.RegisteredActors.Contains(blocker),Is.True);
                     }
                     acceptedRequests.Add(Request(details));
                     if(resumed && state==CustomerVisitState.MovingToPickup)

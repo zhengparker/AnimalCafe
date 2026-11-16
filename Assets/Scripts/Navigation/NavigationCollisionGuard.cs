@@ -83,9 +83,18 @@ namespace AnimalCafe.Navigation
         // 显式起点复用原完整sweep；不临时移动actor或缩小碰撞规则。
         internal Vector3 ClampDisplacementFrom(NavigationActor actor, Vector3 start, Vector3 displacement,
             IReadOnlyList<NavigationActor> actors, IReadOnlyList<Collider> solids)
+            => ClampDisplacementFromCore(actor,start,displacement,actors,solids,false,out _);
+
+        internal Vector3 ClampDisplacementFromWithStaticProof(NavigationActor actor, Vector3 start, Vector3 displacement,
+            IReadOnlyList<NavigationActor> actors, IReadOnlyList<Collider> solids, out bool staticWhole)
+            => ClampDisplacementFromCore(actor,start,displacement,actors,solids,true,out staticWhole);
+
+        private Vector3 ClampDisplacementFromCore(NavigationActor actor, Vector3 start, Vector3 displacement,
+            IReadOnlyList<NavigationActor> actors, IReadOnlyList<Collider> solids, bool captureStatic, out bool staticWhole)
         {
+            staticWhole=false;
             if (actor == null || !Finite(start) || !Finite(displacement)) return Vector3.zero;
-            displacement.y = 0;
+            displacement.y = 0;var requested=displacement;
             if (!StaticClear(actor, start, solids) || !DynamicClear(actor, start, Vector3.zero, actors)) return Vector3.zero;
             var length = displacement.magnitude;
             if (length <= 0) return Vector3.zero;
@@ -102,7 +111,9 @@ namespace AnimalCafe.Navigation
                     allowed = Mathf.Min(allowed, Mathf.Max(0, hits[i].distance - actor.Settings.Epsilon));
                 }
             displacement *= allowed / length;
-            if (!DynamicClear(actor, start, displacement, actors))
+            var staticDelta=displacement;
+            var dynamicBlocked=!DynamicClear(actor, start, displacement, actors);
+            if (dynamicBlocked)
             {
                 var low = 0f; var high = 1f;
                 for (var i = 0; i < 16; i++)
@@ -114,10 +125,24 @@ namespace AnimalCafe.Navigation
             }
             // Dynamic shortening changes the rounded Transform endpoint. Prove the final sweep again.
             // 动态碰撞缩短位移后，必须重新检查实际 float32 终点，不能沿用旧终点的证明。
+            var actualStaticClear=StaticSweepEndClear(actor,start,displacement,solids,count,direction);
+            if(captureStatic && staticDelta.x==requested.x && staticDelta.z==requested.z)
+            {
+                // Reuse the original cast; only a dynamically shortened candidate needs its full endpoint checked.
+                // 复用同一次CapsuleCast；只有动态缩短时额外核原完整终点，最多一次StaticClear。
+                staticWhole=dynamicBlocked && (displacement.x!=staticDelta.x || displacement.z!=staticDelta.z)
+                    ? StaticSweepEndClear(actor,start,staticDelta,solids,count,direction) : actualStaticClear;
+            }
+            return actualStaticClear ? displacement : Vector3.zero;
+        }
+
+        private bool StaticSweepEndClear(NavigationActor actor,Vector3 start,Vector3 displacement,
+            IReadOnlyList<Collider> solids,int count,Vector3 direction)
+        {
             for (var i = 0; i < count; i++)
                 if (RegisteredSolid(actor, hits[i].collider, solids) && InitialOverlapSentinel(hits[i], direction) &&
-                    !BoxSweepClear(actor, start, displacement, hits[i].collider)) return Vector3.zero;
-            return StaticClear(actor, start + displacement, solids) ? displacement : Vector3.zero;
+                    !BoxSweepClear(actor, start, displacement, hits[i].collider)) return false;
+            return StaticClear(actor, start + displacement, solids);
         }
 
         private static bool InitialOverlapSentinel(RaycastHit hit, Vector3 direction)

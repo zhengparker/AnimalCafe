@@ -344,6 +344,13 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 {
                     var visit=pair.Value;var id=(string)pair.Key;var anchor=Stored(visit,"PendingCounterAdvance");var actor=Stored(visit,"Actor") as NavigationActor;
                     var row=Facts(visit,"Id","State","ResumeState","Generation","RequestId","Failure","CounterArrived","CounterPosition","QueueLeft","HasCollected","TrafficMovePending","TrafficPhaseSequence","TrafficCandidateFrames");
+                    // Post-failure immutable facts only / 失败后读取原决定，不重新查询路线或恢复。
+                    var failedCollection=Stored(visit,"FailedCollection");
+                    var collectionFailure=Stored(failedCollection,"Failure") as TrafficDecision;
+                    row["failedCollection"]=Facts(failedCollection,"Original","Order","Cup","Resuming","Started","ActiveKey");
+                    row["failedCollectionDecision"]=collectionFailure==null?(object)"NO_SAVED_COLLECTION_FAILURE":new Dictionary<string,object>{
+                        {"intent",collectionFailure.Intent},{"kind",collectionFailure.Kind},{"reason",collectionFailure.Reason},{"disposition",collectionFailure.FailureDisposition},
+                        {"blockers",collectionFailure.Blockers.Select(b=>new Dictionary<string,object>{{"owner",b.Owner},{"resource",b.ResourceId},{"proof",b.Proof}}).ToArray()}};
                     row["actorRef"]=Ref(actor);row["actorEnabled"]=actor!=null && actor.isActiveAndEnabled;row["agentEnabled"]=actor!=null && actor.Agent!=null && actor.Agent.enabled;
                     row["actorPose"]=actor==null?(object)"UNKNOWN_ACTOR":actor.transform.position;row["actorSettings"]=actor==null?(object)"UNKNOWN_ACTOR":new[]{actor.Settings.AgentRadius,actor.Settings.CollisionSkin,actor.Settings.Epsilon};
                     row["totalReservations"]=customers.Capacity.GetReservations().Where(r=>r.OwnerId==id && r.Kind==CapacityKind.TotalCustomers).Select(r=>new Dictionary<string,object>{{"tokenRef",Ref(r.Token)},{"state",r.State}}).ToArray();
@@ -968,6 +975,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             Assert.That(owner.Snapshot.Failure,Does.Contain("Cup prefab")); tools.BlockCurrentReturnRoute(); Assert.That(tools.Feedback,Does.StartWith("Registered owned"));
             CafeLoopRuntimeProof.Set(cups,"cupPrefab",prefab); yield return Until(()=>cups.VisibleOrders.Count==1);
             yield return Until(()=>employees.Snapshot.Any(e=>e.Role==EmployeeRole.Barista && e.State==EmployeeState.Blocked),6000);
+            // Establish real pickup arrival before recording the business rollback baseline.
+            // 先等真实到候餐位：Reserved→Occupied 属于正常移动，不能算作 Complete 失败后的副作用。
+            yield return Until(()=>customers.Snapshot.Single().State==CustomerVisitState.PickupWaiting);
             var service=CafeLoopRuntimeProof.Field<CafeLoopService>(owner,"service"); var operation=CafeLoopRuntimeProof.Field<Delegate>(service,"completeOrder"); var rejected=0;
             CafeLoopRuntimeProof.Set(service,"completeOrder",new Func<OrderService,long,string,OrderResult>((orders,id,visit)=>{rejected++; return orders.Complete(id,"wrong-real-owner");}));
             var id=customers.Snapshot.Single().VisitId; var tokenStates=customers.Capacity.GetReservations().Where(r=>r.OwnerId==id).Select(r=>r.State).ToArray();
@@ -1176,8 +1186,14 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             CollectionAssert.AreEqual(before,owner.Snapshot.Orders.Select(p=>p.Key.OrderId+":"+p.Value.State));
         }
         private T Find<T>() where T:Component=>scene.GetRootGameObjects().SelectMany(r=>r.GetComponentsInChildren<T>(true)).Single();
-        private IEnumerator Until(Func<bool> done,int max=6000)
-        { for(var f=0;f<max && !done();f++) yield return null; Assert.That(done(),Is.True,owner.Snapshot.Status+" / "+owner.Snapshot.Failure+" / "+customers.Status); }
+        private IEnumerator Until(Func<bool> done,int max=6000,[System.Runtime.CompilerServices.CallerLineNumber] int callerLine=0)
+        {
+            for(var f=0;f<max && !done();f++)yield return null;
+            var completed=done();
+            if(!completed && TestContext.CurrentContext.Test.Name==nameof(WholeOwnerPreparedAndReturningDisableResumeSameBodyWithoutRepreparingOrRedelivery))
+                TestContext.WriteLine("OWNER_HOLD_ORIGINAL_FINAL callerLine="+callerLine+" "+TwentyTrafficFailureTrace.CounterGapCurrent(world,customers,storedOnly:true));
+            Assert.That(completed,Is.True,"original Until callerLine="+callerLine+" / "+owner.Snapshot.Status+" / "+owner.Snapshot.Failure+" / "+customers.Status);
+        }
     }
 }
 #endif

@@ -171,8 +171,36 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             Assert.That(adapter.IsPointWalkable(position),Is.True,"Fixture blocker must be on real owned NavMesh");
             Assert.That(world.RegisteredActors.All(a=>Vector3.Distance(a.transform.position,position)>.92f),Is.True,"Never overlap an existing body when creating the blocker");
             var prefab=CafeLoopRuntimeProof.Field<NavigationActor>(tools,"blockerPrefab");
-            var body=UnityEngine.Object.Instantiate(prefab,position,Quaternion.identity,tools.transform);
-            Assert.That(body.TryInitializeRuntimeId(name),Is.True); Assert.That(body.TryEnableSteadyPathMotion(),Is.True); Assert.That(world.Register(body),Is.True); return body;
+            // A sampleable goal need not be a legal exact actor start. Choose the NEW body's start once before birth.
+            // 目标与权限不变；仅出生前用同owned filter/原arrival范围采样一次，不移动已有body或注册后重试。
+            const System.Reflection.BindingFlags flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+            var filter=(UnityEngine.AI.NavMeshQueryFilter)typeof(NavigationLayoutAdapter).GetProperty("OwnedFilter",flags).GetValue(adapter);
+            Assert.That(UnityEngine.AI.NavMesh.SamplePosition(position,out var hit,prefab.Settings.ArrivalDistance,filter),Is.True,
+                "Fixture goal must have one owned-filter start within its original arrival tolerance");
+            Assert.That(Vector3.Distance(hit.position,position),Is.LessThanOrEqualTo(prefab.Settings.ArrivalDistance));
+            var initialPosition=hit.position;initialPosition.y=position.y;
+            Assert.That(Vector3.Distance(initialPosition,position),Is.LessThan(prefab.Settings.AgentRadius),
+                "The actual NEW body's physical footprint must still cover the unchanged requested goal");
+            Assert.That(world.RegisteredActors.All(actor=>Vector3.Distance(actor.transform.position,initialPosition)>.92f),Is.True,
+                "The sampled NEW body must also clear every existing body");
+            if(initialPosition!=position)TestContext.WriteLine("BLOCKER_INITIAL_OWNED_SAMPLE name="+name+" goal="+position.ToString("F9")+
+                " sample="+hit.position.ToString("F9")+" actualStart="+initialPosition.ToString("F9")+
+                " arrival="+prefab.Settings.ArrivalDistance+" ownedAgentType="+filter.agentTypeID+" beforeInstantiate=True singleSample=True noRetry=True");
+            var body=UnityEngine.Object.Instantiate(prefab,initialPosition,Quaternion.identity,tools.transform);
+            // Each original API runs exactly once; label only its actual failed result.
+            // 原初始化/enable/register各调用一次，失败时只读事实；不重放guard或Native。
+            string Failure(string stage)=>"BLOCKER_FIXTURE stage="+stage+" name="+name+" requested="+position.ToString("F9")+
+                " actual="+body.transform.position.ToString("F9")+" actor="+body.ActorId+" active="+body.isActiveAndEnabled+
+                " agent="+(body.Agent!=null)+" proxy="+(body.Proxy!=null)+
+                " layoutAvailable="+world.LayoutAvailable+" otherBodies=["+
+                string.Join(";",world.RegisteredActors.Select(other=>other.ActorId+"@"+other.transform.position.ToString("F9")))+"]";
+            var initialized=body.TryInitializeRuntimeId(name);
+            Assert.That(initialized,Is.True,initialized?null:Failure("initialize-runtime-id"));
+            var enabled=body.TryEnableSteadyPathMotion();
+            Assert.That(enabled,Is.True,enabled?null:Failure("enable-steady-path-motion"));
+            var registered=world.Register(body);
+            Assert.That(registered,Is.True,registered?null:Failure("register-current-pose"));
+            return body;
         }
         // Default-off original WaitOrFail witness; never call a planner, hint, preview or progress API.
         // callback 内捕获所有观察异常，确保原 Fail 继续；finally 恢复 hook 后才输出和断言。
@@ -898,11 +926,27 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             }
             finally {endDeliveryProtection?.Invoke();endWorkingTrace();}
         }
+        // Exact compatibility-test names only; default Main/family geometry stays unchanged.
+        // 仅旧yield拓扑测试显式opt-in；任何真实customer proposal之前一次初始化。
+        private static bool UsesLegacySingleSideYieldInput()
+        {
+            var name=TestContext.CurrentContext.Test.Name;
+            return name==nameof(SingleSideHeldReadyStartsSafeCollectionBeforeActualMachineReturn) ||
+                name==nameof(SingleSidePaidOwnerActuallyYieldsThroughDeliveryReturnThenCollectsWithOriginalTokens) ||
+                name==nameof(SingleSideActualYieldPauseDisableResumeKeepsPaidBodyAndTokens) ||
+                name==nameof(SingleSideChangedDoneDuringActualYieldRetiresOriginalPaidVisit) ||
+                name==nameof(SingleSideDeliveryDeclaresOriginalBoundedYieldOption) ||
+                name==nameof(SingleSideDeliveryWaitsForActualYieldArrivalBeforeReservedOption) ||
+                name==nameof(SingleSidePickupBeginYieldCapturesOriginalPreparationBeforeSubmit) ||
+                name==nameof(SingleSidePickupReturnYieldCapturesOriginalPreparationBeforeSubmit) ||
+                name==nameof(SingleSidePickupYieldedCollectionCapturesOriginalPreparationBeforeSubmit);
+        }
+
         // Compatibility input only: initialize the old empty canonical queue before the first customer proposal.
         // 只保留本例旧yield拓扑；新默认geometry仍由Photo/Five验证，发布后不改owner/slots。
         private void InitializeLegacySingleSideHeldReadyInput()
         {
-            Assert.That(TestContext.CurrentContext.Test.Name==nameof(SingleSideHeldReadyStartsSafeCollectionBeforeActualMachineReturn) ||
+            Assert.That(UsesLegacySingleSideYieldInput() ||
                 TestContext.CurrentContext.Test.Name==nameof(SingleSideSelectedUnissuedDeliverySegmentRecognizesFiniteMovingBodyAndKeepsOriginalWork),Is.True);
             Assert.That(customers.Snapshot,Is.Empty);Assert.That(owner.Snapshot.Orders,Is.Empty);Assert.That(owner.Snapshot.PaidVisitIds,Is.Empty);
             Assert.That(customers.CounterAssignments,Is.Empty);Assert.That(customers.Capacity.GetReservations(),Is.Empty);
@@ -982,7 +1026,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         {
             var paid=0;var prepared=0;
             employees.IntegratedTaskEvent+=e=>{if(e.Kind==CafeTaskEventKind.ServiceFinished)paid++;if(e.Kind==CafeTaskEventKind.Prepared)prepared++;};
-            if(TestContext.CurrentContext.Test.Name==nameof(SingleSideHeldReadyStartsSafeCollectionBeforeActualMachineReturn))
+            if(UsesLegacySingleSideYieldInput())
                 InitializeLegacySingleSideHeldReadyInput();
             yield return PrimePickupFamilyAdmission();
             Assert.That(customers.TrySpawn(),Is.True,customers.Status);var id=customers.Snapshot.Single().VisitId;

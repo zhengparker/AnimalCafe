@@ -1,5 +1,83 @@
 # Phase 15 — Business Day Lifecycle Validation Report
 
+> **CI / PR 发布说明（2026-11-16）：** 用户已授权将本地已测修复提交到现有 PR15，并将日常 Unity CI 改为本地一致的 compact。共用筛选见 `Tools/Testing/compact-edit.filter.txt`、`compact-play.filter.txt`；保留 full、手动触发、登录 opt-in、原失败断言和单次 activation。配置通过10项 offline 检查及真实本地 NUnit XML 核验；新云端 CI 尚未运行。仅更新 PR，不合并。下方“未提交/未push”是原本地测试完成时的历史状态；发布状态以 PR head 为准。
+
+<!-- P15_FINAL_LOCAL_COMPACT_20261116_BEGIN -->
+**最新结果：本地精简回归完成，0 FAIL。P15 尚未正式关闭；本轮没有运行 CI、commit、push 或 merge。**
+
+| 范围 | 结果 | 原始 XML SHA256 |
+| --- | --- | --- |
+| EditMode，原4类筛选 | 1459 PASS / 0 FAIL / 0 SKIP | `11E20BED126CC230C56B5FE6B15751C5E5B22C532FC459E56DB1251804D19FD2` |
+| PlayMode，原100 selectors / 180 cases | 179 PASS / 0 FAIL / 1 既有 SKIP | `428062DD6773226995E6314683792A385B7941A909EE13CB2C232EAA93973D2A` |
+| 其中 P15 自动营业周期 | 77 / 77 PASS | 同上 PlayMode XML |
+
+PlayMode 本轮约25分46秒，未开启临时诊断参数。冻结537文件 source set：`64D04E8A730EC97130F54900098EEA426B063D740C9BB0E6E689F9D45AEC9E44`。两模式启动前与结束后均537/537匹配；Assets/Scenes/inputs parity无差异，Unity/worker退出数0；原生 OS handles仍UNKNOWN，不据此外推。机器收据：[result.json](../outputs/phase15/p15-unity-ci-20261113/local-compact-final-collection-exit-handoffs-20261116/result.json)、[final-verification.json](../outputs/phase15/p15-unity-ci-20261113/local-compact-final-collection-exit-handoffs-20261116/final-verification.json)。
+
+本次修正 `ServiceTrafficCoordinator.cs` 中的有限准备交接：真实到位的旧顾客保留原账本时，允许取餐准备等待同PQS员工的有效返程；原顾客真实离店后，允许出口准备等待同PQS实际付款移动；已付顾客原次腿遇更早有效离店路线时，只保留原正债内的准备。所有当前身份、原期限、Frozen/WAIT集合、真实碰撞及最终 query/commit 检查继续生效；没有修改 Scene、存档、半径、epsilon、生产 query budget 或经营时间。
+
+Main 原8次来客时间复现：修复前76.981秒 Blocked（`4C399C86…`），修复后8/8真实离店（`E952D2FB…`），鉴权收窄后再次通过（`DC4F3E1E…`）。本轮正常随机 Main：独立一轮6/6，三连续批次8/8、8/8、10/10均排空；本轮各长柜台/截图专项继续保留原20次真实离店及容量释放断言。
+
+**仍未证明的覆盖，不能算PASS：**
+
+- 既有 `D2PreparedDeliveryRefreshesAtRealPrePumpMetadataCheckpoint` SKIP：未捕获真实 commit 前 primary snapshot delta，当前 leg delta 不能替代该状态。
+- 新增公开模型草案v2/v3未达到目标 Native Bound 状态，均记 PREM_NOT_PROVEN 后撤回；原1148项 Core 测试 bytes `C11C9B54…` 完整恢复，没有删除或放宽既有断言。产品修复依据是上述真实 Native RED/GREEN及本轮正常精简回归。
+- 历史6DEC已付顾客指定 strict-index 状态没有原始字段记录；整体 Native/精简通过不伪造该状态回执。
+
+保留测试中的只读失败 blocker 输出，以及默认关闭的原8次合法来客时间重放选项；临时逐分支诊断已清理。手动验收步骤仍见 [Beginner Guide](Phase15_Beginner_Guide.md)。当前 HEAD仍 `7d2ccdd911e63492d9d9db5ef3425d1cd6956596`，本轮修改未提交；历史云端CI与正式合并验收不以本地结果替代。
+<!-- P15_FINAL_LOCAL_COMPACT_20261116_END -->
+
+<details>
+<summary>历史验证记录：各自绑定旧源码；以顶部最新结果为准</summary>
+
+<!-- P15_CURRENT_HANDOFF_FIXES_20261116_BEGIN -->
+> **Current repair / 当前修复：IN_PROGRESS。** Main original ordinary-Collection failure reproduced by its actual eight arrival times: RED at76.981s, XML `4C399C86…`; minimal same-PQS arrived-advance / actual worker-return preparation fix then GREEN8/8 actual exits, XML `E952D2FB…`. Generation/slot/actual-body hardening also passed the same replay in `DC4F3E1E…`.
+>
+> Original LongSevenFast actual-Exit refusal captured in `DC4F3E1E…`: original Frozen Exit truly retired, later same-PQS strict Bound paid source crosses the still-unacquired Exit. Current bounded preparation repair passed20 actual exits (`FE80EC45…`), then Fast + Normal both passed20 actual exits each (`8537F50F…`). Source/lease/current-body checks, original debt, Frozen, collision and final query/commit rules remain intact. Retained-paid arrived-original / earlier-Exit continuation is also narrowly authenticated; prior6DEC specified receiver strict-index state remains NOT_PROVEN where not captured.
+>
+> New public model draft had2 **PREMISE failures**, not product RED: a never-frozen producer was correctly held by canonical successor ordering. Its fixture is being corrected to use a real earlier WAIT. The original180-case compact has **not** been rerun on this working source; earlier clean177P2F1SKIP is historical below. CI/commit/push/merge remain NOT_PERFORMED.
+<!-- P15_CURRENT_HANDOFF_FIXES_20261116_END -->
+
+
+<!-- P15_FINAL_MIXED_DETOUR_20261116_BEGIN -->
+> **Latest clean source / 最新：IN_PROGRESS。** Mixed Working-body / already-Frozen Native geometry repair is applied. Exact public feature RED 1 FAIL + 1 control PASS (`B61DA5C7…`), then related Core **1148/1148 PASS** (`D6E925B7…`). Original Main3, LongSix1x/2x and PhotoFast Native preflight all **4/4 PASS** (`224B70FF…`), with Main 6/8/6 actual exits and each layout20 actual exits. Working business hints are preserved; the detour still validates every body/right and original finite debt.
+>
+> Frozen 537-file set `983CA1DABA86822B9E4607066295BC03CFD2997985DF9401402717B9FF97D734`; clean compact **Edit1459 PASS / 0 FAIL / 0 SKIP**, XML `798CC018BC1D0AEAE431839D1EDA11D5381DE0C8F57ABA88AB15F6ABC90174BD`. Original **180-case / 100-selector Play completed: 177 PASS / 2 FAIL / 1 SKIP**, XML `8CC21D36D31AC35515F625615C8FA7FEAB02188CC6F37B61167B3BD480A1822E`, without diagnostic flags. Remaining failures: Main third-cohort ordinary Collection and LongSevenFast actual Exit. No aggregate PASS or formal P15 closure. Source-bound receipt: `outputs/phase15/p15-unity-ci-20261113/local-compact-repaired-mixed-detour-20261116/result.json`. Current continuation adds passive test diagnostics and targets only those two cases before further repair.
+>
+> The earlier clean compact below remains **historical FAIL** at its own source. The old same-Paid next-leg rejection's exact guard and D2 checkpoint remain unproven where not observed; targeted passes do not invent those receipts. CI/commit/push/merge/P16 remain NOT_PERFORMED on the current uncommitted delta.
+<!-- P15_FINAL_MIXED_DETOUR_20261116_END -->
+
+<!-- P15_LATEST_LOCAL_REPAIR_20261116_BEGIN -->
+> **Latest / 最新：IN_PROGRESS，精简 PlayMode 尚未完成。** Latest clean PlayMode completed **175 PASS / 4 FAIL / 1 SKIP**, XML `23F80281326DEE6A0511592413D8396647CFD40AD769A4B833C2E3A2A809F10E` (22m59s), with all **77 P15 business-day cases PASS**. Owner authorized continuing repairs until compact regression completes. TEMP query-cost and paid-gap diagnostics have been removed. Clean related compact EditMode **1457 PASS / 0 FAIL / 0 SKIP**, XML `DB6662173E47FAA230C994EEE28CAED70313FE3B6649C5B3C982CCCE13746DD2`. Current frozen 537-file source set: `2AC56505A0A2CE78A938BD4C6A87A7F5B5417650A18D9D2E74A9C1F311AE221E`.
+>
+> Repairs now include actual Bound obstruction preserving collection identity; same unpublished delivery refresh; finite employee preparation across actual canonical collection / paid strict next-leg gaps; capture at the first genuine owned return WAIT; typed authenticated raw Native-query reuse; and real retained CQ + transferred PQS checkpoint capture. Complete/StaticSampleNoHit memo never caches Unknown, and every current spatial/commit check remains mandatory. Actual CQ departure counterexample: 7 old PASS + 1 feature FAIL (`3EFE8108…`), then Core **1146/1146 PASS** (`918C2AB0…`), followed by the clean 1457-case run above.
+>
+> Prior source-bound Native runs passed LongSix 1x/2x and PhotoFast 20 real exits each. A later Main cohort completed 9 actual exits before a second cohort failed; another single Main completed 8 actual exits. These are narrower receipts. Main same-Frozen Paid next-leg failure has a confirmed missing capture; exact original capture sub-condition remains UNKNOWN. A separate historical unacquired delivery-candidate failure (`245CAF0B…`) has no captured exact guard yet; a later single-case pass did not establish its repair. Clean Main three-cohort preflight now PASS: 7/7, 10/10 and 9/9 actual exits, all drained; XML `55D09A6359BA5B0C94493C900ACBEA8819ACE9BC6D6B30F238E632A607D524FE`. This run used existing boundary-observation flags. The original normal-mode 180-case compact completed without diagnostic flags. Its Main third cohort recorded actual employee return Blocked at 42.004 scene seconds, after 2 real exits. Original stored WAIT confirms the same Frozen Paid6 source in an unissued next-leg gap. Other current failures are LongSix counter advance after 12/11 completed orders, and PhotoFast Barista failure after 2 completed orders. A four-case targeted original-witness batch, with Main replaying the actual six arrival times, is now running. This supersedes any implied readiness from the preflight pass; no aggregate Play PASS is claimed.
+>
+> The historical compact block below (1436 PASS / Play175 PASS,4 FAIL,1 SKIP) remains evidence for its old source only. D2 deeper pre-commit metadata checkpoint and the optional returning-body negative remain **NOT_PROVEN** where not observed. PR15 stays open/unmerged at `7d2ccdd911e63492d9d9db5ef3425d1cd6956596`; current-source CI, commit, push, merge, P16 and formal closure are **NOT_PERFORMED**. Current receipts: `outputs/phase15/p15-unity-ci-20261113/local-compact-repaired-20261116/` and `remaining-four-repair-20261116/progress.json`.
+<!-- P15_LATEST_LOCAL_REPAIR_20261116_END -->
+
+<!-- P15_CURRENT_CI_REPAIR_20261115_BEGIN -->
+> **Current status / 当前状态：精简回归未全过，LOCAL_COMPACT_FAIL / NOT_READY_FOR_CI。** Clean frozen-source EditMode **1436 PASS / 0 FAIL / 0 SKIP**; PlayMode **175 PASS / 4 FAIL / 1 SKIP** (180 cases). All **77 P15 business-day Play cases PASS**. PR15 stays open and unmerged at `7d2ccdd911e63492d9d9db5ef3425d1cd6956596`. No newer commit, push or CI dispatch; no merge, P16 or formal phase closure. Full CI [43707894338](https://github.com/zhengparker/AnimalCafe/actions/runs/43707894338) failed at that head: EditMode 4055 PASS / 12 FAIL / 3 SKIP; PlayMode 1588 PASS / 60 FAIL / 14 SKIP / 1 Inconclusive. Historical local-ready statements below do not override the current failed compact run.
+>
+> **Current remaining failures / 当前失败：** `MainDefaultCounterPlacementCompletesServiceWithoutTrafficDeadlock` and `UserPhotoCounterSevenFast` enter employee `PlanningFailed: no-independent-finite-release-or-cycle`; `UserLongCounterSixFast` and `UserLongCounterSixNormal` reach customer `StaleContext: collection-reserve-preparation-invalid`. These are observed failure states, not yet four independently diagnosed root causes. `D2PreparedDeliveryRefreshesAtRealPrePumpMetadataCheckpoint` is SKIP / NOT_PROVEN because the authentic deeper pre-commit snapshot delta was absent. It is not counted as PASS. Stop and report this batch before further tests or CI, following the owner's instruction for new failures.
+>
+> **Exact clean run:** source-set SHA256 `F37E7FF878C92324050B7DE5C8AB0BD352DC35552DF8008B331E8AC437BEF598`, all 537 files still identical after both runs. Edit XML `E521BA97B184316C904C6C34B6AC7A34691CD3DA2F691BBB46F6189381EC6892`; Play XML `C59FF03A34EBCCDA3CD06B910EAB91D23C6492EF2DE78BBCDDB7FEC97BD2FA9D` (22m21s). No diagnostic flags; asset delta/restoration/unknown delta all zero; Unity workers exited. Play restored 8 historical output files with originals verified; Native OS handle ownership remains UNKNOWN. Detailed receipt: `outputs/phase15/p15-unity-ci-20261113/local-compact-continuation-20261115/result.json`.
+>
+> **Latest verified Core:** **1125/1125 PASS**, XML `8837153612AA479AD23C97F624D43255A88B5F4C1340F3BC7CD2E3F8F51C1F0C`. This includes stable first-request numbering while typed unpaid speculative work yields CPU for owned Native queries; original owned unissued next-leg identity through real WAIT/Prepared/Bind; current Bound endpoint-body qualification before primary reproof; Ready collection reproof at actual paid arrival; and bounded preparation for a frozen worker's genuine replacement Native task. All existing Core assertions remain. Wider scheduling variants were withdrawn after their failures.
+>
+> **Original Native pair: 2/2 PASS**, XML `C2547F4D2C761CD3C99F5B614CBCA23BE2C01928141A9A8DA06760BA18FF5E6A`: original LongSevenFast and PhotoSevenNormal each finish all 20 real exits with the original order/payment/token/lease/staff assertions. Both also PASS in the final clean compact run, without diagnostic flags. This does not close the four other layout failures above. TEMP cleanup is applied; no combined or inferred all-layout PASS.
+>
+> **Verified earlier repairs:** real CFC identity repair authenticates its own actual CQ/Actor/Admission instead of an external cached world object. Certified static SampleNoHit Native reuse remains distinct from Unknown null results; real Adapter Complete/height/unavailable controls and the CFC original identity/zero-time controls passed. The latest compact scope explicitly includes all three new real Native controls. No Scene/save/GUID/radius/epsilon/query-budget/business-clock changes are part of these route repairs.
+>
+> **Original observation boundary:** Photo keeps the 360-second admission window and original 45-second stall/NUnit limits, while the same already admitted 20-person cohort can finish draining. No fabricated exit or longer business-test timeout is used. Old Ready-first/service-lease experiments are withdrawn. Final TEMP-free compact is FAIL; a new exact-head CI remains NOT_RUN. P15 remains unmerged and not formally closed.
+>
+> Historical source-bound repairs: P12 plus navigation tests 80/80 PASS (`4DD7DFF2…`); original seven Side cases, MainSelected and ControlledReady PASS (`0300166E…`); Main service plus three fresh natural cohorts PASS (`960904F6…`). P13's original four-customer, Carry/CashierWorking and complete Decor-reset assertions PASS after two explicit public test-setup support moves (`87237E80…`). Temporary timing observations are removed. The three-fresh-cohort case also PASS in the clean compact run; the separate normal Main case FAIL above remains authoritative.
+>
+> **Optional specified-state negative / 指定状态负例：NOT_PROVEN.** The full-CI Inconclusive was `CurrentReturningBodyFailureRetiresOriginalActualExitWait`: its required current Returning-leg WAIT was absent, so the injected-failure/retirement negative was not proved. Following the owner's prior acceptance of this unreproduced edge, only an `Explicit` opt-in attribute and bilingual explanation are added; all original setup, Need and assertions remain. The existing compact scope is 177 plus the real-CFC identity regression and two real-Adapter controls (180 expected), with this optional negative listed separately. Default NUnit SKIP is expected but awaits full-CI discovery; it is never a PASS or equivalent Native coverage claim. CI still rejects ordinary failures and Inconclusive results.
+>
+> Next work is limited to the four failed Native cases and the separate D2 coverage gap; no additional suite, CI or phase closure was started after this batch. TEMP cleanup and frozen compact execution are complete; compact FAIL and new full CI NOT_RUN must remain explicit.
+<!-- P15_CURRENT_CI_REPAIR_20261115_END -->
+
 <!-- P15_QUEUE_BLUEPRINT_CURRENT_20261114_BEGIN -->
 > **2026-11-15 pre-dispatch local snapshot / 提交前本地验收：PASS.** Exact current35selector regression115/115 PASS, 0 failures/skips, including P15 own77. Full CI is pending at this snapshot; its later source-bound result is recorded on PR15 and the workflow run. PR15 remains unmerged; no merge/P16 or formal P15 closure.
 >
@@ -1087,3 +1165,6 @@ Owner明确批准“同意，先证明反例再实施”。新增停车目标只
 实际离店新candidate与真实replan新增同等员工检查；只有当前有效任务及native运动、完整剩余往返对所有真实身体／目标／lease均独立清空时才可暂等，绑定attempt／actor／generation／revision／Queue。取消或失效不沿用证明；清掉未发candidate以免倒置阻挡员工下一腿。初始正例及原1x／2x20真实单3PASS，真实员工Cancel保留body与future静态body反例等2PASS。Review发现两个延后首腿入口后，两个controlled seam先RED0PASS/2FAIL，再于Core仅对Exiting／Segments0／Request0终验；GREEN4PASS/0FAIL/9.9440527s，保留原预算、request、lease、token及真实离店断言。中途新replan独立检查，旧suffix不新增让权。
 
 当前冻结CFC SHA256 `3E468F1584D2C1C2BE5C137D43A94BC71BD0A47FE3D739D71C4C948ED1DA686B`。独立review Critical0／Important0／newMinor0。`related-final/edit`实际387PASS/0FAIL/0SKIP，12.0286263s，native/CLI0；恢复3项已知资源后3176Assets／12source／3inputs／14Scenes零差异，未知／missing0，EditorWorkers0。当前同源相关Play执行中，Computer Use第6–8项尚待复测。历史FAIL不由focused PASS覆盖；整个Game输入首因UNKNOWN，真实8h／device／Owner／CI／Git门槛仍分列，P15不正式关闭。
+
+
+</details>

@@ -5,6 +5,19 @@ using UnityEngine;
 
 namespace AnimalCafe.Navigation
 {
+    public enum TrafficNativeQueryOutcome { Unknown, Complete, StaticSampleNoHit }
+    // Immutable result of one actual provider call; no WAIT, geometry or movement authority.
+    // 单次真实查询的不可变结果；普通null仍是Unknown，只认证当前静态mesh上的Sample无命中。
+    public sealed class TrafficNativeQueryResult
+    {
+        public readonly object Provider,Context;
+        public readonly Vector3 From,To;
+        public readonly TrafficNativeQueryOutcome Outcome;
+        public readonly IReadOnlyList<Vector3> Path;
+        public TrafficNativeQueryResult(object provider,object context,Vector3 from,Vector3 to,TrafficNativeQueryOutcome outcome,IReadOnlyList<Vector3> path=null)
+        {Provider=provider;Context=context;From=from;To=to;Outcome=outcome;Path=path==null?null:Array.AsReadOnly(path.ToArray());}
+    }
+
     // Internal producer identity/readiness only; this object cannot grant any traffic right.
     internal sealed class TrafficAdmissionReadiness
     {
@@ -30,6 +43,44 @@ namespace AnimalCafe.Navigation
             object businessOwner,object admission,Func<bool> isCurrent,TrafficInitialQueueGeometry initialQueueGeometry)
         {Intent=intent;ActorLife=actorLife;CounterOwner=counterOwner;BusinessOwner=businessOwner;Admission=admission;
             IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));InitialQueueGeometry=initialQueueGeometry;}
+    }
+
+    // One real paid FIFO-head Collection factory. Readiness withholds preparation; it grants no traffic right.
+    // 只认证原Ready杯/同PQS取餐准备；不授予Working、Native或新的Frozen/WAIT依赖。
+    internal sealed class TrafficCollectionReserveReadiness
+    {
+        internal readonly TrafficIntentKey Intent;
+        internal readonly object ActorLife,BusinessOwner,Admission,ReadySeal;
+        internal readonly AnimalCafe.Customers.PickupQueueService PickupOwner;
+        internal readonly Func<bool> IsCurrent;
+        internal readonly Func<TrafficIntentKey,TrafficDecision,object,TrafficCollectionReserveObservation> Read;
+        internal TrafficCollectionReserveReadiness(TrafficIntentKey intent,object actorLife,object businessOwner,object admission,
+            AnimalCafe.Customers.PickupQueueService pickupOwner,object readySeal,Func<bool> isCurrent,
+            Func<TrafficIntentKey,TrafficDecision,object,TrafficCollectionReserveObservation> read)
+        {
+            Intent=intent;ActorLife=actorLife;BusinessOwner=businessOwner;Admission=admission;PickupOwner=pickupOwner;ReadySeal=readySeal;
+            IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));Read=read??throw new ArgumentNullException(nameof(read));
+        }
+    }
+    // Fresh preview is a read-only factory output; publication is proved by the actual same-origin parking receipt.
+    // 每次preview可正常刷新；旧cookie是否Consumed不证明发布，必须同原factory/真实PQS预约谱系。
+    public sealed class TrafficCollectionReserveObservation
+    {
+        public AnimalCafe.Customers.PickupQueueService.ReservationClaim CollectorClaim { get; }
+        public AnimalCafe.Customers.PickupQueueService.PreparedMutation CollectionPreview { get; }
+        public object ProducerSeal { get; }
+        public TrafficCounterUncommittedPreparationObservation Uncommitted { get; }
+        public AnimalCafe.Customers.PickupQueueService.ReservationClaim PublishedReservation { get; }
+        public TrafficDecision ParkingSource { get; }
+        public TrafficDecision PaidSource { get; }
+        internal TrafficCollectionReserveObservation(AnimalCafe.Customers.PickupQueueService.ReservationClaim collectorClaim,
+            AnimalCafe.Customers.PickupQueueService.PreparedMutation collectionPreview,object producerSeal,
+            TrafficCounterUncommittedPreparationObservation uncommitted,
+            AnimalCafe.Customers.PickupQueueService.ReservationClaim publishedReservation,TrafficDecision parkingSource,TrafficDecision paidSource)
+        {
+            CollectorClaim=collectorClaim;CollectionPreview=collectionPreview;ProducerSeal=producerSeal;Uncommitted=uncommitted;
+            PublishedReservation=publishedReservation;ParkingSource=parkingSource;PaidSource=paidSource;
+        }
     }
 
     // Existing Counter producer only. Withholds preparation; never grants a finite WAIT/Native right.

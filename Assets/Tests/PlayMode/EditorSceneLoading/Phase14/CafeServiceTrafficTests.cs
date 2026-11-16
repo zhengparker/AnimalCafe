@@ -2054,6 +2054,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             var errors=new List<string>();var violations=new List<string>();var records=new List<string>();var overflow=0;
             string id=null;object visit=null,admission=null,reservationEntry=null,parkingEntry=null;
             NavigationActor actor=null,blocker=null;PickupQueueService pickup=null;PickupQueueService.ReservationClaim originalClaim=null;
+            Vector3 blockerInitialPose=default;
             TrafficDecision parkingSource=null,movementSource=null;TrafficRequest parkingRequest=null,movementPrimary=null;
             TrafficIntentKey parkingIntent=default,movementIntent=default;CafeOrderKey paidKey=default;
             CapacityToken[] tokens=null;QueueAssignment originalAssignment=default,transferredAssignment=default;
@@ -2337,7 +2338,15 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                         if(incoming!=id)return;creates++;
                         if(!result.Succeeded)return;createFrame=Time.frameCount;orderNumber=result.Order.OrderId;
                         Record("CREATE succeeded=True order="+orderNumber+" paidBeforeReturn="+owner.Snapshot.PaidVisitIds.Contains(id));
-                        if(mode==2 && blocker==null)blocker=Blocker(originalAssignment.Position,"paid-pickup-current-body");
+                        if(mode==2 && blocker==null)
+                        {
+                            blocker=Blocker(originalAssignment.Position,"paid-pickup-current-body");
+                            // Capture the actual one-time birth; the original business goal and Source stay unchanged.
+                            // 只读记录实际出生点；仍在原arrival内物理覆盖原目标，后续静止比较保持Exact。
+                            blockerInitialPose=blocker.transform.position;
+                            Assert.That(Vector3.Distance(blockerInitialPose,originalAssignment.Position),Is.LessThanOrEqualTo(actor.Settings.ArrivalDistance));
+                            Assert.That(Vector3.Distance(blockerInitialPose,originalAssignment.Position),Is.LessThan(blocker.Settings.AgentRadius));
+                        }
                     });
                     return result;
                 }));
@@ -2374,7 +2383,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 if(mode==2)
                 {
                     Assert.That(blocker,Is.Not.Null);Assert.That(world.RegisteredActors.Contains(blocker),Is.True);
-                    Assert.That(blocker.transform.position,Is.EqualTo(originalAssignment.Position));Assert.That(actor.transform.position,Is.EqualTo(reservePose));
+                    Assert.That(blocker.transform.position,Is.EqualTo(blockerInitialPose));Assert.That(actor.transform.position,Is.EqualTo(reservePose));
                     Assert.That(transfers,Is.Zero,"PRODUCT: new actual body rejects Transfer before paid FIFO publication");
                     Assert.That(pickup.Snapshot.Any(a=>a.VisitId==id),Is.False);Assert.That(accepted,Is.Zero,"PRODUCT: no Native movement through the actual body");
                     Assert.That(Read(visit,"PickupInTransit"),Is.EqualTo(false));Assert.That(originalClaim.IsCurrent,Is.True);
@@ -2424,7 +2433,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 Assert.That(failedSource.Blockers.Any(b=>b.Owner.ActorId==blocker.ActorId),Is.True,"FIXTURE: actual inserted body is in original terminal decision");
                 var failedBody=failedPrimary.Snapshot.Bodies.Single(b=>b.Owner.ActorId==id);
                 Assert.That(failedBody.ActorLife,Is.SameAs(actor));Assert.That(failedBody.Position,Is.EqualTo(failedPose));
-                Assert.That(failedPrimary.Snapshot.Bodies.Any(b=>ReferenceEquals(b.ActorLife,blocker) && b.Position==originalAssignment.Position),Is.True);
+                Assert.That(failedPrimary.Snapshot.Bodies.Any(b=>ReferenceEquals(b.ActorLife,blocker) && b.Position==blockerInitialPose),Is.True);
                 Assert.That(failedPrimary.ProvenFailure.HasValue,Is.False);Assert.That(Read(candidate,"Parking"),Is.EqualTo(false));
                 Assert.That(Read(candidate,"Leg"),Is.Null);Assert.That(Read(candidate,"JourneyPermit"),Is.Null);
                 Assert.That(Read(candidate,"JourneyRequest"),Is.Null);Assert.That(Read(candidate,"PendingHandoff"),Is.Null);
@@ -4015,8 +4024,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             // 仅重放合法来客输入；原 driver 仍决定付款、站位、移动和离店。
             var replay=Environment.GetCommandLineArgs().FirstOrDefault(arg=>arg.StartsWith("-mainArrivalReplay=",StringComparison.Ordinal))?.Substring("-mainArrivalReplay=".Length);
             var replayEnabled=!string.IsNullOrEmpty(replay);
-            Assert.That(!replayEnabled || replay=="paid" || replay=="paid-gate" || replay=="exit" || replay=="exit-gate" || replay=="exit-after-head",Is.True,"FIXTURE: known controlled replay mode");
-            var replayTargets=replay=="exit" || replay=="exit-gate" || replay=="exit-after-head"?new[]{6.72209f,10.97073f,12.74005f}:
+            Assert.That(!replayEnabled || replay=="collection-advance-gap" || replay=="paid" || replay=="paid-gate" || replay=="exit" || replay=="exit-gate" || replay=="exit-after-head",Is.True,"FIXTURE: known controlled replay mode");
+            var replayTargets=replay=="collection-advance-gap"?new[]{8.071f,16.823f,24.708f,34.369f,40.352f,46.777f,51.842f,53.513f}:
+                replay=="exit" || replay=="exit-gate" || replay=="exit-after-head"?new[]{6.72209f,10.97073f,12.74005f}:
                 replay=="paid-gate"?new[]{1.20890f,2.96570f,11.76960f}:new[]{1.20890f,2.96570f,11.76960f,15.48880f};
             var originalClock=CafeLoopRuntimeProof.Field<CustomerSpawnClock>(customers,"clock");
             var originalCollection=owner.HoldCollection;
@@ -4086,14 +4096,15 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                             var tickCompensation=replay=="exit-after-head"?Time.deltaTime:0f;
                             return next>=replayTargets.Length?1f:Mathf.Clamp01((replayTargets[(int)next]-(Time.time-sceneStart)+tickCompensation)/10f);
                         }));
-                        trace.Record("CONTROLLED_ARRIVAL_REPLAY mode="+replay+" targets="+string.Join(";",replayTargets)+" bound=90");
+                        trace.Record("CONTROLLED_ARRIVAL_REPLAY mode="+replay+" targets="+string.Join(";",replayTargets)+" bound="+
+                            (replay=="collection-advance-gap"?"original-natural-drain":"90"));
                     }
                     if(replayCollectionReleased)tools.ResumeCollection();else tools.HoldCollection();
                     tools.ResumeArrivals();
                     // A natural cohort may still be preparing its last order at 120s. Give its one-way stop
                     // one bounded drain window; R19 fixed-cost sampling retains its original exact 120s.
                     // 停止来客时仅记录一次排空起点；进度/Waiting不续期，全部原业务断言仍须通过。
-                    while(replayEnabled?Time.time-sceneStart<90f && timer.Elapsed.TotalSeconds<90d:
+                    while(replayEnabled && replay!="collection-advance-gap"?Time.time-sceneStart<90f && timer.Elapsed.TotalSeconds<90d:
                         (!stoppedArrivals || trace.FixedCostWindow
                         ? Time.time-sceneStart<120f && timer.Elapsed.TotalSeconds<120d
                         : Time.time-drainSceneStart<drainSeconds && timer.Elapsed.TotalSeconds-drainWallStart<drainSeconds))
