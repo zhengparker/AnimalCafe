@@ -5138,6 +5138,10 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             OriginalExitDecisionTrace exitDecisions=null;
             ExitConnectorTimingTrace connectorTimings=null;
             var receiptTrackers=new List<CafeActualExitObserver>();
+            var ciWitness=Environment.GetCommandLineArgs().Contains("-p15CiFailureWitness");
+            ServiceTrafficCoordinator ciCore=null;
+            TrafficWaitFailureTrace ciWaitTrace=null;
+            string ciPriorIntent=null;
             var priorCleanup=controlledHandoffCleanup;
             Action<string> diagnosticCleanup=null;
             var directory = Path.Combine("outputs", "phase15", "long-counter-stall", "live-" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
@@ -5204,6 +5208,13 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     (photoDirection ? " CR=(" + length + ",4) CM=(1,7) rotated180 pickup=(1,4)" :
                     " CR=(1,5) CM=(4,6) pickup=(" + length + ",5)") + " modules contiguous\n");
                 tools.ResumeCollection();
+                if(ciWitness)
+                {
+                    ciCore=CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic");
+                    ciPriorIntent=CafeLoopRuntimeProof.Field<string>(ciCore,"WaitFailureDiagnosticIntent");
+                    CafeLoopRuntimeProof.Set(ciCore,"WaitFailureDiagnosticIntent","*");
+                    ciWaitTrace=new TrafficWaitFailureTrace(ciCore);
+                }
                 Assert.That(time.TrySetSpeed(speed), Is.True);
                 if(publicationProbe)
                     typeof(CustomerFlowController).GetField("clock",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)
@@ -5211,7 +5222,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 if (publicationProbe || Environment.GetCommandLineArgs().Contains("-corridorTrace") || Environment.GetCommandLineArgs().Contains("-stallObservationTrace")) corridorTrace = new CorridorTrace(this);
                 if(Environment.GetCommandLineArgs().Contains("-segmentFailureWitness")) segmentFailureTrace=new SegmentFailureTrace(this);
                 if(Environment.GetCommandLineArgs().Contains("-pickupTargetWitness")) targetDecisionTrace=new PickupTargetDecisionTrace(this);
-                if(originalExitDecisions||exitConnectorTimings)
+                if(originalExitDecisions||exitConnectorTimings||ciWitness)
                 {
                     if(originalExitDecisions)exitDecisions=new OriginalExitDecisionTrace(this,directory);
                     if(exitConnectorTimings)connectorTimings=new ExitConnectorTimingTrace(this,directory);
@@ -5225,6 +5236,11 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                         if(observe!=null&&owner!=null)owner.SnapshotChanged-=observe;
                         foreach(var tracker in receiptTrackers)if(tracker!=null)tracker.Receipt=null;
                         if(ReferenceEquals(controlledHandoffCleanup,diagnosticCleanup))controlledHandoffCleanup=priorCleanup;
+                        if(ciWaitTrace!=null)
+                        {
+                            CafeLoopRuntimeProof.Set(ciCore,"WaitFailureDiagnosticIntent",ciPriorIntent);
+                            ciWaitTrace.Dispose();ciWaitTrace=null;
+                        }
                         exitDecisions?.Finish(reason);connectorTimings?.Finish(reason);
                         priorCleanup?.Invoke(reason);
                     };
@@ -5247,7 +5263,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                         originalTokens.Add(visit.VisitId, customers.Capacity.GetReservations().Where(r => r.OwnerId == visit.VisitId).Select(r => r.Token).ToArray());
                         var total = customers.Capacity.GetReservations().Single(r => r.OwnerId == visit.VisitId && r.Kind == AnimalCafe.Capacity.CapacityKind.TotalCustomers).Token;
                         var tracker = body.gameObject.AddComponent<CafeActualExitObserver>();
-                        if(originalExitDecisions||exitConnectorTimings)receiptTrackers.Add(tracker);
+                        if(originalExitDecisions||exitConnectorTimings||ciWitness)receiptTrackers.Add(tracker);
                         tracker.VisitId = visit.VisitId;
                         tracker.Receipt = (id, pose) =>
                         {
@@ -5294,6 +5310,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     {
                         var sample = "t=" + elapsed.ToString("F2") + " idle=" + idleSeconds.ToString("F2") +
                             " seen=" + seen.Count + " actualExit=" + exited.Count + "\n" + UserCounterDiagnostic();
+                        if(ciWitness)TestContext.WriteLine("CI_LONG_COUNTER_PROGRESS "+sample);
                         history.Enqueue(sample); while (history.Count > 10) history.Dequeue();
                         File.AppendAllText(output, sample + "\n\n");
                         nextSample = elapsed + 5;
@@ -5302,6 +5319,11 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     {
                         firstBlocked = true;
                         TestContext.WriteLine("USER_LONG_COUNTER_FIRST_BLOCK " + UserCounterDiagnostic());
+                        if(ciWitness)
+                        {
+                            TestContext.WriteLine("CI_ORIGINAL_WAIT "+CafeLoopRuntimeProof.Field<string>(ciCore,"WaitFailureDiagnostic"));
+                            TestContext.WriteLine("CI_COUNTER_GAP "+TwentyTrafficFailureTrace.CounterGapCurrent(world,customers,storedOnly:true));
+                        }
                         File.AppendAllText(output, UserExitPathQueries("FIRST_BLOCK") + "\n");
                         File.AppendAllText(output, UserTrafficPathQueries("FIRST_BLOCK") + "\n");
                     }
@@ -5362,6 +5384,11 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             finally
             {
                 diagnosticCleanup?.Invoke("finally");
+                if(ciWaitTrace!=null)
+                {
+                    CafeLoopRuntimeProof.Set(ciCore,"WaitFailureDiagnosticIntent",ciPriorIntent);
+                    ciWaitTrace.Dispose();ciWaitTrace=null;
+                }
                 segmentFailureTrace?.Finish();
                 targetDecisionTrace?.Finish();
                 corridorTrace?.Finish();

@@ -68,7 +68,7 @@ def main():
     command = commands.add_parser("filter")
     command.add_argument("--mode", choices=("edit", "play", "all"), required=True)
     command = commands.add_parser("verify")
-    command.add_argument("--scope", choices=("compact", "full", "remaining-ci-failures", "p15-ci-repairs"), required=True)
+    command.add_argument("--scope", choices=("compact", "full", "remaining-ci-failures", "p15-ci-repairs", "p15-ci-five-failures"), required=True)
     command.add_argument("--results", type=Path, required=True)
     args = parser.parse_args()
     if args.command == "filter":
