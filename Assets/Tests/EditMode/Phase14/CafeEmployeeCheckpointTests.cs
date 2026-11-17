@@ -12,11 +12,11 @@ namespace AnimalCafe.Tests.EditMode.Phase14
 {
     public sealed class CafeEmployeeCheckpointTests
     {
-        private sealed class Port : IIntegratedEmployeeTaskEnvironment
+        private class Port : IIntegratedEmployeeTaskEnvironment
         {
             internal sealed class Move { internal long Id; internal NavigationTarget Target; internal Action<MovementResult> Done; }
             internal readonly List<Move> Moves = new List<Move>();
-            internal bool Gate = true, Lease = true, Show = true, Commit = true, Immediate;
+            internal bool Gate = true, Lease = true, Show = true, Commit = true, Immediate, RejectMove;
             internal int ShowCalls, Commits, Held, Cleanup;
             internal CafeTaskEvent Arrival;
             internal Action OnShow, OnCommit, OnCleanup;
@@ -24,6 +24,7 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             public MoveStartResult MoveTo(NavigationTarget target, Action<MovementResult> completed)
             {
                 var move = new Move { Id = Moves.Count + 1, Target=target, Done = completed }; Moves.Add(move);
+                if(RejectMove)return new MoveStartResult(false,0,NavigationFailure.IncompletePath);
                 if (Immediate) Complete(Moves.Count - 1);
                 return new MoveStartResult(true, move.Id, NavigationFailure.None);
             }
@@ -53,6 +54,89 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             runner.TryAssignBinding(EmployeeTaskEnvironmentFake.Binding(role));
             port.Immediate = true; runner.TryReturnToWork(); port.Immediate = false;
             events = new List<CafeTaskEvent>(); runner.IntegratedTaskEvent += events.Add; return runner;
+        }
+
+        private sealed class TrafficPort : Port,IEmployeeTrafficEnvironment
+        {
+            internal bool Traffic;
+            internal TrafficDecisionKind Decision=TrafficDecisionKind.Granted;
+            internal readonly List<int> NativeGenerations=new List<int>();
+            public bool TrafficEnabled=>Traffic;
+            public TrafficDecision PrepareMove(NavigationTarget target,int nativeLegGeneration)
+            {
+                NativeGenerations.Add(nativeLegGeneration);
+                return new TrafficDecision(default,Decision,"typed-gate-test");
+            }
+        }
+        private static EmployeeTaskRunner TrafficReady(out TrafficPort port,out List<CafeTaskEvent> events)
+        {
+            port=new TrafficPort();var runner=new EmployeeTaskRunner("employee.test",EmployeeRole.Barista,port);
+            Assert.That(runner.TryAssignBinding(EmployeeTaskEnvironmentFake.Binding(EmployeeRole.Barista)),Is.True);
+            port.Immediate=true;runner.TryReturnToWork();port.Immediate=false;port.Traffic=true;
+            Assert.That(runner.Snapshot.State,Is.EqualTo(EmployeeState.Idle));
+            events=new List<CafeTaskEvent>();runner.IntegratedTaskEvent+=events.Add;return runner;
+        }
+
+        [TestCase(TrafficDecisionKind.DeferredByBudget)]
+        [TestCase(TrafficDecisionKind.WaitingForTraffic)]
+        public void TypedTrafficPendingPreservesPreparedCupAndNativeLegIdentity(TrafficDecisionKind pending)
+        {
+            var runner=TrafficReady(out var port,out var events);port.Decision=pending;
+            Assert.That(runner.TryStartIntegrated(Token(),Work()),Is.True);runner.Tick(3);
+            Assert.That(port.Moves.Count,Is.EqualTo(1),"PRODUCT: ordinary traffic pending cannot create or fake an accepted Native request");
+            var handle=runner.Snapshot.HandleId;var prepared=events.Single(e=>e.Kind==CafeTaskEventKind.Prepared);
+            Assert.That(runner.CaptureCheckpoint().Stage,Is.EqualTo(CafeWorkStage.Prepared));Assert.That(port.Held,Is.EqualTo(1));
+            for(var i=0;i<5;i++)runner.Tick(1);
+            Assert.That(port.Moves.Count,Is.EqualTo(1));Assert.That(port.ShowCalls,Is.EqualTo(1));
+            Assert.That(runner.Snapshot.HandleId,Is.EqualTo(handle));Assert.That(port.Cleanup,Is.Zero);
+            Assert.That(events.Count(e=>e.Kind==CafeTaskEventKind.Prepared),Is.EqualTo(1));
+            Assert.That(events.Any(e=>e.Kind==CafeTaskEventKind.Blocked),Is.False);
+            Assert.That(port.NativeGenerations,Is.Not.Empty);Assert.That(port.NativeGenerations.All(g=>g>0),Is.True);
+            Assert.That(port.NativeGenerations.Distinct().Count(),Is.EqualTo(1),"Pending polls reuse one installed Native leg generation");
+            var outwardGeneration=port.NativeGenerations[0];port.Decision=TrafficDecisionKind.Granted;runner.Tick(1);
+            Assert.That(port.Moves.Count,Is.EqualTo(2));Assert.That(port.NativeGenerations.Last(),Is.EqualTo(outwardGeneration));
+            port.Complete(1);
+            Assert.That(port.Commits,Is.EqualTo(1));Assert.That(port.Moves.Count,Is.EqualTo(3));
+            Assert.That(port.NativeGenerations.Last(),Is.GreaterThan(outwardGeneration),"Actual return is a different Native leg");
+            Assert.That(events.Single(e=>e.Kind==CafeTaskEventKind.DeliveryArrived).Generation,Is.EqualTo(prepared.Generation),
+                "Native leg changes must not repurpose the business Task/Checkpoint generation");
+            port.Complete(2);Assert.That(runner.Snapshot.State,Is.EqualTo(EmployeeState.Idle));
+        }
+
+        [Test] public void TypedTrafficPendingDisposeCannotIssueAfterLateGrant()
+        {
+            var runner=TrafficReady(out var port,out var events);port.Decision=TrafficDecisionKind.DeferredByBudget;
+            Assert.That(runner.TryStartIntegrated(Token(),Work(stage:CafeWorkStage.Prepared,seconds:0)),Is.True);
+            Assert.That(port.Moves.Count,Is.EqualTo(1),"PRODUCT: pending is not a Native move");
+            runner.Dispose();port.Decision=TrafficDecisionKind.Granted;runner.Tick(1);
+            Assert.That(port.Moves.Count,Is.EqualTo(1));Assert.That(port.Held,Is.Zero);Assert.That(port.Cleanup,Is.EqualTo(1));
+            Assert.That(runner.Snapshot.State,Is.EqualTo(EmployeeState.Disabled));
+            Assert.That(events.Any(e=>e.Kind==CafeTaskEventKind.DeliveryArrived),Is.False);
+        }
+
+        [Test] public void TypedTrafficTerminalRefusalBlocksWithoutNativeIssueOrAutomaticRetry()
+        {
+            var runner=TrafficReady(out var port,out var events);port.Decision=TrafficDecisionKind.PlanningFailed;
+            Assert.That(runner.TryStartIntegrated(Token(),Work(stage:CafeWorkStage.Prepared,seconds:0)),Is.True);
+            Assert.That(port.Moves.Count,Is.EqualTo(1),"PRODUCT: genuine traffic refusal cannot fall through to Native MoveTo");
+            Assert.That(runner.Snapshot.State,Is.EqualTo(EmployeeState.Blocked));
+            Assert.That(runner.CaptureCheckpoint().Stage,Is.EqualTo(CafeWorkStage.Prepared));
+            Assert.That(events.Count(e=>e.Kind==CafeTaskEventKind.Blocked),Is.EqualTo(1));
+            var calls=port.NativeGenerations.Count;port.Decision=TrafficDecisionKind.Granted;runner.Tick(10);
+            Assert.That(port.NativeGenerations.Count,Is.EqualTo(calls));Assert.That(port.Moves.Count,Is.EqualTo(1));
+        }
+
+        [Test] public void TypedTrafficSynchronousCompletionKeepsDistinctNativeLegsAndOriginalTaskGeneration()
+        {
+            var runner=TrafficReady(out var port,out var events);port.Immediate=true;
+            Assert.That(runner.TryStartIntegrated(Token(),Work()),Is.True);runner.Tick(3);
+            Assert.That(port.NativeGenerations.Count,Is.EqualTo(2),"PRODUCT: both synchronous outward and return must pass the typed gate");
+            Assert.That(port.NativeGenerations[1],Is.GreaterThan(port.NativeGenerations[0]));
+            var prepared=events.Single(e=>e.Kind==CafeTaskEventKind.Prepared);
+            Assert.That(events.Single(e=>e.Kind==CafeTaskEventKind.DeliveryArrived).Generation,Is.EqualTo(prepared.Generation));
+            Assert.That(port.Commits,Is.EqualTo(1));Assert.That(port.Cleanup,Is.EqualTo(1));
+            Assert.That(runner.Snapshot.State,Is.EqualTo(EmployeeState.Idle));
+            port.Complete(1);runner.Tick(1);Assert.That(port.Moves.Count,Is.EqualTo(3));Assert.That(port.Commits,Is.EqualTo(1));
         }
 
         [Test] public void ChosenReturnHomeIsProtectedWhileCarryingAndInsideDeliveredCallback()
@@ -87,6 +171,88 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             restored.Tick(.01f);restored.Tick(100);
             Assert.That(restoredEvents.Count(e=>e.Kind==CafeTaskEventKind.ServiceFinished),Is.EqualTo(1));
             Assert.That(restored.CaptureCheckpoint().Stage,Is.EqualTo(CafeWorkStage.Finished));
+        }
+
+        [Test] public void UnissuedDeliveryLegWaitsAfterPriorArrivalWithoutRepeatingPreparedWork()
+        {
+            var runner=Ready(EmployeeRole.Barista,out var port,out var events);port.Lease=false;
+            Assert.That(runner.TryStartIntegrated(Token(),Work(stage:CafeWorkStage.Prepared,seconds:0)),Is.True);
+            var side=EmployeeTaskEnvironmentFake.Binding(EmployeeRole.Barista).PickUpTarget.Value;
+            var corner=new NavigationTarget(side.Position+UnityEngine.Vector3.left*2);
+            Assert.That(runner.TrySelectDeliveryTarget(side,new[]{corner,side}),Is.True);
+            var wait=false;var queries=0;
+            typeof(EmployeeTaskRunner).GetMethod("SetPickupDeliveryTrafficWait",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)
+                .Invoke(runner,new object[]{new Func<NavigationTarget,bool>(t=>{queries++;return wait && t.Position==side.Position;})});
+            port.Lease=true;runner.Tick(.1f);var handle=runner.Snapshot.HandleId;var saved=runner.CaptureCheckpoint();
+            wait=true;port.Complete(1);
+            Assert.That(port.Moves.Count,Is.EqualTo(2),"The selected second leg must remain unissued while relevant traffic crosses it");
+            Assert.That(runner.Snapshot.State,Is.EqualTo(EmployeeState.CarryingToPickUp));
+            Assert.That(runner.Snapshot.HandleId,Is.EqualTo(handle));Assert.That(runner.CaptureCheckpoint(),Is.EqualTo(saved));
+            Assert.That(port.Held,Is.EqualTo(1));Assert.That(port.Commits,Is.Zero);
+            var pausedQueries=queries;runner.Tick(0);port.Gate=false;runner.Tick(10);
+            Assert.That(queries,Is.EqualTo(pausedQueries));Assert.That(port.Moves.Count,Is.EqualTo(2));
+            port.Gate=true;for(var i=0;i<3;i++)runner.Tick(.1f);
+            Assert.That(port.Moves.Count,Is.EqualTo(2));Assert.That(port.ShowCalls,Is.EqualTo(1));
+            wait=false;runner.Tick(.1f);runner.Tick(.1f);
+            Assert.That(port.Moves.Count,Is.EqualTo(3));Assert.That(port.Moves[2].Target.Position,Is.EqualTo(side.Position));
+            Assert.That(runner.Snapshot.HandleId,Is.EqualTo(handle));port.Complete(2);port.Complete(2);
+            Assert.That(port.Commits,Is.EqualTo(1));Assert.That(port.ShowCalls,Is.EqualTo(1));
+            Assert.That(events.Count(e=>e.Kind==CafeTaskEventKind.DeliveryArrived),Is.EqualTo(1));
+            port.Complete(3);Assert.That(runner.Snapshot.State,Is.EqualTo(EmployeeState.Idle));
+        }
+
+        [TestCase(0)][TestCase(1)][TestCase(2)]
+        public void ReentrantDeliveryTrafficQueryRetiresPendingContextAndOldArrivalCannotReviveIt(int retirement)
+        {
+            var runner=Ready(EmployeeRole.Barista,out var port,out var events);port.Lease=false;
+            Assert.That(runner.TryStartIntegrated(Token(),Work(stage:CafeWorkStage.Prepared,seconds:0)),Is.True);
+            var side=EmployeeTaskEnvironmentFake.Binding(EmployeeRole.Barista).PickUpTarget.Value;
+            var corner=new NavigationTarget(side.Position+UnityEngine.Vector3.left*2);
+            Assert.That(runner.TrySelectDeliveryTarget(side,new[]{corner,side}),Is.True);
+            var retire=false;
+            typeof(EmployeeTaskRunner).GetMethod("SetPickupDeliveryTrafficWait",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)
+                .Invoke(runner,new object[]{new Func<NavigationTarget,bool>(t=>{
+                    if(t.Position!=side.Position)return false;
+                    if(retire){if(retirement==0)runner.Cancel("retire waiting delivery");else if(retirement==1)runner.Dispose();else runner.InvalidateLayout(8);}
+                    return true;
+                })});
+            port.Lease=true;runner.Tick(.1f);port.Complete(1);retire=true;runner.Tick(.1f);
+            port.Complete(1);runner.Tick(1);
+            Assert.That(runner.Snapshot.HandleId,Is.Zero);Assert.That(port.Moves.Count,Is.EqualTo(2));
+            Assert.That(port.Held,Is.Zero);Assert.That(port.Commits,Is.Zero);Assert.That(port.Cleanup,Is.EqualTo(1));
+            Assert.That(runner.CaptureCheckpoint().Stage,Is.EqualTo(CafeWorkStage.Prepared));
+            Assert.That(events.Count(e=>e.Kind==CafeTaskEventKind.Blocked),Is.EqualTo(1));
+        }
+
+        [Test] public void DeliveryTrafficQueryGateClosureFreezesTheUnissuedLegUntilReopened()
+        {
+            var runner=Ready(EmployeeRole.Barista,out var port,out _);port.Lease=false;
+            Assert.That(runner.TryStartIntegrated(Token(),Work(stage:CafeWorkStage.Prepared,seconds:0)),Is.True);
+            var side=EmployeeTaskEnvironmentFake.Binding(EmployeeRole.Barista).PickUpTarget.Value;
+            var corner=new NavigationTarget(side.Position+UnityEngine.Vector3.left*2);
+            Assert.That(runner.TrySelectDeliveryTarget(side,new[]{corner,side}),Is.True);
+            var closeGate=true;
+            typeof(EmployeeTaskRunner).GetMethod("SetPickupDeliveryTrafficWait",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)
+                .Invoke(runner,new object[]{new Func<NavigationTarget,bool>(t=>{if(t.Position==side.Position && closeGate){port.Gate=false;closeGate=false;}return false;})});
+            port.Lease=true;runner.Tick(.1f);var handle=runner.Snapshot.HandleId;port.Complete(1);runner.Tick(10);
+            Assert.That(port.Moves.Count,Is.EqualTo(2));Assert.That(runner.Snapshot.HandleId,Is.EqualTo(handle));
+            port.Gate=true;runner.Tick(.1f);runner.Tick(.1f);
+            Assert.That(port.Moves.Count,Is.EqualTo(3));Assert.That(port.Moves[2].Target.Position,Is.EqualTo(side.Position));
+        }
+
+        [Test] public void UnissuedDeliveryLegWithNoLiveTrafficStillFailsOriginalMoveGuardOnce()
+        {
+            var runner=Ready(EmployeeRole.Barista,out var port,out var events);port.Lease=false;
+            Assert.That(runner.TryStartIntegrated(Token(),Work(stage:CafeWorkStage.Prepared,seconds:0)),Is.True);
+            var side=EmployeeTaskEnvironmentFake.Binding(EmployeeRole.Barista).PickUpTarget.Value;
+            var corner=new NavigationTarget(side.Position+UnityEngine.Vector3.left*2);
+            Assert.That(runner.TrySelectDeliveryTarget(side,new[]{corner,side}),Is.True);
+            typeof(EmployeeTaskRunner).GetMethod("SetPickupDeliveryTrafficWait",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)
+                .Invoke(runner,new object[]{new Func<NavigationTarget,bool>(t=>false)});
+            port.Lease=true;runner.Tick(.1f);port.RejectMove=true;port.Complete(1);for(var i=0;i<4;i++)runner.Tick(1);
+            Assert.That(runner.Snapshot.State,Is.EqualTo(EmployeeState.Blocked));Assert.That(port.Moves.Count,Is.EqualTo(3));
+            Assert.That(events.Last().Failure,Is.EqualTo("IncompletePath"));Assert.That(port.Commits,Is.Zero);
+            Assert.That(runner.CaptureCheckpoint().Stage,Is.EqualTo(CafeWorkStage.Prepared));
         }
 
         [Test] public void UnissuedReturnLegWaitsForActualTrafficAndFreezesOnPauseWithoutNewRequest()

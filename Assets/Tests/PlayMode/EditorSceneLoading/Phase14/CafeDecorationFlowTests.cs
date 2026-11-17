@@ -92,6 +92,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         [UnityTest] public IEnumerator PreparingGateRetiresOldCallbacksBeforeNavigationAndRelease()
         {
             CafeTaskEvent progress=default; employees.IntegratedTaskEvent+=e=>{if(e.Role==EmployeeRole.Cashier) progress=e;};
+            yield return CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,4000);
             Assert.That(customers.TrySpawn(),Is.True); yield return null;
             var requests=(System.Collections.IDictionary)Field<object>(world.Service,"byActor");
             var oldId=customers.Snapshot.Single().VisitId; var request=requests[oldId]; Assert.That(request,Is.Not.Null);
@@ -143,8 +144,11 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         }
         [UnityTest] public IEnumerator CollectedDisabledVisitAndOriginalCapacitySurviveRepeatedDoneAndExitOnce()
         {
-            owner.HoldCollection=true; Assert.That(customers.TrySpawn(),Is.True);
+            owner.HoldCollection=true;
+            yield return CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,4000);
+            Assert.That(customers.TrySpawn(),Is.True);
             yield return Until(()=>owner.Snapshot.Delivery.Count==1 && employees.Snapshot.All(e=>e.State==EmployeeState.Idle));
+            yield return CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,4000);
             Assert.That(customers.TrySpawn(),Is.True,customers.Status); yield return Until(()=>customers.Snapshot.Count==2 && customers.Snapshot.Any(v=>v.State==CustomerVisitState.Queued));
             owner.HoldCollection=false; yield return Until(()=>owner.Snapshot.CollectedExitVisitIds.Count==1);
             time.SetPaused(); var id=owner.Snapshot.CollectedExitVisitIds.Single(); var body=world.RegisteredActors.Single(a=>a.ActorId==id);
@@ -181,8 +185,22 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         [UnityTest] public IEnumerator BlockedCollectedExitKeepsOverCapacityTokensThenRepairAndNewEpochRejectOldSuccess()
         {
             CafeTaskEvent oldSuccess=default; employees.IntegratedTaskEvent+=e=>{if(e.Kind==CafeTaskEventKind.ServiceFinished && oldSuccess.HandleId==0) oldSuccess=e;};
-            owner.HoldCollection=true; Assert.That(customers.TrySpawn(),Is.True);
+            owner.HoldCollection=true;
+            yield return CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,4000);
+            Assert.That(customers.TrySpawn(),Is.True);
             yield return Until(()=>owner.Snapshot.Delivery.Count==1 && employees.Snapshot.All(e=>e.State==EmployeeState.Idle));
+            var readyVisit=customers.Snapshot.Single().VisitId;
+            yield return Until(()=>owner.Snapshot.PaidVisitIds.Contains(readyVisit) &&
+                owner.Snapshot.Orders.Values.Any(o=>o.CustomerId==readyVisit && o.State==OrderState.ReadyForPickup) &&
+                customers.Snapshot.Single().State==CustomerVisitState.PickupWaiting);
+            // Acquire against the valid exit; HoldCollection prevents collecting before the fault is injected.
+            // 先通过真实合法service acquire并到位，再破坏出口；不伪造paid/Ready/arrival。
+            var serviceAccepted=false;string acquireReason=null;
+            yield return Until(()=>serviceAccepted || (serviceAccepted=customers.TryMoveToPickupService(readyVisit,out acquireReason)));
+            Assert.That(serviceAccepted,Is.True,acquireReason);
+            yield return Until(()=>customers.CanCollectPickup(readyVisit));
+            Assert.That(owner.HoldCollection,Is.True);
+            Assert.That(owner.Snapshot.CollectedExitVisitIds,Is.Empty);
             var departure=Ref<Transform>(customers,"exit"); var validExit=departure.position; departure.position=Vector3.one*1000;
             owner.HoldCollection=false; yield return Until(()=>owner.Snapshot.CollectedExitVisitIds.Count==1 && customers.Snapshot.Single().State==CustomerVisitState.Blocked);
             var id=owner.Snapshot.CollectedExitVisitIds.Single(); var body=world.RegisteredActors.Single(a=>a.ActorId==id);
@@ -203,6 +221,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             capacity.UpdateFloorCellCount(AnimalCafe.Capacity.FloorCapacitySource.CountInteriorCells(layout.Layout));
             yield return Until(()=>customers.Snapshot.Count==0 && employees.Snapshot.All(e=>e.State==EmployeeState.Idle));
             Assert.That(capacity.GetCapacities().All(c=>c.Used==0),Is.True); var epoch=owner.Snapshot.Epoch;
+            yield return CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,4000);
             Assert.That(customers.TrySpawn(),Is.True,customers.Status); yield return Until(()=>owner.Snapshot.Orders.Count==1);
             var key=owner.Snapshot.Orders.Keys.Single(); Assert.That(key.OrderId,Is.EqualTo(1)); Assert.That(key.Epoch,Is.EqualTo(epoch));
             Assert.That(oldSuccess.Token.Epoch,Is.LessThan(key.Epoch),"Replay must remain the old successful event after numeric ID reuse");
@@ -212,7 +231,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         }
         [UnityTest] public IEnumerator DoneDuringActualCarryRetiresDeliveryLeaseBeforeNextEpochDelivery()
         {
-            owner.HoldCollection=true; Assert.That(customers.TrySpawn(),Is.True);
+            owner.HoldCollection=true;
+            yield return CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,4000);
+            Assert.That(customers.TrySpawn(),Is.True);
             yield return Until(()=>employees.Snapshot.Any(e=>e.Role==EmployeeRole.Barista && e.State==EmployeeState.CarryingToPickUp) && Field<string>(owner,"leaseActor")!=null);
             var old=employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista); var bodies=world.RegisteredActors.Where(a=>employees.Snapshot.Any(e=>e.ActorId==a.ActorId)).ToArray();
             time.SetPaused(); decor.EnterDecorationMode(); Rotate(); decor.ExitDecorationMode();
@@ -221,6 +242,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             owner.Step(0); Assert.That(time.TrySetSpeed(GameSpeed.Normal),Is.True,time.ResumeBlockReason);
             yield return Until(()=>employees.Snapshot.All(e=>e.State==EmployeeState.Idle));
             CollectionAssert.AreEquivalent(bodies,world.RegisteredActors);
+            yield return CafeLoopRuntimeProof.PreparePositiveAdmission(owner,customers,world,4000);
             Assert.That(customers.TrySpawn(),Is.True,customers.Status); yield return Until(()=>owner.Snapshot.Delivery.Count==1);
             Assert.That(employees.Snapshot.Single(e=>e.Role==EmployeeRole.Barista).HandleId,Is.GreaterThan(old.HandleId));
             owner.HoldCollection=false; yield return Until(()=>owner.Snapshot.Orders.Values.Any(o=>o.State==OrderState.Completed));
@@ -242,6 +264,147 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             decor.RefreshConfirmedNavigationPresentation(); Rotate(); decor.ExitDecorationMode();
             yield return Until(()=>owner.CanProgress && employees.Snapshot.All(e=>e.State==EmployeeState.Idle));
             Assert.That(time.CurrentSpeed,Is.EqualTo(GameSpeed.Normal)); Assert.That(time.IsResumeBlocked,Is.False);
+        }
+        [UnityTest] public IEnumerator ChangedDoneClosesTrafficBeforeCleanupAvailabilityReentry()
+        {
+            Assert.That(All<AnimalCafe.BusinessDay.BusinessDayController>().Any(d=>d.isActiveAndEnabled),Is.False,"FIXTURE: no competing day owner");
+            var day=owner.gameObject.AddComponent<AnimalCafe.BusinessDay.BusinessDayController>();
+            day.Initialize(owner,new AnimalCafe.BusinessDay.BusinessDaySettings(),validationMode:true);
+            var prepared=new D4PreparedAdmission();yield return D4PrepareUncommittedAdmission(prepared);
+            var oldEpoch=owner.Snapshot.Epoch;
+            decor.EnterDecorationMode();Rotate(); // Actual public Confirm, followed by Done without another driver frame.
+            D4RequireSameGrantedAdmission(prepared);
+            var version=decor.CompletedLayoutChangeVersion+1;
+            var errors=new System.Collections.Generic.List<string>();
+            var availabilityCalls=0;var dayCalls=0;var speedCalls=0;
+            var closedAtAvailability=false;var closedAtDay=false;var closedAtSpeed=false;
+            var blockedAtAvailability=false;var blockedAtDay=false;var sameCoreAtAvailability=false;var sameCoreAfterReentry=false;
+            var localGate=false;long observedVersion=0,observedEpoch=0,recordedCount=-1,nativeBefore=-1,nativeAfter=-1;
+            TrafficDecisionKind? availabilityKind=null,dayKind=null,speedKind=null;
+            void ObserveDay(AnimalCafe.BusinessDay.BusinessDaySnapshot snapshot)
+            {
+                if(dayCalls!=0)return;dayCalls++;
+                try
+                {
+                    closedAtDay=Field<bool>(prepared.Core,"closed");dayKind=prepared.Core.GetDecision(prepared.Key).Kind;
+                    blockedAtDay=!owner.CanProgress;
+                }
+                catch(Exception error){errors.Add("day: "+error.GetType().Name+": "+error.Message);}
+            }
+            void ObserveSpeed(AnimalCafe.Core.Events.GameSpeedChangedEvent change)
+            {
+                if(speedCalls!=0)return;speedCalls++;
+                try{closedAtSpeed=Field<bool>(prepared.Core,"closed");speedKind=prepared.Core.GetDecision(prepared.Key).Kind;}
+                catch(Exception error){errors.Add("speed: "+error.GetType().Name+": "+error.Message);}
+            }
+            void ObserveAvailability()
+            {
+                if(availabilityCalls!=0)return;availabilityCalls++;
+                try
+                {
+                    localGate=Field<bool>(owner,"layoutPending");observedVersion=Field<long>(owner,"preparingVersion");
+                    observedEpoch=owner.Snapshot.Epoch;recordedCount=day.Snapshot.LayoutInterruptionCount;
+                    blockedAtAvailability=!owner.CanProgress;sameCoreAtAvailability=ReferenceEquals(Field<ServiceTrafficCoordinator>(owner,"traffic"),prepared.Core);
+                    closedAtAvailability=Field<bool>(prepared.Core,"closed");availabilityKind=prepared.Core.GetDecision(prepared.Key).Kind;
+                    nativeBefore=Field<long>(world.Service,"nextId");
+                    owner.Step(0); // Real reentry triggers the actual recorder's BeforeService/AfterService publications.
+                    nativeAfter=Field<long>(world.Service,"nextId");
+                    sameCoreAfterReentry=ReferenceEquals(Field<ServiceTrafficCoordinator>(owner,"traffic"),prepared.Core);
+                }
+                catch(Exception error){errors.Add("availability: "+error.GetType().Name+": "+error.Message);}
+            }
+            time.ResumeAvailabilityChanged+=ObserveAvailability;
+            AnimalCafe.Core.Events.GameEventBus.GameSpeedChanged+=ObserveSpeed;
+            day.SnapshotChanged+=ObserveDay;
+            try{decor.ExitDecorationMode();}
+            finally
+            {
+                time.ResumeAvailabilityChanged-=ObserveAvailability;
+                AnimalCafe.Core.Events.GameEventBus.GameSpeedChanged-=ObserveSpeed;
+                day.SnapshotChanged-=ObserveDay;
+            }
+            TestContext.WriteLine("D4_EARLY_CLOSE seam=availability calls="+availabilityCalls+" oldClosed="+closedAtAvailability+
+                " oldKind="+availabilityKind+" dayCalls="+dayCalls+" dayClosed="+closedAtDay+" speedObserved="+(speedCalls>0));
+            Assert.That(errors,Is.Empty,"Callback errors must be asserted outside the controller's catch boundary");
+            Assert.That(availabilityCalls,Is.EqualTo(1),"FIXTURE: actual cleanup Acquire notification");
+            Assert.That(dayCalls,Is.EqualTo(1),"FIXTURE: actual recorder publication during public Step(0) reentry");
+            Assert.That(localGate && blockedAtAvailability && blockedAtDay,Is.True);
+            Assert.That(observedVersion,Is.EqualTo(version));Assert.That(observedEpoch,Is.EqualTo(oldEpoch));
+            Assert.That(recordedCount,Is.EqualTo(1),"Recorder precedes order epoch clear");
+            Assert.That(sameCoreAtAvailability && sameCoreAfterReentry,Is.True,"Reentry must not create a replacement context");
+            Assert.That(nativeAfter,Is.EqualTo(nativeBefore),"Cleanup reentry cannot allocate a Native request");
+            Assert.That(closedAtAvailability,Is.True,"PRODUCT: old traffic must close before cleanup availability reentry");
+            Assert.That(availabilityKind,Is.EqualTo(TrafficDecisionKind.Cancelled));
+            Assert.That(closedAtDay,Is.True,"PRODUCT: real recorder callbacks cannot observe open old traffic");
+            Assert.That(dayKind,Is.EqualTo(TrafficDecisionKind.Cancelled));
+            if(speedCalls>0){Assert.That(closedAtSpeed,Is.True);Assert.That(speedKind,Is.EqualTo(TrafficDecisionKind.Cancelled));}
+        }
+        [UnityTest] public IEnumerator RecorderFailureClosesTrafficWithoutClearingBusinessEpoch()
+        {
+            var prepared=new D4PreparedAdmission();yield return D4PrepareUncommittedAdmission(prepared);
+            Assert.That(All<AnimalCafe.BusinessDay.BusinessDayController>().Any(d=>d.isActiveAndEnabled),Is.False,"FIXTURE: no competing recorder");
+            var blank=owner.gameObject.AddComponent<AnimalCafe.BusinessDay.BusinessDayController>();
+            owner.RegisterBusinessDay(blank); // Real recorder with no Initialize: its public RecordLayoutInterruption throws.
+            var epoch=owner.Snapshot.Epoch;var nextNative=Field<long>(world.Service,"nextId");
+            decor.EnterDecorationMode();Rotate();D4RequireSameGrantedAdmission(prepared);
+            decor.ExitDecorationMode();
+            TestContext.WriteLine("D4_EARLY_CLOSE seam=recorder-failure oldClosed="+Field<bool>(prepared.Core,"closed")+
+                " oldKind="+prepared.Core.GetDecision(prepared.Key).Kind+" epoch="+owner.Snapshot.Epoch+" diagnostic="+owner.Snapshot.Failure);
+            Assert.That(owner.Snapshot.Failure,Does.Contain("recorder尚未初始化"),"FIXTURE: real recorder failed before Acquire and business clear");
+            Assert.That(owner.Snapshot.Epoch,Is.EqualTo(epoch),"Unknown recording cannot clear the old business epoch");
+            Assert.That(owner.CanProgress,Is.False);
+            Assert.That(Field<ServiceTrafficCoordinator>(owner,"traffic"),Is.SameAs(prepared.Core));
+            Assert.That(Field<long>(world.Service,"nextId"),Is.EqualTo(nextNative));
+            Assert.That(Field<bool>(prepared.Core,"closed"),Is.True,"PRODUCT: recorder failure must leave old traffic closed");
+            Assert.That(prepared.Core.GetDecision(prepared.Key).Kind,Is.EqualTo(TrafficDecisionKind.Cancelled));
+        }
+        private sealed class D4PreparedAdmission
+        {
+            internal ServiceTrafficCoordinator Core;
+            internal TrafficIntentKey Key;
+            internal TrafficDecision Decision;
+            internal object Anchor;
+        }
+        // A real uncommitted admission right; no synthetic Entry, Native callback or private state mutation.
+        // 仅 prime 一次；等正常帧准备原 proposal，绝不在测试准备阶段 canonical commit。
+        private IEnumerator D4PrepareUncommittedAdmission(D4PreparedAdmission proof)
+        {
+            Assert.That(customers.Snapshot,Is.Empty,"FIXTURE: the existing scene starts without customers");
+            var nextVisit=Field<long>(customers,"nextVisit");var actorCount=world.RegisteredActors.Count;
+            var nextNative=Field<long>(world.Service,"nextId");
+            Assert.That(customers.TrySpawn(),Is.False,"FIXTURE: first preparation must defer without canonical birth");
+            proof.Anchor=Field<object>(customers,"pendingAdmissionAnchor");Assert.That(proof.Anchor,Is.Not.Null);
+            proof.Core=Field<ServiceTrafficCoordinator>(proof.Anchor,"Coordinator");proof.Key=Field<TrafficIntentKey>(proof.Anchor,"Key");
+            Assert.That(proof.Core,Is.Not.Null);Assert.That(proof.Key.IntentId,Is.EqualTo("counter-admission"));
+            for(var frame=0;frame<600;frame++)
+            {
+                if(!ReferenceEquals(Field<object>(customers,"pendingAdmissionAnchor"),proof.Anchor) ||
+                    !ReferenceEquals(Field<ServiceTrafficCoordinator>(owner,"traffic"),proof.Core))break;
+                var decision=proof.Core.GetDecision(proof.Key);
+                if(decision.Kind==TrafficDecisionKind.Granted)break;
+                if(decision.Kind!=TrafficDecisionKind.DeferredByBudget && decision.Kind!=TrafficDecisionKind.WaitingForTraffic)break;
+                yield return null;
+            }
+            proof.Decision=proof.Core.GetDecision(proof.Key);D4RequireSameGrantedAdmission(proof);
+            Assert.That(proof.Key.LayoutRevision,Is.EqualTo(adapter.Revision));
+            var entries=Field<System.Collections.IDictionary>(proof.Core,"entries");Assert.That(entries.Contains(proof.Key),Is.True);
+            var entry=entries[proof.Key];Assert.That(Field<bool>(entry,"Prepared"),Is.True);
+            Assert.That(Field<long>(entry,"AcquiredSequence"),Is.Zero);Assert.That(Field<bool>(entry,"Active"),Is.False);
+            Assert.That(Field<object>(entry,"Leg"),Is.Null,"FIXTURE: prepared admission is not a fabricated active Native leg");
+            Assert.That(proof.Core.HasActiveGrant(proof.Key),Is.False);
+            Assert.That(customers.Snapshot,Is.Empty);Assert.That(Field<long>(customers,"nextVisit"),Is.EqualTo(nextVisit));
+            Assert.That(world.RegisteredActors.Count,Is.EqualTo(actorCount));Assert.That(Field<long>(world.Service,"nextId"),Is.EqualTo(nextNative));
+        }
+        private void D4RequireSameGrantedAdmission(D4PreparedAdmission proof)
+        {
+            Assert.That(Field<ServiceTrafficCoordinator>(owner,"traffic"),Is.SameAs(proof.Core),"FIXTURE: same original owner Core");
+            Assert.That(Field<ServiceTrafficCoordinator>(customers,"traffic"),Is.SameAs(proof.Core));
+            Assert.That(Field<object>(customers,"pendingAdmissionAnchor"),Is.SameAs(proof.Anchor),"FIXTURE: do not replace the pending proposal");
+            Assert.That(Field<TrafficIntentKey>(proof.Anchor,"Key"),Is.EqualTo(proof.Key));
+            Assert.That(Field<bool>(proof.Core,"closed"),Is.False,"FIXTURE: old traffic must actually still be open before Done");
+            Assert.That(proof.Core.GetDecision(proof.Key),Is.SameAs(proof.Decision));
+            Assert.That(proof.Decision.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"FIXTURE: authentic pending admission was not granted");
+            Assert.That(proof.Decision.AcquiredSequence,Is.Zero,"FIXTURE: permission is prepared, never committed by this test");
         }
         private void Rotate()
         {

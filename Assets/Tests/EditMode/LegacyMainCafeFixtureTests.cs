@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 using System.Linq;
 using AnimalCafe.Decoration;
 using AnimalCafe.EditorTools.P8R;
@@ -16,6 +17,47 @@ namespace AnimalCafe.Tests.EditMode
         [TestCase(false)]
         [TestCase(true)]
         public void LegacyFixture_RestoresOnlyMainEntryAndKeepsUnrelatedDirtySceneAndSelection(bool loadedMain)
+        {
+            VerifyCallerStateRestoration(loadedMain, false);
+        }
+
+        [Test]
+        public void LegacyFixture_MappedReadersKeepOldBytesDuringInstallAndExactRestoration()
+        {
+            VerifyCallerStateRestoration(true, true);
+        }
+
+        [Test]
+        public void LegacyFixture_InstallReplacesMappedOwnedSceneAndPreservesMeta()
+        {
+            var path = "Assets/__LegacyMapped_" + Guid.NewGuid().ToString("N") + ".unity";
+            try
+            {
+                Assert.That(AssetDatabase.CopyAsset("Assets/Scenes/MainCafe.unity", path), Is.True);
+                var original = File.ReadAllBytes(path);
+                var meta = File.ReadAllBytes(path + ".meta");
+                using (var reader = new MappedReader(path))
+                using (var metaReader = new MappedReader(path + ".meta"))
+                {
+                    LegacyMainCafeFixture.Install(path);
+                    Assert.That(File.ReadAllBytes(path), Is.Not.EqualTo(original));
+                    Assert.That(File.ReadAllBytes(path + ".meta"), Is.EqualTo(meta));
+                    reader.AssertBytes(original);
+                    metaReader.AssertBytes(meta);
+                    var legacy = EditorSceneManager.OpenScene(path, OpenSceneMode.Additive);
+                    var controller = legacy.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<DecorationModeController>(true)).Single();
+                    Assert.That(P8RFurnitureUiBuilder.HasAnyP8RWiring(controller), Is.False);
+                }
+            }
+            finally
+            {
+                var scene = SceneManager.GetSceneByPath(path);
+                if (scene.IsValid() && scene.isLoaded) EditorSceneManager.CloseScene(scene, true);
+                AssetDatabase.DeleteAsset(path);
+            }
+        }
+
+        private static void VerifyCallerStateRestoration(bool loadedMain, bool mappedReaders)
         {
             const string mainPath = "Assets/Scenes/MainCafe.unity";
             var callerPath = "Assets/__LegacyCaller_" + Guid.NewGuid().ToString("N") + ".unity";
@@ -60,11 +102,31 @@ namespace AnimalCafe.Tests.EditMode
                 var beforeBytes = File.ReadAllBytes(mainPath);
                 var beforeMeta = File.ReadAllBytes(mainPath + ".meta");
                 var callerHandle = caller.handle;
-                using (new LegacyMainCafeFixture())
+                // Read-only maps allow replacement, but Windows refuses a truncating write.
+                // 旧 view 必须继续读取旧 bytes；同时验证真实 fixture 的安装和恢复。
+                using (var originalReader = mappedReaders ? new MappedReader(mainPath) : null)
+                using (var metaReader = mappedReaders ? new MappedReader(mainPath + ".meta") : null)
                 {
-                    var legacy = EditorSceneManager.OpenScene(mainPath, OpenSceneMode.Additive);
-                    var controller = legacy.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<DecorationModeController>(true)).Single();
-                    Assert.That(P8RFurnitureUiBuilder.HasAnyP8RWiring(controller), Is.False);
+                    using (var fixture = new LegacyMainCafeFixture())
+                    {
+                        var legacy = EditorSceneManager.OpenScene(mainPath, OpenSceneMode.Additive);
+                        var controller = legacy.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<DecorationModeController>(true)).Single();
+                        Assert.That(P8RFurnitureUiBuilder.HasAnyP8RWiring(controller), Is.False);
+                        if (mappedReaders)
+                        {
+                            var legacyBytes = File.ReadAllBytes(mainPath);
+                            Assert.That(legacyBytes, Is.Not.EqualTo(beforeBytes), "Install must publish legacy bytes.");
+                            originalReader.AssertBytes(beforeBytes);
+                            using (var legacyReader = new MappedReader(mainPath))
+                            {
+                                fixture.Dispose();
+                                Assert.That(File.ReadAllBytes(mainPath), Is.EqualTo(beforeBytes));
+                                legacyReader.AssertBytes(legacyBytes);
+                            }
+                        }
+                    }
+                    originalReader?.AssertBytes(beforeBytes);
+                    metaReader?.AssertBytes(beforeMeta);
                 }
                 Assert.That(File.ReadAllBytes(mainPath), Is.EqualTo(beforeBytes));
                 Assert.That(File.ReadAllBytes(mainPath + ".meta"), Is.EqualTo(beforeMeta));
@@ -98,6 +160,44 @@ namespace AnimalCafe.Tests.EditMode
                 Selection.objects = selection;
                 Selection.activeObject = previousSelected.Value != null ? previousSelected.Value
                     : GlobalObjectId.GlobalObjectIdentifierToObjectSlow(previousSelected.Id);
+            }
+        }
+
+        private sealed class MappedReader : IDisposable
+        {
+            private readonly FileStream stream;
+            private readonly MemoryMappedFile mapping;
+            private readonly MemoryMappedViewAccessor view;
+
+            public MappedReader(string path)
+            {
+                stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+                try
+                {
+                    mapping = MemoryMappedFile.CreateFromFile(stream, null, 0, MemoryMappedFileAccess.Read,
+                        HandleInheritability.None, true);
+                    view = mapping.CreateViewAccessor(0, 0, MemoryMappedFileAccess.Read);
+                }
+                catch
+                {
+                    mapping?.Dispose();
+                    stream.Dispose();
+                    throw;
+                }
+            }
+
+            public void AssertBytes(byte[] expected)
+            {
+                var actual = new byte[expected.Length];
+                Assert.That(view.ReadArray(0, actual, 0, actual.Length), Is.EqualTo(actual.Length));
+                Assert.That(actual, Is.EqualTo(expected), "A retained read-only view must keep its original bytes.");
+            }
+
+            public void Dispose()
+            {
+                view.Dispose();
+                mapping.Dispose();
+                stream.Dispose();
             }
         }
 

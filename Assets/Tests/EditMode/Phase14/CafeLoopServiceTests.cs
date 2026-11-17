@@ -85,6 +85,24 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             Assert.That(service.Snapshot.Orders.Count,Is.EqualTo(1));
             Assert.That(env.PickupMoves.Count(v=>v=="a"),Is.EqualTo(1));
         }
+        [Test] public void LaterPaidGuestRequestsPickupBeforeReadyWhileEarlierCollectedGuestHasNotExited()
+        {
+            Start(); FinishCashier(); AtPickup("a"); Deliver(); ReturnBarista();
+            env.CollectionAllowed=true;
+            Assert.That(service.TryCollect("a",out var reason),Is.True,reason);
+            Assert.That(env.ExitMoves,Does.Contain("a"));
+            Assert.That(service.Snapshot.CollectedExitVisitIds,Does.Contain("a"));
+
+            // 前客还未实际离店，后客付款后照常请求候位 / Transfer before Ready or earlier Exit.
+            AddVisit("b"); service.Tick(.1f); FinishCashier();
+            Assert.That(service.Snapshot.Orders.Values.Single(o=>o.CustomerId=="b").State,Is.EqualTo(OrderState.Preparing));
+            Assert.That(env.PickupMoves.Count(id=>id=="b"),Is.EqualTo(1));
+            CollectionAssert.AreEqual(new[]{"a","b"},service.Snapshot.PaidVisitIds);
+            Assert.That(service.Snapshot.CollectedExitVisitIds,Does.Contain("a"));
+            Assert.That(env.VisitValues.Single(v=>v.VisitId=="a").ExitArrived,Is.False);
+            Assert.That(service.TryCollect("b",out _),Is.False,"未 Ready 可以转队，但不能提前取杯 / No early collection");
+        }
+
         [Test] public void NotArrivedAndWrongPhaseCannotChargeThenDuplicateSuccessCreatesOnlyOneOrder()
         {
             env.VisitValues[0]=new CafeVisitSnapshot("a",CustomerVisitState.Queued,Vector3.zero,counterArrived:false,layoutRevision:7);

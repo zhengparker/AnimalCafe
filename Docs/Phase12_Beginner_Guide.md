@@ -1,5 +1,7 @@
 # Phase 12 Beginner Guide
 
+> **到店间隔更新（2026-11-03，Owner已批准）：当前默认改为0–10游戏秒，平均5游戏秒。** 抽到0秒时，下次正游戏时间更新可以尝试接待一位；Pause、容量、通道和营业门禁照常生效，成功接待后才抽下一轮，不积压补发。下方旧1–5秒及旧Owner PASS属于历史参数，不能视为新参数已通过验收；本次定向结果见[当前P15验证报告](Phase15_Validation_Report.md)。
+
 ## MainCafe 后续 UI 修订（2026-10-10）
 
 这两个按钮修订只接入 `Assets/Scenes/MainCafe.unity`，独立P12 validation继续沿用原有行为。在本P12 worktree中打开MainCafe并Play：setup未完成时保持暂停，▶️和2×灰显；点击任一按钮让现有“Setup incomplete · Enter Decor to finish”状态条左右轻抖约0.3秒，并短暂闪半透明红色（0.4秒内淡出）；不会弹出额外提示框或开始营业。进入Decor，完成有效Cash Register / Coffee Machine / Pick-up的confirmed布局并Done后，按钮可用；点击▶️开始1×，运行时左按钮显示⏸️，1×/2×下点击均暂停。
@@ -14,7 +16,7 @@
 1. 在 Unity Hub 添加并打开上述 worktree，使用 Unity `6000.5.5f1`。不要打开 main 做本轮验收。
 2. 打开 `Assets/Scenes/Validation/Phase12CustomerQueue.unity`，检查 Console 没有 compile error，再按 Play。
 3. 验证场景会自动准备 Cash Register、Coffee Machine 和 Pick-up 的可营业布局。下方 P12 panel 显示到店倒计时、Register、三项容量和顾客状态。
-4. 顾客每隔随机 1～5 **游戏秒**尝试入店。入口或路径暂时被占用时，倒计时停在0并保留一位待入场顾客，安全后入场才抽取下一轮；容量或实际队伍站位已满时停止生成，腾出容量后重新计时。
+4. 顾客每隔随机 0～10 **游戏秒**尝试入店。入口或路径暂时被占用时，倒计时停在0并保留一位待入场顾客，安全后入场才抽取下一轮；容量或实际队伍站位已满时停止生成，腾出容量后重新计时。
 5. “让队首离开”只处理已经到队首的顾客；“修复后重试”在修复布局后重新验证路径。
 
 本次M-003重测：重新Play默认验证布局，先等四位全部Queued，再点“让队首离开”；等前一位消失、后方完成前移，再点下一次，直到排空。然后在装修中把柜台分散、保持服务设施有效，重复同样操作。观察绕行不穿家具、不穿前方角色、不瞬移；若失败，请保留下方状态的具体“入店/前移/离场”原因和布局。

@@ -25,6 +25,19 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                 handle,request,generation,revision,CafeTaskEventKind.ServiceFinished,new CafeWorkCheckpoint(EmployeeRole.Cashier,visit,null,CafeWorkStage.Finished,0));
         }
         private const string Key="AnimalCafe.P14.Task9.Reload.";
+        private const string ScenePath="Assets/Scenes/Validation/Phase14CafeLoop.unity";
+        private static CustomerFlowController EditSceneCustomers()
+        {
+            var scene=UnityEngine.SceneManagement.SceneManager.GetSceneByPath(ScenePath);
+            return !scene.IsValid() || !scene.isLoaded?null:scene.GetRootGameObjects()
+                .SelectMany(root=>root.GetComponentsInChildren<CustomerFlowController>(true)).Single();
+        }
+        private static void RestoreStartupArrivals()
+        {
+            if(EditorApplication.isPlaying)return;
+            var customers=EditSceneCustomers();
+            if(customers!=null)customers.AutoSpawn=SessionState.GetBool(Key+"startupAutoSpawn",true);
+        }
         private static CafeLoopController receiptOwner;
         private static CustomerFlowController receiptCustomers;
         private static CapacityToken receiptToken;
@@ -50,6 +63,49 @@ namespace AnimalCafe.Tests.EditMode.Phase14
         }
         [UnityTest] public IEnumerator RealP14RepeatedPlayWithDomainReload() => Sessions(true);
         [UnityTest] public IEnumerator RealP14RepeatedPlayWithoutDomainReload() => Sessions(false);
+        // Read the original startup state without changing admission, time, navigation or actor ownership.
+        // 只在五个原边界同步记录；诊断失败标为 UNKNOWN，不覆盖原测试结果。
+        private static void ObserveStartup(string boundary,CafeLoopController owner=null,EmployeeFlowController staff=null)
+        {
+            try
+            {
+                TestContext.WriteLine("P14_STARTUP_META boundary="+boundary+" frame="+Time.frameCount+" delta="+Time.deltaTime+
+                    " unscaled="+Time.unscaledDeltaTime+" capture="+Time.captureDeltaTime+" timeScale="+Time.timeScale+
+                    " reload="+SessionState.GetBool(Key+"reload",true)+" run="+SessionState.GetInt(Key+"run",0)+
+                    " savedSession="+SessionState.GetString(Key+"session",""));
+                if(owner==null)owner=UnityEngine.Object.FindAnyObjectByType<CafeLoopController>();
+                if(staff==null)staff=UnityEngine.Object.FindAnyObjectByType<EmployeeFlowController>();
+                var customers=UnityEngine.Object.FindAnyObjectByType<CustomerFlowController>();
+                var world=UnityEngine.Object.FindAnyObjectByType<NavigationWorld>();
+                var tools=UnityEngine.Object.FindAnyObjectByType<CafeLoopValidationController>();
+                const System.Reflection.BindingFlags flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
+                var clock=customers==null?null:typeof(CustomerFlowController).GetField("clock",flags)?.GetValue(customers) as CustomerSpawnClock;
+                var heldCustomers=tools==null?null:typeof(CafeLoopValidationController).GetField("customers",flags)?.GetValue(tools) as CustomerFlowController;
+                var actors=UnityEngine.Object.FindObjectsByType<NavigationActor>(); // Same active-object scope as the original assertion.
+                TestContext.WriteLine("P14_STARTUP_COUNTS boundary="+boundary+" runtimeSession="+(owner==null?"UNKNOWN":owner.Snapshot.SessionId)+
+                    " staff="+(staff==null?"UNKNOWN":staff.Snapshot.Count.ToString())+" globalActiveNav="+actors.Length+
+                    " customers="+(customers==null?"UNKNOWN":customers.Snapshot.Count.ToString())+
+                    " orders="+(owner==null?"UNKNOWN":owner.Snapshot.Orders.Count.ToString())+
+                    " paid="+(owner==null?"UNKNOWN":owner.Snapshot.PaidVisitIds.Count.ToString())+
+                    " autoSpawn="+(customers==null?"UNKNOWN":customers.AutoSpawn.ToString())+
+                    " clockRemaining="+(clock==null?"UNKNOWN":clock.RemainingSeconds.ToString("R"))+
+                    " customerEntity="+(customers==null?"UNKNOWN":customers.GetEntityId().ToString())+
+                    " holdTargetEntity="+(heldCustomers==null?"UNKNOWN":heldCustomers.GetEntityId().ToString()));
+                TestContext.WriteLine("P14_STARTUP_STAFF boundary="+boundary+" rows=["+(staff==null?"UNKNOWN":
+                    string.Join(";",staff.Snapshot.Select(e=>e.ActorId+"/"+e.Role+"/"+e.State+"/handle="+e.HandleId)))+"] customers=["+
+                    (customers==null?"UNKNOWN":string.Join(";",customers.Snapshot.Select(v=>v.VisitId+"/"+v.State)))+"]");
+                foreach(var actor in actors)
+                    TestContext.WriteLine("P14_STARTUP_ACTOR boundary="+boundary+" name="+actor.name+" entity="+actor.GetEntityId()+
+                        " runtimeActorId="+actor.ActorId+" sceneName="+actor.gameObject.scene.name+" scenePath="+actor.gameObject.scene.path+
+                        " sceneLoaded="+actor.gameObject.scene.isLoaded+" activeHierarchy="+actor.gameObject.activeInHierarchy+
+                        " componentEnabled="+actor.enabled+" registered="+(world==null?"UNKNOWN":world.RegisteredActors.Contains(actor).ToString()));
+            }
+            catch(Exception error)
+            {
+                try{TestContext.WriteLine("P14_STARTUP_DIAGNOSTIC_UNKNOWN boundary="+boundary+" error="+error);}
+                catch { /* A diagnostic sink must never replace the original Play assertion. */ }
+            }
+        }
         private IEnumerator Sessions(bool reload)
         {
             SessionState.SetBool(Key+"enabled",EditorSettings.enterPlayModeOptionsEnabled); SessionState.SetInt(Key+"options",(int)EditorSettings.enterPlayModeOptions);
@@ -58,25 +114,36 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             SessionState.SetInt(Key+"run",0); SessionState.SetString(Key+"session",""); SessionState.SetString(Key+"actor","");
             SessionState.SetString(Key+"event","");
             EditorSettings.enterPlayModeOptionsEnabled=true; EditorSettings.enterPlayModeOptions=reload?EnterPlayModeOptions.None:EnterPlayModeOptions.DisableDomainReload;
-            EditorSceneManager.OpenScene("Assets/Scenes/Validation/Phase14CafeLoop.unity",OpenSceneMode.Single);
+            EditorSceneManager.OpenScene(ScenePath,OpenSceneMode.Single);
+            SessionState.SetBool(Key+"startupAutoSpawn",EditSceneCustomers().AutoSpawn);
             try
             {
                 while(SessionState.GetInt(Key+"run",0)<2)
                 {
-                    yield return new EnterPlayMode(SessionState.GetBool(Key+"reload",true)); Time.captureDeltaTime=1f/60;
+                    // Serialize this test-owned startup gate before Play can run its first Update.
+                    // 先暂停自动来客，再进入真实Play；保留原两名员工检查，不清理已出生顾客来掩盖竞态。
+                    EditSceneCustomers().AutoSpawn=false;
+                    yield return new EnterPlayMode(SessionState.GetBool(Key+"reload",true));
+                    SessionState.SetBool(Key+"startupHeldAtEnter",!UnityEngine.Object.FindAnyObjectByType<CustomerFlowController>().AutoSpawn);
+                    ObserveStartup("enter-return-before-capture");Time.captureDeltaTime=1f/60;
                     CafeLoopController owner=null; EmployeeFlowController staff=null; Exception failure=null;
                     for(var f=0;f<600;f++)
                     {
                         owner=UnityEngine.Object.FindAnyObjectByType<CafeLoopController>(); staff=UnityEngine.Object.FindAnyObjectByType<EmployeeFlowController>();
+                        if(f==0)ObserveStartup("before-first-hold",owner,staff);
                         UnityEngine.Object.FindAnyObjectByType<CafeLoopValidationController>()?.HoldArrivals();
+                        if(f==0)ObserveStartup("after-first-hold",owner,staff);
                         if(owner!=null && owner.CanProgress && staff.Snapshot.All(e=>e.State==EmployeeState.Idle)) break; yield return null;
                     }
                     try
                     {
+                        ObserveStartup("before-ready-assertions",owner,staff);
+                        Assert.That(SessionState.GetBool(Key+"startupHeldAtEnter",false),Is.True,"The startup gate must survive actual Play entry before the test coroutine can hold arrivals");
                         Assert.That(owner,Is.Not.Null); Assert.That(owner.CanProgress,Is.True);
                         Assert.That(UnityEngine.Object.FindObjectsByType<CafeLoopController>().Length,Is.EqualTo(1));
                         Assert.That(UnityEngine.Object.FindObjectsByType<CafeLoopStatusView>().Length,Is.EqualTo(1));
-                        Assert.That(staff.Snapshot.Count,Is.EqualTo(2)); Assert.That(UnityEngine.Object.FindObjectsByType<NavigationActor>().Length,Is.EqualTo(2));
+                        Assert.That(staff.Snapshot.Count,Is.EqualTo(2),"Original staff snapshot count must be two");
+                        Assert.That(UnityEngine.Object.FindObjectsByType<NavigationActor>().Length,Is.EqualTo(2),"Original global active NavigationActor count must be two");
                         Assert.That(owner.Snapshot.Orders,Is.Empty); Assert.That(owner.Snapshot.SessionId,Is.Not.EqualTo(SessionState.GetString(Key+"session","")));
                         Assert.That(owner.Snapshot.Delivery,Is.Empty); Assert.That(UnityEngine.Object.FindAnyObjectByType<PickupCupDisplay>().VisibleOrders,Is.Empty);
                         Assert.That(UnityEngine.Object.FindObjectsByType<Transform>().Any(t=>t.name=="EmployeeHeldCup" || t.name.StartsWith("PickupCup_")),Is.False);
@@ -96,7 +163,7 @@ namespace AnimalCafe.Tests.EditMode.Phase14
                         };
                         UnityEngine.Object.FindAnyObjectByType<CafeLoopValidationController>().ResumeArrivals();
                     }
-                    catch(Exception error) { failure=error; }
+                    catch(Exception error) { ObserveStartup("ready-assertion-catch-before-exit",owner,staff);failure=error; }
                     if(failure==null)
                     {
                         var customers=UnityEngine.Object.FindAnyObjectByType<CustomerFlowController>();
@@ -133,7 +200,7 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             {
                 Time.captureDeltaTime=SessionState.GetFloat(Key+"capture",0);
                 EditorSettings.enterPlayModeOptions=(EnterPlayModeOptions)SessionState.GetInt(Key+"options",0); EditorSettings.enterPlayModeOptionsEnabled=SessionState.GetBool(Key+"enabled",false);
-                if(!EditorApplication.isPlaying) RestoreScenes();
+                if(!EditorApplication.isPlaying) { RestoreStartupArrivals();RestoreScenes(); }
                 Assert.That(EditorSettings.enterPlayModeOptions,Is.EqualTo((EnterPlayModeOptions)SessionState.GetInt(Key+"options",0)));
                 Assert.That(EditorSettings.enterPlayModeOptionsEnabled,Is.EqualTo(SessionState.GetBool(Key+"enabled",false)));
             }
@@ -144,7 +211,7 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             if(EditorApplication.isPlaying) yield return new ExitPlayMode();
             Time.captureDeltaTime=SessionState.GetFloat(Key+"capture",0);
             EditorSettings.enterPlayModeOptions=(EnterPlayModeOptions)SessionState.GetInt(Key+"options",0); EditorSettings.enterPlayModeOptionsEnabled=SessionState.GetBool(Key+"enabled",false);
-            RestoreScenes();
+            RestoreStartupArrivals();RestoreScenes();
         }
         private static void RestoreScenes()
         {

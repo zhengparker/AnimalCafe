@@ -77,7 +77,7 @@ namespace AnimalCafe.Tests.EditMode.AssetPipeline
                     foreach (var file in Directory.GetFiles(root, "*", SearchOption.AllDirectories))
                         if (!snapshot.ContainsKey(file)) File.Delete(file);
                 foreach (var file in snapshot)
-                    File.WriteAllBytes(file.Key, file.Value);
+                    TestAssetBytes.Restore(file.Key, file.Value);
                 AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
             }
         }

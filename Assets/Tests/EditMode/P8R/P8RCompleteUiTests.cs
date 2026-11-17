@@ -179,7 +179,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
                 if (scene.IsValid()) EditorSceneManager.CloseScene(scene, true);
                 foreach (var path in paths.Where(path => !System.IO.File.ReadAllBytes(path).SequenceEqual(bytes[path])))
                 {
-                    System.IO.File.WriteAllBytes(path, bytes[path]);
+                    TestAssetBytes.Restore(path, bytes[path]);
                     if (!path.EndsWith(".meta")) AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
                 }
                 if (active.IsValid() && active.isLoaded) SceneManager.SetActiveScene(active);
@@ -233,7 +233,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
             finally
             {
                 EditorSceneManager.CloseScene(scene, true);
-                System.IO.File.WriteAllBytes(path, original); AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+                TestAssetBytes.Restore(path, original); AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
             }
         }
         [TestCase("exitModalView", "discardButton")]
@@ -604,7 +604,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
             {
                 foreach (var entry in original)
                 {
-                    System.IO.File.WriteAllBytes(entry.Key, entry.Value);
+                    TestAssetBytes.Restore(entry.Key, entry.Value);
                     AssetDatabase.ImportAsset(entry.Key, ImportAssetOptions.ForceSynchronousImport);
                 }
             }
@@ -660,7 +660,7 @@ namespace AnimalCafe.Tests.EditMode.P8R
                 EditorSceneManager.CloseScene(scene, true);
                 foreach (var entry in original)
                 {
-                    System.IO.File.WriteAllBytes(entry.Key, entry.Value);
+                    TestAssetBytes.Restore(entry.Key, entry.Value);
                     AssetDatabase.ImportAsset(entry.Key, ImportAssetOptions.ForceSynchronousImport);
                 }
             }
@@ -896,9 +896,9 @@ namespace AnimalCafe.Tests.EditMode.P8R
             finally
             {
                 if (!System.IO.File.ReadAllBytes(cataloguePath).SequenceEqual(originalCatalogue))
-                    System.IO.File.WriteAllBytes(cataloguePath, originalCatalogue);
+                    TestAssetBytes.Restore(cataloguePath, originalCatalogue);
                 if (!System.IO.File.ReadAllBytes(cataloguePath + ".meta").SequenceEqual(originalMeta))
-                    System.IO.File.WriteAllBytes(cataloguePath + ".meta", originalMeta);
+                    TestAssetBytes.Restore(cataloguePath + ".meta", originalMeta);
                 AssetDatabase.ImportAsset(cataloguePath, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
             }
         }

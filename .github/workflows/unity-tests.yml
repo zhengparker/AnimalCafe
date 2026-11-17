@@ -11,13 +11,16 @@ on:
         type: boolean
         default: false
       test_scope:
-        description: 'full = complete regression; remaining-ci-failures = focused diagnosis only'
+        description: 'compact = same local regression; full = complete suite; other scopes = diagnosis only'
         required: true
         type: choice
-        default: full
+        default: compact
         options:
+          - compact
           - full
           - remaining-ci-failures
+          - p15-ci-repairs
+          - p15-ci-five-failures
 
 permissions:
   contents: read
@@ -33,8 +36,8 @@ jobs:
     name: Unity EditMode and PlayMode
     if: ${{ inputs.allow_unity_login }}
     runs-on: ubuntu-22.04
-    # Budget both complete suites plus cold Library imports in one activation.
-    # 冷启动旧资源重建已耗尽原90分钟总预算；仍执行完整suite，完成即结束。
+    # Allow cold Library imports; compact changes selection, not assertion/time budgets.
+    # 精简范围与本地共用；保留冷导入上限，不延长游戏测试自身的等待。
     timeout-minutes: 150
     steps:
       - name: Check out project
@@ -42,6 +45,20 @@ jobs:
         with:
           lfs: true
           persist-credentials: false
+
+      - name: Validate shared regression scope without Unity login
+        run: python3 -B -m unittest discover -s Tools/Testing -p test_unity_regression.py
+
+      - name: Read shared compact selectors
+        id: scope
+        env:
+          TEST_SCOPE: ${{ inputs.test_scope }}
+        shell: bash
+        run: |
+          if [[ "$TEST_SCOPE" == 'compact' ]]; then
+            FILTER="$(python3 Tools/Testing/unity_regression.py filter --mode all)"
+            echo "parameters=-testFilter $FILTER" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Verify Unity version and CI license configuration
         env:
@@ -79,7 +96,7 @@ jobs:
       - name: Remove automatic activation retries before credentials are used
         run: python3 .github/scripts/disable-gameci-activation-retries.py .ci/gameci-test-runner
 
-      - name: Run complete Unity test suites after one activation
+      - name: Run selected EditMode and PlayMode after one activation
         id: tests
         # Same pinned runner, with its activation loop removed before invocation.
         # 同一固定版本；all 模式只激活一次，再顺序执行 EditMode / PlayMode。
@@ -93,7 +110,7 @@ jobs:
           projectPath: .
           unityVersion: 6000.5.5f1
           testMode: all
-          customParameters: ${{ inputs.test_scope == 'remaining-ci-failures' && '-testFilter P8RGlyphMinificationTests;GeneratedProductionViews_ReducedMotionPauseAndRapidReverseFinishOneStableRaycastOwner' || '' }}
+          customParameters: ${{ inputs.test_scope == 'compact' && steps.scope.outputs.parameters || inputs.test_scope == 'p15-ci-five-failures' && '-testFilter AnimalCafe.Tests.EditMode.Phase14.ServiceTrafficCoordinatorTests;AnimalCafe.Tests.PlayMode.Phase14.CafePickupSideTests.MainDefaultCounterPlacementCompletesServiceWithoutTrafficDeadlock;AnimalCafe.Tests.PlayMode.Phase14.CafePickupSideTests.UserLongCounterSevenNormal;AnimalCafe.Tests.PlayMode.Phase14.CafePickupSideTests.UserLongCounterSixFast;AnimalCafe.Tests.PlayMode.Phase14.CafePickupSideTests.UserLongCounterSixNormal;AnimalCafe.Tests.PlayMode.Phase14.CafePickupSideTests.UserPhotoCounterSevenNormal -waitFailureIntent=* -p15CiFailureWitness' || inputs.test_scope == 'remaining-ci-failures' && '-testFilter P8RGlyphMinificationTests;GeneratedProductionViews_ReducedMotionPauseAndRapidReverseFinishOneStableRaycastOwner' || inputs.test_scope == 'p15-ci-repairs' && '-testFilter UiPublishBackup_RestoreWithRestrictiveReaderRespectsPlatformSharingWithoutTempLeak;UiPublishBackup_RestoreDirectoryConflictPropagatesWithoutTempLeak;AnimalCafe.Tests.EditMode.Phase7.Phase7PublicationIoTests;AnimalCafe.Tests.PlayMode.Phase14.CafePickupSideTests.ThreeNaturalCustomersReleasePickupDependenciesAndActuallyExit;AnimalCafe.Tests.PlayMode.Phase14.CafePickupSideTests.CenterCounterContinuousBusinessNormal;AnimalCafe.Tests.EditMode.Phase14.ServiceTrafficCoordinatorTests;AnimalCafe.Tests.PlayMode.Phase14.CafePickupSideTests.PhotoParallelBenchesExposeActualPickupWaitReason;AnimalCafe.Tests.PlayMode.Phase14.CafePickupSideTests.PhotoParallelBenchesConfiguredConflictHoldsAndResumesOriginalAdmission -serviceTrafficWaitTrace -waitFailureIntent=*' || '' }}
           artifactsPath: artifacts/unity
           githubToken: ''
 
@@ -102,44 +119,19 @@ jobs:
         env:
           RESULTS_PATH: artifacts/unity
           TESTED_COMMIT: ${{ github.sha }}
+          TEST_SCOPE: ${{ inputs.test_scope }}
         shell: bash
-        run: |
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-          import xml.etree.ElementTree as ET
-
-          reports = []
-          for path in Path(os.environ['RESULTS_PATH']).rglob('*.xml'):
-              root = ET.parse(path).getroot()
-              if root.tag == 'test-run':
-                  reports.append((path, root))
-          required_reports = {'editmode-results.xml', 'playmode-results.xml'}
-          if {path.name for path, _ in reports} != required_reports:
-              raise SystemExit('Both EditMode and PlayMode NUnit XML reports are required.')
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as summary:
-              summary.write(f"Tested commit: `{os.environ['TESTED_COMMIT']}`\n\n")
-              for path, root in reports:
-                  passed = int(root.get('passed', '0'))
-                  failed = int(root.get('failed', '0'))
-                  skipped = int(root.get('skipped', '0'))
-                  inconclusive = int(root.get('inconclusive', '0'))
-                  duration_minutes = float(root.get('duration', '0')) / 60
-                  summary.write(f'{path.name}: **{passed} PASS / {failed} FAIL / {skipped} SKIP**\n\n')
-                  summary.write(f'Duration: {duration_minutes:.2f} minutes\n\n')
-                  # Unity 1.7 may mark a green run with optional skips as Skipped:Ignored.
-                  # 有实际 PASS 且零失败时允许已报告的可选 SKIP；全部 SKIP 仍失败。
-                  accepted_status = root.get('result') in ('Passed', 'Skipped', 'Skipped:Ignored')
-                  if passed == 0 or failed != 0 or inconclusive != 0 or not accepted_status:
-                      raise SystemExit(f'Incomplete or failed Unity test run: {path.name}')
-          PY
+        run: python3 Tools/Testing/unity_regression.py verify --scope "$TEST_SCOPE" --results "$RESULTS_PATH"
 
       - name: Preserve test results and logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: unity-all-${{ github.run_attempt }}
-          path: artifacts/unity
+          name: unity-${{ inputs.test_scope }}-${{ github.run_attempt }}
+          path: |
+            artifacts/unity
+            outputs/phase15/long-counter-stall/live-*
+            outputs/phase15/service-traffic-coordination-20261030/task-1
           if-no-files-found: warn
           retention-days: 14
 
@@ -154,8 +146,8 @@ jobs:
           TEST_RESULT: ${{ needs.tests.result }}
           TEST_SCOPE: ${{ inputs.test_scope }}
         run: |
-          if [[ "$TEST_SCOPE" == 'remaining-ci-failures' ]]; then
-            echo '::error::Focused diagnosis does not satisfy the complete Unity CI requirement.'
+          if [[ "$TEST_SCOPE" != 'compact' && "$TEST_SCOPE" != 'full' ]]; then
+            echo '::error::Focused diagnosis does not satisfy Unity CI; select compact or full.'
             exit 1
           fi
           if [[ "$TEST_RESULT" != 'success' ]]; then

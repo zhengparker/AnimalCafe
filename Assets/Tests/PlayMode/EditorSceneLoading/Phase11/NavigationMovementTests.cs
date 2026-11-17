@@ -446,6 +446,201 @@ namespace AnimalCafe.Tests.PlayMode.Phase11
             yield return null;
         }
 
+        [UnityTest] public IEnumerator SteadyTwoInteriorFurnitureCornersReachFullTargetWithoutBody()
+        {
+            // Same fixed geometry as the obstruction test; prove the entire two-corner trip, not a corner as final target.
+            // 同固定家具场景；完整到达最终目标，不把原中间角当终点。
+            Box(new Vector3(0,.7f,0),new Vector3(2,1.4f,2),true);Bake();
+            var actor=Actor("a",new Vector3(-3,0,2));Assert.That(actor.TryEnableSteadyPathMotion(),Is.True);
+            Assert.That(world.Register(actor),Is.True);MovementResult? result=null;var callbacks=0;
+            var target=new Vector3(3,0,-2);
+            var start=world.Service.MoveTo(actor.ActorId,new NavigationTarget(target,Vector3.back),r=>{callbacks++;result=r;});
+            Assert.That(start.Accepted,Is.True);Assert.That(start.RequestId,Is.GreaterThan(0));
+            const System.Reflection.BindingFlags flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+            object Read(object value,string name)
+            {
+                var field=value.GetType().GetField(name,flags);Assert.That(field,Is.Not.Null,"Missing stored field "+name);
+                return field.GetValue(value);
+            }
+            var drivers=(System.Collections.IDictionary)Read(world,"drivers");var driver=drivers[actor];
+            var byId=(System.Collections.IDictionary)Read(world.Service,"byId");var byActor=(System.Collections.IDictionary)Read(world.Service,"byActor");
+            Assert.That(byId.Contains(start.RequestId),Is.True);var native=byId[start.RequestId];
+            Assert.That(ReferenceEquals(native,byActor[actor.ActorId]),Is.True);Assert.That(ReferenceEquals(Read(native,"Driver"),driver),Is.True);
+            Assert.That(Read(native,"Generation"),Is.EqualTo(1));Assert.That(Read(native,"RetryCount"),Is.EqualTo(0));
+            var raw=(Vector3[])((Vector3[])Read(driver,"rawCorners")).Clone();
+            Assert.That(raw.Length,Is.EqualTo(4),"PREMISE_NOT_PROVEN: actual accepted Native path must contain exactly two consecutive interior corners");
+            Assert.That(world.RegisteredActors.Count,Is.EqualTo(1),"No stationary blocker in the positive control");
+            TestContext.WriteLine("SKIN_TWO_CORNER_CONTROL request="+start.RequestId+" raw=["+
+                string.Join(";",System.Array.ConvertAll(raw,p=>p.ToString("F9")))+"]");
+            yield return Run(()=>result.HasValue); // Existing single 1800-frame bound, unchanged.
+            Assert.That(result.Value.Status,Is.EqualTo(MovementStatus.Arrived),result.Value.Reason+" at "+actor.transform.position);
+            Assert.That(callbacks,Is.EqualTo(1));
+            Assert.That(Vector3.Distance(actor.transform.position,target),Is.LessThanOrEqualTo(actor.Settings.ArrivalDistance));
+            Assert.That(Vector3.Distance(actor.transform.position,result.Value.FinalPosition),Is.LessThanOrEqualTo(.001f));
+            Assert.That(Vector3.Angle(actor.transform.forward,Vector3.back),Is.LessThanOrEqualTo(actor.Settings.FacingToleranceDegrees));
+        }
+
+        [UnityTest] public IEnumerator SteadySkinCornerKeepsOutgoingOwnedLegClearOfStationaryBody()
+        {
+            // Fixed existing furniture fixture; all path/corner identities come from the real accepted Native request.
+            // 固定现有家具场景；不写driver corner/pose，不伪造Core Grant或Native stamp。
+            var furniture=Box(new Vector3(0,.7f,0),new Vector3(2,1.4f,2),true);Bake();
+            var actor=Actor("a",new Vector3(-1.5f,0,-1.3f));Assert.That(actor.TryEnableSteadyPathMotion(),Is.True);
+            Assert.That(world.Register(actor),Is.True);MovementResult? result=null;
+            var start=world.Service.MoveTo(actor.ActorId,new NavigationTarget(new Vector3(3,0,-2)),r=>result=r);
+            Assert.That(start.Accepted,Is.True);Assert.That(start.RequestId,Is.GreaterThan(0));
+            const System.Reflection.BindingFlags flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+            object Read(object value,string name)
+            {
+                var field=value.GetType().GetField(name,flags);Assert.That(field,Is.Not.Null,"Missing stored field "+name);
+                return field.GetValue(value);
+            }
+            var drivers=(System.Collections.IDictionary)Read(world,"drivers");var driver=drivers[actor];
+            var byId=(System.Collections.IDictionary)Read(world.Service,"byId");var byActor=(System.Collections.IDictionary)Read(world.Service,"byActor");
+            Assert.That(byId.Contains(start.RequestId),Is.True);var native=byId[start.RequestId];
+            Assert.That(ReferenceEquals(native,byActor[actor.ActorId]),Is.True);Assert.That(ReferenceEquals(Read(native,"Driver"),driver),Is.True);
+            Assert.That(Read(native,"Generation"),Is.EqualTo(1));Assert.That(Read(native,"RetryCount"),Is.EqualTo(0));
+            var raw=(Vector3[])((Vector3[])Read(driver,"rawCorners")).Clone();
+            Assert.That(raw.Length,Is.EqualTo(3),"PREMISE_NOT_PROVEN: real Native path must contain only the single last interior furniture corner");
+            var index=raw.Length-2;var corner=raw[index];var goal=raw[index+1];
+            Vector3 Horizontal(Vector3 value){value.y=0;return value;}
+            float Distance(Vector3 point,Vector3 from,Vector3 to)
+            {
+                point=Horizontal(point);from=Horizontal(from);to=Horizontal(to);var delta=to-from;
+                var t=delta.sqrMagnitude<1e-10f?0:Mathf.Clamp01(Vector3.Dot(point-from,delta)/delta.sqrMagnitude);
+                return Vector3.Distance(point,from+delta*t);
+            }
+            var nearestPoint=furniture.ClosestPoint(corner+Vector3.up*(actor.Settings.CapsuleHeight*.5f));
+            var outward=Horizontal(corner-nearestPoint);var nearest=outward.magnitude;
+            Assert.That(nearest,Is.GreaterThan(0));
+            Assert.That(nearest,Is.LessThanOrEqualTo(actor.Settings.AgentRadius+actor.Settings.CollisionSkin+actor.Settings.ArrivalDistance),
+                "PREMISE_NOT_PROVEN: actual last interior corner must enter the original skin-adjust branch");
+            outward.Normalize();var direction=Horizontal(goal-corner).normalized;
+            var side=outward-direction*Vector3.Dot(outward,direction);
+            Assert.That(side.magnitude,Is.GreaterThan(.1f),"PREMISE_NOT_PROVEN: real outgoing turn needs a lateral skin correction");side.Normalize();
+            // Derive one fixed body from the actual original outgoing segment. No fallback/search/retry.
+            // 仅按原Native腿构造一次合法静态body；原proof留原ArrivalDistance四分之一加4*原epsilon余量。
+            var expectedRadius=actor.Settings.AgentRadius*2+actor.Settings.CollisionSkin+actor.Settings.Epsilon;
+            Assert.That(Horizontal(goal-corner).magnitude,Is.GreaterThan(expectedRadius*2));
+            var bodyPosition=Horizontal((corner+goal)*.5f)+side*(expectedRadius+actor.Settings.ArrivalDistance*.25f+4*actor.Settings.Epsilon);
+            var body=Actor("b",bodyPosition);Assert.That(world.Register(body),Is.True,"PREMISE_NOT_PROVEN: single actual blocker must register at its original derived pose");
+            var nativeRadius=actor.Settings.AgentRadius+body.Settings.AgentRadius+actor.Settings.CollisionSkin;
+            var required=actor.Settings.AgentRadius+body.Settings.AgentRadius+Mathf.Max(actor.Settings.CollisionSkin+actor.Settings.Epsilon,body.Settings.CollisionSkin+body.Settings.Epsilon);
+            for(var part=1;part<raw.Length;part++)Assert.That(Distance(bodyPosition,raw[part-1],raw[part]),Is.GreaterThanOrEqualTo(required),
+                "PREMISE_NOT_PROVEN: complete original Native path must be clear before any movement");
+            var fullOffset=corner+outward*(actor.Settings.ArrivalDistance-actor.Settings.Epsilon);
+            Assert.That(Distance(bodyPosition,fullOffset,goal),Is.LessThan(nativeRadius),
+                "PREMISE_NOT_PROVEN: original largest skin offset must make the real outgoing connection unsafe even under Native collision radius");
+            var halfOffset=corner+outward*((actor.Settings.ArrivalDistance-actor.Settings.Epsilon)*.5f);
+            Assert.That(Distance(bodyPosition,halfOffset,goal),Is.GreaterThanOrEqualTo(required),
+                "PREMISE_NOT_PROVEN: existing half-offset must leave a geometrically body-clear outgoing option; incoming static/Native acceptance still requires actual guards");
+            TestContext.WriteLine("SKIN_OUTGOING_PREMISE request="+start.RequestId+" cornerIndex="+index+" raw=["+
+                string.Join(";",System.Array.ConvertAll(raw,p=>p.ToString("F9")))+"] body="+bodyPosition.ToString("F9")+
+                " fullOffset="+fullOffset.ToString("F9")+" outgoingDistance="+Distance(bodyPosition,fullOffset,goal)+" NativeRadius="+nativeRadius);
+            Assert.That(result.HasValue,Is.False);var observedCorrection=false;var minimumSweep=float.PositiveInfinity;
+            for(var frame=0;frame<1800 && !result.HasValue;frame++)
+            {
+                yield return null;var before=actor.transform.position;world.Step(1f/60);
+                minimumSweep=Mathf.Min(minimumSweep,Distance(bodyPosition,before,actor.transform.position));
+                Assert.That(minimumSweep,Is.GreaterThanOrEqualTo(nativeRadius),"Original final World sweep remains safe");
+                Assert.That(body.transform.position,Is.EqualTo(bodyPosition),"Stationary registered body never moves");
+                Assert.That(result.HasValue||ReferenceEquals(byId[start.RequestId],native),Is.True,"Same original Native request until its real terminal receipt");
+                var corrected=(Vector3[])Read(driver,"corners");var adjusted=(bool[])Read(driver,"adjustedCorners");var cursor=(int)Read(driver,"corner");
+                if(index<adjusted.Length && adjusted[index])
+                {
+                    observedCorrection=true;
+                    Assert.That(((Vector3[])Read(driver,"rawCorners"))[index],Is.EqualTo(corner),"Original raw proof corner is immutable");
+                    if(cursor<=index)Assert.That(Distance(bodyPosition,corrected[index],goal),Is.GreaterThanOrEqualTo(nativeRadius),
+                        "FEATURE_RED: adopted skin-safe incoming correction must also keep its original outgoing Native connection clear");
+                }
+            }
+            Assert.That(observedCorrection,Is.True,"PREMISE_NOT_PROVEN: actual movement must exercise skin-adjust, not only an arrival skip");
+            Assert.That(result.HasValue,Is.True,"Original 1800-frame Native deadline; no retry or extension");
+            Assert.That(result.Value.Status,Is.EqualTo(MovementStatus.Arrived),result.Value.Reason+" at "+actor.transform.position);
+            Assert.That(body.transform.position,Is.EqualTo(bodyPosition));
+        }
+
+        [UnityTest] public IEnumerator SteadyLastSkinCornerUsesStaticFallbackWhileFutureBodyMovesAway()
+        {
+            // Real original Native route plus a genuinely moving future obstacle; no driver/pose writes.
+            // 原生完整路径及真实移动的前方body；不写driver状态或修改actor位置。
+            var furniture=Box(new Vector3(0,.7f,0),new Vector3(2,1.4f,2),true);Bake();
+            var actor=Actor("a",new Vector3(-1.5f,0,-1.3f));Assert.That(actor.TryEnableSteadyPathMotion(),Is.True);
+            Assert.That(world.Register(actor),Is.True);MovementResult? result=null,bodyResult=null;
+            var target=new Vector3(3,0,-2);
+            var request=world.Service.MoveTo(actor.ActorId,new NavigationTarget(target),r=>result=r);
+            Assert.That(request.Accepted,Is.True);
+            const System.Reflection.BindingFlags flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+            object Read(object value,string name){var field=value.GetType().GetField(name,flags);Assert.That(field,Is.Not.Null,name);return field.GetValue(value);}
+            Vector3 Flat(Vector3 value){value.y=0;return value;}
+            float Distance(Vector3 point,Vector3 from,Vector3 to)
+            {point=Flat(point);from=Flat(from);to=Flat(to);var d=to-from;var t=d.sqrMagnitude==0?0:Mathf.Clamp01(Vector3.Dot(point-from,d)/d.sqrMagnitude);return Vector3.Distance(point,from+d*t);}
+            var driver=((System.Collections.IDictionary)Read(world,"drivers"))[actor];
+            var byId=(System.Collections.IDictionary)Read(world.Service,"byId");var native=byId[request.RequestId];
+            var raw=(Vector3[])((Vector3[])Read(driver,"rawCorners")).Clone();
+            Assert.That(raw.Length,Is.EqualTo(3),"PREMISE: fixed actual Native route has one last interior corner");
+            var index=raw.Length-2;var corner=raw[index];var goal=raw[index+1];
+            Assert.That(((bool[])Read(driver,"adjustedCorners"))[index],Is.False,"PREMISE: original correction has not happened before blocker registration");
+            var outward=Flat(corner-furniture.ClosestPoint(corner+Vector3.up*(actor.Settings.CapsuleHeight*.5f))).normalized;
+            var direction=Flat(goal-corner).normalized;var bodyStart=Flat((corner+goal)*.5f);
+            var body=Actor("b",bodyStart);Assert.That(body.TryEnableSteadyPathMotion(),Is.True);Assert.That(world.Register(body),Is.True);
+            var radius=actor.Settings.AgentRadius+body.Settings.AgentRadius+Mathf.Max(actor.Settings.CollisionSkin,body.Settings.CollisionSkin);
+            var bodyGoal=Flat(goal)+direction*(2*radius);
+            var bodyRequest=world.Service.MoveTo(body.ActorId,new NavigationTarget(bodyGoal),r=>bodyResult=r);
+            Assert.That(bodyRequest.Accepted,Is.True,"PREMISE: actual future body has its own real Native movement");
+            var bodyNative=byId[bodyRequest.RequestId];
+            var offset=outward*(actor.Settings.ArrivalDistance-actor.Settings.Epsilon);
+            for(var attempt=0;attempt<4;attempt++)
+            {
+                var candidate=corner+offset;
+                Assert.That(Distance(bodyStart,candidate,goal),Is.LessThan(radius),"PREMISE: every existing full outgoing attempt is blocked by the future body");
+                Assert.That(Distance(bodyStart,actor.transform.position,candidate),Is.GreaterThan(radius),"PREMISE: same body does not block the original incoming connection");
+                offset*=.5f;
+            }
+            Assert.That(result.HasValue||bodyResult.HasValue,Is.False);
+            yield return null;
+            var before=actor.transform.position;var bodyBefore=body.transform.position;world.Step(1f/60);
+            Assert.That(Distance(Vector3.zero,before-bodyBefore,actor.transform.position-body.transform.position),Is.GreaterThanOrEqualTo(radius),"First real synchronized movement remains dynamically safe");
+            Assert.That(((bool[])Read(driver,"adjustedCorners"))[index],Is.True,
+                "FEATURE_RED: future dynamic blockage cannot prevent every statically safe last-corner correction");
+            var corrected=((Vector3[])Read(driver,"corners"))[index];
+            Assert.That(Distance(body.transform.position,corrected,goal),Is.LessThan(radius),"Fallback is genuinely exercised while the future outgoing is still dynamically blocked");
+            Assert.That(((Vector3[])Read(driver,"rawCorners"))[index],Is.EqualTo(corner));
+            var minimum=float.PositiveInfinity;
+            for(var frame=1;frame<1800 && !(result.HasValue&&bodyResult.HasValue);frame++)
+            {
+                yield return null;before=actor.transform.position;bodyBefore=body.transform.position;world.Step(1f/60);
+                minimum=Mathf.Min(minimum,Distance(Vector3.zero,before-bodyBefore,actor.transform.position-body.transform.position));
+                Assert.That(minimum,Is.GreaterThanOrEqualTo(radius),"Static fallback never bypasses the actual dynamic sweep");
+                Assert.That(Read(native,"RetryCount"),Is.EqualTo(0));Assert.That(Read(bodyNative,"RetryCount"),Is.EqualTo(0));
+                if(!result.HasValue)Assert.That(ReferenceEquals(byId[request.RequestId],native),Is.True);
+                if(!bodyResult.HasValue)Assert.That(ReferenceEquals(byId[bodyRequest.RequestId],bodyNative),Is.True);
+            }
+            Assert.That(result.HasValue&&bodyResult.HasValue,Is.True,"Original shared 1800-frame bound, without retry or extension");
+            Assert.That(result.Value.Status,Is.EqualTo(MovementStatus.Arrived),result.Value.Reason.ToString());
+            Assert.That(bodyResult.Value.Status,Is.EqualTo(MovementStatus.Arrived),bodyResult.Value.Reason.ToString());
+            Assert.That(Vector3.Distance(actor.transform.position,target),Is.LessThanOrEqualTo(actor.Settings.ArrivalDistance));
+            Assert.That(Vector3.Distance(body.transform.position,bodyGoal),Is.LessThanOrEqualTo(body.Settings.ArrivalDistance));
+        }
+
+        [UnityTest] public IEnumerator LastCornerStaticFallbackRejectsRegisteredStaticOutgoingWall()
+        {
+            // NavMesh remains clear; a newly registered real collider must veto the static certificate.
+            // NavMesh不变，新增真实注册静态墙必须拒绝fallback证书。
+            Bake();var actor=Actor("a",new Vector3(-3,0,0));Assert.That(world.Register(actor),Is.True);
+            var wall=Box(new Vector3(0,.7f,0),new Vector3(1,1.4f,2),true);Physics.SyncTransforms();world.SetGeometry(solids,2);
+            var from=new Vector3(-2,0,0);var target=new Vector3(2,0,0);
+            var filter=new NavMeshQueryFilter{agentTypeID=actor.Agent.agentTypeID,areaMask=actor.Agent.areaMask};
+            Assert.That(NavMesh.Raycast(from,target,out _,filter),Is.False,"PREMISE: refusal must be real static geometry, not NavMesh");
+            Assert.That(wall.enabled,Is.True);var pose=actor.transform.position;
+            var method=typeof(NavigationWorld).GetMethod("CanTraverseStraightFromWithStaticProof",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+            Assert.That(method,Is.Not.Null,"New separately named read-only dual-result API");
+            var arguments=new object[]{actor,from,target,false};
+            Assert.That((bool)method.Invoke(world,arguments),Is.False);Assert.That((bool)arguments[3],Is.False,"Static wall cannot become dynamic-only fallback");
+            Assert.That(actor.transform.position,Is.EqualTo(pose));
+            yield return null;
+        }
+
         [UnityTest] public IEnumerator SteadyShortFinalTargetKeepsPoseAndFacingWithoutOvershoot()
         {
             Bake(); var actor = Actor("a", Vector3.zero); actor.TryEnableSteadyPathMotion(); world.Register(actor);

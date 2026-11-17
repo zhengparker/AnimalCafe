@@ -18,6 +18,10 @@ namespace AnimalCafe.Navigation
         private IDisposable unavailableResumeBlock;
         private int currentRevision;
         private NavigationActor[] pendingStartupActors;
+#if UNITY_EDITOR
+        // Opt-in observation of original evaluations only / 不额外查询或推进driver。
+        internal Action<NavigationActor, Vector3, Vector3, Vector3, Vector3, Vector3, Vector3, Vector3, float> StepObserver;
+#endif
         // Only the validation fixture pins its initial roster; ordinary worlds stay dynamic.
         internal void RequireStartupActors(IReadOnlyList<NavigationActor> required)
         {
@@ -84,6 +88,15 @@ namespace AnimalCafe.Navigation
             Service.SetActorAvailable(actor.ActorId, available);
         }
 
+        internal IReadOnlyList<Vector3> ReadCurrentNativeRemainder(TrafficRequest issued,TrafficNativeStamp coreStamp,object life,Vector3 position)
+        {
+            var actor=life as NavigationActor;
+            if(issued==null || !LayoutAvailable || currentRevision!=issued.Intent.LayoutRevision || coreStamp.RequestId<=0 || coreStamp.LegGeneration<=0 ||
+                actor==null || actor.ActorId!=issued.Intent.ActorId || !ReferenceEquals(actor.World,this) || !actors.Contains(actor) ||
+                !actor.transform.position.Equals(position) || !drivers.TryGetValue(actor,out var driver) || service==null ||
+                !service.TryReadOriginalActiveGeneration(actor.ActorId,coreStamp.RequestId,currentRevision,driver,issued.Target,out var generation))return null;
+            return driver.ReadCurrentRemainder(generation,currentRevision,position,issued.Target);
+        }
         internal bool CanStartActor(NavigationActor actor)
         {
             Physics.SyncTransforms();
@@ -147,6 +160,30 @@ namespace AnimalCafe.Navigation
             return approved.x == delta.x && approved.z == delta.z;
         }
 
+        // Read-only candidate-origin connection. Height follows real horizontal movement, not NavMesh voxel Y.
+        // 只读候选起点连接；胶囊与NavMesh查询都用actor真实高度，不将胶囊抬至corner高度。
+        internal bool CanTraverseStraightFrom(NavigationActor actor, Vector3 from, Vector3 target)
+            => CanTraverseStraightFromCore(actor,from,target,false,out _);
+
+        internal bool CanTraverseStraightFromWithStaticProof(NavigationActor actor, Vector3 from, Vector3 target,out bool staticWhole)
+            => CanTraverseStraightFromCore(actor,from,target,true,out staticWhole);
+
+        private bool CanTraverseStraightFromCore(NavigationActor actor, Vector3 from, Vector3 target,bool captureStatic,out bool staticWhole)
+        {
+            staticWhole=false;
+            if (!LayoutAvailable || actor == null || !drivers.ContainsKey(actor)) return false;
+            var start = new Vector3(from.x, actor.transform.position.y, from.z);
+            if (!NavigationCollisionGuard.Finite(start) || !NavigationCollisionGuard.Finite(target)) return false;
+            var delta = target - start; delta.y = 0;
+            var filter = new UnityEngine.AI.NavMeshQueryFilter
+                { agentTypeID = actor.Agent.agentTypeID, areaMask = actor.Agent.areaMask };
+            if (UnityEngine.AI.NavMesh.Raycast(start, start + delta, out _, filter)) return false;
+            var approved = captureStatic
+                ? guard.ClampDisplacementFromWithStaticProof(actor,start,delta,actors,solids,out staticWhole)
+                : guard.ClampDisplacementFrom(actor,start,delta,actors,solids);
+            return approved.x == delta.x && approved.z == delta.z;
+        }
+
         public void Step(float scaledDeltaTime)
         {
             if (float.IsNaN(scaledDeltaTime) || float.IsInfinity(scaledDeltaTime) || scaledDeltaTime < 0)
@@ -175,9 +212,10 @@ namespace AnimalCafe.Navigation
                     var driver = drivers[actor]; var start = actor.transform.position;
                     var velocity = actor.isActiveAndEnabled ? driver.DesiredVelocity : Vector3.zero;
                     velocity.y = 0;
-                    var proposed = guard.ProjectAvoidance(actor, driver.ClampToCurrentCorner(velocity * dt), actors);
-                    proposed = guard.ProjectStaticAvoidance(actor, proposed, solids);
-                    proposed = driver.ClampToNavMesh(proposed);
+                    var cornerDelta = driver.ClampToCurrentCorner(velocity * dt);
+                    var dynamicDelta = guard.ProjectAvoidance(actor, cornerDelta, actors);
+                    var staticDelta = guard.ProjectStaticAvoidance(actor, dynamicDelta, solids);
+                    var proposed = driver.ClampToNavMesh(staticDelta);
                     var delta = guard.ClampDisplacement(actor, proposed, actors, solids);
                     var facing = driver.Facing ?? delta;
                     var rotation = actor.transform.rotation;
@@ -185,6 +223,9 @@ namespace AnimalCafe.Navigation
                         rotation = Quaternion.RotateTowards(rotation, Quaternion.LookRotation(facing), settings.TurnSpeedDegrees * dt);
                     actor.transform.SetPositionAndRotation(start + delta, rotation);
                     driver.AcceptPose(start + delta, rotation, delta.magnitude / dt);
+#if UNITY_EDITOR
+                    StepObserver?.Invoke(actor, start, velocity, cornerDelta, dynamicDelta, staticDelta, proposed, delta, dt);
+#endif
                     distances[actor] += delta.magnitude;
                     sweeps.Add(new NavigationCollisionGuard.Sweep { Actor = actor, Start = start, Delta = delta });
                 }

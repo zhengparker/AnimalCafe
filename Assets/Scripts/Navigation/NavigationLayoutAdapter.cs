@@ -9,6 +9,33 @@ using UnityEngine.AI;
 
 namespace AnimalCafe.Navigation
 {
+#if UNITY_EDITOR
+    // Default-off Editor observation only; never owns navigation or query policy.
+    // 默认null；只记录原生调用，异常不得改变原返回或原异常。
+    internal static class NavigationCostObservation
+    {
+        // site 0/1=Adapter Path/GetCompletePath; 2/3/4=Driver Start/Rebind/Edge.
+        // outcome is the raw Native bool (1/0), or -1 if the original call throws; not route permission.
+        internal static Action<int,int,int> NativeCall;
+        internal static Action<int,long> ProcessReadyElapsed;
+        internal static int ObserverErrors;
+        internal static bool CalculatePath(int site,Vector3 start,Vector3 goal,NavMeshQueryFilter filter,NavMeshPath path)
+        {
+            var observer=NativeCall;
+            if(observer==null)return NavMesh.CalculatePath(start,goal,filter,path);
+            var frame=Time.frameCount;var outcome=-1;
+            try
+            {
+                var result=NavMesh.CalculatePath(start,goal,filter,path);outcome=result?1:0;return result;
+            }
+            finally
+            {
+                try{observer(site,frame,outcome);}catch(Exception){ObserverErrors++;}
+            }
+        }
+    }
+#endif
+
     // Detached world-space geometry: preview GameObjects are never authoritative.
     public readonly struct NavigationSolidPose : IEquatable<NavigationSolidPose>
     {
@@ -57,6 +84,10 @@ namespace AnimalCafe.Navigation
         public int Revision { get; private set; }
         public int PublishedRevision { get; private set; } = -1;
         public int BakeCount { get; private set; }
+        // Same token means the same published owned geometry/filter; release/rebuild cannot reuse an old proof.
+        // 暂停/未发布/已释放时返回null；不触发采样、路径查询或重建。
+        public object NativePathQueryContext=>isActiveAndEnabled && ownedData!=null && ownedInstance.valid &&
+            ownedAgentType.HasValue && world!=null && world.LayoutAvailable && PublishedRevision==Revision ? ownedData : null;
         public NavigationWorld World => world;
         public bool EnforceBusinessReadiness => enforceBusinessReadiness;
         // P12在首次有效营业布局出现后启用gate；空店仍可正常编辑。
@@ -367,10 +398,12 @@ namespace AnimalCafe.Navigation
             foreach(var station in viable) if(!participating.Contains(station.InstanceId)) failures[station.InstanceId]="No connected essential service combination";
             return report.CanOpenForBusiness && participating.Count>0;
         }
-        private bool SampleAnchor(Vector3 position,out Vector3 sampled)
+        private bool SampleAnchor(Vector3 position,out Vector3 sampled)=>SampleAnchor(position,out sampled,out _);
+        private bool SampleAnchor(Vector3 position,out Vector3 sampled,out bool sampleNoHit)
         {
-            sampled=position;
-            if(!NavMesh.SamplePosition(position,out var hit,.15f,OwnedFilter) || Mathf.Abs(hit.position.y-position.y)>.05f) return false;
+            sampled=position;sampleNoHit=false;
+            if(!NavMesh.SamplePosition(position,out var hit,.15f,OwnedFilter)){sampleNoHit=true;return false;}
+            if(Mathf.Abs(hit.position.y-position.y)>.05f)return false;
             foreach(var solid in snapshot.Skip(1))
             {
                 var inverse=Quaternion.Inverse(solid.Rotation); var from=inverse*(position+Vector3.up*.65f-solid.Position); var to=inverse*(hit.position+Vector3.up*.65f-solid.Position);
@@ -384,20 +417,55 @@ namespace AnimalCafe.Navigation
         private bool Path(Vector3 from,Vector3 to)
         {
             if(!SampleAnchor(from,out var a)||!SampleAnchor(to,out var b)) return false;
-            var path=new NavMeshPath(); return NavMesh.CalculatePath(a,b,OwnedFilter,path) && path.status==NavMeshPathStatus.PathComplete;
+            var path=new NavMeshPath();
+#if UNITY_EDITOR
+            return NavigationCostObservation.CalculatePath(0,a,b,OwnedFilter,path) && path.status==NavMeshPathStatus.PathComplete;
+#else
+            return NavMesh.CalculatePath(a,b,OwnedFilter,path) && path.status==NavMeshPathStatus.PathComplete;
+#endif
         }
         // 只查询本 adapter 拥有的 NavMesh；供 P12 slot/admission 验证。
-        public bool IsPointWalkable(Vector3 position)
-            => isActiveAndEnabled && ownedData!=null && world!=null && world.LayoutAvailable && SampleAnchor(position,out _);
+        public bool IsPointWalkable(Vector3 position)=>IsPointWalkable(position,out _);
+        private bool IsPointWalkable(Vector3 position,out bool sampleNoHit)
+        {
+            sampleNoHit=false;
+            return isActiveAndEnabled && ownedData!=null && world!=null && world.LayoutAvailable && SampleAnchor(position,out _,out sampleNoHit);
+        }
+        // Local canonical-goal check only; the shared coordinator still proves the complete route.
+        // 沿用原同一次owned采样；canonical目标必须在真实Actor的到位容差内。
+        public bool IsPointArrivable(Vector3 position,float arrivalTolerance)
+        {
+            if(float.IsNaN(arrivalTolerance) || float.IsInfinity(arrivalTolerance) || arrivalTolerance<=0)return false;
+            return isActiveAndEnabled && ownedData!=null && world!=null && world.LayoutAvailable &&
+                SampleAnchor(position,out var sampled) && Vector3.Distance(position,sampled)<=arrivalTolerance;
+        }
         public bool HasClearPath(Vector3 from,Vector3 to)
             => IsPointWalkable(from) && IsPointWalkable(to) && Path(from,to);
         // P12只读路径查询；仍使用本adapter拥有的agent type与NavMesh。
-        public IReadOnlyList<Vector3> GetCompletePath(Vector3 from,Vector3 to)
+        // A local result of the same original call, not a LastOutcome field or a replayed query.
+        // 只认证原同一次静态Sample无命中；高度/bridge/partial/invalid等null仍为Unknown。
+        internal TrafficNativeQueryResult GetCertifiedCompletePath(Vector3 from,Vector3 to)
         {
-            if(!IsPointWalkable(from) || !IsPointWalkable(to) ||
-                !SampleAnchor(from,out var start) || !SampleAnchor(to,out var goal)) return null;
+            var context=NativePathQueryContext;var path=GetCompletePathCore(from,to,out var sampleNoHit);
+            bool Finite(Vector3 point)=>!float.IsNaN(point.x) && !float.IsInfinity(point.x) &&
+                !float.IsNaN(point.y) && !float.IsInfinity(point.y) && !float.IsNaN(point.z) && !float.IsInfinity(point.z);
+            var outcome=path!=null?TrafficNativeQueryOutcome.Complete:
+                sampleNoHit && context!=null && ReferenceEquals(context,NativePathQueryContext) && Finite(from) && Finite(to)
+                    ?TrafficNativeQueryOutcome.StaticSampleNoHit:TrafficNativeQueryOutcome.Unknown;
+            return new TrafficNativeQueryResult(this,context,from,to,outcome,path);
+        }
+        public IReadOnlyList<Vector3> GetCompletePath(Vector3 from,Vector3 to)=>GetCompletePathCore(from,to,out _);
+        private IReadOnlyList<Vector3> GetCompletePathCore(Vector3 from,Vector3 to,out bool sampleNoHit)
+        {
+            sampleNoHit=false;
+            if(!IsPointWalkable(from,out sampleNoHit) || !IsPointWalkable(to,out sampleNoHit) ||
+                !SampleAnchor(from,out var start,out sampleNoHit) || !SampleAnchor(to,out var goal,out sampleNoHit)) return null;
             var path=new NavMeshPath();
+#if UNITY_EDITOR
+            if(!NavigationCostObservation.CalculatePath(1,start,goal,OwnedFilter,path) || path.status!=NavMeshPathStatus.PathComplete) return null;
+#else
             if(!NavMesh.CalculatePath(start,goal,OwnedFilter,path) || path.status!=NavMeshPathStatus.PathComplete) return null;
+#endif
             return Array.AsReadOnly(path.corners);
         }
         private static NavigationReadiness Result(bool available,string reason) => new NavigationReadiness(available,new Dictionary<string,string>(),reason);

@@ -9,6 +9,18 @@ using UnityEngine.UI;
 
 namespace AnimalCafe.CafeLoop
 {
+    public enum CafeServicePresentationKind { None, Waiting, Planning, Blocked }
+    // Immutable display facts only; no actor/resource identities or gameplay permission.
+    // 只读显示事实，不含内部 ID，也不授予通行或业务权限。
+    public readonly struct CafeServicePresentation
+    {
+        public CafeServicePresentationKind Kind { get; }
+        public bool IsPaused { get; }
+        public bool IsAvailable { get; }
+        public CafeServicePresentation(CafeServicePresentationKind kind,bool isPaused=false,bool isAvailable=true)
+        { Kind=kind;IsPaused=isPaused;IsAvailable=isAvailable; }
+    }
+
     public sealed class CafeLoopViewSnapshot
     {
         public CafeLoopSnapshot Business { get; }
@@ -35,10 +47,15 @@ namespace AnimalCafe.CafeLoop
         [SerializeField] private CafeLoopController owner;
         [SerializeField] private Text status;
         [SerializeField] private GameObject hud;
+        [SerializeField] private bool showDiagnostics = true;
         public string CurrentText => status==null?"":status.text;
         private CafeLoopController subscribed;
         public void Bind(CafeLoopController value)
         { Unbind(); owner=value; Subscribe(); Refresh(); }
+        // Main hides only diagnostics; the shared Canvas also owns the player day card.
+        // Main只隐藏诊断图形，保留共享Canvas与原有Decor生命周期。
+        public void SetDiagnosticPresentation(bool visible)
+        { showDiagnostics=visible; ApplyDiagnosticPresentation(); }
         private void OnEnable() { Subscribe(); Refresh(); }
         private void OnDisable() => Unbind();
         private void OnDestroy() => Unbind();
@@ -48,9 +65,17 @@ namespace AnimalCafe.CafeLoop
         private void OnSnapshot(CafeLoopSnapshot _) => Refresh();
         private void Refresh()
         {
+            ApplyDiagnosticPresentation();
             if(owner==null || status==null) return;
             status.text=Format(owner.ViewSnapshot);
             if(hud!=null) hud.SetActive(!owner.ViewSnapshot.Reception.StartsWith("Decoration",StringComparison.Ordinal));
+        }
+        private void ApplyDiagnosticPresentation()
+        {
+            if(status==null) return;
+            status.gameObject.SetActive(showDiagnostics);
+            var background=status.transform.parent.Find("P14 Readonly Background");
+            if(background!=null) background.gameObject.SetActive(showDiagnostics);
         }
         public static string Format(CafeLoopViewSnapshot value)
         {
