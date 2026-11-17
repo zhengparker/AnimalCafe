@@ -4015,8 +4015,8 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             var boundaryWitnessOnly=Environment.GetCommandLineArgs().Contains("-mainDeliveryFailureBoundaryOnly");
             var storedWait=true; // Test-only passive failure cache; no observer or pre-failure sampling.
             var storedWaitCore=CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic");
-            var storedWaitIntent=Environment.GetCommandLineArgs().FirstOrDefault(arg=>arg.StartsWith("-waitFailureIntent=",StringComparison.Ordinal))?.Substring("-waitFailureIntent=".Length)??"employee-pickup-journey";
-            if(storedWait)typeof(ServiceTrafficCoordinator).GetField("WaitFailureDiagnosticIntent",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(storedWaitCore,storedWaitIntent);
+            var storedWaitPrior=(string)typeof(ServiceTrafficCoordinator).GetField("WaitFailureDiagnosticIntent",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(storedWaitCore);
+            var storedWaitIntent=Environment.GetCommandLineArgs().FirstOrDefault(arg=>arg.StartsWith("-waitFailureIntent=",StringComparison.Ordinal))?.Substring("-waitFailureIntent=".Length)??"cache-only-all";
             TestContext.WriteLine("MAIN_WAIT_FAILURE_INTENT "+storedWaitIntent);
             var sceneStart=Time.time;
             var timer=Stopwatch.StartNew();
@@ -4024,8 +4024,15 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             // 仅重放合法来客输入；原 driver 仍决定付款、站位、移动和离店。
             var replay=Environment.GetCommandLineArgs().FirstOrDefault(arg=>arg.StartsWith("-mainArrivalReplay=",StringComparison.Ordinal))?.Substring("-mainArrivalReplay=".Length);
             var replayEnabled=!string.IsNullOrEmpty(replay);
-            Assert.That(!replayEnabled || replay=="collection-advance-gap" || replay=="paid" || replay=="paid-gate" || replay=="exit" || replay=="exit-gate" || replay=="exit-after-head",Is.True,"FIXTURE: known controlled replay mode");
-            var replayTargets=replay=="collection-advance-gap"?new[]{8.071f,16.823f,24.708f,34.369f,40.352f,46.777f,51.842f,53.513f}:
+            Assert.That(!replayEnabled || replay=="paid-current-route-gap" || replay=="counter-live-advance-gap" || replay=="collection-advance-gap" || replay=="paid" || replay=="paid-gate" || replay=="exit" || replay=="exit-gate" || replay=="exit-after-head",Is.True,"FIXTURE: known controlled replay mode");
+            var naturalDrainReplay=replay=="paid-current-route-gap" || replay=="collection-advance-gap" || replay=="counter-live-advance-gap";
+            // First six actual births; seventh due time is an estimate from the saved admission anchor frame.
+            // 前六项取自真实出生记录；第七次机会由旧anchor帧估计，不冒充原始随机抽样回执。
+            // First five observed births relative to TRACE_BEGIN=1624.069; unseen 6/7 are legal +10s completion inputs, not recovered samples.
+            // 前五项是原失败日志出生时序；后两项仅以合法最大间隔补全，不冒充原随机输入。
+            var replayTargets=replay=="paid-current-route-gap"?new[]{5.845f,8.054f,9.209f,14.343f,23.384f,33.384f,43.384f}:
+                replay=="counter-live-advance-gap"?new[]{5.977f,12.436f,14.440f,15.597f,20.971f,22.159f,24.592f}:
+                replay=="collection-advance-gap"?new[]{8.071f,16.823f,24.708f,34.369f,40.352f,46.777f,51.842f,53.513f}:
                 replay=="exit" || replay=="exit-gate" || replay=="exit-after-head"?new[]{6.72209f,10.97073f,12.74005f}:
                 replay=="paid-gate"?new[]{1.20890f,2.96570f,11.76960f}:new[]{1.20890f,2.96570f,11.76960f,15.48880f};
             var originalClock=CafeLoopRuntimeProof.Field<CustomerSpawnClock>(customers,"clock");
@@ -4080,6 +4087,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 owner.SnapshotChanged+=WatchVisits;
                 try
                 {
+                    if(storedWait)typeof(ServiceTrafficCoordinator).GetField("WaitFailureDiagnosticIntent",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(storedWaitCore,storedWaitIntent);
                     if(Environment.GetCommandLineArgs().Contains("-unpaidBudgetWitness"))unpaidBudget=new UnpaidBudgetWitness(customers,world);
                     deliveryWitness=BeginMainDeliveryFailureWitness(trace,out finishDeliveryWitness);
                     trace.InstallReservationWaitFailureWitness();
@@ -4097,14 +4105,14 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                             return next>=replayTargets.Length?1f:Mathf.Clamp01((replayTargets[(int)next]-(Time.time-sceneStart)+tickCompensation)/10f);
                         }));
                         trace.Record("CONTROLLED_ARRIVAL_REPLAY mode="+replay+" targets="+string.Join(";",replayTargets)+" bound="+
-                            (replay=="collection-advance-gap"?"original-natural-drain":"90"));
+                            (naturalDrainReplay?"original-natural-drain":"90"));
                     }
                     if(replayCollectionReleased)tools.ResumeCollection();else tools.HoldCollection();
                     tools.ResumeArrivals();
                     // A natural cohort may still be preparing its last order at 120s. Give its one-way stop
                     // one bounded drain window; R19 fixed-cost sampling retains its original exact 120s.
                     // 停止来客时仅记录一次排空起点；进度/Waiting不续期，全部原业务断言仍须通过。
-                    while(replayEnabled && replay!="collection-advance-gap"?Time.time-sceneStart<90f && timer.Elapsed.TotalSeconds<90d:
+                    while(replayEnabled && !naturalDrainReplay?Time.time-sceneStart<90f && timer.Elapsed.TotalSeconds<90d:
                         (!stoppedArrivals || trace.FixedCostWindow
                         ? Time.time-sceneStart<120f && timer.Elapsed.TotalSeconds<120d
                         : Time.time-drainSceneStart<drainSeconds && timer.Elapsed.TotalSeconds-drainWallStart<drainSeconds))
@@ -4199,6 +4207,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 }
                 finally
                 {
+                    if(storedWait)typeof(ServiceTrafficCoordinator).GetField("WaitFailureDiagnosticIntent",BindingFlags.Instance|BindingFlags.NonPublic).SetValue(storedWaitCore,storedWaitPrior);
                     if(replayEnabled)
                     {
                         CafeLoopRuntimeProof.Set(customers,"clock",originalClock);

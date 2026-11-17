@@ -1,5 +1,189 @@
 # Phase 15 — Business Day Lifecycle Validation Report
 
+<!-- P15_COUNTER_PHOTO_REPAIR_20261117_BEGIN -->
+**当前：两项修复已通过最终精简回归：Edit1511 PASS；Play179 PASS／0 FAIL／1既有SKIP，P15周期77/77 PASS。**
+
+本轮只改`ServiceTrafficCoordinator.cs`及对应`ServiceTrafficCoordinatorTests.cs`，并同步共用discovery基线与文档：
+
+- Counter：原单owner的body＋current-conflict整段路径WAIT，在同一CQ前客真实Arrived handoff后，只补记原captured完成通知。认证同一concrete CQ、真实reservation、原receiver身份及callback前后CQ version；保留reentry／world／账本fence，不释放CQ、不加Frozen或Grant。
+- Photo：原Paid真实末腿到位后，真实collector同一Source／Proof已完成prefix、正准备下一段时，允许员工保留原有限准备。必须是当前Prepared、零stamp、index>0、同actorLife、身体位于前waypoint，仍检查真实CollectionLease、same-PQS、当前通路、其他路权、循环和原债务；index0仍拒绝。
+
+| 当前验证 | 结果 |
+| --- | --- |
+| Counter完成通知模型 | 有效RED2F/2P，XML `9CCF78B1CF59008B821465DA85CF3A0564C89D619CCD7312A71E55712C4B9862`；GREEN4P，后续同22项再次全部通过 |
+| Photo真实prefix模型＋Counter4 | 有效RED20P/2F，XML `A1A7A014427CD250B5615297F9BEA934819F4D40DAF161B343A87A60FBBB687F`；旧15项控制和新index0控制均PASS |
+| 最终两组定向模型 | 22 PASS / 0 FAIL / 0 SKIP，XML `572C02524257AFD389139ED8F11D82B2A26E9BBE2263EA2CC9B8FD8E9E7BDFF9` |
+| LongSixFast阶段性真实经营 | PASS／原20次实际离店及订单、容量、token断言通过；该阶段XML `6799AE858F14B9830EEAB1BBF3BDFD1B8E52B2C0C01E8290B68CFC3763E84D79`；最终组合源码仍需整轮覆盖 |
+| PhotoSevenNormal最终源码真实经营 | PASS，20次实际离店及原订单／容量／token断言通过，115.203秒，XML `A0E01E3BBF54D5DA82AAED7C2F0AAF4CF3EB576AF60E7B7B9BB621BB67D4CFA4`；原180秒Timeout不变 |
+| 共用CI verifier helper | 10 PASS；4个Edit selectors不变，新增7项后实际1511 cases；Play仍原100 selectors／180 cases |
+
+两份静态review已为C0/I0。冻结537文件source-set SHA256：`D3743DD4D1EB5426C5065710C521016DA322B338E920C717EFEF6EA2350F0C62`，机器manifest为`counter-photo-source.json`。Photo初次模型因通知早于MarkArrived后当前快照而触发StaleContext，不计目标RED；对齐真实post-arrival通知后才取得上述有效RED。没有回填出生帧、手改Entry／Index／Native状态或放宽旧断言。
+
+最终原4 selectors精简Edit：1511 PASS / 0 FAIL / 0 SKIP，9.448秒，XML `38BA3D03A4A8FA7700865A37FACECB27F67BF7790D2396F7BF10AA247F0C8F2E`。原100 selectors／180-case精简Play：179 PASS / 0 FAIL / 1既有D2 SKIP，23分18.088秒，XML `B67E5FCB7FB40F70F201D4A94F1914ADD7ADB36E56DFBD7F67E854FABB41A8FB`，没有诊断或到店重放参数。
+
+本次整轮七种长柜台／截图布局全部PASS，均保留原20次真实离店、订单／付款／容量／token检查；P15周期77/77 PASS。唯一SKIP仍是`D2PreparedDeliveryRefreshesAtRealPrePumpMetadataCheckpoint`指定状态未捕获，NOT_PROVEN，未算PASS。
+
+源码537/537匹配；两模式Assets／source／scene／inputs parity均无差异，Assets delta／restoration／unknown delta均0；Play恢复8份历史输出，Editor workers0，OS handles仍UNKNOWN。共用CI verifier已在真实XML上核对通过，机器收据`outputs/phase15/p15-ci-five-repair-20261116/counter-photo-local-result.json`。提交内容另核对Git仅LF规范化等价；raw测试hash不冒充commit blob hash。
+
+当前源码云端CI：NOT_RUN；本地结果不代表Linux云端通过。PR不merge，P15未正式关闭，后续发布与CI状态以PR head及对应run为准。下方均为此前对应源码历史记录。
+<!-- P15_COUNTER_PHOTO_REPAIR_20261117_END -->
+
+<details>
+<summary>上一源码1504 Edit／177P、2F、1SKIP历史</summary>
+
+<!-- P15_EXIT_PHASE_REPAIR_20261117_BEGIN -->
+**当前：LongSevenFast修复通过单独及整轮验证；精简Edit1504 PASS，Play177 PASS / 2 FAIL / 1既有SKIP。已按新失败先停的约定停止后续修改、重跑和发布。**
+
+只修改`ServiceTrafficCoordinator.DeferActualExitForCurrentPaidNative`及对应测试：初次准备时真实PQS claim由Counter阶段持有，付款后由Paid阶段持有。该局部入口改为认证同一Actor／actorLife、scope、CanonicalOwner、BusinessOwner、ReleaseObligation和私有reservation身份，允许阶段key改变；全局`SameOwnedClaim`保持严格。真实当前Bound、可独立前进、循环检查、原Frozen／顺序／等待债务与最终碰撞检查全部保留。
+
+- 忠实public生命周期RED：5控制PASS / 2目标FAIL，XML `E8B25594F91EEDFDF6DFEE294882B092FCDFC5A6DBD8550221DB491B1683B4BC`。
+- GREEN：7 PASS / 0 FAIL / 0 SKIP，XML `A91AF2DDF0963EE7624BA39AF5F53CCD5D767A964B42C81C5A49CD527DE8B264`。包括同Owner对照、真实跨阶段、原债务耗尽、错误actorLife／业务身份、同位置新reservation及路径受阻。
+- 只读review C0/I0；Tools helper10 PASS。四个Edit selectors未变，新增7项后实际发现1504 cases；Play保持原100 selectors／180 cases，不附加诊断或到店重放参数。
+- 本次冻结537文件source-set：`2E2B5EA46CC2D8A09E716F6BC444759C28ACDF740760925FE10B902CEBBE1303`，机器收据`exit-phase-source.json`。
+
+当前验证进度：精简Edit1504 PASS / 0 FAIL / 0 SKIP（10.736秒，XML `1E8FDCD4E5266F70CE9EF43BB2AAADAFCFEC4D4A2F5EA009A1302544BFEEC4F1`）；真实LongSevenFast PASS（31.583秒，20次实际离店及原订单／容量／token断言全通过，XML `9775FD3DD14354084AEAEB1B9D719CD3398D42B3F26BB42A18051941B9AE95AD`）；原180项精简Play为177 PASS / 2 FAIL / 1既有D2 SKIP，P15周期77/77 PASS；当前源码commit／push／云端CI NOT_RUN。Photo7Normal仍保留原180秒Timeout。P15未正式关闭，PR未merge。下方旧结果只属于对应旧源码。
+本轮Play用时22分13.335秒，XML SHA256：`0F47322015FEF72039D72ACFEEAFC156B6DC9881370C183CF6FFDA9460C995BB`。整轮LongSevenFast PASS（30.167秒），LongSevenNormal、LongSixNormal、PhotoSevenFast、PhotoSixNormal亦PASS；保留每项原20次真实离店、订单／付款／容量／token断言。
+
+两项失败均来自同一原180项范围：
+
+- `UserLongCounterSixFast`：前15位已真实离店，第16位进入Counter前移`PlanningFailed: no-independent-finite-release-or-cycle`，触发原45游戏秒无订单完成watchdog。
+- `UserPhotoCounterSevenNormal`：2位已真实离店后，Barista进入`PlanningFailed: no-independent-finite-release-or-cycle`，后续两位顾客留在Counter队列，触发相同45游戏秒watchdog；本次NUnit用时14.245秒，并非180秒wall Timeout。
+
+两者具体根因仍UNKNOWN。按用户遇新失败先报告的要求，本轮结束后没有继续修改产品／测试、重跑、commit/push或启动CI。537源码文件全匹配；两模式Assets／source／scene／inputs parity全部通过，Assets delta／restoration／unknown delta均0；恢复8份历史输出，Unity/worker数0，OS handles仍UNKNOWN。共用CI verifier正确拒绝这份失败报告。机器收据`outputs/phase15/p15-ci-five-repair-20261116/exit-phase-local-failed-result.json`，失败原文已分别保存为`*-exit-phase-compact.txt`。
+
+<!-- P15_EXIT_PHASE_REPAIR_20261117_END -->
+
+</details>
+
+<details>
+<summary>上一源码1497 Edit通过、178P/1F/1SKIP历史</summary>
+
+<!-- P15_ISSUED_COLLECTION_REPAIR_20261116_BEGIN -->
+**当前：原两项修复通过整轮回归；Edit1497 PASS，Play178 PASS / 1 FAIL / 1既有SKIP。新增LongSevenFast离店失败，按约定已停止后续修改、重跑和发布。**
+
+本轮只修改ServiceTrafficCoordinator及对应EditMode模型：
+
+- 同PQS真实已发CollectionLease也可让原未获权Paid路径准备暂缓；实际Source／stamp／当前通路／claim重新认证，原Exit保持优先。
+- 员工原Frozen Paid真实末腿完成到位后，仅记原有限准备历史；新collector必须真Bound，未绑定、外Queue、未发布lease和同位置新reservation不能借用此入口。
+- 初始PrepClaim早于Transfer，仅用于真实reservation谱系。完成时的Generation／Slot／Pos取真实付款后末腿快照核对，不能混用付款前版本。原Frozen、source、age、query和债务不续期；恢复仍完整检查并实际Commit/Bind。
+
+| 当前验证 | 结果 |
+| --- | --- |
+| Long新增5项模型 | 有效RED2 FAIL/3控制PASS后GREEN |
+| Photo新增5项＋原10项控制 | 有效RED后GREEN，包含真实完成、到期、错误Queue、未发布lease及ABA |
+| 两组合计 | 20 PASS / 0 FAIL / 0 SKIP，XML `062BBAC5FD84B3A017B6BE25BF173151AEBF4AD33CFD36E8E33686DD3AD7BF96` |
+| 原4 selectors精简Edit | 1497 PASS / 0 FAIL / 0 SKIP，10.822秒；XML `59C8E3691C46369E2BD96C943B202A1DE10B4C24337C5928390EB3971F975A69` |
+| 原Long7Normal＋Photo7Fast真实20离店 | 2 PASS，各20次实际离店／原容量全部释放；103.318秒，XML `84EE4B060E36DC010CFC740270A7AF3101E0EEC591C67B6526F0C5AD971A0401` |
+| 当前原180项精简Play | 178 PASS / 1 FAIL / 1既有D2 SKIP；原100 selectors，无诊断或重放参数 |
+
+537文件source-set SHA256：`92781CBDAD0A98316A8C47A2F94DB3B376B7E2AF8183FD24D31C1F4A5E0ABD90`，见`issued-collection-source.json`。review C0/I0，新增10项使Edit discovery从1487变1497；Tools helper10 PASS。两个root模型不能代替Native成功；下方旧177P/2F/1SKIP仍为对应旧源码记录。当前修复未commit/push、未启动云端CI、未merge；P15未正式关闭。没有修改Photo7Normal的180秒Timeout。
+
+本轮Play用时23分30.167秒，XML SHA256：`72E78D62C8B8B002D836D6D68325E15F9FEACCE52638CB685AE50136021C3C3B`。Main连续三批、LongSevenNormal、PhotoSevenFast本轮均PASS；P15周期77/77 PASS。唯一失败为新增`UserLongCounterSevenFast`：顾客2实际取餐后Exit准备g41原Frozen为Exit1/g37，遇实际Bound的Paid5/g40（仍同时保留真实Counter与Pickup claim），直接拒绝`new-frozen-owner`。后续独立性检查因短路未执行，仍UNKNOWN；这是待修的离店交接，不将较早被正常后续阶段消化的Advance g38缓存另算一个产品故障。缓存Dropped0。按用户先停再报的新失败约定，本轮未继续改产品／测试或重跑，未commit/push／启动当前源码CI／merge，P15未正式关闭。537源码全匹配，Assets、scene、inputs parity均无差异；8份历史输出已恢复，Editor workers0，OS handles UNKNOWN；共用verifier正确拒绝本失败报告。机器收据`issued-collection-local-failed-result.json`。
+<!-- P15_ISSUED_COLLECTION_REPAIR_20261116_END -->
+
+</details>
+
+<details>
+<summary>前一源码的被动缓存与精简失败历史</summary>
+
+<!-- P15_CONCURRENT_NATIVE_REPAIR_20261116_BEGIN -->
+**当前状态：当前源码精简1487 Edit PASS；Play177 PASS / 2 FAIL / 1既有SKIP。发现新失败，按用户约定停止后续修复／重跑／发布。**
+
+修复范围仍为原精简回归的 Main 连续客流与 `UserLongCounterSevenNormal`：
+
+- 临时不能 Join 时，撤下未出生顾客的旧 Prepared 入店路线；恢复后重新核查，保留原来客机会及有限预算。
+- 认证原等待 Paid 顾客的真实完成与当前预留，保留其原债务，允许合法未提交准备继续。
+- Ready 队首的完整路径已算完后，如果新阻挡全部为真实已提交且 Bound、能够独立前进的 Native 移动，只暂缓准备。保持原 Entry、Frozen 池、顺序和剩余时间；沿用现有兼容路径重证，不增加另一套缓存或授予通行。
+
+| 当前源码验证 | 结果 |
+| --- | --- |
+| 新增并发 Native 专项 | 7 PASS；有效反例先 RED；覆盖未 Bound、未知 body、Prepared、静态障碍、Ready 失效、暂停／到期及真实取餐提交 |
+| 同来源连续5个移动快照 | 没有新增 Native query；静态空间改变后正常重新计算再提交 |
+| 当前原4 selectors EditMode compact | 1487 PASS / 0 FAIL / 0 SKIP，9.592秒 |
+| 前一800a86b源码定向重放 Main + LongSevenNormal 原20次真实离店 | 2 PASS：Main 125.277秒；Long 36.007秒，原20离店断言保留 |
+| 当前原100 selectors / 180-case PlayMode compact | 177 PASS / 2 FAIL / 1既有SKIP；P15周期77/77 PASS。Main连续三批本轮PASS；LongSevenNormal及新增PhotoSevenFast FAIL |
+| 前一800a86b源码完整Play180 | 177 PASS / 2 FAIL / 1既有D2 SKIP；P15营业周期77/77 PASS。Main三批与LongSevenNormal失败 |
+
+Play用时20分38.889秒，XML SHA256：`B20710260CEFD1F92636809A7E2228CCB1791373DBD9F6CE38B1863079001A3B`。失败仍为原两个case；此前定向重放2 PASS不能覆盖另一组自然客流，当时先限定两项定位，待补齐被动缓存后再回到下述当前原180项验证。
+
+上述精简回归537文件 source-set SHA256：`800A86B07FEF5124DFE6BBA8DA45A76C6379C6CE2784B6DF26691925EB231CFB`；Edit XML SHA256：`BB6BF7B8BC4A6CC459C55214B967F6DA1CBA2356067545311F0349EC372EC8C8`。当前新增28项（包含1项被动缓存验证）使 Edit discovery 从1459变为1487，Play仍180项；Tools helper 10/10 PASS。
+
+尚未 commit/push 当前修复，当前源码云端CI为 NOT_RUN；PR15未合并，P15未正式关闭。既有D2覆盖缺口仍为 SKIP／未证明。没有修改 PhotoSevenNormal 的180秒 Timeout。手动验收仍为 Beginner Guide 的8项。
+
+后续复现：只跑原两项自然取证均PASS（XML `310AC351...`），Main前五实际birth近似输入重放也PASS（XML `33BA0D50...`），未复现原失败，均不能覆盖整轮FAIL。为修复证据遗漏，测试加入仅在原拒绝后执行的 `cache-only-all`，不启用live观察、不改游戏规则；1项模型真实RED后GREEN，当前精简Edit1487 PASS（XML `13052FB9...`），仅以普通模式验证原两项亦为2 PASS（XML `EBF8E3A7...`），未复现前一完整范围失败；随后同一源码原180项已完成，结果及停止边界如下，没有实时诊断或重放参数。当前源码 `d8bca0b3...`；上述177P/2F是前一源码完整精简结果。
+
+当前证据：`outputs/phase15/p15-ci-five-repair-20261116/passive-cache-source.json`，Native批次 `p15-ci-passive-cache-*`。前一源码证据为 `concurrent-native-final-source.json`／`p15-ci-concurrent-native-final-*`。
+
+当前537文件 source-set SHA256：`D8BCA0B3239D3ADADC145D09D0A280C86EB0A92FF3546881C3B46C9BEF77174D`。当前Edit XML SHA256：`13052FB98644601BF09B6A15C0594D91EC8FE68C4EC24596CA2A17EBCC875EAF`。`cache-only-all`只在原拒绝后保存每intent第一条记录，原64条上限不变；不启用`*`实时stage记录，未采集stage仍为UNKNOWN，不是未发生。Main／Long测试都会恢复原selector。普通游戏默认值仍null，游戏规则没有因此改变。
+
+最新Play用时23分41.718秒，XML SHA256：`6636A7F98EB7C6046122961809201C156A02FC45B44C62581BAF577A8E93FDD0`。失败缓存Dropped均0：LongSevenNormal在19次完成后，第20位Paid准备的原Frozen为Exit18，遇到真实Bound的Collection19，直接被`new-frozen-owner`拒绝；PhotoSevenFast员工的原Frozen为Paid2，遇到真实Bound的Collection1，同样被拒绝。后续CanProgress／IndependentPathClear因原短路次序未执行，仍UNKNOWN，不能据此宣称修复规则已证明。当前先停，不自动扩大修复到新增case。机器收据为`passive-cache-local-failed-result.json`；共用verifier正确拒绝失败报告。537源码全匹配，Assets／scene／inputs parity均0差异；8份历史输出已归档恢复；Editor workers为0，原生OS handles仍UNKNOWN。没有commit/push当前修改或启动当前源码CI，PR未merge，P15未正式关闭。
+<!-- P15_CONCURRENT_NATIVE_REPAIR_20261116_END -->
+
+</details>
+
+<details>
+<summary>本轮前一源码的 Join／Paid 修复验证历史</summary>
+
+<!-- P15_JOIN_PAID_REPAIR_20261116_BEGIN -->
+**当前状态：剩余两项修复验证中；EditMode 精简1479 PASS，最终PlayMode尚未运行，不能宣布全部完成。**
+
+用户已授权继续修复此前精简回归中的 Main 连续客流和 LongSevenNormal。本次落实两个实际状态缺口：
+
+- 未出生顾客的原 Join preview 暂时失效后，旧 Prepared 入店路线没有撤回。新增只读 `CanPrepareJoin` 资格，并在普通调度前撤下其准备权利，沿用原 `AdmissionHeld`、同一来客机会和剩余预算；合法 Join 恢复后完整重证。已有旧3参数消费者及 Exit first-leg 检查保留。
+- Ready 队首原先等候的 Paid 顾客已真实 Bound→Arrived，原捕获的等待池仍保留；遇到更早的真实 Unpaid Reserve 准备时，现有暂缓入口只接受员工来源。现在仅认证同一原 Paid 的真实完成收据、原依赖、同PQS当前身体／预留谱系及原有限债务，允许准备继续；不把已到站顾客改成独立移动来源，不加 Frozen／WAIT，也不提前授予取餐权。
+
+| 当前验证 | 结果 |
+| --- | --- |
+| Join preview模型 | 7项真实RED后GREEN；涵盖撤权、恢复、正在前移但已对齐、暂停／到期及提交前重核 |
+| 原Paid完成准备模型 | 有效RED 2 FAIL / 1控制PASS；本轮5项含真实Reserve→Transfer→Bound Native→CollectionLease完整提交、ABA拒绝错误完成／原债到期 |
+| 原4 selectors EditMode compact | 1479 PASS / 0 FAIL / 0 SKIP，9.391秒 |
+| Main合法原失败输入 | 原RED 25.444秒Blocked，后GREEN 7/7真实离店排空；第7次机会为anchor帧估计，未冒充完整原随机状态 |
+| 003003源码 Main重放 + LongSevenNormal原20离店 | Main PASS / Long FAIL：11次离店后遇到后来的真实Bound Counter14；当前定向修复验证中 |
+| 原100 selectors / 180-case PlayMode compact | NOT_RUN（当前修复）；下方177P/2F/1SKIP为旧源码结果 |
+
+上述历史1479项对应冻结537文件 source-set SHA256：`003003BC0C61F091CAE27DFB1841334BF1B96FD2003A4AEBE118C16030F06DFF`，格式为有序 `path TAB raw-file-sha256 LF`，含末尾LF。Edit XML SHA256：`772A1D03DB90A76DF7867C48D4C88279233F93672901F35208D264A214F0500E`。两模式共用筛选不变，Edit discovery1479包括修复前1459项加本轮20项针对性回归；Play仍原180项。Tools helper 10/10 PASS。
+
+**本轮阶段界限：** 当前修复尚未commit/push或运行云端CI；PR15未合并，P15未正式关闭，不进入P16。既有D2 checkpoint覆盖缺口保留为SKIP／未证明。PhotoSevenNormal Linux单项180→300秒Timeout提案仍未应用，待用户答复；20真实离店和45游戏秒无进展watchdog保持。手动验收仍为 [Beginner Guide](Phase15_Beginner_Guide.md) 的8项。
+
+证据：`outputs/phase15/p15-ci-five-repair-20261116/join-and-paid-final-source.json`；Native批次位于 `outputs/phase15/service-traffic-coordination-20261030/p15-ci-join-paid-*`。此前两次云端运行均早于本轮产品修复，不能用作当前源码云端结果。
+<!-- P15_JOIN_PAID_REPAIR_20261116_END -->
+
+</details>
+
+<details>
+<summary>上一轮精简失败及此前发布历史（各自旧源码）</summary>
+
+<!-- P15_CURRENT_CI_FIVE_REPAIR_20261116_BEGIN -->
+**当前修复：本地精简回归 FAIL，已停止后续修改和运行；P15 未正式关闭。**
+
+本轮修正两处真实服务协调问题：员工送杯的首个位置被更早、已 Ready 的取餐路线保护时，只尝试其他原有位置，保留前客权益并重新完整检查；顾客完成真实 Counter 移动后补发完成通知，Core 对原已捕获、暂时暂停准备的等待者记录真实完成，不提前解除暂停或授予移动许可。碰撞、付款、容量、原有限等待和营业周期均保留，没有 Scene 或存档迁移。
+
+| 当前冻结源码上的验证 | 结果 |
+| --- | --- |
+| 新增针对性回归 | 8 PASS；两组均有修复前真实 RED / 修复后 GREEN |
+| Main、LongSevenNormal、LongSixFast、LongSixNormal 混合 Native | 4 PASS，保留各长柜台20次真实离店 |
+| 原4类 EditMode 精简筛选 | 1467 PASS / 0 FAIL / 0 SKIP |
+| 原100 selectors / 180-case PlayMode 精简筛选 | 177 PASS / 2 FAIL / 1 既有 SKIP；没有诊断或到店重放参数 |
+
+本轮 PlayMode 为19分02秒，XML SHA256 `88E984838A757AFA40F1925DC9A1B94B50FEE8A3802CA958B9F59F1139C07A8B`。P15营业周期77/77 PASS；原五个云端失败case本轮4 PASS / 1 FAIL。两项失败来自原180项范围，没有追加筛选：
+
+- `MainDefaultCounterPlacementCompletesThreeFreshNaturalCohorts`：25.466场景秒，第6位顾客 Counter 前移进入 `PlanningFailed: no-independent-finite-release-or-cycle`。这是本次暴露的另一个既有case失败，单轮 Main 的 PASS 不覆盖它。
+- `UserLongCounterSevenNormal`：5单完成后，第6位顾客 Collection prerequisite 进入同类终止；随后45游戏秒无完成，触发原 watchdog。此前 Native4 PASS 不能覆盖本次失败。
+
+具体剩余根因尚未确定，不能认定两者同一根因或声称经营修复完成。按用户“有新失败先停下来告知”的要求，本轮后不再修改产品、重跑测试、commit/push或启动CI。源码537/537匹配；两模式Assets delta/restoration/unknown delta均0，Play归档并恢复8份历史输出，所有parity匹配；Unity/worker退出数0，原生OS handles仍UNKNOWN。机器收据：`outputs/phase15/p15-ci-five-repair-20261116/final-local-result.json`。
+
+冻结537文件 source-set SHA256：`85DEB9EF2EE6EFAB3650887B368527274798B54C2CB7247B0BF97B04074893A9`。EditMode XML SHA256：`76004D230771E4AA22178106F98763032C4592CB713A6241247FD5C99E3B7E53`。Native4 XML：`DE75B6AC45B505B8285E47CC45D857F22D1BC243ABC9E11A77748018A23CB2FC`。新增8项让 EditMode discovery 从1459变为1467；筛选范围没有扩大。
+
+**云端结果须单独区分：** [compact 43875362961](https://github.com/zhengparker/AnimalCafe/actions/runs/43875362961) 在 `39b7703` 为 Edit1459 PASS、Play174 PASS / 5 FAIL / 1 SKIP；[五项诊断 43896609745](https://github.com/zhengparker/AnimalCafe/actions/runs/43896609745) 在 `00b9157` 为 Edit1148 PASS、Play2 PASS / 3 FAIL。两次均早于当前产品修复，不能当作当前源码的结果。当前修复云端 compact：NOT_RUN。
+
+PhotoSevenNormal 在旧 Linux CI 的180秒 wall-clock 截止时仍有真实服务进展；Windows同样20次离店约120秒。仅此 case 的300秒 Timeout 提案尚未应用，等待用户答复；不减少20次离店、不延长45秒游戏内无进展 watchdog。既有 D2 指定 pre-commit 状态覆盖仍未证明，不能转为 PASS。手动验收保持 [Beginner Guide](Phase15_Beginner_Guide.md) 的8项；PR15保持未合并，不进入P16。
+
+证据目录：`outputs/phase15/p15-ci-five-repair-20261116/`；原始 Native XML 在 `outputs/phase15/service-traffic-coordination-20261030/p15-ci-held-counter-*`。下方全部为各自旧源码的历史记录。
+<!-- P15_CURRENT_CI_FIVE_REPAIR_20261116_END -->
+
+<details>
+<summary>修复前发布和本地验证历史（旧源码）</summary>
+
 > **CI / PR 发布说明（2026-11-16）：** 用户已授权将本地已测修复提交到现有 PR15，并将日常 Unity CI 改为本地一致的 compact。共用筛选见 `Tools/Testing/compact-edit.filter.txt`、`compact-play.filter.txt`；保留 full、手动触发、登录 opt-in、原失败断言和单次 activation。配置通过10项 offline 检查及真实本地 NUnit XML 核验；新云端 CI 尚未运行。仅更新 PR，不合并。下方“未提交/未push”是原本地测试完成时的历史状态；发布状态以 PR head 为准。
 
 <!-- P15_FINAL_LOCAL_COMPACT_20261116_BEGIN -->
@@ -1166,5 +1350,9 @@ Owner明确批准“同意，先证明反例再实施”。新增停车目标只
 
 当前冻结CFC SHA256 `3E468F1584D2C1C2BE5C137D43A94BC71BD0A47FE3D739D71C4C948ED1DA686B`。独立review Critical0／Important0／newMinor0。`related-final/edit`实际387PASS/0FAIL/0SKIP，12.0286263s，native/CLI0；恢复3项已知资源后3176Assets／12source／3inputs／14Scenes零差异，未知／missing0，EditorWorkers0。当前同源相关Play执行中，Computer Use第6–8项尚待复测。历史FAIL不由focused PASS覆盖；整个Game输入首因UNKNOWN，真实8h／device／Owner／CI／Git门槛仍分列，P15不正式关闭。
 
+
+</details>
+
+</details>
 
 </details>

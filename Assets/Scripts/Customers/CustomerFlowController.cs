@@ -2553,7 +2553,17 @@ namespace AnimalCafe.Customers
                 receipt.Marked=true;return receipt;
             },out var handle))return false;
             receipt.Handle=handle;visit.PendingTraffic=handle==null?null:receipt;visit.RequestId=0;
-            move.Index++;move.NativeGeneration=0;return true;
+            move.Index++;move.NativeGeneration=0;
+            if(handle!=null && phase==CustomerVisitState.Advancing && ReferenceEquals(traffic,move.Coordinator))
+            {
+                // Arrival may have published its stopped body before the strict handoff existed.
+                // 真到位receipt发布后补一次body通知；只唤醒原捕获依赖，Core仍重验全部通路。
+                RefreshTrafficSnapshot();
+                if(ReferenceEquals(traffic,move.Coordinator) && ReferenceEquals(visit.PendingTraffic,receipt) &&
+                    ReferenceEquals(receipt.Handle,handle) && visit.State==CustomerVisitState.Queued && visit.RequestId==0)
+                    move.Coordinator.NotifyChanged(move.Intent,"body");
+            }
+            return true;
         }
         private void AbortCustomerHandoff(Visit visit,string reason)
         {
@@ -2823,7 +2833,7 @@ namespace AnimalCafe.Customers
             if(!a.Submitted && !a.Coordinator.ContainsIntent(a.Key) && !a.Coordinator.IsParkingEndpointAvailable(request))return false;
             if(!a.Submitted){decision=a.Coordinator.EvaluateParking(request);a.Submitted=true;}
             else if(!a.Coordinator.TryReprepareCanonicalAnchor(a.Coordinator.GetDecision(a.Key),request,out decision))return false;
-            if(a.Readiness==null)a.Readiness=new TrafficAdmissionReadiness(a.Key,()=>AdmissionReadinessCurrent(a),PendingCollectedExitKeys);
+            if(a.Readiness==null)a.Readiness=new TrafficAdmissionReadiness(a.Key,()=>AdmissionReadinessCurrent(a),PendingCollectedExitKeys,()=>a.Owner.CanJoin);
             if(!a.Coordinator.TrySetAdmissionReadiness(decision,a.Readiness))return false;
             a.Preview=preview;return AdmissionAnchorCurrent(a) && preview.IsCurrent;
         }

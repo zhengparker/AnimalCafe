@@ -5208,12 +5208,12 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     (photoDirection ? " CR=(" + length + ",4) CM=(1,7) rotated180 pickup=(1,4)" :
                     " CR=(1,5) CM=(4,6) pickup=(" + length + ",5)") + " modules contiguous\n");
                 tools.ResumeCollection();
+                ciCore=CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic");
+                ciPriorIntent=CafeLoopRuntimeProof.Field<string>(ciCore,"WaitFailureDiagnosticIntent");
+                CafeLoopRuntimeProof.Set(ciCore,"WaitFailureDiagnosticIntent",ciWitness?"*":"cache-only-all");
                 if(ciWitness)
                 {
-                    ciCore=CafeLoopRuntimeProof.Field<ServiceTrafficCoordinator>(customers,"traffic");
-                    ciPriorIntent=CafeLoopRuntimeProof.Field<string>(ciCore,"WaitFailureDiagnosticIntent");
-                    CafeLoopRuntimeProof.Set(ciCore,"WaitFailureDiagnosticIntent","*");
-                    ciWaitTrace=new TrafficWaitFailureTrace(ciCore);
+                    if(!Environment.GetCommandLineArgs().Contains("-p15CiStoredFailureOnly"))ciWaitTrace=new TrafficWaitFailureTrace(ciCore);
                 }
                 Assert.That(time.TrySetSpeed(speed), Is.True);
                 if(publicationProbe)
@@ -5236,10 +5236,10 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                         if(observe!=null&&owner!=null)owner.SnapshotChanged-=observe;
                         foreach(var tracker in receiptTrackers)if(tracker!=null)tracker.Receipt=null;
                         if(ReferenceEquals(controlledHandoffCleanup,diagnosticCleanup))controlledHandoffCleanup=priorCleanup;
-                        if(ciWaitTrace!=null)
+                        if(ciCore!=null)
                         {
                             CafeLoopRuntimeProof.Set(ciCore,"WaitFailureDiagnosticIntent",ciPriorIntent);
-                            ciWaitTrace.Dispose();ciWaitTrace=null;
+                            ciWaitTrace?.Dispose();ciWaitTrace=null;ciCore=null;
                         }
                         exitDecisions?.Finish(reason);connectorTimings?.Finish(reason);
                         priorCleanup?.Invoke(reason);
@@ -5324,6 +5324,8 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                             TestContext.WriteLine("CI_ORIGINAL_WAIT "+CafeLoopRuntimeProof.Field<string>(ciCore,"WaitFailureDiagnostic"));
                             TestContext.WriteLine("CI_COUNTER_GAP "+TwentyTrafficFailureTrace.CounterGapCurrent(world,customers,storedOnly:true));
                         }
+                        else TestContext.WriteLine("LONG_ORIGINAL_WAIT "+CafeLoopRuntimeProof.Field<string>(ciCore,"WaitFailureDiagnostic"));
+                        TestContext.WriteLine("ORIGINAL_WAIT_CACHE_DROPPED "+CafeLoopRuntimeProof.Field<int>(ciCore,"WaitFailureDiagnosticDropped"));
                         File.AppendAllText(output, UserExitPathQueries("FIRST_BLOCK") + "\n");
                         File.AppendAllText(output, UserTrafficPathQueries("FIRST_BLOCK") + "\n");
                     }
@@ -5384,10 +5386,10 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             finally
             {
                 diagnosticCleanup?.Invoke("finally");
-                if(ciWaitTrace!=null)
+                if(ciCore!=null)
                 {
                     CafeLoopRuntimeProof.Set(ciCore,"WaitFailureDiagnosticIntent",ciPriorIntent);
-                    ciWaitTrace.Dispose();ciWaitTrace=null;
+                    ciWaitTrace?.Dispose();ciWaitTrace=null;ciCore=null;
                 }
                 segmentFailureTrace?.Finish();
                 targetDecisionTrace?.Finish();

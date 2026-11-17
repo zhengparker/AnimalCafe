@@ -24,8 +24,13 @@ namespace AnimalCafe.Navigation
         internal readonly TrafficIntentKey Intent;
         internal readonly Func<bool> IsCurrent;
         internal readonly Func<IReadOnlyList<TrafficIntentKey>> PendingExits;
+        internal readonly Func<bool> CanPrepareJoin;
         internal TrafficAdmissionReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<IReadOnlyList<TrafficIntentKey>> pendingExits)
-        { Intent=intent;IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));PendingExits=pendingExits??throw new ArgumentNullException(nameof(pendingExits)); }
+            :this(intent,isCurrent,pendingExits,null) { }
+        internal TrafficAdmissionReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<IReadOnlyList<TrafficIntentKey>> pendingExits,
+            Func<bool> canPrepareJoin)
+        { Intent=intent;IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));PendingExits=pendingExits??throw new ArgumentNullException(nameof(pendingExits));
+            CanPrepareJoin=canPrepareJoin; }
     }
 
     // Unacquired queued/unpaid Counter proposal only; this descriptor grants no traffic WAIT or movement right.

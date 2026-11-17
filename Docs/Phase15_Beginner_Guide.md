@@ -1,6 +1,6 @@
 # Phase 15 自动营业周期：Beginner Guide
 
-> **本地精简回归已完成：EditMode 1459通过；PlayMode 179通过、0失败、1项既有SKIP。** P15营业周期77项全部通过；SKIP仍是未捕获指定状态的覆盖缺口，不算通过。Unity CI已配置为同范围compact，full可手动选择；本地结果不代替云端结果，PR本次仅更新不合并，P15尚未正式关闭。下方8项手动步骤保留；证据见 [Validation Report](Phase15_Validation_Report.md) 顶部。
+> **当前：两项修复已通过整轮精简回归：Edit1511 PASS；Play179 PASS／0 FAIL／1既有SKIP；P15周期77/77 PASS。** 七种经营布局均完成20次真实离店。既有D2状态缺口仍NOT_PROVEN；当前源码云端CI尚待执行，PR不merge，P15尚未正式关闭。下方8项手动步骤保持。
 
 ## 0. 按顺序手动验收（8 项）
 
