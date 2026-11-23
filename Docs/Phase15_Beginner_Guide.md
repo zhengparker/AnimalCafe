@@ -1,6 +1,6 @@
 # Phase 15 自动营业周期：Beginner Guide
 
-> **当前：两项修复已通过整轮精简回归：Edit1511 PASS；Play179 PASS／0 FAIL／1既有SKIP；P15周期77/77 PASS。** 七种经营布局均完成20次真实离店。既有D2状态缺口仍NOT_PROVEN；当前源码云端CI尚待执行，PR不merge，P15尚未正式关闭。下方8项手动步骤保持。
+> **当前：Linux精简CI有4项经营失败，修复验证进行中，P15未关闭。** aa80341云端结果为Edit1511 PASS、Play175 PASS／4 FAIL／1既有SKIP；P15周期77/77 PASS。2026-11-23四项Windows定向基线全部通过20次真实离店，但不能代替Linux结果。新增修复尚待组合精简回归和云端验证；既有D2状态缺口仍NOT_PROVEN，PR不merge。下方8项手动步骤保持。
 
 ## 0. 按顺序手动验收（8 项）
 

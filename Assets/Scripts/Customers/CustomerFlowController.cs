@@ -757,7 +757,7 @@ namespace AnimalCafe.Customers
         {
             if(!CollectionReserveCurrent(f,provider,cup) || source==null || !source.Intent.Equals(key) || key.IntentId!="pickup-wait" ||
                 !CollectionReservePreviewCurrent(f,f.Preview) || !visits.TryGetValue(key.ActorId,out var visit))return null;
-            var a=seal==null?visit.PendingReservationAnchor:seal as PickupReservationAnchor;
+            var a=seal==null?visit.PendingReservationAnchor??visit.PickupParking?.Origin:seal as PickupReservationAnchor;
             if(a==null || !a.Key.Equals(key) || !ReferenceEquals(a.Coordinator,f.Coordinator) || !ReferenceEquals(a.Owner,f.Owner) ||
                 !ReferenceEquals(a.Counter,queue) || !ReferenceEquals(a.Visit,visit) || !ReferenceEquals(a.Actor,visit.Actor) ||
                 !ReferenceEquals(a.Admission,visit.Admission) || !ReferenceEquals(a.World,world) || !ReferenceEquals(a.Capacity,Capacity) ||
@@ -779,7 +779,7 @@ namespace AnimalCafe.Customers
                 return new TrafficCollectionReserveObservation(f.Claim,f.Preview,a,uncommitted,null,source,null);
             }
             var parking=visit.PickupParking;var paid=visit.PaidPickup;var work=a.CollectionWorking;
-            if(seal==null || !ReferenceEquals(parking.Origin,a) || !ReferenceEquals(parking.Owner,f.Owner) ||
+            if(!ReferenceEquals(parking.Origin,a) || !ReferenceEquals(parking.Owner,f.Owner) ||
                 !ReferenceEquals(parking.Coordinator,f.Coordinator) || !ReferenceEquals(parking.Actor,a.Actor) || !ReferenceEquals(parking.Admission,a.Admission) ||
                 parking.Source==null || !parking.Source.Intent.Equals(key) || parking.Source.AcquiredSequence<=0 ||
                 parking.Claim==null || !f.Owner.TryCaptureReservation(visit.Id,out var reservation) || !reservation.IsCurrent ||
@@ -802,6 +802,10 @@ namespace AnimalCafe.Customers
                 !visit.HasCollected && (paid==null || !paid.Failed && !paid.RecoveryUsed && !paid.RecoveryPending && paid.Accepted &&
                     paid.Transferred==transferred && paid.ActiveIntent.Equals(paidIntent)) &&
                 f.Owner.TryCaptureReservation(visit.Id,out var now) && reservation.IsSameCurrentClaim(now);
+            // Initial published observation must bind the same genuinely captured Working producer.
+            // 首次已发布Reserve只接受原任务，不能在reader里临时捕获或制造Native。
+            if(seal==null && (work==null || paid!=null || work.Paid!=null ||
+                ReadCounterWorkingPredecessor(work,key,f.Coordinator)!=CounterWorkingPredecessorResult.Pending))return null;
             TrafficDecision paidSource=null;
             if(paid==null)
             {
@@ -820,7 +824,8 @@ namespace AnimalCafe.Customers
             // Last Ready callback may change either side; never return the previously sampled producer after reentry.
             // 最后Ready读取后双端重核；真实first Bound也不代表CQ身体已经离开，Core仍查全部空间。
             return SameProducer() && CollectionReserveCurrent(f,provider,cup) && SameProducer() && CollectionReservePreviewCurrent(f,f.Preview)
-                ?new TrafficCollectionReserveObservation(f.Claim,f.Preview,a,null,reservation,parkingSource,paidSource):null;
+                ?new TrafficCollectionReserveObservation(f.Claim,f.Preview,a,null,reservation,parkingSource,paidSource,
+                    work==null?null:new TrafficCollectionPublishedWorkingObservation(work.Actor,work.Visit,work.Admission,work,work.CounterClaim)):null;
         }
         private bool PickupDeliveryHistoryCurrent(PickupDeliveryHistory h)
         {

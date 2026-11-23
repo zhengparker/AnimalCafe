@@ -1,8 +1,10 @@
 # Unity 精简回归 / Shared compact regression
 
-本地与 GitHub Actions 共用 `compact-edit.filter.txt`、`compact-play.filter.txt`。EditMode 4个 selectors，当前1511 cases；PlayMode 100个 selectors，当前180 cases。范围包括P15营业周期、路线协调、相关导航和真实经营布局。本轮新增4项Counter到位通知与3项真实已完成prefix后的取餐交接回归，沿用全部既有测试范围和断言。
+本地与 GitHub Actions 共用 `compact-edit.filter.txt`、`compact-play.filter.txt`。EditMode 4个 selectors，当前1522 cases；PlayMode 100个 selectors，当前180 cases。范围包括P15营业周期、路线协调、相关导航和真实经营布局。本轮新增6项已提交Working预留交接及5项既有Paid等待下的取餐侧回归，沿用全部既有测试范围和断言。
 
 CI 仍只通过 `workflow_dispatch` 手动触发，Unity登录仍须勾选 `allow_unity_login`。`test_scope` 默认 `compact`；`full` 保留为主动完整回归。两者成功均可满足 `Unity CI`，diagnosis scopes不满足。Unity版本仍6000.5.5f1；一次activation后顺序跑两模式，禁止自动activation retry。150分钟是含冷导入的上限，不是预计耗时。
+
+`p15-ci-four-failures` 只用于核查本次四项Linux布局故障及完整路线协调EditMode class，使用原case、原时限，不打开live observer。它不替代 `compact`，也不满足必需的 `Unity CI` check；诊断通过后仍跑正式精简CI。
 
 ## 本地使用相同范围
 

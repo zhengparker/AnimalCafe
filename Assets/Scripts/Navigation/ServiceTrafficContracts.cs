@@ -78,14 +78,34 @@ namespace AnimalCafe.Navigation
         public AnimalCafe.Customers.PickupQueueService.ReservationClaim PublishedReservation { get; }
         public TrafficDecision ParkingSource { get; }
         public TrafficDecision PaidSource { get; }
+        public TrafficCollectionPublishedWorkingObservation PublishedWorking { get; }
         internal TrafficCollectionReserveObservation(AnimalCafe.Customers.PickupQueueService.ReservationClaim collectorClaim,
             AnimalCafe.Customers.PickupQueueService.PreparedMutation collectionPreview,object producerSeal,
             TrafficCounterUncommittedPreparationObservation uncommitted,
             AnimalCafe.Customers.PickupQueueService.ReservationClaim publishedReservation,TrafficDecision parkingSource,TrafficDecision paidSource)
+            :this(collectorClaim,collectionPreview,producerSeal,uncommitted,publishedReservation,parkingSource,paidSource,null) { }
+        internal TrafficCollectionReserveObservation(AnimalCafe.Customers.PickupQueueService.ReservationClaim collectorClaim,
+            AnimalCafe.Customers.PickupQueueService.PreparedMutation collectionPreview,object producerSeal,
+            TrafficCounterUncommittedPreparationObservation uncommitted,
+            AnimalCafe.Customers.PickupQueueService.ReservationClaim publishedReservation,TrafficDecision parkingSource,TrafficDecision paidSource,
+            TrafficCollectionPublishedWorkingObservation publishedWorking)
         {
             CollectorClaim=collectorClaim;CollectionPreview=collectionPreview;ProducerSeal=producerSeal;Uncommitted=uncommitted;
-            PublishedReservation=publishedReservation;ParkingSource=parkingSource;PaidSource=paidSource;
+            PublishedReservation=publishedReservation;ParkingSource=parkingSource;PaidSource=paidSource;PublishedWorking=publishedWorking;
         }
+    }
+    // Same captured task and current CQ claim only; no independent release, duration or traffic permission.
+    // 同一原Working任务谱系；只暂缓准备，不授予WAIT、Native或lease。
+    public sealed class TrafficCollectionPublishedWorkingObservation
+    {
+        public object ActorLife { get; }
+        public object BusinessOwner { get; }
+        public object Admission { get; }
+        public object WorkingSeal { get; }
+        public AnimalCafe.Customers.CounterQueueService.AssignmentClaim CounterClaim { get; }
+        internal TrafficCollectionPublishedWorkingObservation(object actorLife,object businessOwner,object admission,
+            object workingSeal,AnimalCafe.Customers.CounterQueueService.AssignmentClaim counterClaim)
+        {ActorLife=actorLife;BusinessOwner=businessOwner;Admission=admission;WorkingSeal=workingSeal;CounterClaim=counterClaim;}
     }
 
     // Existing Counter producer only. Withholds preparation; never grants a finite WAIT/Native right.

@@ -5331,6 +5331,13 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                     }
                     if (idleSeconds >= 45f)
                     {
+                        // Read stored refusal data only after the unchanged watchdog has failed.
+                        // 原45秒判定后才读取缓存；不重跑资格检查，也不提前观察游戏流程。
+                        var storedEntries=CafeLoopRuntimeProof.Field<System.Collections.IDictionary>(ciCore,"entries");
+                        foreach(System.Collections.DictionaryEntry stored in storedEntries)
+                            if(CafeLoopRuntimeProof.Field<bool>(stored.Value,"UnpaidEligibilityHeld"))
+                                TestContext.WriteLine("LONG_UNPAID_SPATIAL "+CafeLoopRuntimeProof.Field<string>(stored.Value,"UnpaidPreparationDiagnostic"));
+                        TestContext.WriteLine("LONG_STALLED_WAIT "+CafeLoopRuntimeProof.Field<string>(ciCore,"WaitFailureDiagnostic"));
                         File.AppendAllText(output, UserExitPathQueries("STALLED") + "\n");
                         File.AppendAllText(output, UserTrafficPathQueries("STALLED") + "\n");
                         TestContext.WriteLine("USER_LONG_COUNTER_STALL\n" + string.Join("\n", history));
