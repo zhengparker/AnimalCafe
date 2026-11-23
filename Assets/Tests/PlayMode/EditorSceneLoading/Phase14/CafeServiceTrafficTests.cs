@@ -4024,13 +4024,16 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
             // 仅重放合法来客输入；原 driver 仍决定付款、站位、移动和离店。
             var replay=Environment.GetCommandLineArgs().FirstOrDefault(arg=>arg.StartsWith("-mainArrivalReplay=",StringComparison.Ordinal))?.Substring("-mainArrivalReplay=".Length);
             var replayEnabled=!string.IsNullOrEmpty(replay);
-            Assert.That(!replayEnabled || replay=="paid-current-route-gap" || replay=="counter-live-advance-gap" || replay=="collection-advance-gap" || replay=="paid" || replay=="paid-gate" || replay=="exit" || replay=="exit-gate" || replay=="exit-after-head",Is.True,"FIXTURE: known controlled replay mode");
-            var naturalDrainReplay=replay=="paid-current-route-gap" || replay=="collection-advance-gap" || replay=="counter-live-advance-gap";
+            Assert.That(!replayEnabled || replay=="collected-exit-bind-gap" || replay=="paid-current-route-gap" || replay=="counter-live-advance-gap" || replay=="collection-advance-gap" || replay=="paid" || replay=="paid-gate" || replay=="exit" || replay=="exit-gate" || replay=="exit-after-head",Is.True,"FIXTURE: known controlled replay mode");
+            var naturalDrainReplay=replay=="collected-exit-bind-gap" || replay=="paid-current-route-gap" || replay=="collection-advance-gap" || replay=="counter-live-advance-gap";
             // First six actual births; seventh due time is an estimate from the saved admission anchor frame.
             // 前六项取自真实出生记录；第七次机会由旧anchor帧估计，不冒充原始随机抽样回执。
             // First five observed births relative to TRACE_BEGIN=1624.069; unseen 6/7 are legal +10s completion inputs, not recovered samples.
             // 前五项是原失败日志出生时序；后两项仅以合法最大间隔补全，不冒充原随机输入。
-            var replayTargets=replay=="paid-current-route-gap"?new[]{5.845f,8.054f,9.209f,14.343f,23.384f,33.384f,43.384f}:
+            // Eight actual birth timestamps from the failed Main cohort; input replay only, never route/body injection.
+            // 八项均来自原失败cohort的真实出生记录，仅重放合法clock输入。
+            var replayTargets=replay=="collected-exit-bind-gap"?new[]{6.049f,10.548f,13.578f,15.562f,25.092f,31.589f,33.477f,38.788f}:
+                replay=="paid-current-route-gap"?new[]{5.845f,8.054f,9.209f,14.343f,23.384f,33.384f,43.384f}:
                 replay=="counter-live-advance-gap"?new[]{5.977f,12.436f,14.440f,15.597f,20.971f,22.159f,24.592f}:
                 replay=="collection-advance-gap"?new[]{8.071f,16.823f,24.708f,34.369f,40.352f,46.777f,51.842f,53.513f}:
                 replay=="exit" || replay=="exit-gate" || replay=="exit-after-head"?new[]{6.72209f,10.97073f,12.74005f}:
@@ -4169,6 +4172,8 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                             trace.Milestone("FIRST_BLOCKED "+firstBlocked);
                             if(storedWait)TestContext.WriteLine("MAIN_ORIGINAL_WAIT "+typeof(ServiceTrafficCoordinator).GetField("WaitFailureDiagnostic",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(storedWaitCore));
                             if(storedWait)TestContext.WriteLine("MAIN_ORIGINAL_WAIT_DROPPED "+typeof(ServiceTrafficCoordinator).GetField("WaitFailureDiagnosticDropped",BindingFlags.Instance|BindingFlags.NonPublic)?.GetValue(storedWaitCore));
+                            if(storedWait)TestContext.WriteLine("MAIN_EXIT_BIND_CORE "+typeof(ServiceTrafficCoordinator).GetField("SuccessorPreparationFailureDiagnostic",BindingFlags.Instance|BindingFlags.NonPublic)?.GetValue(storedWaitCore));
+                            if(storedWait)TestContext.WriteLine("MAIN_EXIT_BIND_CFC "+typeof(CustomerFlowController).GetField("CollectedExitPreparationFailureDiagnostic",BindingFlags.Instance|BindingFlags.NonPublic)?.GetValue(customers));
                         }
                         if(firstBlocked.Length!=0)break; // Confirmed original assertion failure; keep positive window and all assertions unchanged.
                         if(firstBlocked.Length==0 && !boundaryWitnessOnly)deliveryWitness?.Sample(); // Do not follow a retired failure source through the remaining window.

@@ -1,6 +1,6 @@
 # Phase 15 自动营业周期：Beginner Guide
 
-> **当前：两项修复已推送到PR #15，新增Main经营失败后已按约停止继续修改和重跑，P15未关闭。** `1a5e069`本地Edit1522 PASS，Play177 PASS／2 FAIL／1既有D2 SKIP；P15周期77/77 PASS。本地失败为LongSevenNormal与Main连续三批经营；Linux四项定向3 PASS／1项PhotoSevenNormal在持续经营中触发180秒wall Timeout，尚未调整时限。正式compact云端仍待执行，PR不merge。下方8项手动步骤保持。
+> **当前：本地精简Edit 1549 PASS；Play 179 PASS／0 FAIL／1既有D2 SKIP；P15自身77项Play全PASS。** Long7两项及七种布局均PASS，每项20次真实离店；Main三批8/9/7位全部排空。P15进入In Review，按已有授权更新PR与运行compact CI，PR不merge；当前head云端结果见PR checks。既有D2指定状态仍未覆盖，下方8项手动步骤保持。
 
 ## 0. 按顺序手动验收（8 项）
 
@@ -163,8 +163,8 @@ M01–M04原批准范围以[Test Cases第4节](superpowers/specs/2026-10-26-phas
 本节是后续操作说明，不代表这些操作已执行。最终本地结果以Validation Report最新收尾节为准；本地测试通过后，仍须由Owner确认观感并安排CI／仓库合入。
 
 1. 在Unity Hub打开 `E:/Unity/Project/AnimalCafe/.worktrees/phase-15-business-day`（branch `codex/phase-15-business-day`），使用Unity6000.5.5f1。MainCafe是正式玩家UI；短时周期检查使用独立 `Assets/Scenes/Validation/Phase15BusinessDay.unity`。原M01–M07已有Agent代测，无须为了流程重复整套；请Owner实际判断当前界面的可读性和操作感。
-2. Owner在GitHub Desktop检查P15源码、tests、配套 `.meta`、Scene和Docs，再自行commit／push。建议commit说明：`Phase 15: automatic business days and safe service routes`。`.gitignore`仅新增 `/outputs/phase15/`，本地raw XML、日志、截图和恢复备份仍在磁盘；它们不随该规则纳入提交。
-3. 需要正式CI时，由Owner在仓库Actions选择 **Unity tests** → **Run workflow**，选P15 branch，`test_scope=full`；只有本次同意Unity账号登录及两套测试时，才勾选 `allow_unity_login`。这是既有手动workflow，Codex未触发，也不因本地PASS代替登录授权。
+2. P15已有[PR #15](https://github.com/zhengparker/AnimalCafe/pull/15)，分支为 `codex/phase-15-business-day`。Owner已授权Codex在本地验证通过后commit／push更新该PR，无须重复手动提交。raw XML、日志、截图与恢复备份保留在本地 `outputs/phase15/`，该目录不纳入提交。
+3. 正式CI使用既有手动 `workflow_dispatch`：**Unity tests** → **Run workflow**，选P15 branch，默认 `test_scope=compact`，范围与本地相同；`full` 保留为主动完整回归。Owner已授权Codex使用现有凭据发起CI并设置 `allow_unity_login=true`。每轮须核对实际run及源码commit；尚未运行或失败的轮次不填PASS。
 4. CI结束后核对真实EditMode／PlayMode XML及测试commit。Owner决定PR／merge；实际合入后再核对merged-main，才按项目规则更新正式Completed。未完成的Owner接受、CI、merge不填为PASS，不自动进入P16。
 
 8小时实钟／Player／Android与iOS设备、挂起恢复继续单列NOT_RUN，不新增为本次Windows Editor本地技术验收门槛；退出后Save／Offline收益不在P15实现范围。

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System;
 using System.Linq;
 using UnityEngine;
@@ -899,6 +899,10 @@ namespace AnimalCafe.Customers
         // 原side/初始yield坐标固定；cursor不保存TrafficRequest，也不授予canonical权限。
         private enum TrafficCandidateRole { Reservation,Collection,Yield,Delivery }
         private enum PlannedYieldResult { Pending,Yielded,Unavailable,Failed }
+#if UNITY_EDITOR
+        internal string PlannedYieldFailureDiagnostic;
+        internal int NaturalCollectionHoldCount;
+#endif
         // One optional strategy, fixed before the original staff Submit; not another service side.
         // 只绑定当时已安定的真实 paid waiter；等待 child 不创建新 parent key 或补预算。
         private sealed class DeliveryYieldPlan
@@ -921,6 +925,7 @@ namespace AnimalCafe.Customers
             internal QueueAssignment YieldAssignment;
             internal int YieldGeneration;
             internal DeliveryYieldContinuation Continuation;
+            internal TrafficIntentKey? NaturalCollectionIntent;
             internal TrafficIntentKey ActiveChildKey=>Continuation?.Used==true?Continuation.Intent:Child.Key;
             internal TrafficDecision ActiveChildSource=>Continuation?.Used==true?Continuation.Source:ChildSource;
             internal DeliveryYieldPlan(CustomerFlowController flow,TrafficCandidateCursor parent,TrafficCandidateCursor child,
@@ -1818,6 +1823,7 @@ namespace AnimalCafe.Customers
         internal Action<TrafficRequest> AdmissionPreparationObserver; // Editor-only, default off; original request, no policy replay.
         internal Action<TrafficParkingFact> ParkingNotificationObserver; // Actual original Notify args, default null; no policy replay.
         internal Action<string> CollectedExitPreparationObserver; // Default off; original locals only, never policy replay.
+        internal string CollectedExitPreparationFailureDiagnostic;
         internal int CollectedExitPreparationObservationErrors; // Reader reports UNKNOWN on any enabled witness failure.
         internal Action<string,string,string,Vector3,IReadOnlyList<Vector3>,Vector3[],string> CorridorObserver;
         // Cold-only witness / 只在原始segment、WAIT、replan均拒绝后调用。
@@ -4306,6 +4312,47 @@ namespace AnimalCafe.Customers
                 parent.OriginalDeliveryPlan=new DeliveryYieldPlan(this,parent,child,visit,claim,total.Token,parent.Sides[0]);return;
             }
         }
+        private bool HoldOriginalSideForNaturalCollection(TrafficCandidateCursor parent,TrafficDecision expected)
+        {
+            var plan=parent.OriginalDeliveryPlan;var visit=plan?.Visit;
+            if(plan==null || visit==null)return false;
+            bool Current()=>ReferenceEquals(plan.Coordinator,traffic) && ReferenceEquals(parent.OriginalDeliveryPlan,plan) &&
+                ReferenceEquals(parent.DeliveryContext,plan.Context) && DeliveryContextCurrent(parent,parent.ActorLife as NavigationActor) &&
+                AnchorContextCurrent(traffic,plan.Child.Key) && plan.ChildSource==null && plan.ActiveChildSource==null &&
+                plan.Continuation==null && plan.Child.Source==null && plan.Child.AttemptedIndices.Count==0 &&
+                !traffic.ContainsIntent(plan.Child.Key) && trafficCandidates.TryGetValue(plan.Child.Key,out var child) && ReferenceEquals(child,plan.Child) &&
+                visits.TryGetValue(visit.Id,out var current) && ReferenceEquals(current,visit) && ReferenceEquals(visit.Actor,plan.Actor) &&
+                plan.Actor!=null && plan.Actor.isActiveAndEnabled && world.RegisteredActors.Any(actor=>ReferenceEquals(actor,plan.Actor)) &&
+                ReferenceEquals(visit.Admission,plan.Admission) && ReferenceEquals(pickupQueue,plan.Owner) && ReferenceEquals(visit.PickupOwner,plan.Owner) &&
+                visit.PickupAssigned && !visit.PickupDeparted && visit.DeliveryYieldPhase==0 &&
+                (visit.State==CustomerVisitState.MovingToPickupService || visit.State==CustomerVisitState.PickupService ||
+                    visit.State==CustomerVisitState.Exiting && visit.HasCollected) &&
+                plan.Actor.Settings.AgentRadius==plan.Radius && plan.Actor.Settings.CollisionSkin==plan.Skin && plan.Actor.Settings.Epsilon==plan.Epsilon &&
+                Capacity.GetReservations().Any(token=>ReferenceEquals(token.Token,plan.Total) && token.OwnerId==visit.Id &&
+                    token.Kind==CapacityKind.TotalCustomers && token.State==ReservationState.Occupied) &&
+                plan.Owner.TryCaptureReservation(visit.Id,out var claim) && plan.Claim.IsSameReservation(claim) && claim.IsCurrentCollectionLease;
+            if(!Current())return false;
+            var source=visit.TrafficMove?.Source;
+            var collector=plan.NaturalCollectionIntent??source?.Intent;
+            if(!collector.HasValue)return false;
+            for(var index=0;index<parent.Sides.Count;index++)
+            {
+                if(parent.AttemptedIndices.Contains(index) || parent.StaticInvalidIndices.Contains(index))continue;
+                var side=parent.Sides[index].Position;
+                if(!plan.Owner.TryGetServiceLease(visit.Id,out var occupied) || !occupied.Equals(side))continue;
+                var originalIndex=index;
+                if(traffic.TryHoldDeliveryForNaturalCollection(expected,plan,plan.Claim,collector.Value,plan.Actor,index,side,
+                    ()=>Current() && !parent.AttemptedIndices.Contains(originalIndex) && !parent.StaticInvalidIndices.Contains(originalIndex) &&
+                        parent.Sides[originalIndex].Position.Equals(side)))
+                {
+#if UNITY_EDITOR
+                    if(!plan.NaturalCollectionIntent.HasValue)NaturalCollectionHoldCount++;
+#endif
+                    plan.NaturalCollectionIntent=collector;return true;
+                }
+            }
+            return false;
+        }
         private bool DeliveryYieldIdentityCurrent(DeliveryYieldPlan plan)
         {
             if(plan==null || !ReferenceEquals(plan.Coordinator,traffic) || !AnchorContextCurrent(traffic,plan.Parent.Key) ||
@@ -4345,6 +4392,7 @@ namespace AnimalCafe.Customers
         }
         private bool StopPlannedDelivery(TrafficCandidateCursor parent,PlannedYieldResult result)
         {
+            if(result==PlannedYieldResult.Failed)RecordPlannedYieldFailure(parent.OriginalDeliveryPlan,"caller-stop");
             PickupDeliveryFailure="原让路策略已停止 / Original delivery yield stopped: "+result;
             var continuation=parent.OriginalDeliveryPlan?.Continuation;
             if(continuation!=null)FailYieldContinuation(continuation,PickupDeliveryFailure);
@@ -4360,13 +4408,45 @@ namespace AnimalCafe.Customers
             }
             return false;
         }
+        private PlannedYieldResult RecordPlannedYieldFailure(DeliveryYieldPlan plan,string stage)
+        {
+#if UNITY_EDITOR
+            // Original failure facts only; no currentness/path/claim guard is replayed.
+            // 仅缓存原失败分支字段，不重跑规则、查询或恢复，也不影响原Failed结果。
+            if(PlannedYieldFailureDiagnostic==null && traffic!=null &&
+                (traffic.WaitFailureDiagnosticIntent=="*" || traffic.WaitFailureDiagnosticIntent=="cache-only-all"))
+            try
+            {
+                var visit=plan?.Visit;var parent=plan?.Parent;var child=plan?.Child;var continuation=plan?.Continuation;
+                Visit actual=null;if(visit!=null)visits.TryGetValue(visit.Id,out actual);
+                PlannedYieldFailureDiagnostic="stage="+stage+" frame="+Time.frameCount+" parent="+parent?.Key.ActorId+"/"+parent?.Key.Generation+
+                    " index="+parent?.CurrentIndex+" attempted="+(parent==null?"NONE":string.Join(",",parent.AttemptedIndices))+
+                    " sides="+(parent==null?"NONE":string.Join(";",parent.Sides.Select((side,index)=>index+":"+side.Position.ToString("F9")+"/tried="+parent.AttemptedIndices.Contains(index)+"/static="+parent.StaticInvalidIndices.Contains(index))))+
+                    " serviceLease="+(plan?.Owner==null?"NONE":string.Join(";",plan.Owner.ServiceLeases.Where(pair=>pair.Key==visit?.Id).Select(pair=>pair.Key+"@"+pair.Value.ToString("F9"))))+
+                    " debt=["+(parent==null?"NONE":traffic.DescribeStoredPreparationDebt(parent.Key))+"]"+
+                    " source="+parent?.Source?.Kind+"/"+parent?.Source?.Reason+"/"+parent?.Source?.FailureDisposition+
+                    " visit="+visit?.Id+" sameVisit="+ReferenceEquals(visit,actual)+" sameContext="+ReferenceEquals(parent?.DeliveryContext,plan?.Context)+
+                    " state="+visit?.State+" generation="+visit?.Generation+" expectedGeneration="+plan?.Generation+
+                    " phase="+visit?.TrafficPhaseSequence+" expectedPhase="+plan?.PhaseSequence+" request="+visit?.RequestId+
+                    " collected="+visit?.HasCollected+" departed="+visit?.PickupDeparted+" assigned="+visit?.PickupAssigned+
+                    " yieldPhase="+visit?.DeliveryYieldPhase+" pending="+visit?.PendingPickupSegment+" trafficPending="+visit?.TrafficMovePending+
+                    " actorPose="+(plan?.Actor==null?"NONE":plan.Actor.transform.position.ToString("F9"))+" childOrigin="+child?.Origin.ToString("F9")+
+                    " first="+plan?.FirstFrame+" activeSource="+plan?.ActiveChildSource?.Kind+"/"+plan?.ActiveChildSource?.Reason+
+                    " oldAssignment="+plan?.Assignment+" claimVersion="+plan?.Claim?.CapturedOwnerVersion+" ownerVersion="+plan?.Owner?.Version+
+                    " actualRows="+(plan?.Owner==null?"NONE":string.Join(";",plan.Owner.Snapshot.Where(row=>row.VisitId==visit?.Id)))+
+                    " continuation="+continuation?.Used+"/"+continuation?.Pending+"/"+continuation?.Failed+"/"+continuation?.CancellationConfirmed;
+            }
+            catch(Exception error){PlannedYieldFailureDiagnostic="UNKNOWN_YIELD_FAILURE "+error.GetType().Name;}
+#endif
+            return PlannedYieldResult.Failed;
+        }
         private PlannedYieldResult PrepareTrafficYield(NavigationActor employee,TrafficCandidateCursor deliverySource)
         {
             var plan=deliverySource.OriginalDeliveryPlan;
             var continuation=plan?.Continuation;
             if(continuation!=null && (continuation.Failed || !continuation.Used || continuation.Pending))
-                return continuation.CancellationConfirmed && YieldContinuationCheckpointCurrent(continuation)?PlannedYieldResult.Pending:PlannedYieldResult.Failed;
-            if(!DeliveryYieldIdentityCurrent(plan))return PlannedYieldResult.Failed;
+                return continuation.CancellationConfirmed && YieldContinuationCheckpointCurrent(continuation)?PlannedYieldResult.Pending:RecordPlannedYieldFailure(plan,"continuation");
+            if(!DeliveryYieldIdentityCurrent(plan))return RecordPlannedYieldFailure(plan,"identity");
             if(plan.ActiveChildSource!=null)
             {
                 if(PlannedYieldArrived(plan))return PlannedYieldResult.Yielded;
@@ -4375,11 +4455,11 @@ namespace AnimalCafe.Customers
                 var move=plan.Visit.TrafficMove;
                 return plan.Visit.DeliveryYieldPhase==1 && plan.Visit.State==CustomerVisitState.PickupAdvancing && move!=null &&
                     ReferenceEquals(move.Coordinator,traffic) && move.Intent.Equals(plan.ActiveChildKey) && ReferenceEquals(move.Source,plan.ActiveChildSource)
-                    ?PlannedYieldResult.Pending:PlannedYieldResult.Failed;
+                    ?PlannedYieldResult.Pending:RecordPlannedYieldFailure(plan,"active-child");
             }
             if(deliveryYieldCount>=2 || !TrafficActorReady(plan.Actor) || !TrafficActorReady(employee))return PlannedYieldResult.Unavailable;
             var waiter=plan.Visit;var key=plan.Child.Key;var cursor=plan.Child;
-            if(traffic.ContainsIntent(key) && traffic.GetDecision(key).FailureDisposition==TrafficFailureDisposition.Terminal)return PlannedYieldResult.Failed;
+            if(traffic.ContainsIntent(key) && traffic.GetDecision(key).FailureDisposition==TrafficFailureDisposition.Terminal)return RecordPlannedYieldFailure(plan,"child-terminal");
             RefreshTrafficSnapshot();
             if(!SelectTrafficCandidate(cursor,waiter.Actor,(candidate,unused,point)=>
             {
@@ -4397,7 +4477,7 @@ namespace AnimalCafe.Customers
                         waiter.Actor.Settings.AgentRadius,"pickup/"+waiter.Id,
                         safetyMargin:waiter.Actor.Settings.CollisionSkin+waiter.Actor.Settings.Epsilon,planPrimaryRoute:true));
             },out var choice,out _))return PlannedYieldResult.Unavailable;
-            if(!cursor.TryDescribe(key,waiter.Actor,choice,out var side,out var target))return PlannedYieldResult.Failed;
+            if(!cursor.TryDescribe(key,waiter.Actor,choice,out var side,out var target))return RecordPlannedYieldFailure(plan,"child-describe");
             var occupied=trafficSnapshot.Parking.Where(p=>p.Owner.ActorId!=waiter.Id && p.Owner.ActorId!=employee.ActorId).Select(p=>p.Position)
                 .Concat(trafficSnapshot.Bodies.Where(b=>b.Owner.ActorId!=waiter.Id && b.Owner.ActorId!=employee.ActorId && !b.IndependentlyProgressing).Select(b=>b.Position)).Distinct().ToArray();
             var proofs=new[]{new TrafficRouteRequirement("yield-work-out",employee.transform.position,side.Position,RouteClearance(employee.Settings),occupied),
@@ -4407,17 +4487,17 @@ namespace AnimalCafe.Customers
             {
                 deliveryYieldCount++;
                 if(!traffic.TryGetCommittedJourney(key,out var source) || !plan.Owner.TryCaptureReservation(waiter.Id,out var claim) ||
-                    !plan.Owner.TryGetReservation(waiter.Id,out var assignment))return PlannedYieldResult.Failed;
+                    !plan.Owner.TryGetReservation(waiter.Id,out var assignment))return RecordPlannedYieldFailure(plan,"child-published-source");
                 plan.ChildSource=source;plan.YieldClaim=claim;plan.YieldAssignment=assignment;plan.YieldGeneration=waiter.Generation;
                 return PlannedYieldResult.Pending;
             }
             if(!traffic.ContainsIntent(key))return PlannedYieldResult.Unavailable;
             var pending=traffic.GetDecision(key);
-            if(pending.FailureDisposition==TrafficFailureDisposition.Terminal)return PlannedYieldResult.Failed;
+            if(pending.FailureDisposition==TrafficFailureDisposition.Terminal)return RecordPlannedYieldFailure(plan,"child-submitted-terminal");
             // A real finite child proposal (or its remaining original candidates) is the only asynchronous prerequisite.
             return pending.AcquiredSequence==0 && (pending.Kind==TrafficDecisionKind.DeferredByBudget ||
                 pending.Kind==TrafficDecisionKind.WaitingForTraffic || pending.FailureDisposition==TrafficFailureDisposition.AlternateAllowed)
-                ?PlannedYieldResult.Pending:PlannedYieldResult.Failed;
+                ?PlannedYieldResult.Pending:RecordPlannedYieldFailure(plan,"child-pending-shape");
         }
         internal void SetTrafficDeliveryGate(Func<string,bool> gate) => trafficDeliveryGate=gate;
         private bool BindDeliveryPreparationReadiness(TrafficCandidateCursor cursor,TrafficDecision initial)
@@ -4648,6 +4728,7 @@ namespace AnimalCafe.Customers
                 if(prior?.FailureDisposition==TrafficFailureDisposition.AlternateAllowed && cursor.OriginalDeliveryPlan!=null &&
                     !cursor.AttemptedIndices.Contains(cursor.Sides.Count))
                 {
+                    if(HoldOriginalSideForNaturalCollection(cursor,prior))return false;
                     var result=PrepareTrafficYield(actor,cursor);
                     if(result==PlannedYieldResult.Pending)return false;
                     if(result!=PlannedYieldResult.Yielded)return StopPlannedDelivery(cursor,result);
@@ -4784,7 +4865,10 @@ namespace AnimalCafe.Customers
             TrafficDecision decision=null,TrafficRequest request=null,bool? live=null,bool? bound=null,string guards="NOT_EVALUATED")
         {
 #if UNITY_EDITOR
-            var observer=CollectedExitPreparationObserver;if(observer==null)return;
+            var observer=CollectedExitPreparationObserver;
+            var store=stage=="bind-computed" && bound==false && traffic!=null &&
+                (traffic.WaitFailureDiagnosticIntent=="*" || traffic.WaitFailureDiagnosticIntent=="cache-only-all");
+            if(observer==null && !store)return;
             try
             {
                 object Stored(object value,string member)
@@ -4800,13 +4884,15 @@ namespace AnimalCafe.Customers
                 object boxed=key.HasValue?(object)key.Value:null;var world=Stored(request,"Snapshot");
                 var actualKey=boxed==null?"NOT_CREATED":Scalar(boxed,"Session")+"/e"+Scalar(boxed,"Epoch")+"/"+Scalar(boxed,"ActorId")+"/"+
                     Scalar(boxed,"IntentId")+"/g"+Scalar(boxed,"Generation")+"/r"+Scalar(boxed,"LayoutRevision")+"/"+Scalar(boxed,"Context");
-                observer("COLLECTED_EXIT_PREPARATION_ORIGINAL key="+actualKey+" first="+first+" live="+(live.HasValue?live.Value.ToString():"NOT_EVALUATED")+
+                var message="COLLECTED_EXIT_PREPARATION_ORIGINAL key="+actualKey+" first="+first+" live="+(live.HasValue?live.Value.ToString():"NOT_EVALUATED")+
                     " bound="+(bound.HasValue?bound.Value.ToString():"NOT_EVALUATED")+" stage="+stage+" sequence="+sequence+" generation="+generation+" collected="+collected+
                     " pending="+Ref(pending)+" handle="+Ref(pending?.Handle)+" predecessorSource="+Ref(pending?.Source)+" marked="+pending?.Marked+
                     " actor="+Ref(actor)+" pendingActor="+Ref(pending?.Actor)+" admission="+Ref(admission)+" pendingAdmission="+Ref(pending?.Admission)+
                     " decision="+Ref(decision)+" kind="+Scalar(decision,"Kind")+" reason="+Scalar(decision,"Reason")+
                     " disposition="+Scalar(decision,"FailureDisposition")+" requestSeq="+Scalar(decision,"RequestSequence")+" acquiredSeq="+Scalar(decision,"AcquiredSequence")+
-                    " request="+Ref(request)+" requestFirst="+Scalar(request,"RequestedFrame")+" snapshot="+Ref(world)+" version="+Scalar(world,"Version")+"/"+Scalar(world,"BodyVersion")+" guards="+guards);
+                    " request="+Ref(request)+" requestFirst="+Scalar(request,"RequestedFrame")+" snapshot="+Ref(world)+" version="+Scalar(world,"Version")+"/"+Scalar(world,"BodyVersion")+" guards="+guards;
+                if(store)CollectedExitPreparationFailureDiagnostic=message;
+                observer?.Invoke(message);
             }
             catch(Exception){CollectedExitPreparationObservationErrors++;}
 #endif

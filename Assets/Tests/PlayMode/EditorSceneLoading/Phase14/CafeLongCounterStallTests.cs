@@ -1,4 +1,4 @@
-#if UNITY_EDITOR
+﻿#if UNITY_EDITOR
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -5338,6 +5338,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                             if(CafeLoopRuntimeProof.Field<bool>(stored.Value,"UnpaidEligibilityHeld"))
                                 TestContext.WriteLine("LONG_UNPAID_SPATIAL "+CafeLoopRuntimeProof.Field<string>(stored.Value,"UnpaidPreparationDiagnostic"));
                         TestContext.WriteLine("LONG_STALLED_WAIT "+CafeLoopRuntimeProof.Field<string>(ciCore,"WaitFailureDiagnostic"));
+                        TestContext.WriteLine("LONG_PLANNED_YIELD_FAILURE "+CafeLoopRuntimeProof.Field<string>(customers,"PlannedYieldFailureDiagnostic"));
                         File.AppendAllText(output, UserExitPathQueries("STALLED") + "\n");
                         File.AppendAllText(output, UserTrafficPathQueries("STALLED") + "\n");
                         TestContext.WriteLine("USER_LONG_COUNTER_STALL\n" + string.Join("\n", history));
@@ -5389,6 +5390,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 Assert.That(owner.Snapshot.Delivery, Is.Empty);
                 if(publicationProbe) Assert.That(corridorTrace.ServiceDeferrals,Is.GreaterThan(0),"This controlled chronology must actually encounter a protected service corridor");
                 File.AppendAllText(output, "RESULT twenty actual exits, all orders completed, capacities zero\n");
+                TestContext.WriteLine("NATURAL_COLLECTION_HOLDS "+CafeLoopRuntimeProof.Field<int>(customers,"NaturalCollectionHoldCount"));
             }
             finally
             {
