@@ -1,6 +1,6 @@
 # Phase 15 自动营业周期：Beginner Guide
 
-> **当前：Linux精简CI有4项经营失败，修复验证进行中，P15未关闭。** aa80341云端结果为Edit1511 PASS、Play175 PASS／4 FAIL／1既有SKIP；P15周期77/77 PASS。2026-11-23四项Windows定向基线全部通过20次真实离店，但不能代替Linux结果。新增修复尚待组合精简回归和云端验证；既有D2状态缺口仍NOT_PROVEN，PR不merge。下方8项手动步骤保持。
+> **当前：两项修复已推送到PR #15，新增Main经营失败后已按约停止继续修改和重跑，P15未关闭。** `1a5e069`本地Edit1522 PASS，Play177 PASS／2 FAIL／1既有D2 SKIP；P15周期77/77 PASS。本地失败为LongSevenNormal与Main连续三批经营；Linux四项定向3 PASS／1项PhotoSevenNormal在持续经营中触发180秒wall Timeout，尚未调整时限。正式compact云端仍待执行，PR不merge。下方8项手动步骤保持。
 
 ## 0. 按顺序手动验收（8 项）
 

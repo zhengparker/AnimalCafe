@@ -1,7 +1,7 @@
 # Phase 15 — Business Day Lifecycle Validation Report
 
 <!-- P15_LINUX_FOUR_REPAIR_20261123_BEGIN -->
-**当前：正在修复 PR #15、aa80341 的四项 Linux 经营失败，P15 未关闭，PR 不 merge。**
+**当前：两项修复已推送到 PR #15 的 `1a5e069`；完整本地Play出现新增Main经营失败，已按约停止继续产品修改和重跑。P15未关闭，PR不merge。**
 
 2026-11-17 云端 run `44023266062`：Edit1511 PASS；Play175 PASS／4 FAIL／1既有SKIP；P15周期77/77 PASS。四项失败为 LongSevenNormal、LongSixNormal、PhotoSevenFast、PhotoSevenNormal，均为原45游戏秒无订单完成检查，并非NUnit wall Timeout。
 
@@ -9,9 +9,17 @@
 
 已取得两项准确public生命周期反例：已提交且仍接受原柜台任务的Reserve不能启动Collection准备（3目标FAIL／2控制PASS，XML `102D7F146936BD3F85C66765C62F5AFD933C0AED5E6BF13682DC600BED5CC685`）；员工已冻结原Paid后遇到更早Prepared collector路线，不能尝试未用原侧（2目标FAIL／2控制PASS，XML `DC58660EBAC86062814770278E1CB9C0BE6AB81E907E22BF6EC7D3F42A8DA6E2`；同批mixed-body的测试准备失败不计产品RED）。第一项修复及到站位置偏差等6项定向已PASS；组合源码精简回归及云端结果仍待完成。
 
-LongSevenNormal旧Exit具体腿状态、PhotoSevenNormal unpaid资格拒绝的具体role仍UNKNOWN。仅补测试启用、原失败发生后的raw缓存，不重跑guard或额外查询；不先放宽政策。正式compact保持4个Edit selectors／100个Play selectors，新增11个Edit case后预期1522／180。以下均为对应旧源码历史。
+修复开始时，LongSevenNormal旧Exit具体腿状态、PhotoSevenNormal unpaid资格拒绝的具体role均UNKNOWN。仅补测试启用、原失败发生后的raw缓存，不重跑guard或额外查询；不先放宽政策。正式compact保持4个Edit selectors／100个Play selectors，新增11个Edit case后预期1522／180。
 
-组合源码原4 selectors精简Edit已实际通过：**1522 PASS／0 FAIL／0 SKIP**，9.4305448秒，XML `F60AFCF629EF5CDB8C9AFA79FCED4B0C28507FBFC3C887BE9C67C8F254267928`；新增两组6＋5项均GREEN。537文件源码集合 `65E4905FC4E8BBA2D3BEF7BF9A5FBB63173A6CE6362F3B877436691EE3E667EE`，Assets3192／原source469／inputs3／Scenes28均无差异；资源恢复0、未知delta0、Editor workers0，OS handles UNKNOWN。helper10项PASS。Play及当前源码Linux仍待验证；`p15-ci-four-failures`仅定向诊断，不替代正式Unity CI。
+组合源码原4 selectors精简Edit已实际通过：**1522 PASS／0 FAIL／0 SKIP**，9.4305448秒，XML `F60AFCF629EF5CDB8C9AFA79FCED4B0C28507FBFC3C887BE9C67C8F254267928`；新增两组6＋5项均GREEN。537文件源码集合 `65E4905FC4E8BBA2D3BEF7BF9A5FBB63173A6CE6362F3B877436691EE3E667EE`，Assets3192／原source469／inputs3／Scenes28均无差异；资源恢复0、未知delta0、Editor workers0，OS handles UNKNOWN。helper10项PASS；此Edit阶段Play及Linux尚未完成，最终结果如下。
+
+`1a5e069`最终本地Play：**177 PASS／2 FAIL／1既有D2 SKIP**，180项、1294.6228629秒，XML `1765956391FD6B0FCD59591F397204DE79E4CE453E44C187FB26FA8909A1FAB1`。P15周期77/77 PASS；七种布局6 PASS／1 FAIL，6项成功均完成20次真实离店。LongSevenNormal仍失败；另新增`MainDefaultCounterPlacementCompletesThreeFreshNaturalCohorts`失败，场景56.858秒时第4位已付款顾客进入Blocked，具体根因UNKNOWN。本轮未为该新增问题扩展产品修改。
+
+LongSevenNormal新缓存认证：原Frozen Exit1实际Active＋Committed＋Bound、leg2／generation12、未Completed；新Collector2为acquired18的Prepared次腿、未Commit／Bind。不能将本次归因于“旧Exit未发次腿”；新Collector具体index仍需下一步真实谱系模型核对。仅保留证据，没有据此放宽路权。
+
+Linux定向[run45187544446](https://github.com/zhengparker/AnimalCafe/actions/runs/45187544446)测试同一`1a5e069`：Core Edit1211 PASS，Play3 PASS／1 FAIL；LongSevenNormal、LongSixNormal、PhotoSevenFast均PASS。PhotoSevenNormal触发原NUnit180秒wall Timeout，末记录12单Completed／11次实际离店、idle3.27游戏秒、无Blocked；清场又触发“非出口销毁不能算真实离店”断言，不能算正常完成。该case在本地为121.568690秒PASS。Timeout尚未调整，已询问是否改360秒；原45游戏秒无进展检查及20次真实离店断言保持。
+
+Artifact14824549909 SHA256 `B2D859C4EA8582FE7B4A54304E9FC4054F348141F08165A670F78B8E446A8036`已核对。定向结果不能满足required Unity CI；当前产品源码正式compact云端NOT_RUN。两模式source537全匹配、资源／Scene parity零差异，Play恢复8份历史输出、资源恢复0、未知0、Editor workers0；OS handles UNKNOWN。完整证据位于`outputs/phase15/p15-ci-four-repair-20261123/`。Windows与Linux分别记录，任何一方通过均不覆盖另一方失败。
 <!-- P15_LINUX_FOUR_REPAIR_20261123_END -->
 
 <!-- P15_COUNTER_PHOTO_REPAIR_20261117_BEGIN -->
