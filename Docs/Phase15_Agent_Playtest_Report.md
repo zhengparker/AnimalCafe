@@ -1,10 +1,12 @@
 # Phase 15 Agent 代测记录（2026-10-27）
 
+> **历史Agent代测记录。** 本报告仅记录2026-10-27对应源码与真实Editor UI操作；不冒充Owner本人或设备验收。P15当前工程实现、成功CI、PR #15合并及merged-main结论见[Validation Report](Phase15_Validation_Report.md)。旧worktree已清理，历史证据链接改指本机归档；下方“当前”“未执行CI／Git”等表述只描述采集当时，历史FAIL和UNKNOWN继续保留。
+
 用户授权代测后，Agent 使用真实 Unity Editor UI 操作 MainCafe 与独立 P15 Scene。以下是 **Agent 实测**，不冒充 Owner 本人试玩或手机验收。初轮未修改产品／测试源码、Scene、prefab 或 meta；随后经用户批准执行下文三文件HUD修复。未执行 CI／Git 交付。
 
 环境：worktree `E:/Unity/Project/AnimalCafe/.worktrees/phase-15-business-day`，branch `codex/phase-15-business-day`，HEAD `f55d4eb685f32e4dcc30fb64b753b45b695a6a3b` 加当前未提交实现，Unity `6000.5.5f1`，Windows Editor Game View。Validation 使用真实60／15秒，Main使用28800／7200秒；没有注入时钟或把验证布局注入 Main。
 
-## 当前结论：原批准 M01–M07 已有 Agent PASS；Guide 扩展检查仍有缺口
+## 历史结论（2026-10-27）：原批准 M01–M07 已有 Agent PASS；Guide 扩展检查仍有缺口
 
 2026-10-27 HUD修复后，按用户要求补测M01–M04。当前按[原批准test cases第4节](superpowers/specs/2026-10-26-phase-15-business-day-test-cases.md#4-scene--owner-manual)记录：M01–M04 Validation PASS，结合此前M05出口分支、M06、M07正常UI PASS，原七项均有Agent通过记录。后续Guide追加的Main正常装修开店和直接付款集合对照仍未完成，不能将它们写成PASS。下面保留初轮和HUD修复时点的3／7历史；本轮证据见末节。Debugger异常仍UNKNOWN，Owner观感和device仍未验收。
 
@@ -34,15 +36,15 @@
 
 ## 初轮原始证据与当时结论（修复前历史）
 
-所有未编辑截图与操作事件在 [agent-manual](../outputs/phase15/agent-manual/)；最终清单为 [events-final.json](../outputs/phase15/agent-manual/events-final.json)。关键截图：
+所有未编辑截图与操作事件在 [agent-manual](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/)；最终清单为 [events-final.json](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/events-final.json)。关键截图：
 
-- [Open Pause](../outputs/phase15/agent-manual/m04-open-paused-1793137076475.png) → [Closing仍保持队列](../outputs/phase15/agent-manual/m04-closing-paused-1793137157921.png)。
-- [真实出口堵塞](../outputs/phase15/agent-manual/m05-actual-exit-blocked-1793137549632.png) → [恢复后排空才Rest15](../outputs/phase15/agent-manual/m02-m05-recovered-rest15-1793137601560.png) → [次日仍Pause](../outputs/phase15/agent-manual/m03-m04-next-day-keeps-pause-1793137619194.png)。
-- [Preview取消不中断](../outputs/phase15/agent-manual/m06-preview-cancel-no-interruption-1793137662761.png)；[Closing实际装修中断一次](../outputs/phase15/agent-manual/m06-closing-layout-interrupted-once-1793137800203.png)；[下一Open及旧callback](../outputs/phase15/agent-manual/m06-next-open-retired-callback-safe-1793137826821.png)。
-- [Validation横屏长Closing](../outputs/phase15/agent-manual/m07-landscape960-long-closing-1793137888686.png)；[Main正式配置及横屏遮挡](../outputs/phase15/agent-manual/m01-main-formal-config-1793138005679.png)；[Main竖屏遮挡](../outputs/phase15/agent-manual/m07-fail-main-readiness-overlap-portrait-1793138019941.png)。
-- [调试器期间异常栈](../outputs/phase15/agent-manual/editor-debugger-exception-stack-1793137764300.png)；[Main结束后Console及非Play状态](../outputs/phase15/agent-manual/main-session-console-zero-and-stopped-1793138275629.png)。
+- [Open Pause](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/m04-open-paused-1793137076475.png) → [Closing仍保持队列](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/m04-closing-paused-1793137157921.png)。
+- [真实出口堵塞](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/m05-actual-exit-blocked-1793137549632.png) → [恢复后排空才Rest15](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/m02-m05-recovered-rest15-1793137601560.png) → [次日仍Pause](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/m03-m04-next-day-keeps-pause-1793137619194.png)。
+- [Preview取消不中断](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/m06-preview-cancel-no-interruption-1793137662761.png)；[Closing实际装修中断一次](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/m06-closing-layout-interrupted-once-1793137800203.png)；[下一Open及旧callback](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/m06-next-open-retired-callback-safe-1793137826821.png)。
+- [Validation横屏长Closing](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/m07-landscape960-long-closing-1793137888686.png)；[Main正式配置及横屏遮挡](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/m01-main-formal-config-1793138005679.png)；[Main竖屏遮挡](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/m07-fail-main-readiness-overlap-portrait-1793138019941.png)。
+- [调试器期间异常栈](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/editor-debugger-exception-stack-1793137764300.png)；[Main结束后Console及非Play状态](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual/main-session-console-zero-and-stopped-1793138275629.png)。
 
-退出Play后，[Assets逐hash核对](../outputs/phase15/agent-manual-assets-parity.json)为测试前3172／后3172、差异0。没有保存Play中的装修变化；Editor停在Main的非Play状态，无Scene dirty标记。没有找到本次启动请求的独立`agent-manual-editor.log`，不引用旧Editor.log作为本轮原生日志；以UI截图及事件为证据。
+退出Play后，[Assets逐hash核对](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/agent-manual-assets-parity.json)为测试前3172／后3172、差异0。没有保存Play中的装修变化；Editor停在Main的非Play状态，无Scene dirty标记。没有找到本次启动请求的独立`agent-manual-editor.log`，不引用旧Editor.log作为本轮原生日志；以UI截图及事件为证据。
 
 此前完整Edit2832 PASS和独立Play1445 PASS／5 opt-in SKIP保持各自原receipt；此次manual FAIL不会被自动测试抵消。**当前手测未收口，不具备正式Phase closure／merge readiness。** 需修复HUD遮挡、调查或明确处置Debugger异常，并补完表内缺口。Owner视觉喜好、实际8小时＋排空＋2小时、Player／真机／挂起恢复、CI及Git交付仍未验证。
 
@@ -50,9 +52,9 @@
 
 本节时点为 **3／7 PASS**：M05出口分支、M06、M07正常Editor UI；当时M01–M04按扩展Guide仍为PARTIAL。初轮M07 FAIL已由以下修复与复测解决，不覆盖Debugger UNKNOWN。最新原批准范围与扩展检查的分列见末节。
 
-只修改BusinessDayStatusView.cs和两份P15 Scene测试：周期HUD避让同一UI根下可见readiness实际边界，保留8单位间距；隐藏后释放，Decor沿用隐藏共享HUD，Done恢复。不改P8R、Scene、prefab、meta、时间规则或游戏流程。实现细节和hash见[修复报告](../.superpowers/sdd/2026-10-26-phase-15-business-day/manual-hud-repair-report.md)，[独立复核](../.superpowers/sdd/2026-10-26-phase-15-business-day/manual-hud-task-review.md)Spec／quality PASS，Critical0／Important0／Minor0。
+只修改BusinessDayStatusView.cs和两份P15 Scene测试：周期HUD避让同一UI根下可见readiness实际边界，保留8单位间距；隐藏后释放，Decor沿用隐藏共享HUD，Done恢复。不改P8R、Scene、prefab、meta、时间规则或游戏流程。实现细节和hash见[修复报告](../outputs/p15-closeout-20261124/worktree-local-files/.superpowers/sdd/2026-10-26-phase-15-business-day/manual-hud-repair-report.md)，[独立复核](../outputs/p15-closeout-20261124/worktree-local-files/.superpowers/sdd/2026-10-26-phase-15-business-day/manual-hud-task-review.md)Spec／quality PASS，Critical0／Important0／Minor0。
 
-当前源定向PlayMode：[原始XML](../outputs/phase15/manual-hud-green3.xml)123项，**122 PASS／0 FAIL／1原有opt-in SKIP**；P15为70 PASS。CLI0、native log0，OS handle exit UNKNOWN。原RED两项重叠FAIL及中间33／1 FAIL运行均保留。此前完整Edit2832 PASS、完整Play1445 PASS＋5 SKIP是HUD修复前source的receipt，本次没有重新完整suite，不能冒充当前源全量通过。
+当前源定向PlayMode：[原始XML](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/manual-hud-green3.xml)123项，**122 PASS／0 FAIL／1原有opt-in SKIP**；P15为70 PASS。CLI0、native log0，OS handle exit UNKNOWN。原RED两项重叠FAIL及中间33／1 FAIL运行均保留。此前完整Edit2832 PASS、完整Play1445 PASS＋5 SKIP是HUD修复前source的receipt，本次没有重新完整suite，不能冒充当前源全量通过。
 
 真实Windows Editor未注入时钟或伪造snapshot，操作两Scene及540×960／960×540：
 
@@ -60,7 +62,7 @@
 - Validation真实Open、长Closing原因、Rest均在面板内；Pause／2x／Decor实际可点击。Day2 Closing确认默认绿色柜台后LayoutInterrupted1、Epoch2；恢复2x后真实排空才Rest00:15，Day3自动Open仍显示上日LayoutInterrupted1，两尺寸历史均完整。横屏Rest使用Day1 CompletedDrain，竖屏Rest使用Day2 LayoutInterrupted，未声称捕获横屏中断Rest。
 - 本次正常路径Console warning／error均0；定向日志未找到NullReferenceException、ArgumentOutOfRangeException、dt assertion或C#编译error。退出日志另有mono abort_threads、debugger-agent端口监听及hubIPC shutdown诊断，未定位，不能由此声称原生资源完全关闭；Sky随后确认本次Editor窗口消失。原Debugger期间异常与拖动／目录滚动UNKNOWN继续保留，没有修复或重试其代码。
 
-未编辑截图与逐条记录见[新增证据events-final.json](../outputs/phase15/manual-hud-ui/events-final.json)。Stop后未保存运行中装修，Scene无dirty标记；[修复源之后至UI结束Assets核对](../outputs/phase15/manual-hud-ui-assets-parity.json)3172／3172、增删改0，三份修复源码hash与GREEN3一致。
+未编辑截图与逐条记录见[新增证据events-final.json](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/manual-hud-ui/events-final.json)。Stop后未保存运行中装修，Scene无dirty标记；[修复源之后至UI结束Assets核对](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/manual-hud-ui-assets-parity.json)3172／3172、增删改0，三份修复源码hash与GREEN3一致。
 
 接下来补M01–M04缺口与Debugger问题的明确处置，Owner观感、真实8h＋排空＋2h、Player／device、CI／VCS仍未验证。当前不宣布正式Phase closure或merge readiness，不进入P16。
 
@@ -93,7 +95,7 @@
 | Rest Pause | Day5 00:13→00:07，约5.25s，秒显示取整；没有解除Pause。 |
 | Rest 2x | Day6 00:13→00:08，约5.25s，没有把Rest加速一倍。 |
 
-本轮截图与事件见[events-final.json](../outputs/phase15/m01-m04-manual/events-final.json)；日志[独立Editor log](../outputs/phase15/m01-m04-editor.log)，[identity-comparison.json](../outputs/phase15/m01-m04-manual/identity-comparison.json)实际解析3次Snapshot：订单8／15／15，首批key／owner保留，后两次Completed集合及员工行完全相同。PaidVisitIds没有被现有PrintSnapshot打印，不能由订单或源码推断冒充直接付款集合证据。
+本轮截图与事件见[events-final.json](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/m01-m04-manual/events-final.json)；日志[独立Editor log](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/m01-m04-editor.log)，[identity-comparison.json](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/m01-m04-manual/identity-comparison.json)实际解析3次Snapshot：订单8／15／15，首批key／owner保留，后两次Completed集合及员工行完全相同。PaidVisitIds没有被现有PrintSnapshot打印，不能由订单或源码推断冒充直接付款集合证据。
 
 ### 采集限制与仍开放的补充检查
 
@@ -101,9 +103,9 @@
 
 补充检查继续开放：Main按正常UI布置完整有效布局→Done→自动来客，直接读取完整PaidVisitIds前后集合，Owner观感、8h＋排空＋2h、Player／device／挂起、CI／VCS。此前拖动／目录滚动和Debugger时间参数异常仍UNKNOWN；本轮没有新调查或修复。Main打开对话框在加载前已取消，未用seed／API布局或修改正式8h／2h。
 
-本轮Console保留5条正常信息，warning0／error0；日志定向异常检查0。Play已停止且未保存Scene，随后Sky确认Editor窗口关闭。退出日志诊断和OS native handle结果另保留边界，不推断资源全部关闭。[Assets核对](../outputs/phase15/m01-m04-assets-parity.json)3172／3172、增删改0；本轮未改产品／测试源码、Scene、prefab或meta，未新增自动suite或Git／CI操作。
+本轮Console保留5条正常信息，warning0／error0；日志定向异常检查0。Play已停止且未保存Scene，随后Sky确认Editor窗口关闭。退出日志诊断和OS native handle结果另保留边界，不推断资源全部关闭。[Assets核对](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/m01-m04-assets-parity.json)3172／3172、增删改0；本轮未改产品／测试源码、Scene、prefab或meta，未新增自动suite或Git／CI操作。
 
-独立QA已读取原批准标准、实际截图和日志，结论为**原批准M01–M04 4 PASS，限Windows Editor Validation Scene**；Main补充路径与PaidVisitIds／Paid FIFO原始集合仍未完成／NOT_PRINTED。复核同时排除误标pair，未操作Unity或重跑测试，见[review.md](../outputs/phase15/m01-m04-manual/review.md)。
+独立QA已读取原批准标准、实际截图和日志，结论为**原批准M01–M04 4 PASS，限Windows Editor Validation Scene**；Main补充路径与PaidVisitIds／Paid FIFO原始集合仍未完成／NOT_PRINTED。复核同时排除误标pair，未操作Unity或重跑测试，见[review.md](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/m01-m04-manual/review.md)。
 
 
 ## Main 玩家 HUD 分离后复测（2026-10-27）

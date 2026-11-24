@@ -1,6 +1,8 @@
 # Phase 15 自动营业周期：Beginner Guide
 
-> **当前P15为In Review，PR #15未合并。** 上一提交云端compact剩长柜台1x一项失败（17/20单）；本轮后提交Reserve挡住取餐端点的换原侧修正已通过专项7/7和本地精简回归：Edit1582通过，Play179通过／0失败／1既有D2跳过，P15自身Edit68／Play77全通过，Main与七种布局经营验证通过。发布后运行同范围compact CI，当前head云端结论见[PR checks](https://github.com/zhengparker/AnimalCafe/pull/15/checks)。不以本地结果替代正式关闭P15，不进入P16。见[验证报告](Phase15_Validation_Report.md)。
+> **P15 工程收尾完成，PR #15 已合并。** 2026-11-24 合并为 `224e7c7`；云端精简 CI：Edit1582 PASS，Play179 PASS / 0 FAIL / 1 既有 D2 SKIP；实际 merged-main 定向检查：Edit75 PASS、Play77 PASS、配置检查10 PASS。本地 main 已 fast-forward，原 P15 分支及 worktree 已清理。D2 仍为 NOT_PROVEN；Owner 观感、真实8小时周期、Player／设备及挂起恢复等既有验收边界保留。可进入 P16 设计准备，尚未开始 P16 实现。见[当前收尾与证据](Phase15_Validation_Report.md)、[已合并 PR #15](https://github.com/zhengparker/AnimalCafe/pull/15)与[成功 CI](https://github.com/zhengparker/AnimalCafe/actions/runs/45474112047)。
+
+> **历史快照说明：** 下方带日期的开发／失败记录保留其当时源码与验收范围，不覆盖上方工程收尾结论。原证据已迁移到本机 `outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/`；文中的本地证据链接仅供本机使用，GitHub 端请使用 PR／CI 链接。
 
 ## 0. 按顺序手动验收（8 项）
 
@@ -73,13 +75,17 @@
 
 每项记下 PASS／FAIL、Scene、操作步骤和新增 Console error。这 8 项的本人人工结果仍由实际观察填写。原旧离店交接专项继续保留 NOT_PROVEN，短周期测试记录覆盖本次观察的周期。
 
+## 历史代测资料区
+
+下方至第4.1节为原日期／源码的代测快照；其中“最新”“当前”均指采集当时。不把历史Main失败删成通过，也不把旧manual证据当作当前源码重新手测。当前工程结论见文首，第5／6节给出现在的验收边界和打开方式。
+
 > **历史阶段记录（2026-10-31）：统一服务交通重构仍在开发，暂未进入最终手动验收。** 一轮定向测试为 Edit702 PASS、实际运行24 PASS／2 SKIP／0 FAIL；这只验证已接入的员工恢复与部分顾客流程。服务站位、闭店排空、其余布局及 Main 完整操作仍需继续开发和测试。下方 Main FAIL 与旧手测是历史源码记录，不能当作当前重构的完整结论。当前范围和原始结果见[Validation Report](Phase15_Validation_Report.md)；正式8小时营业／2小时休息规则不变。
 
-> **最新Main补测（2026-10-30本地）：完整经营FAIL。** 正常目录装修后三项设备Ready，Done能自动进店，但首单送杯阶段Barista为`Blocked / IncompletePath`，Completed=0。Pause／2x／镜头仍响应，现场保留在Play＋游戏Pause，没有改代码或保存Scene。原因尚未查明；历史整局无响应按Owner要求搁置。旧相关suite与Validation通过记录保持其范围，P15未完成。见[Main补测报告及截图](../outputs/phase15/reservation-rule-20261029-01/manual-main-complete/report.md)。
+> **最新Main补测（2026-10-30本地）：完整经营FAIL。** 正常目录装修后三项设备Ready，Done能自动进店，但首单送杯阶段Barista为`Blocked / IncompletePath`，Completed=0。Pause／2x／镜头仍响应，现场保留在Play＋游戏Pause，没有改代码或保存Scene。原因尚未查明；历史整局无响应按Owner要求搁置。旧相关suite与Validation通过记录保持其范围，P15未完成。见[Main补测报告及截图](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/reservation-rule-20261029-01/manual-main-complete/report.md)。
 
-> **此前相关suite与Validation窗口（2026-10-30）：PASS，不覆盖上方Main失败。** 当前同源相关Edit387PASS、Play299PASS／0FAIL／6项明确opt-in SKIP；八种长柜台各20次真实离店、容量归零，原失败照片六节1x本次通过。普通Editor在真实中央柜台装修后连续618.975秒运行至Day7／Completed66，真实Rest排空与自动重开、Pause／1x／2x／Decor／镜头／横竖屏响应正常，Console0warning／0error。此次没有重做真实堵路恢复manual7，旧源码记录与当前Native正反例分开；历史整个Game输入失效首因仍UNKNOWN。下面旧失败保留，具体结果与剩余Owner／CI／Git等门槛见[Validation Report](Phase15_Validation_Report.md)和[当前GUI报告](../outputs/phase15/reservation-rule-20261029-01/manual-detour-final/report.md)。
+> **此前相关suite与Validation窗口（2026-10-30）：PASS，不覆盖上方Main失败。** 当前同源相关Edit387PASS、Play299PASS／0FAIL／6项明确opt-in SKIP；八种长柜台各20次真实离店、容量归零，原失败照片六节1x本次通过。普通Editor在真实中央柜台装修后连续618.975秒运行至Day7／Completed66，真实Rest排空与自动重开、Pause／1x／2x／Decor／镜头／横竖屏响应正常，Console0warning／0error。此次没有重做真实堵路恢复manual7，旧源码记录与当前Native正反例分开；历史整个Game输入失效首因仍UNKNOWN。下面旧失败保留，具体结果与剩余Owner／CI／Git等门槛见[Validation Report](Phase15_Validation_Report.md)和[当前GUI报告](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/reservation-rule-20261029-01/manual-detour-final/report.md)。
 
-> **此前修复与手测（历史源码快照，2026-10-30）：仍未修完。** 当时相关Edit387项通过，Play288项通过／0失败／2项原有诊断跳过，原八组合全部通过；随后普通Editor在装修后发现Day5 Closing停住，已撤回短时健康判断。当时第6项通过、第7项尚未注入堵路、第8项失败。详见[历史手测记录](../outputs/phase15/reservation-rule-20261029-01/manual-ui/report.md)及[本轮记录](../outputs/phase15/reservation-rule-20261029-01/report.md)。历史整个Game输入失效首因仍UNKNOWN，不能由本次限定窗口通过推断已解决。
+> **此前修复与手测（历史源码快照，2026-10-30）：仍未修完。** 当时相关Edit387项通过，Play288项通过／0失败／2项原有诊断跳过，原八组合全部通过；随后普通Editor在装修后发现Day5 Closing停住，已撤回短时健康判断。当时第6项通过、第7项尚未注入堵路、第8项失败。详见[历史手测记录](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/reservation-rule-20261029-01/manual-ui/report.md)及[本轮记录](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/reservation-rule-20261029-01/report.md)。历史整个Game输入失效首因仍UNKNOWN，不能由本次限定窗口通过推断已解决。
 
 > 工作区：`E:/Unity/Project/AnimalCafe/.worktrees/phase-15-business-day`；Unity `6000.5.5f1`。原批准test cases的M01–M04均在Validation Scene，本轮已Agent补测PASS；结合原M05出口、M06、M07正常UI，原七项均有Agent通过记录。后续Guide扩展的Main正常装修路径和完整付款集合对照仍未完成。最新展示修正Edit59 PASS、定向Play122 PASS／0 FAIL／1原有SKIP；旧全量Edit2832／Play1445＋5 SKIP属HUD修复前source。Debugger异常仍UNKNOWN，Owner观感／device／CI／VCS未验收，不宣告Phase closure。见[Agent报告](Phase15_Agent_Playtest_Report.md)及[Validation Report](Phase15_Validation_Report.md)。
 
@@ -107,7 +113,7 @@ MainCafe 完成正常装修后才可接待：点 Decor，按 [P14 Guide 的分�
 
 MainCafe 采用现有 P5 玩家 UI：浅色状态卡显示 Day、营业阶段、倒计时和必要提示，readiness 提示继续说明布局问题。黑色 P14／P15 诊断面板仅供 Validation Scene；它显示 Epoch、订单 ID、任务状态等开发信息。2026-10-27 展示分离修正已通过限定自动回归、独立review与真实Editor UI检查；详见[Validation Report第17节](Phase15_Validation_Report.md#17-main-玩家界面与-validation-诊断分离2026-10-27)。旧黑色Main截图仅作历史。
 
-![Main玩家状态卡](../outputs/phase15/player-hud/ui/main-portrait.png)
+![Main玩家状态卡](../outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/player-hud/ui/main-portrait.png)
 
 | 显示 | 含义 |
 | --- | --- |
@@ -156,15 +162,16 @@ M01–M04原批准范围以[Test Cases第4节](superpowers/specs/2026-10-26-phas
 
 ## 5. 真实默认与验收边界
 
-短时 Scene 和注入时钟测试只证明边界逻辑；**真实8小时营业＋Closing＋2小时Rest连续运行、Windows Player、Android／iOS真机、应用挂起恢复、CI均 `NOT_RUN`**。退出后 Offline 收益尚未实现。最终部门 review、Owner手测、CI／merge与merged-main验证须按项目流程记录，不能仅凭本地自动测试将P15写成正式Completed。
+短时 Scene 和注入时钟测试证明边界逻辑。当前工程证据已包括云端精简 CI、PR #15 合并、merged-main 定向验证和本地清理，具体结果见 [Validation Report](Phase15_Validation_Report.md)。既有 D2 指定状态仍是 `SKIP / NOT_PROVEN`，不能写成 PASS。
 
-## 6. 本地完成后的Owner验收与交付
+真实8小时营业＋Closing＋2小时Rest连续运行、Windows Player、Android／iOS真机及应用挂起恢复没有本次新增通过证据；Owner 本人观感与 Agent 代测继续分别记录。退出后 Save／Offline 收益不属于 P15 已实现范围。上述既有边界不被这次工程收尾改写为通过。
 
-本节是后续操作说明，不代表这些操作已执行。最终本地结果以Validation Report最新收尾节为准；本地测试通过后，仍须由Owner确认观感并安排CI／仓库合入。
+## 6. 合并后的打开、复验与交付记录
 
-1. 在Unity Hub打开 `E:/Unity/Project/AnimalCafe/.worktrees/phase-15-business-day`（branch `codex/phase-15-business-day`），使用Unity6000.5.5f1。MainCafe是正式玩家UI；短时周期检查使用独立 `Assets/Scenes/Validation/Phase15BusinessDay.unity`。原M01–M07已有Agent代测，无须为了流程重复整套；请Owner实际判断当前界面的可读性和操作感。
-2. P15已有[PR #15](https://github.com/zhengparker/AnimalCafe/pull/15)，分支为 `codex/phase-15-business-day`。Owner已授权Codex在本地验证通过后commit／push更新该PR，无须重复手动提交。raw XML、日志、截图与恢复备份保留在本地 `outputs/phase15/`，该目录不纳入提交。
-3. 正式CI使用既有手动 `workflow_dispatch`：**Unity tests** → **Run workflow**，选P15 branch，默认 `test_scope=compact`，范围与本地相同；`full` 保留为主动完整回归。Owner已授权Codex使用现有凭据发起CI并设置 `allow_unity_login=true`。每轮须核对实际run及源码commit；尚未运行或失败的轮次不填PASS。
-4. CI结束后核对真实EditMode／PlayMode XML及测试commit。Owner决定PR／merge；实际合入后再核对merged-main，才按项目规则更新正式Completed。未完成的Owner接受、CI、merge不填为PASS，不自动进入P16。
+1. 在 Unity Hub 打开主项目 `E:/Unity/Project/AnimalCafe`，使用 Unity `6000.5.5f1`。正式玩家界面在 `Assets/Scenes/MainCafe.unity`；短时周期检查使用 `Assets/Scenes/Validation/Phase15BusinessDay.unity`，不要把短时验证参数改成 Main 的正式默认。
+2. Main 仍按现实8小时营业、真实Closing排空后休息2小时运行；Pause／2x只影响场景工作。旧工作区 `.worktrees/phase-15-business-day` 已删除，不再作为打开入口。本文历史资料中的旧路径只说明当时环境。
+3. [PR #15](https://github.com/zhengparker/AnimalCafe/pull/15) 已合并为 `224e7c7`。[CI 45474112047](https://github.com/zhengparker/AnimalCafe/actions/runs/45474112047) 针对 `f832afa`：Edit1582 PASS，Play179 PASS／0 FAIL／1既有D2 SKIP；合并tree与该提交相同。随后实际main上的Edit75／Play77及配置检查10项通过。
+4. 本机记录见[合并与fast-forward](../outputs/p15-closeout-20261124/merge-and-fast-forward.json)、[merged-main回归](../outputs/p15-closeout-20261124/merged-main-regression.json)和[清理完成记录](../outputs/p15-closeout-20261124/cleanup-complete.json)。历史XML、日志、截图与恢复备份保留在 `outputs/p15-closeout-20261124/worktree-local-files/outputs/phase15/`，不纳入Git；本地链接应从主项目查看。
+5. 以后有相关产品变更时，再对实际变更提交运行适当验证。正式CI仍是手动 `workflow_dispatch`，默认 `test_scope=compact`，与本地共享筛选；`full`保留为主动完整回归。既有结果不能复制成新提交的通过记录。本次文档收尾仅检查事实、链接与差异，不新增Unity运行结果。
 
-8小时实钟／Player／Android与iOS设备、挂起恢复继续单列NOT_RUN，不新增为本次Windows Editor本地技术验收门槛；退出后Save／Offline收益不在P15实现范围。
+P16可进入独立设计准备，尚未开始实现；Owner观感、实钟／Player／设备、挂起恢复等既有边界继续单列，不因文档更新自动清除。
