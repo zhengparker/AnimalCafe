@@ -4742,7 +4742,9 @@ namespace AnimalCafe.Navigation
                     if(preparation && refusal=="new-frozen-owner" && DeferPaidPreparationAfterReleasedExit(entry,blockers))return;
                     if(preparation && refusal=="new-frozen-owner" && DeferDeliveryPreparationForIssuedAdvance(entry,blockers))return;
                     if(!inspect())return;
-                    var alternate=DeliveryFrozenBlockerMayTryOriginalAlternate(entry,blocker,refusal,preparation,blockers,out var alternateRefusal);
+                    var alternate=CollectionFrozenReservationMayTryOriginalAlternate(entry,refusal,preparation,blockers);
+                    var alternateRefusal=alternate?"eligible-original-collection-reservation-alternate":"not-applicable";
+                    if(!alternate)alternate=DeliveryFrozenBlockerMayTryOriginalAlternate(entry,blocker,refusal,preparation,blockers,out alternateRefusal);
                     if(!inspect())return;
                     if(!alternate)StoreWaitFailure(entry,blocker,refusal,blockers,alternateRefusal);
                     ObserveWaitFailure(entry,blocker,refusal);if(alternate && !inspect())return;
@@ -5345,6 +5347,61 @@ namespace AnimalCafe.Navigation
             if(!QueuedPreparationClaimsCurrent(entry,Same) || !Same() || !inspectOld() || !inspectMoving())return false;
             entry.Queued=true;entry.Prepared=entry.Active=false;
             Decide(entry,TrafficDecisionKind.DeferredByBudget,collecting?"delivery-preparation-issued-counter-revalidation":"delivery-preparation-issued-advance-revalidation",blockers);return true;
+        }
+        // A later committed Reserve can invalidate this side without promising independent release.
+        // 只允许消耗未试原取餐侧；不撤销后客权利、不加Frozen/WAIT，原债务在换侧空档仍扣减。
+        private bool CollectionFrozenReservationMayTryOriginalAlternate(Entry entry,string refusal,bool preparation,
+            IReadOnlyList<TrafficBlocker> blockers)
+        {
+            var read=entry.CollectionReserveReadiness;
+            if(!preparation || refusal!="new-frozen-owner" || read==null || entry.CollectionReserveInspecting ||
+                !LiveEntry(entry) || !Current(entry.Key) || entry.Key.IntentId!="pickup-service" || !entry.Parking || !HasPrimary(entry) ||
+                !entry.Queued || entry.Prepared || entry.Active || entry.Discarded || entry.AcquiredSequence!=0 || entry.Leg!=null ||
+                entry.JourneyPermit!=null || entry.JourneyRequest!=null || entry.PendingHandoff!=null || entry.EverCanonicalAttempt ||
+                entry.ExplicitRecoveryUsed || entry.LegacyLegCompleted || entry.ContinuationAttempted ||
+                !entry.Request.NativeStamp.Equals(default(TrafficNativeStamp)) || !SnapshotCurrent(entry.Request) ||
+                entry.FrozenOwners?.Count!=1 || entry.FrozenResources==null || !Positive(entry.WaitRemaining) || entry.WaitRemaining>entry.FiniteLimit ||
+                CandidateAttempts(entry).Count>=entry.CandidateCount || entry.Jobs.Count!=0 || entry.JobIndex!=0 ||
+                blockers.Count==0)return false;
+            var key=blockers[0].Owner;
+            if(key.IntentId!="pickup-wait" || key.ActorId==entry.Key.ActorId || entry.FrozenOwners.Contains(key) ||
+                blockers.Any(block=>!block.Owner.Equals(key) || block.ResourceId!="pickup/"+key.ActorId || block.Proof!="selected-journey-parking-protection") ||
+                !entries.TryGetValue(key,out var owner) || !LiveEntry(owner) || !Current(key) || !owner.Active || !owner.Parking || owner.Prepared ||
+                owner.Discarded || owner.AcquiredSequence<=0 || !owner.EverCanonicalAttempt || owner.Leg!=null || owner.PendingHandoff!=null ||
+                owner.ExplicitRecoveryUsed || owner.Decision.Kind!=TrafficDecisionKind.Granted || owner.Decision.FailureDisposition!=TrafficFailureDisposition.None ||
+                owner.JourneyPermit==null || owner.JourneyPermit.AcquiredSequence!=owner.AcquiredSequence || !owner.JourneyParking || owner.JourneyRequest==null ||
+                owner.Request.ResourceId!="pickup/"+key.ActorId || !owner.JourneyRequest.Target.Equals(owner.Request.Target))return false;
+            var old=entry.FrozenOwners.Single();
+            if(old.IntentId!="pickup-paid-movement" || !entry.FrozenResources.TryGetValue(old,out var resources) || !resources.Contains("pickup/"+old.ActorId) ||
+                !TryReadUnpaidNativeActivity(old.ActorId,out var activity) || !activity.Owner.Key.Equals(old) ||
+                !CanProgress(old,out var seconds) || !Positive(seconds) || DependsOn(key,entry.Key,new HashSet<TrafficIntentKey>()))return false;
+            var inspect=CollectionReserveFence(entry);var inspectOwner=CollectionReserveFence(owner);var inspectOld=ClaimInspectionGuard(activity.Owner);
+            var pickup=read.PickupOwner;var world=snapshot;var queueVersion=pickup?.Version;
+            bool Same()=>!closed && !paused && inspect() && inspectOwner() && inspectOld() && ReferenceEquals(snapshot,world) &&
+                ReferenceEquals(entry.CollectionReserveReadiness,read) && pickup?.Version==queueVersion;
+            entry.CollectionReserveInspecting=true;
+            try
+            {
+                if(pickup==null || !PreparationIdentityCurrent(entry) || !Same() || !CollectionReceiverFactsCurrent(entry,read,out _) || !Same() ||
+                    !read.IsCurrent() || !Same() || !pickup.TryPrepareMutation(AnimalCafe.Customers.PickupQueueService.MutationKind.CollectionLease,
+                        entry.Key.ActorId,pickup.Version,out _,entry.Request.Target) || !Same() ||
+                    !pickup.TryCaptureReservation(key.ActorId,out var claim) || !claim.IsCurrent || claim.IsCurrentCollectionLease ||
+                    pickup.Snapshot.Any(assignment=>assignment.VisitId==key.ActorId) || claim.Assignment.Arrived || !claim.Assignment.Position.Equals(owner.Request.Target))return false;
+                var facts=snapshot.Parking.Where(fact=>fact.Owner.ActorId==key.ActorId && ReferenceEquals(fact.CanonicalOwner,pickup)).ToArray();
+                var bodies=snapshot.Bodies.Where(body=>body.Owner.ActorId==key.ActorId).ToArray();var original=owner.PreparationBody;
+                if(facts.Length!=1 || facts[0].ResourceId!=owner.Request.ResourceId || !facts[0].Position.Equals(claim.Assignment.Position) ||
+                    facts[0].BusinessOwner==null || facts[0].ReleaseObligation==null ||
+                    !(facts[0].SemanticCheckpoint is AnimalCafe.Customers.PickupQueueService.ReservationClaim captured) || !captured.IsSameCurrentClaim(claim) ||
+                    original==null || bodies.Length!=1 || !bodies[0].Enabled || !bodies[0].ActorActive || !Current(bodies[0].Owner) ||
+                    !bodies[0].Owner.Equals(original.Owner) || !ReferenceEquals(bodies[0].ActorLife,original.ActorLife) || original.ActorLife==null ||
+                    !bodies[0].Position.Equals(original.Position) || bodies[0].Radius!=owner.Request.Radius || bodies[0].SafetyMargin!=owner.Request.SafetyMargin ||
+                    owner.PreparationClaims==null || !owner.PreparationClaims.Any(before=>before.CanonicalOwner is AnimalCafe.Customers.CounterQueueService &&
+                        ReferenceEquals(before.BusinessOwner,facts[0].BusinessOwner) && ReferenceEquals(before.ReleaseObligation,facts[0].ReleaseObligation) &&
+                        snapshot.Parking.Any(now=>now.Owner.ActorId==key.ActorId && SameOwnedClaim(before,now))))return false;
+                return Same();
+            }
+            catch{return false;} // Unknown keeps the original refusal / 未知沿用原拒绝。
+            finally{entry.CollectionReserveInspecting=false;}
         }
         // A new issued body or an authenticated prepared collection point may invalidate this one side.
         // Only an already-declared delivery side may be tried; no new WAIT edge, time or permission.

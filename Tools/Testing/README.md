@@ -1,6 +1,6 @@
 # Unity 精简回归 / Shared compact regression
 
-本地与 GitHub Actions 共用 `compact-edit.filter.txt`、`compact-play.filter.txt`。EditMode 4个 selectors，当前1575 cases；PlayMode 100个 selectors，当前180 cases。范围包括P15营业周期、路线协调、相关导航和真实经营布局。前轮新增6项已提交Working预留交接及5项既有Paid等待下的取餐侧回归，前轮新增4项真实取餐前段完成后的有限准备回归；本轮再补1项首次混合身体绕行及2项跨帧Prepared停车混合重证回归，以及6项同代自然取餐有限等待／拒绝／过期／callback退休／租约重取回归；本轮再补14项退休员工身体／新Bound路线混合及旧Exit／新Prepared Paid边界正反例；本轮新增9项原Exit下一段Prepared交接（含原身体仍挡路／身体检查顺序）／期限／失效身份和阻挡反测；本轮新增17项合法单点证明、原员工WAIT下的Paid准备及身份拒绝、未出生Admission跨两代真实Counter Advance的有限准备回归；送杯两项继续使用原Native真实经营测试验收，沿用全部既有测试范围和断言。
+本地与 GitHub Actions 共用 `compact-edit.filter.txt`、`compact-play.filter.txt`。EditMode 保持4个 selectors，当前1582 cases（原1575＋本轮7）；PlayMode 保持100个 selectors、180 cases。范围包括P15营业周期、路线协调、相关导航和真实经营布局，保留全部既有测试与断言。本轮7项覆盖原Paid Native等待期间、后提交Reserve保护当前取餐侧时的原候选换侧与原期限过期，以及单侧／无Ready／未提交／不同PQS／额外身体阻挡拒绝。历次范围与实际证据见 `Docs/Phase15_Validation_Report.md`。
 
 CI 仍只通过 `workflow_dispatch` 手动触发，Unity登录仍须勾选 `allow_unity_login`。`test_scope` 默认 `compact`；`full` 保留为主动完整回归。两者成功均可满足 `Unity CI`，diagnosis scopes不满足。Unity版本仍6000.5.5f1；一次activation后顺序跑两模式，禁止自动activation retry。150分钟是含冷导入的上限，不是预计耗时。
 

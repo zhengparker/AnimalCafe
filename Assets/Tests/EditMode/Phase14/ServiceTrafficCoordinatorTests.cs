@@ -632,6 +632,123 @@ namespace AnimalCafe.Tests.EditMode.Phase14
             else {f.Core.ProcessReady(12);Assert.That((float)D1Read(f.Core,collector,"WaitRemaining"),Is.EqualTo(debt-.25f));Assert.That(f.Core.GetDecision(collector).Reason,Is.EqualTo("collection-reserve-preparation-held"));}
         }
 
+        [TestCase("current")][TestCase("expiry")][TestCase("one-side")][TestCase("not-ready")]
+        [TestCase("uncommitted")][TestCase("foreign-pqs")][TestCase("mixed-body")]
+        public void ReadyCollectionTriesUnusedOriginalSideAroundLaterCommittedReservation(string mode)
+        {
+            // Real WAIT -> later actual Reserve commit -> same spent collector candidate.
+            // 通过公开业务/移动 API 建立原冻结债务；禁止注入 Frozen 或伪造 Native。
+            var collector=Key("original-side-collector","pickup-service",801);var collectorBody=Key(collector.ActorId,"pickup-paid-movement",800);
+            var first=Key("original-side-moving-paid","pickup-paid-movement",802);var tail=Key("original-side-later-reserve","pickup-wait",803);
+            var counterBody=Key(tail.ActorId,"counter-advance",804);
+            var life=new object();var firstLife=new object();var tailLife=new object();var business=new object();var admission=new object();
+            var tailBusiness=new object();var tailAdmission=new object();
+            var start=Origin;var side=P(4);var alternate=P(0,4);var firstPose=P(2,-2);var firstGoal=P(2,2);
+            var tailPose=P(4,-6);var tailGoal=P(4,3);var moving=false;var published=false;long version=0;
+            var sides=mode=="one-side"?new[]{side}:new[]{side,alternate};
+            var pickup=new PickupQueueService(new[]{start,firstGoal,tailGoal},sides);
+            var counter=new CounterQueueService(new[]{tailPose});
+            Assert.That(pickup.TryReserve(collector.ActorId,out _),Is.True);Assert.That(pickup.TryBeginTransfer(collector.ActorId,out var ownAssignment),Is.True);
+            Assert.That(pickup.MarkArrived(collector.ActorId,ownAssignment.Generation),Is.True);
+            Assert.That(pickup.TryReserve(first.ActorId,out _),Is.True);Assert.That(pickup.TryBeginTransfer(first.ActorId,out _),Is.True);
+            Assert.That(counter.TryJoin(tail.ActorId),Is.True);Assert.That(counter.Complete(tail.ActorId,1),Is.True);
+            var orders=new AnimalCafe.Orders.OrderService();var made=orders.Create(collector.ActorId,"coffee");Assert.That(made.Succeeded,Is.True);
+            Assert.That(orders.ClaimNext("original-side-barista").Succeeded,Is.True);Assert.That(orders.StartPreparation(made.Order.OrderId,"original-side-barista").Succeeded,Is.True);
+            var ready=orders.MarkReadyForPickup(made.Order.OrderId,"original-side-barista");Assert.That(ready.Succeeded,Is.True);var seal=ready.Order;
+            TrafficWorldSnapshot Snapshot()
+            {
+                Assert.That(pickup.TryCaptureReservation(collector.ActorId,out var own),Is.True);
+                Assert.That(pickup.TryCaptureReservation(first.ActorId,out var paid),Is.True);
+                Assert.That(counter.TryCaptureAssignment(tail.ActorId,out var cq),Is.True);
+                var bodies=new List<TrafficBodyFact>{new TrafficBodyFact(collectorBody,start,.4f,actorLife:life),
+                    new TrafficBodyFact(first,firstPose,.4f,independentlyProgressing:moving,remainingSeconds:moving?30:0,actorLife:firstLife),
+                    new TrafficBodyFact(counterBody,tailPose,.4f,actorLife:tailLife)};
+                if(mode=="mixed-body"&&published)bodies.Add(new TrafficBodyFact(Key("unrelated-at-side"),side,.4f,actorLife:new object()));
+                var facts=new List<TrafficParkingFact>{new TrafficParkingFact(collectorBody,pickup,pickup.Version,own.ResourceId,start,.4f,
+                        businessOwner:business,releaseObligation:admission,semanticCheckpoint:own),
+                    new TrafficParkingFact(first,pickup,pickup.Version,paid.ResourceId,firstGoal,.4f,semanticCheckpoint:paid),
+                    new TrafficParkingFact(counterBody,counter,counter.Version,cq.ResourceId,tailPose,.4f,
+                        businessOwner:tailBusiness,releaseObligation:tailAdmission,semanticCheckpoint:cq)};
+                if(published){Assert.That(pickup.TryCaptureReservation(tail.ActorId,out var reserve),Is.True);
+                    facts.Add(new TrafficParkingFact(counterBody,pickup,pickup.Version,reserve.ResourceId,tailGoal,.4f,
+                        businessOwner:tailBusiness,releaseObligation:tailAdmission,semanticCheckpoint:reserve));}
+                return World(pickup.Version+counter.Version,++version,bodies.ToArray(),facts.ToArray());
+            }
+            var world=Snapshot();var core=new ServiceTrafficCoordinator("scene",1,7,world,(from,to)=>
+                from.Equals(tailPose)&&to.Equals(tailGoal)?new[]{from,side,to}:new[]{from,to},waitSeconds:30,
+                getCurrentNativeRemainder:(request,stamp,actor,pose)=>request.Intent.Equals(first)&&stamp.Equals(new TrafficNativeStamp(19801,801))&&
+                    ReferenceEquals(actor,firstLife)?new[]{pose,request.Target}:null);var frame=1;
+            void Publish(){world=Snapshot();core.SetSnapshot(world);}
+            TrafficDecision Pump(TrafficIntentKey key)
+            {
+                for(var n=0;n<128;n++){core.ProcessReady(frame++);var d=core.GetDecision(key);
+                    if(d.Kind!=TrafficDecisionKind.DeferredByBudget||d.Reason!="native-query-frame-budget"&&d.Reason!="proof-frame-budget"&&d.Reason!="ready-batch-pending")return d;}
+                Assert.Fail("Original-side model did not settle");return null;
+            }
+            core.EvaluateMovement(new TrafficRequest(first,frame,world,firstPose,firstGoal,.4f,"pickup/"+first.ActorId,independentlyProgressing:true,finiteSeconds:30));
+            var source=Pump(first);Assert.That(source.Kind,Is.EqualTo(TrafficDecisionKind.Granted),source.Reason);Assert.That(core.TryCommit(source),Is.True);
+            core.PrepareLeg(source,"pickup/"+first.ActorId,0,firstLife,801,world,firstPose,.05f,frame);
+            var leg=Pump(first);Assert.That(leg.Kind,Is.EqualTo(TrafficDecisionKind.Granted),leg.Reason);Assert.That(core.TryCommit(leg),Is.True);
+            Assert.That(core.BindLeg(first,firstLife,new TrafficNativeStamp(19801,801)),Is.True);moving=true;firstPose=P(2);Publish();
+            TrafficRequest Request(Vector3 target)=>new TrafficRequest(collector,frame,world,start,target,.4f,"pickup/"+collector.ActorId,
+                requirements:new[]{new TrafficRouteRequirement("collection-exit-capability",target,P(-4,4),.8f,avoidProposedParking:false)},finiteSeconds:30,planPrimaryRoute:true);
+            bool Current()=>orders.TryGetOrder(made.Order.OrderId,out var order)&&ReferenceEquals(order,seal)&&order.State==AnimalCafe.Orders.OrderState.ReadyForPickup;
+            object Descriptor()=>Activator.CreateInstance(typeof(ServiceTrafficCoordinator).Assembly.GetType("AnimalCafe.Navigation.TrafficCollectionReserveReadiness",true),
+                System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,null,
+                new object[]{collector,life,business,admission,pickup,seal,(Func<bool>)Current,
+                    (Func<TrafficIntentKey,TrafficDecision,object,TrafficCollectionReserveObservation>)((key,d,cookie)=>null)},null);
+            var submitted=core.EvaluateParking(Request(side),0,sides.Length);
+            Assert.That(D3InvokeBool(core,"TrySetCollectionReserveReadiness",submitted,Descriptor()),Is.True);
+            var waiting=Pump(collector);Assert.That(waiting.Kind,Is.EqualTo(TrafficDecisionKind.WaitingForTraffic),"PREMISE actual first Native establishes original WAIT: "+waiting.Reason);
+            Assert.That(waiting.Blockers.All(b=>b.Owner.Equals(first)),Is.True);
+            var frozen=D1Read(core,collector,"FrozenOwners");var resources=D1Read(core,collector,"FrozenResources");var age=D1Read(core,collector,"FirstFrame");var sequence=waiting.RequestSequence;
+            core.Tick(.5f,false);var debt=(float)D1Read(core,collector,"WaitRemaining");Publish();
+            core.EvaluateParking(new TrafficRequest(tail,frame,world,tailPose,tailGoal,.4f,"pickup/"+tail.ActorId,planPrimaryRoute:true));
+            var parking=Pump(tail);Assert.That(parking.Kind,Is.EqualTo(TrafficDecisionKind.Granted),"PREMISE real later parking preparation: "+parking.Reason);
+            Assert.That(CustomerRoutePlanner.IsClear((Vector3[])D1Read(core,tail,"CurrentPath"),new[]{side},.8f),Is.False,
+                "PREMISE the later real selected route crosses the current collection endpoint: "+string.Join(";",((Vector3[])D1Read(core,tail,"CurrentPath")).Select(p=>p.ToString("F3"))));
+            if(mode!="uncommitted")
+            {
+                Assert.That(pickup.TryPrepareMutation(PickupQueueService.MutationKind.Reserve,tail.ActorId,pickup.Version,out var reserve),Is.True);
+                Assert.That(core.TryCommit(parking,reserve),Is.True);published=true;
+                Assert.That(core.GetDecision(tail).AcquiredSequence,Is.GreaterThan(0));Assert.That(D1Read(core,tail,"Active"),Is.EqualTo(true));
+                Assert.That(D1Read(core,tail,"Parking"),Is.EqualTo(true));Assert.That(D1Read(core,tail,"Leg"),Is.Null);
+            }
+            if(mode=="not-ready")Assert.That(orders.Fail(made.Order.OrderId,"real Ready invalidated").Succeeded,Is.True);
+            firstPose=P(2,.05f);Publish();core.NotifyChanged(first,"body");
+            Assert.That(CfcReprepare(core,core.GetDecision(collector),Request(side),out _),Is.True);
+            if(mode=="foreign-pqs")
+            {
+                var foreign=new PickupQueueService(new[]{start},sides);
+                var descriptor=Activator.CreateInstance(typeof(ServiceTrafficCoordinator).Assembly.GetType("AnimalCafe.Navigation.TrafficCollectionReserveReadiness",true),
+                    System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic,null,
+                    new object[]{collector,life,business,admission,foreign,seal,(Func<bool>)Current,
+                        (Func<TrafficIntentKey,TrafficDecision,object,TrafficCollectionReserveObservation>)((key,d,cookie)=>null)},null);
+                Assert.That(D3InvokeBool(core,"TrySetCollectionReserveReadiness",core.GetDecision(collector),descriptor),Is.True);
+            }
+            var queries=core.QueriesConsumed(collector);var refused=Pump(collector);
+            Assert.That(D1Read(core,collector,"FrozenOwners"),Is.SameAs(frozen));Assert.That(D1Read(core,collector,"FrozenResources"),Is.SameAs(resources));
+            Assert.That(refused.RequestSequence,Is.EqualTo(sequence));Assert.That(D1Read(core,collector,"FirstFrame"),Is.EqualTo(age));
+            Assert.That((float)D1Read(core,collector,"WaitRemaining"),Is.EqualTo(debt));Assert.That(core.QueriesConsumed(collector),Is.EqualTo(queries));
+            Assert.That(core.HasActiveGrant(collector),Is.False);Assert.That(core.TryCommit(refused),Is.False);Assert.That(pickup.ServiceLeases,Is.Empty);
+            Assert.That(core.GetDecision(tail),Is.SameAs(parking),"The committed later right is never revoked or replaced");
+            if(mode!="current"&&mode!="expiry")
+            {Assert.That(refused.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.Terminal),refused.Reason);Assert.That(core.TryAdvanceCandidate(refused,1,Request(alternate),out _),Is.False);return;}
+            Assert.That(refused.FailureDisposition,Is.EqualTo(TrafficFailureDisposition.AlternateAllowed),
+                "FEATURE RED: later actual Reserve invalidates only this side, not the untouched original collection side: "+refused.Reason);
+            if(mode=="expiry")
+            {core.Tick(debt,false);var expired=core.GetDecision(collector);Assert.That(expired.Reason,Is.EqualTo("wait-budget-exhausted"));Assert.That(core.TryAdvanceCandidate(expired,1,Request(alternate),out _),Is.False);return;}
+            Assert.That(core.TryAdvanceCandidate(refused,0,Request(side),out _),Is.False);Assert.That(core.TryAdvanceCandidate(refused,2,Request(alternate),out _),Is.False);
+            Assert.That(core.TryAdvanceCandidate(refused,1,Request(alternate),out var next),Is.True);Assert.That(core.TryAdvanceCandidate(refused,1,Request(alternate),out _),Is.False);
+            Assert.That(D3InvokeBool(core,"TrySetCollectionReserveReadiness",next,Descriptor()),Is.True);
+            core.Tick(.25f,false);var winner=Pump(collector);Assert.That(winner.Kind,Is.EqualTo(TrafficDecisionKind.Granted),winner.Reason);
+            Assert.That(winner.ProofRoutes[0].Waypoints.Last(),Is.EqualTo(alternate));Assert.That(D1Read(core,collector,"FrozenOwners"),Is.SameAs(frozen));
+            Assert.That((float)D1Read(core,collector,"WaitRemaining"),Is.EqualTo(debt-.25f));Assert.That(winner.RequestSequence,Is.EqualTo(sequence));
+            Assert.That(pickup.TryPrepareMutation(PickupQueueService.MutationKind.CollectionLease,collector.ActorId,pickup.Version,out var collection,alternate),Is.True);
+            Assert.That(core.TryCommit(winner,collection),Is.True);Assert.That(pickup.TryGetServiceLease(collector.ActorId,out var actualSide),Is.True);
+            Assert.That(actualSide,Is.EqualTo(alternate));Assert.That(core.GetDecision(tail),Is.SameAs(parking));
+        }
+
         [TestCase("current")][TestCase("expiry")][TestCase("unbound")][TestCase("body-hint")]
         [TestCase("prepared")][TestCase("static")][TestCase("not-ready")]
         [TestCase("retired-working")][TestCase("retired-working-expiry")]

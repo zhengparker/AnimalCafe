@@ -9,7 +9,7 @@ from unity_regression import filters, verify
 
 class RegressionContractTests(unittest.TestCase):
     def reports(self, folder, *, missing=False, failed=False, count_delta=0):
-        for mode, count in (("edit", 1575 + count_delta), ("play", 180)):
+        for mode, count in (("edit", 1582 + count_delta), ("play", 180)):
             if missing and mode == "play":
                 continue
             root = ET.Element("test-run", result="Passed", passed=str(count),

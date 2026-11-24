@@ -7,7 +7,7 @@ import re
 import xml.etree.ElementTree as ET
 
 HERE = Path(__file__).resolve().parent
-EXPECTED = {"editmode-results.xml": 1575, "playmode-results.xml": 180}
+EXPECTED = {"editmode-results.xml": 1582, "playmode-results.xml": 180}
 
 
 def filters(mode):

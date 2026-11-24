@@ -1,5 +1,17 @@
 # Phase 15 — Business Day Lifecycle Validation Report
 
+### 2026-11-24 后提交预留挡住取餐端点：本地精简通过，云端待验证
+
+上一提交 `673ea57` 的 [compact CI 45344302763](https://github.com/zhengparker/AnimalCafe/actions/runs/45344302763) 实际为 Edit **1575 PASS**，Play **178 PASS / 1 FAIL / 1 既有 D2 SKIP**。唯一失败 `UserLongCounterSevenNormal`：完成17单后，未获权的第18位顾客保留第19位顾客实际 Paid Native 的原 Frozen；第20位顾客已提交的 `pickup-wait` Reserve 路线令当前取餐端点不可用，原代码却把整组取餐候选直接 Terminal。前轮 Main 与 Photo 三项云端均已通过，不能把它们继续列为当前失败。
+
+本轮只允许当前真实 Ready、已到达同 PQS 队首、尚未获权的 collector，在纯同 PQS 已提交 Reserve 的 selected-route 端点冲突下消费尚未尝试的原取餐侧。Reserve 不视为 Native 或独立释放者，不撤销任何既有权利。原 Frozen、age、query accounting、candidate count 与有限债务保留；换侧空档仍扣原债务，新侧完整重证后才允许正常 canonical joint commit。
+
+准确 native RED 为 **2 业务 RED / 5 拒绝控制 PASS**（`6B9EB9A48555950805B4734121B9A3851C54837A49B75200EA386A1C729BB34F`），修正后相同7项 **7 PASS**（`4229CB84080B4EF2EC9F31BC13D8BC3242B66414EF316DEA438E4ACA23F176AC`）。单侧、Ready失效、未提交预留、不同PQS及额外身体阻挡不获得此换侧资格。前置fixture准备错误和两次编译错误均保留真实原文，不算产品RED或通过。
+
+同一537项冻结源码集合 `7aac78da0b065a07d7604c2e3a8b7caec41a7cb26766939edb625ce13f7e6715`，Core SHA256 `0A4DC57B833F12C802A5E63E50607D4C2707831AE0B0B5BBA82179CAB3B4F323`，独立 review **C0 / I0**。共享范围保持原4个Edit / 100个Play selectors，计入7项后 Edit **1582/1582 PASS**（XML `0B2CEAB67BED5F9D04821651B8D844ADFFFEB5E1ECEFB6E12CB9D6AEB16F2867`）；helper **10 PASS**。同一冻结源码的完整精简 Play **179 PASS / 0 FAIL / 1 既有 D2 SKIP**（180项，1465.5649771秒），XML `2F6E1DBC16B7B27B51B964911570DDA4658357E294139818C72F61191CFCECB2`。P15自身Edit68 / Play77全PASS；Main单批与三批自然经营、七种布局各20位真实离店并排空均通过。既有D2指定状态仍为SKIP / NOT_PROVEN，未转PASS。3192 Assets、537源码和5范围输入一致，未知资源差异0、历史文件恢复8项、Editor / worker 0；OS handles UNKNOWN。当前尚未以此结果宣称Linux通过。
+
+证据：`outputs/phase15/p15-cloud-late-reserve-side-repair-20261124/`。PR #15保持Open / 未merge，P15 **In Review**，不进入P16。后续云端、Owner、device、长期后台与merged-main验收各自保留；下方为历史源码与旧结果。
+
 ### 2026-11-24 三类准备阶段修正：本地精简回归通过，P15 In Review
 
 上轮实际Edit1558通过、Play176通过／3失败／1既有D2跳过。当前继续修复该三项，保留全部原业务断言和实际失败证据。

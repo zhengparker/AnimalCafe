@@ -1,6 +1,6 @@
 # AnimalCafe Development Roadmap
 
-> **当前P15为In Review，PR #15未合并。** 本轮三类准备交接修正已通过本地精简Edit1575/1575；Play179通过／0失败／1既有D2跳过（P15自身77项全通过）。Main单批8位、三批8／7／10位排空；七种布局各20真实离店。按已有授权发布并运行同范围compact CI，当前head云端结论见[PR checks](https://github.com/zhengparker/AnimalCafe/pull/15/checks)，不以本地通过替代Linux或正式关闭P15，不进入P16。见[验证报告](Phase15_Validation_Report.md)。
+> **当前P15为In Review，PR #15未合并。** 上一提交云端compact剩长柜台1x一项失败（17/20单）；本轮后提交Reserve挡住取餐端点的换原侧修正已通过专项7/7和本地精简回归：Edit1582通过，Play179通过／0失败／1既有D2跳过，P15自身Edit68／Play77全通过，Main与七种布局经营验证通过。发布后运行同范围compact CI，当前head云端结论见[PR checks](https://github.com/zhengparker/AnimalCafe/pull/15/checks)。不以本地结果替代正式关闭P15，不进入P16。见[验证报告](Phase15_Validation_Report.md)。
 
 > **历史 P15（2026-11-07 UTC，修复前）：IN_PROGRESS。** 原固定 1 秒来客、2x 的 20 单用例已修复并在精简回归通过；EditMode 1388/1388 PASS，PlayMode 88/89 PASS（P15 自身 76/76 PASS）。唯一新失败是 MainCafe：第 9 位尚未进店的收银站位预留挡住送杯规划路线，第 8 位未完成，已停止；不关闭 P15、不进入 PR。见[本轮验证](Phase15_Validation_Report.md)。
 
