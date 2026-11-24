@@ -1,6 +1,6 @@
 # Phase 15 自动营业周期：Beginner Guide
 
-> **当前：本地精简Edit 1549 PASS；Play 179 PASS／0 FAIL／1既有D2 SKIP；P15自身77项Play全PASS。** Long7两项及七种布局均PASS，每项20次真实离店；Main三批8/9/7位全部排空。P15进入In Review，按已有授权更新PR与运行compact CI，PR不merge；当前head云端结果见PR checks。既有D2指定状态仍未覆盖，下方8项手动步骤保持。
+> **当前P15为In Review，PR #15未合并。** 本轮三类准备交接修正已通过本地精简Edit1575/1575；Play179通过／0失败／1既有D2跳过（P15自身77项全通过）。Main单批8位、三批8／7／10位排空；七种布局各20真实离店。按已有授权发布并运行同范围compact CI，当前head云端结论见[PR checks](https://github.com/zhengparker/AnimalCafe/pull/15/checks)，不以本地通过替代Linux或正式关闭P15，不进入P16。见[验证报告](Phase15_Validation_Report.md)。
 
 ## 0. 按顺序手动验收（8 项）
 

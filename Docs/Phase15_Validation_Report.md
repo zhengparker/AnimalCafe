@@ -1,5 +1,53 @@
 # Phase 15 — Business Day Lifecycle Validation Report
 
+### 2026-11-24 三类准备阶段修正：本地精简回归通过，P15 In Review
+
+上轮实际Edit1558通过、Play176通过／3失败／1既有D2跳过。当前继续修复该三项，保留全部原业务断言和实际失败证据。
+
+本轮把已存在的有限准备检查复用于两个明确来源：原唯一Frozen为员工路线的、真实CQ队首和同业务PQS未Transfer预留的Paid准备；以及具有当前producer／Join资格的未出生Admission。所有当前blocker仍须真实Bound／stamp／ActorLife／独立path clear，新增owner不进入Frozen／WAIT；原年龄、查询累计和期限保持。Admission允许在Jobs=0的endpoint阶段纯Deferred，但不Join、不生成人物、不重试Terminal。原Exit来源继续走原严格检查，未用新增分支覆盖；已有Completed、非selected、起终点相同的单点Native证明也被正确保留。
+
+准确RED证据：Main单点／Paid准备5项业务RED、16控制PASS（22F1570B）；Paid业务／入店谱系错配及已Transfer3项RED（86D612B1）；Admission真实CQ暂满→恢复→原WAIT→同actor第二次真实Advance的2项业务RED、2控制PASS（E7CA08AC）。28项定向最终PASS（DB8ADC88）；完整精简Edit保留全部旧断言，最终 **1575/1575 PASS**，XML `09639AC24878593BA18B5FAAD7BD926E3A839D8E9CB89AEA90C2DD1E2838B695`。中间测试准备错误与6项兼容性失败原文保留，均不冒充通过；随后收紧来源并验证旧Exit严格反测仍通过。
+
+空店诊断在fresh Photo7 Fast中复现：第6人原anchor先等待前客Counter Advance assignment1，后者真实进入assignment2／Bound时被误认为新owner，预算仍18.13秒却进入Terminal。之后同anchor空店拒绝、clock armed且Remaining=0，witness errors0／observer restored。原Normal9那次未保存anchor首因，不据新Fast5断言其具体失败瞬间完全一致；自然来客使用独立System.Random，单项／整套顺序不能单独证明测试污染。
+
+当前冻结537项源码集合 `23ed9736b760019157c0c7039ac842bffc09e1ba1943ecf6451c64e90bbdb6d4`；Core `8F649517...`，独立review C0/I0。原4个Edit／100个Play selectors不变，新增17项Edit后为1575，Play仍180项；helper10 PASS。最终完整精简Play为 **179 PASS／0 FAIL／1既有D2 SKIP**（180项、1537.5855306秒），P15自身Edit68／Play77全PASS；Main单批8位、三批8／7／10位真实离店排空，七种柜台布局各20位真实离店并排空。Play XML `1F7E3B46E264A89C5444872FC4FA9438F56EB619D02C30C2EB38484AFD6BBAE0`。D2指定状态仍SKIP／NOT_PROVEN，未转PASS。3192 Assets、原source／inputs／Scene parity一致、未知差异0、历史恢复8项、Editor／worker0；OS handles UNKNOWN。
+
+本轮按已有授权更新PR #15并运行正式compact CI；当前head云端实际结果以[PR checks](https://github.com/zhengparker/AnimalCafe/pull/15/checks)和PR说明为准。本地通过不替代Linux／Owner／device／长期后台／merged-main验收。PR保持Open／未merge，P15 In Review，不进入P16。
+
+证据：`outputs/phase15/p15-customer-preparation-repair-20261124/`。下方为历史候选与旧源码结果。
+
+
+### 2026-11-24 最终精简回归未通过：已停止，未push／未启动新CI
+
+**当前候选修复未完成整体验证。** 同一537项冻结源码 `97eda25767cac7bbe23ac9beaa225529df6bfe9bd3a68baa363918a646e72833`：Edit **1558 PASS／0 FAIL／0 SKIP**；Play **176 PASS／3 FAIL／1既有D2 SKIP**（180项每项一次，1036.6995874秒）。P15自身Edit68／Play77通过，但不关闭P15。
+
+| 原有Play用例 | 实际结果 |
+| --- | --- |
+| MainDefaultCounterPlacementCompletesServiceWithoutTrafficDeadlock | FAIL：23.516game秒，第4客Paid取餐准备Blocked；首次缓存new-frozen-owner，新增owner是第1客actual-exit |
+| MainDefaultCounterPlacementCompletesThreeFreshNaturalCohorts | FAIL：61.390game秒，第3客pickup-service Blocked；首次缓存new-frozen-owner，新增owner为Barista employee-pickup-journey |
+| UserPhotoCounterSevenNormal | FAIL：360game秒窗口只进9位，9位均真实离店、订单Completed、容量0、员工Idle，之后无新来客；不是本次wall Timeout |
+
+新失败根因及是否由候选修改引入均UNKNOWN，不仅凭相同new-frozen-owner字样认定同根因。原两项单独真实经营验证2/2 PASS（各20真实exit），本轮整套Long7 1x／2x及其余五种布局通过；单项通过不能替代整套。原Play范围未增加，Edit只增加9项有针对性的交接正反例。
+
+按Owner“新失败先停下来告知”要求，当前批次已完成并保留实际NUnit XML、逐段日志与失败首拒绝缓存；不继续修改／自动重跑，不commit／push，也不dispatch新CI。PR仍为 `0654f37`，上次云端45286584326仍FAIL。候选修改仅留本地待后续处理，PR不merge，P15 In Review，不进入P16。
+
+资源恢复：3192 Assets、未知差异0、原Scene／source／inputs parity一致、历史恢复8、Editor／worker0；OS handles UNKNOWN。Edit XML SHA256 `C229339348C23347B4446111A57E2ED0CCE0B55B0E5B7465DCCDB0BAD67EE034`；Play `BDF41644999049259D46219537915BA3EDDFCAB4C40DE7B5D5B925B5CA055B31`。证据：`outputs/phase15/p15-cloud-paid-prepared-exit-repair-20261124/local-result.json`。下方均保留为历史阶段证据。
+
+
+### 2026-11-24 云端两项失败修正：Edit1558通过，真实经营验证中
+
+上一head `0654f37` 的正式compact CI [45286584326](https://github.com/zhengparker/AnimalCafe/actions/runs/45286584326) 为 Edit1549 PASS；Play177 PASS／2 FAIL／1既有D2 SKIP。P15自身Edit68／Play77通过，但不能据此关闭P15。
+
+Paid12的首次失败记录表明：原Frozen为Exit10，Exit10已真实完成前腿、下一腿Prepared而未Bind，身体仍挡住Paid路线；新增Collection11真Bound使它被误判Terminal。初始模型遗漏“旧身体仍挡路”，其1554项Edit通过不能代表准确云端修复；已中止该旧Play批次，无完整XML，不计PASS。中止留下的两个Test Framework bootstrap文件已归档，原3192 Assets逐项一致，保留原始收尾及恢复receipt。
+
+最终修复复用已有 strict next-leg life／pose／claim认证，只允许当前路径clear的原Exit保持原有限Paid准备；原身体可以仍是已冻结blocker，不把Prepared当Native，不扩大Frozen／WAIT、不重置期限、不授予移动。准确body-blocking反例为2 FAIL／2控制PASS后修复，新增9项正反例涵盖两种身体检查顺序、原期限耗尽、stale pose／wrong life／blocked next leg拒绝。最终精简Edit1558/1558 PASS（XML `C229339348C23347B4446111A57E2ED0CCE0B55B0E5B7465DCCDB0BAD67EE034`）。
+
+Photo7 1x的Linux180秒wall截断前有逐段日志：game210.44、Completed10、actualExit10、最后idle12.90、无Blocked且仍有Native移动。本地同项约365game秒／106wall秒完成20人，不能沿用“未捕获状态”结论。仅该case显式Timeout360000ms，保留45game秒无进展失败及20位真实离店／订单／容量断言；所有模式在teardown卸载前解除observer receipt，清场不算离店。
+
+最终源码537项集合 `97eda25767cac7bbe23ac9beaa225529df6bfe9bd3a68baa363918a646e72833`；原4个Edit及100个Play selectors不变，Play仍180项，未添加新Play用例。独立review C0/I0，Python helper10 PASS。正在先运行云端原失败的两项真实经营用例；随后运行完整精简Play。Windows／Linux结果分别记录，本轮云端未运行，PR不merge，P15 In Review，未进入P16。
+
+证据目录：`outputs/phase15/p15-cloud-paid-prepared-exit-repair-20261124/`。下方均为历史源码的独立结果，不替代本轮当前状态。
+
 ### 2026-11-23 最终本地精简回归通过：P15 In Review，当前head CI待运行
 
 本轮两项Long7修复已完成本地验证。冻结537项源码集合 `6b88266fe49915fd3ba13b708daa13790d2a6bd027bb012a5d0f8a2317009990` 全部校验一致，原4个Edit／原100个Play selectors保持，未追加Play范围或放宽原测试时限、碰撞、容量、付款与营业时间。

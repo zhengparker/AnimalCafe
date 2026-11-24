@@ -1252,7 +1252,9 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         }
         [UnityTest] public IEnumerator UserPhotoCounterSixFast() => ObserveUserLongCounter(6, GameSpeed.Fast, true,
             originalExitDecisions:Environment.GetCommandLineArgs().Any(arg=>arg=="-photoExitFirstFailureWitness" || arg=="-photoCheckoutFirstRefusalWitness"));
-        [UnityTest] public IEnumerator UserPhotoCounterSevenNormal() => ObserveUserLongCounter(7, GameSpeed.Normal, true);
+        // Linux CI advances fixed game frames more slowly; keep the 45-game-second stall guard and 20 actual exits.
+        // 仅增加本测试wall预算；营业/寻路等待与20位真实离店断言不变。
+        [UnityTest, Timeout(360000)] public IEnumerator UserPhotoCounterSevenNormal() => ObserveUserLongCounter(7, GameSpeed.Normal, true);
         [UnityTest] public IEnumerator UserPhotoCounterSevenFast() => ObserveUserLongCounter(7, GameSpeed.Fast, true);
         [UnityTest, Timeout(600000)] public IEnumerator PhotoSevenFastExitConnectorTimings()
         {
@@ -5222,7 +5224,6 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                 if (publicationProbe || Environment.GetCommandLineArgs().Contains("-corridorTrace") || Environment.GetCommandLineArgs().Contains("-stallObservationTrace")) corridorTrace = new CorridorTrace(this);
                 if(Environment.GetCommandLineArgs().Contains("-segmentFailureWitness")) segmentFailureTrace=new SegmentFailureTrace(this);
                 if(Environment.GetCommandLineArgs().Contains("-pickupTargetWitness")) targetDecisionTrace=new PickupTargetDecisionTrace(this);
-                if(originalExitDecisions||exitConnectorTimings||ciWitness)
                 {
                     if(originalExitDecisions)exitDecisions=new OriginalExitDecisionTrace(this,directory);
                     if(exitConnectorTimings)connectorTimings=new ExitConnectorTimingTrace(this,directory);
@@ -5263,7 +5264,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
                         originalTokens.Add(visit.VisitId, customers.Capacity.GetReservations().Where(r => r.OwnerId == visit.VisitId).Select(r => r.Token).ToArray());
                         var total = customers.Capacity.GetReservations().Single(r => r.OwnerId == visit.VisitId && r.Kind == AnimalCafe.Capacity.CapacityKind.TotalCustomers).Token;
                         var tracker = body.gameObject.AddComponent<CafeActualExitObserver>();
-                        if(originalExitDecisions||exitConnectorTimings||ciWitness)receiptTrackers.Add(tracker);
+                        receiptTrackers.Add(tracker);
                         tracker.VisitId = visit.VisitId;
                         tracker.Receipt = (id, pose) =>
                         {
