@@ -416,7 +416,7 @@ namespace AnimalCafe.EditorTools.Phase7
         private static void NormalizeSerializedWhitespace(string path)
         {
             var original=File.ReadAllText(path);var normalized=Regex.Replace(original,@"[ \t]+(?=\r?$)",string.Empty,RegexOptions.Multiline);
-            if(normalized==original)return;File.WriteAllText(path,normalized,new System.Text.UTF8Encoding(false));AssetDatabase.ImportAsset(path,ImportAssetOptions.ForceSynchronousImport);
+            if(normalized==original)return;Phase7BytePublication.Write(path,new System.Text.UTF8Encoding(false).GetBytes(normalized));AssetDatabase.ImportAsset(path,ImportAssetOptions.ForceSynchronousImport);
         }
         private static void PreserveDependencyAssets(Action operation)
         {

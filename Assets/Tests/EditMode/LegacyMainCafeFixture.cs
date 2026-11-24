@@ -57,7 +57,7 @@ namespace AnimalCafe.Tests.EditMode
         {
             var bytes = GetLegacyBytes();
             if (!File.Exists(path)) CreateEmptyAsset(path);
-            File.WriteAllBytes(path, bytes);
+            WriteBytesAtomically(path, bytes);
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
         }
 
@@ -113,14 +113,37 @@ namespace AnimalCafe.Tests.EditMode
                 throw new IOException("Could not create isolated legacy Scene: " + path);
         }
 
+        private static void WriteBytesAtomically(string path, byte[] bytes)
+        {
+            // Publish complete bytes without truncating a file held by a read-only mapping.
+            // 点前缀 sibling 不作为新 Unity asset 导入；只清理由本次操作创建的 temp。
+            var temporary = Path.Combine(Path.GetDirectoryName(path),
+                "." + Path.GetFileName(path) + "." + Guid.NewGuid().ToString("N") + ".tmp");
+            var ownsTemporary = false;
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    ownsTemporary = true;
+                    stream.Write(bytes, 0, bytes.Length);
+                }
+                if (File.Exists(path)) File.Replace(temporary, path, null);
+                else File.Move(temporary, path);
+            }
+            finally
+            {
+                if (ownsTemporary && File.Exists(temporary)) File.Delete(temporary);
+            }
+        }
+
         public void Dispose()
         {
             if (disposed) return;
             var scene = SceneManager.GetSceneByPath(Main);
             if (scene.IsValid() && !EditorSceneManager.CloseScene(scene, true))
                 throw new InvalidOperationException("Could not release test-owned MainCafe before restoring its original bytes.");
-            File.WriteAllBytes(Main, original);
-            File.WriteAllBytes(Main + ".meta", originalMeta);
+            WriteBytesAtomically(Main, original);
+            WriteBytesAtomically(Main + ".meta", originalMeta);
             AssetDatabase.ImportAsset(Main, ImportAssetOptions.ForceSynchronousImport | ImportAssetOptions.ForceUpdate);
             EditorBuildSettings.scenes = buildSettings;
             // Restore only MainCafe's entry; never reopen an unrelated dirty/Untitled Scene.

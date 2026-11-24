@@ -202,13 +202,56 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
 
         [UnityTest] public IEnumerator MainCafeConfirmedDecorResetsFourCustomersAndPreservesActiveStaff()
         {
+            var waitFailureLogged=false;
+            // Wrap only the original five waits; do not query a planner or change their budgets/predicates.
+            // 只给本例原Wait标阶段；失败时一次读取public snapshot，原异常继续抛出。
+            IEnumerator WaitStage(string stage,IEnumerator original)
+            {
+                var completed=false;
+                try
+                {
+                    while(original.MoveNext())yield return original.Current;
+                    completed=true;
+                }
+                finally
+                {
+                    if(!completed && !waitFailureLogged)
+                    {
+                        waitFailureLogged=true;
+                        try
+                        {
+                            var actualOwner=Find<CafeLoopController>();var current=actualOwner.Snapshot;
+                            var navigation=Find<NavigationLayoutAdapter>();
+                            TestContext.WriteLine("P13_DECOR_WAIT_FAILURE stage="+stage+" frame="+Time.frameCount+
+                                " epoch="+current.Epoch+" canProgress="+actualOwner.CanProgress+" layoutReady="+layout.CurrentReadiness.CanOpenForBusiness+
+                                " navReady="+navigation.CurrentReadiness.CanResume+" revision="+navigation.Revision+
+                                " decorOpen="+decor.IsOpen+" layoutChanges="+decor.CompletedLayoutChangeVersion+" auto="+customers.AutoSpawn+
+                                " status="+customers.Status+" ownerFailure="+current.Failure+
+                                " staff=["+string.Join(";",flow.Snapshot.Select(e=>e.Role+"/"+e.State+"/handle="+e.HandleId+"/"+e.Failure))+"]"+
+                                " visits=["+string.Join(";",customers.Snapshot.Select(v=>v.VisitId+"/"+v.State+"@"+v.Position.ToString("F6")))+"]"+
+                                " counter=["+string.Join(";",customers.CounterAssignments.Select(v=>v.VisitId+"/slot"+v.SlotIndex+"/arrived="+v.Arrived))+"]"+
+                                " orders=["+string.Join(";",current.Orders.Select(v=>v.Key.OrderId+"/"+v.Value.State+"/"+v.Value.CustomerId))+"]"+
+                                " paid=["+string.Join(";",current.PaidVisitIds)+"] deliveryCount="+current.Delivery.Count+
+                                " bodies=["+string.Join(";",world.RegisteredActors.Select(v=>v.ActorId+"@"+v.transform.position.ToString("F6")))+"]");
+                        }
+                        catch(Exception error){TestContext.WriteLine("P13_DECOR_WAIT_FAILURE stage="+stage+" snapshot=UNKNOWN "+error.GetType().Name+": "+error.Message);}
+                    }
+                    (original as IDisposable)?.Dispose();
+                }
+            }
             yield return Load("Assets/Scenes/MainCafe.unity"); yield return null; yield return null;
             Assert.That(scene.path,Is.EqualTo("Assets/Scenes/MainCafe.unity"));
             Assert.That(customers.AutoSpawn,Is.True); customers.AutoSpawn=false;
-            Seed(); decor.RefreshConfirmedNavigationPresentation(); Find<NavigationDecorationBridge>().ResumeAfterRepair();
+            Seed();
+            // Only this scenario uses fixed supports for the real four-customer carry/cashier overlap.
+            // 仅本例固定CR/CM台面位置；共享Seed、四客、工作时长与并发断言不变。
+            var registerSupport=layout.FunctionalSurfaceLayout.MountedInstances.Single(item=>item.InstanceId=="12000000000000000000000000000004").Address.SupportFurnitureInstanceId;
+            Assert.That(layout.Layout.MoveFurniture(registerSupport,new GridPosition(3,5)).Succeeded,Is.True);
+            Assert.That(layout.Layout.MoveFurniture("12000000000000000000000000000002",new GridPosition(1,6)).Succeeded,Is.True);
+            decor.RefreshConfirmedNavigationPresentation(); Find<NavigationDecorationBridge>().ResumeAfterRepair();
             yield return null; // Existing MainCafe setup panel releases its independent resume block on Update.
             Assert.That(Find<GameTimeService>().TrySetSpeed(GameSpeed.Normal),Is.True,Find<GameTimeService>().ResumeBlockReason);
-            yield return Ready();
+            yield return WaitStage("initial-staff-ready",Ready());
             Assert.That(layout.CurrentReadiness.CanOpenForBusiness,Is.True);
             Assert.That(Find<NavigationLayoutAdapter>().CurrentReadiness.CanResume,Is.True);
             var owner=Find<CafeLoopController>(); owner.HoldCollection=true;
@@ -221,13 +264,19 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
             Assert.That(flow.TryGetBinding(EmployeeRole.Barista,out var oldBinding),Is.True);
             Assert.That(flow.TryStartTask(EmployeeRole.Barista),Is.False);
             var barista=staffActors.Single(a=>a.ActorId==State(EmployeeRole.Barista).ActorId);
-            yield return Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.CarryingToPickUp &&
-                Vector3.Distance(barista.transform.position,oldBinding.WorkTarget.Position)>.3f && State(EmployeeRole.Cashier).State==EmployeeState.Working,true);
+            yield return WaitStage("four-guests-carry-and-cashier-working",Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.CarryingToPickUp &&
+                Vector3.Distance(barista.transform.position,oldBinding.WorkTarget.Position)>.3f && State(EmployeeRole.Cashier).State==EmployeeState.Working,true));
             Assert.That(flow.TryStartTask(EmployeeRole.Cashier),Is.False); Assert.That(State(EmployeeRole.Cashier).HandleId,Is.GreaterThan(0));
             var oldHandle=State(EmployeeRole.Barista).HandleId;
             var held=barista.GetComponentsInChildren<Transform>().Single(t=>t.name=="EmployeeHeldCup");
             var before=barista.transform.position; var version=decor.CompletedLayoutChangeVersion;
-            var display=Find<PickupCupDisplay>(); Assert.That(display.VisibleCount(oldBinding.CupAddress.Value),Is.Zero);
+            var display=Find<PickupCupDisplay>();
+            // Earlier Ready orders can coexist with this real carried order; bind the no-early-cup assertion to its key.
+            Assert.That(flow.TryCaptureOrderCheckpoint(EmployeeRole.Barista,out var carriedCheckpoint),Is.True);
+            Assert.That(carriedCheckpoint.Order.HasValue,Is.True);
+            Assert.That(display.VisibleOrders.ContainsKey(carriedCheckpoint.Order.Value),Is.False,"The actual carried order has not delivered its own cup");
+            Assert.That(display.VisibleOrders.Keys.All(key=>owner.Snapshot.Orders.TryGetValue(key,out var order) &&
+                order.State==OrderState.ReadyForPickup),Is.True,"Every earlier visible cup belongs to an actual already-delivered order");
             decor.EnterDecorationMode();
             Assert.That(decor.TryBeginExistingFunctionalSurfacePreview(FunctionalSurfacePreviewKind.MountedEquipment,"12000000000000000000000000000005"),Is.True);
             Assert.That(decor.TryRotateFunctionalSurfacePreview(),Is.True); Assert.That(decor.TryConfirmFunctionalSurfacePreview(),Is.True);
@@ -261,11 +310,11 @@ namespace AnimalCafe.Tests.PlayMode.Phase13
                 Assert.That(actor.Proxy.radius,Is.EqualTo(radii[index])); Assert.That(actor.Proxy.height,Is.EqualTo(heights[index]));
             }
             yield return AdmitIntegratedCustomers(1);
-            yield return Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.Working,true);
+            yield return WaitStage("post-decor-new-working",Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.Working,true));
             Assert.That(State(EmployeeRole.Barista).HandleId,Is.Not.EqualTo(oldHandle));
-            yield return Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.Idle && State(EmployeeRole.Barista).Delivered,true);
+            yield return WaitStage("post-decor-new-delivered-idle",Wait(()=>State(EmployeeRole.Barista).State==EmployeeState.Idle && State(EmployeeRole.Barista).Delivered,true));
             Assert.That(State(EmployeeRole.Barista).Delivered,Is.True); Assert.That(display.VisibleCount(newBinding.CupAddress.Value),Is.EqualTo(1));
-            owner.HoldCollection=false; yield return Wait(()=>customers.Snapshot.Count==0,true);
+            owner.HoldCollection=false; yield return WaitStage("post-decor-final-drain",Wait(()=>customers.Snapshot.Count==0,true));
             Assert.That(customers.Snapshot,Is.Empty);
             TestContext.WriteLine($"QA03_REAL_MAINCAFE Confirm reset4Customers; same2Employee objects/IDs/roles/proxies; returned {travelled:F3}m to changed anchor then new task delivered");
         }

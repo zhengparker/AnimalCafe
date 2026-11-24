@@ -1,0 +1,539 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
+
+namespace AnimalCafe.Navigation
+{
+    public enum TrafficNativeQueryOutcome { Unknown, Complete, StaticSampleNoHit }
+    // Immutable result of one actual provider call; no WAIT, geometry or movement authority.
+    // 单次真实查询的不可变结果；普通null仍是Unknown，只认证当前静态mesh上的Sample无命中。
+    public sealed class TrafficNativeQueryResult
+    {
+        public readonly object Provider,Context;
+        public readonly Vector3 From,To;
+        public readonly TrafficNativeQueryOutcome Outcome;
+        public readonly IReadOnlyList<Vector3> Path;
+        public TrafficNativeQueryResult(object provider,object context,Vector3 from,Vector3 to,TrafficNativeQueryOutcome outcome,IReadOnlyList<Vector3> path=null)
+        {Provider=provider;Context=context;From=from;To=to;Outcome=outcome;Path=path==null?null:Array.AsReadOnly(path.ToArray());}
+    }
+
+    // Internal producer identity/readiness only; this object cannot grant any traffic right.
+    internal sealed class TrafficAdmissionReadiness
+    {
+        internal readonly TrafficIntentKey Intent;
+        internal readonly Func<bool> IsCurrent;
+        internal readonly Func<IReadOnlyList<TrafficIntentKey>> PendingExits;
+        internal readonly Func<bool> CanPrepareJoin;
+        internal TrafficAdmissionReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<IReadOnlyList<TrafficIntentKey>> pendingExits)
+            :this(intent,isCurrent,pendingExits,null) { }
+        internal TrafficAdmissionReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<IReadOnlyList<TrafficIntentKey>> pendingExits,
+            Func<bool> canPrepareJoin)
+        { Intent=intent;IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));PendingExits=pendingExits??throw new ArgumentNullException(nameof(pendingExits));
+            CanPrepareJoin=canPrepareJoin; }
+    }
+
+    // Unacquired queued/unpaid Counter proposal only; this descriptor grants no traffic WAIT or movement right.
+    // 只认证付款前真实Counter身份；空间资格等待沿用原Entry/age/query，不复活Terminal。
+    internal sealed class TrafficUnpaidParkingEligibility
+    {
+        internal readonly TrafficIntentKey Intent;
+        internal readonly object ActorLife,CounterOwner,BusinessOwner,Admission;
+        internal readonly Func<bool> IsCurrent;
+        internal TrafficInitialQueueGeometry InitialQueueGeometry { get; }
+        internal TrafficUnpaidParkingEligibility(TrafficIntentKey intent,object actorLife,object counterOwner,
+            object businessOwner,object admission,Func<bool> isCurrent)
+            :this(intent,actorLife,counterOwner,businessOwner,admission,isCurrent,null) { }
+        internal TrafficUnpaidParkingEligibility(TrafficIntentKey intent,object actorLife,object counterOwner,
+            object businessOwner,object admission,Func<bool> isCurrent,TrafficInitialQueueGeometry initialQueueGeometry)
+        {Intent=intent;ActorLife=actorLife;CounterOwner=counterOwner;BusinessOwner=businessOwner;Admission=admission;
+            IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));InitialQueueGeometry=initialQueueGeometry;}
+    }
+
+    // One real paid FIFO-head Collection factory. Readiness withholds preparation; it grants no traffic right.
+    // 只认证原Ready杯/同PQS取餐准备；不授予Working、Native或新的Frozen/WAIT依赖。
+    internal sealed class TrafficCollectionReserveReadiness
+    {
+        internal readonly TrafficIntentKey Intent;
+        internal readonly object ActorLife,BusinessOwner,Admission,ReadySeal;
+        internal readonly AnimalCafe.Customers.PickupQueueService PickupOwner;
+        internal readonly Func<bool> IsCurrent;
+        internal readonly Func<TrafficIntentKey,TrafficDecision,object,TrafficCollectionReserveObservation> Read;
+        internal TrafficCollectionReserveReadiness(TrafficIntentKey intent,object actorLife,object businessOwner,object admission,
+            AnimalCafe.Customers.PickupQueueService pickupOwner,object readySeal,Func<bool> isCurrent,
+            Func<TrafficIntentKey,TrafficDecision,object,TrafficCollectionReserveObservation> read)
+        {
+            Intent=intent;ActorLife=actorLife;BusinessOwner=businessOwner;Admission=admission;PickupOwner=pickupOwner;ReadySeal=readySeal;
+            IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));Read=read??throw new ArgumentNullException(nameof(read));
+        }
+    }
+    // Fresh preview is a read-only factory output; publication is proved by the actual same-origin parking receipt.
+    // 每次preview可正常刷新；旧cookie是否Consumed不证明发布，必须同原factory/真实PQS预约谱系。
+    public sealed class TrafficCollectionReserveObservation
+    {
+        public AnimalCafe.Customers.PickupQueueService.ReservationClaim CollectorClaim { get; }
+        public AnimalCafe.Customers.PickupQueueService.PreparedMutation CollectionPreview { get; }
+        public object ProducerSeal { get; }
+        public TrafficCounterUncommittedPreparationObservation Uncommitted { get; }
+        public AnimalCafe.Customers.PickupQueueService.ReservationClaim PublishedReservation { get; }
+        public TrafficDecision ParkingSource { get; }
+        public TrafficDecision PaidSource { get; }
+        public TrafficCollectionPublishedWorkingObservation PublishedWorking { get; }
+        internal TrafficCollectionReserveObservation(AnimalCafe.Customers.PickupQueueService.ReservationClaim collectorClaim,
+            AnimalCafe.Customers.PickupQueueService.PreparedMutation collectionPreview,object producerSeal,
+            TrafficCounterUncommittedPreparationObservation uncommitted,
+            AnimalCafe.Customers.PickupQueueService.ReservationClaim publishedReservation,TrafficDecision parkingSource,TrafficDecision paidSource)
+            :this(collectorClaim,collectionPreview,producerSeal,uncommitted,publishedReservation,parkingSource,paidSource,null) { }
+        internal TrafficCollectionReserveObservation(AnimalCafe.Customers.PickupQueueService.ReservationClaim collectorClaim,
+            AnimalCafe.Customers.PickupQueueService.PreparedMutation collectionPreview,object producerSeal,
+            TrafficCounterUncommittedPreparationObservation uncommitted,
+            AnimalCafe.Customers.PickupQueueService.ReservationClaim publishedReservation,TrafficDecision parkingSource,TrafficDecision paidSource,
+            TrafficCollectionPublishedWorkingObservation publishedWorking)
+        {
+            CollectorClaim=collectorClaim;CollectionPreview=collectionPreview;ProducerSeal=producerSeal;Uncommitted=uncommitted;
+            PublishedReservation=publishedReservation;ParkingSource=parkingSource;PaidSource=paidSource;PublishedWorking=publishedWorking;
+        }
+    }
+    // Same captured task and current CQ claim only; no independent release, duration or traffic permission.
+    // 同一原Working任务谱系；只暂缓准备，不授予WAIT、Native或lease。
+    public sealed class TrafficCollectionPublishedWorkingObservation
+    {
+        public object ActorLife { get; }
+        public object BusinessOwner { get; }
+        public object Admission { get; }
+        public object WorkingSeal { get; }
+        public AnimalCafe.Customers.CounterQueueService.AssignmentClaim CounterClaim { get; }
+        internal TrafficCollectionPublishedWorkingObservation(object actorLife,object businessOwner,object admission,
+            object workingSeal,AnimalCafe.Customers.CounterQueueService.AssignmentClaim counterClaim)
+        {ActorLife=actorLife;BusinessOwner=businessOwner;Admission=admission;WorkingSeal=workingSeal;CounterClaim=counterClaim;}
+    }
+
+    // Existing Counter producer only. Withholds preparation; never grants a finite WAIT/Native right.
+    // 已有顾客的原Counter准备，与未出生admission身份严格区分。
+    internal sealed class TrafficCounterAdvanceReadiness
+    {
+        internal readonly TrafficIntentKey Intent;
+        internal readonly Func<bool> IsCurrent;
+        internal readonly Func<TrafficIntentKey,float> FiniteWorkingPredecessorSeconds;
+        internal readonly Func<TrafficIntentKey,TrafficDecision,TrafficCounterPaidTraversalObservation> OriginalPaidTraversal;
+        internal readonly Func<TrafficIntentKey,TrafficDecision,TrafficCounterUncommittedPreparationObservation> UncommittedPredecessor;
+        internal TrafficCounterAdvanceReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<TrafficIntentKey,float> finiteWorkingPredecessorSeconds)
+            :this(intent,isCurrent,finiteWorkingPredecessorSeconds,null) { }
+        internal TrafficCounterAdvanceReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<TrafficIntentKey,float> finiteWorkingPredecessorSeconds,
+            Func<TrafficIntentKey,TrafficDecision,TrafficCounterPaidTraversalObservation> originalPaidTraversal)
+            :this(intent,isCurrent,finiteWorkingPredecessorSeconds,originalPaidTraversal,null) { }
+        internal TrafficCounterAdvanceReadiness(TrafficIntentKey intent,Func<bool> isCurrent,Func<TrafficIntentKey,float> finiteWorkingPredecessorSeconds,
+            Func<TrafficIntentKey,TrafficDecision,TrafficCounterPaidTraversalObservation> originalPaidTraversal,
+            Func<TrafficIntentKey,TrafficDecision,TrafficCounterUncommittedPreparationObservation> uncommittedPredecessor)
+        { Intent=intent;IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));
+            FiniteWorkingPredecessorSeconds=finiteWorkingPredecessorSeconds??throw new ArgumentNullException(nameof(finiteWorkingPredecessorSeconds));
+            OriginalPaidTraversal=originalPaidTraversal;UncommittedPredecessor=uncommittedPredecessor; }
+    }
+    // Only an uncommitted real CQ-head Reserve preparation; never a finite Working or Native promise.
+    // 只认证原CQ头客尚未发布的Reserve准备，不授予占位、移动或WAIT依赖。
+    public sealed class TrafficCounterUncommittedPreparationObservation
+    {
+        public object ActorLife { get; }
+        public object BusinessOwner { get; }
+        public object Admission { get; }
+        public AnimalCafe.Customers.CounterQueueService.AssignmentClaim CounterClaim { get; }
+        public AnimalCafe.Customers.PickupQueueService PickupOwner { get; }
+        public AnimalCafe.Customers.PickupQueueService.PreparedMutation ReservePreview { get; }
+        public TrafficDecision PreparationSource { get; }
+        internal TrafficCounterUncommittedPreparationObservation(object actorLife,object businessOwner,object admission,
+            AnimalCafe.Customers.CounterQueueService.AssignmentClaim counterClaim,AnimalCafe.Customers.PickupQueueService pickupOwner,
+            AnimalCafe.Customers.PickupQueueService.PreparedMutation reservePreview,TrafficDecision preparationSource)
+        {ActorLife=actorLife;BusinessOwner=businessOwner;Admission=admission;CounterClaim=counterClaim;
+            PickupOwner=pickupOwner;ReservePreview=reservePreview;PreparationSource=preparationSource;}
+    }
+    // Optional original business provenance only. Core must independently authenticate the owned paid traversal.
+    // No selected path, body independence, permission or WAIT edge is granted by this readonly observation.
+    public sealed class TrafficCounterPaidTraversalObservation
+    {
+        public object ActorLife { get; }
+        public object WorkingSeal { get; }
+        public TrafficDecision ParkingSource { get; }
+        public TrafficDecision PaidSource { get; }
+        public TrafficIntentKey PaidIntent { get; }
+        public AnimalCafe.Customers.PickupQueueService.ReservationClaim Reservation { get; }
+        internal TrafficCounterPaidTraversalObservation(object actorLife,object workingSeal,TrafficDecision parkingSource,
+            TrafficIntentKey paidIntent,TrafficDecision paidSource,AnimalCafe.Customers.PickupQueueService.ReservationClaim reservation)
+        {ActorLife=actorLife;WorkingSeal=workingSeal;ParkingSource=parkingSource;PaidIntent=paidIntent;PaidSource=paidSource;Reservation=reservation;}
+    }
+
+    // Internal producer observation only; no movement, canonical or parking authority.
+    // 内部只读准备资格；不能授予移动、业务提交或占位权限。
+    internal enum TrafficDeliveryPreparationStage { Invalid,PublicationPending,WorkingOrPaidPending,NativeAccepted }
+    // One readonly observation; the producer does not issue a permit. Core authenticates the actual lineage.
+    // 同次只读结果；业务seal不替代Core的真实canonical/strict-leg证明。
+    internal readonly struct TrafficDeliveryPreparationObservation
+    {
+        internal readonly TrafficDeliveryPreparationStage Stage;
+        internal readonly object ActorLife,WorkingSeal;
+        internal readonly AnimalCafe.Customers.PickupQueueService.ReservationClaim Reservation;
+        internal readonly TrafficIntentKey? PaidIntent;
+        internal readonly TrafficDecision PaidSource;
+        internal TrafficDeliveryPreparationObservation(TrafficDeliveryPreparationStage stage,object actorLife=null,object workingSeal=null,
+            AnimalCafe.Customers.PickupQueueService.ReservationClaim reservation=null,TrafficIntentKey? paidIntent=null,TrafficDecision paidSource=null)
+        {Stage=stage;ActorLife=actorLife;WorkingSeal=workingSeal;Reservation=reservation;PaidIntent=paidIntent;PaidSource=paidSource;}
+    }
+
+    internal sealed class TrafficDeliveryPreparationReadiness
+    {
+        internal readonly TrafficIntentKey Intent;
+        internal readonly Func<bool> IsCurrent;
+        internal readonly Func<TrafficIntentKey,TrafficDecision,TrafficDeliveryPreparationObservation> Read;
+        internal readonly AnimalCafe.Customers.PickupQueueService PickupOwner;
+        internal TrafficDeliveryPreparationReadiness(TrafficIntentKey intent,Func<bool> isCurrent,
+            Func<TrafficIntentKey,TrafficDecision,TrafficDeliveryPreparationObservation> read)
+            :this(intent,isCurrent,read,null){}
+        internal TrafficDeliveryPreparationReadiness(TrafficIntentKey intent,Func<bool> isCurrent,
+            Func<TrafficIntentKey,TrafficDecision,TrafficDeliveryPreparationObservation> read,AnimalCafe.Customers.PickupQueueService pickupOwner)
+        {Intent=intent;IsCurrent=isCurrent??throw new ArgumentNullException(nameof(isCurrent));Read=read??throw new ArgumentNullException(nameof(read));PickupOwner=pickupOwner;}
+    }
+
+    public enum TrafficDecisionKind
+    {
+        Granted, WaitingForTraffic, DeferredByBudget, Unreachable, InvalidConfiguration,
+        PlanningFailed, InvalidStart, Cancelled, StaleContext
+    }
+
+    // Failure authority is distinct from the displayed outcome. / 失败后的权限独立于显示结果。
+    public enum TrafficFailureDisposition { None, AlternateAllowed, Terminal }
+
+    // A business phase owns age; a Native leg does not. / 分腿不能重置意图年龄。
+    public readonly struct TrafficIntentKey : IEquatable<TrafficIntentKey>
+    {
+        public string Session { get; }
+        public long Epoch { get; }
+        public string ActorId { get; }
+        public string IntentId { get; }
+        public int Generation { get; }
+        public int LayoutRevision { get; }
+        public string Context { get; }
+        public TrafficIntentKey(string session, long epoch, string actorId, string intentId,
+            int generation, int layoutRevision, string context)
+        {
+            Session = session; Epoch = epoch; ActorId = actorId; IntentId = intentId;
+            Generation = generation; LayoutRevision = layoutRevision; Context = context;
+        }
+        public bool Equals(TrafficIntentKey other) => Session == other.Session && Epoch == other.Epoch &&
+            ActorId == other.ActorId && IntentId == other.IntentId && Generation == other.Generation &&
+            LayoutRevision == other.LayoutRevision && Context == other.Context;
+        public override bool Equals(object obj) => obj is TrafficIntentKey other && Equals(other);
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hash = Session?.GetHashCode() ?? 0;
+                hash = hash * 397 ^ Epoch.GetHashCode(); hash = hash * 397 ^ (ActorId?.GetHashCode() ?? 0);
+                hash = hash * 397 ^ (IntentId?.GetHashCode() ?? 0); hash = hash * 397 ^ Generation;
+                return (hash * 397 ^ LayoutRevision) * 397 ^ (Context?.GetHashCode() ?? 0);
+            }
+        }
+    }
+
+    public readonly struct TrafficNativeStamp : IEquatable<TrafficNativeStamp>
+    {
+        public long RequestId { get; }
+        public int LegGeneration { get; }
+        public TrafficNativeStamp(long requestId, int legGeneration)
+        { RequestId = requestId; LegGeneration = legGeneration; }
+        public bool Equals(TrafficNativeStamp other) => RequestId == other.RequestId && LegGeneration == other.LegGeneration;
+        public override bool Equals(object obj) => obj is TrafficNativeStamp other && Equals(other);
+        public override int GetHashCode() => RequestId.GetHashCode() ^ LegGeneration;
+    }
+
+    public sealed class TrafficBodyFact
+    {
+        public TrafficIntentKey Owner { get; }
+        public Vector3 Position { get; }
+        public float Radius { get; }
+        public float SafetyMargin { get; }
+        public bool Enabled { get; }
+        // Component lifecycle is independent of temporary Native navigation availability.
+        // 旧调用默认沿用Enabled；生产者可单独报告真实actor组件仍active。
+        public bool ActorActive { get; }
+        public bool IndependentlyProgressing { get; }
+        public float RemainingSeconds { get; }
+        // Runtime identity only; the same ActorId does not identify a replacement actor instance.
+        // 只读实际实例身份，不序列化，也不分配第二份身体 ownership。
+        public object ActorLife { get; }
+        public TrafficBodyFact(TrafficIntentKey owner, Vector3 position, float radius, bool enabled = true,
+            bool independentlyProgressing = false, float remainingSeconds = 0, float safetyMargin = 0, object actorLife = null,
+            bool? actorActive = null)
+        {
+            Owner = owner; Position = position; Radius = radius; Enabled = enabled;
+            ActorActive = actorActive ?? enabled;
+            IndependentlyProgressing = independentlyProgressing; RemainingSeconds = remainingSeconds;
+            SafetyMargin = safetyMargin;
+            ActorLife = actorLife;
+        }
+    }
+
+    // Exact claim compatibility only; this evidence never grants a reservation or lease.
+    public interface ITrafficClaimCheckpoint
+    {
+        object CanonicalOwner { get; }
+        string ResourceId { get; }
+        long CapturedOwnerVersion { get; }
+        bool IsSameCurrentClaim(ITrafficClaimCheckpoint current);
+    }
+    public static class TrafficClaimCheckpoints
+    {
+        public static bool AreSame(TrafficParkingFact captured,TrafficParkingFact current)
+        {
+            if(captured==null || current==null)return false;
+            var old=captured.SemanticCheckpoint as ITrafficClaimCheckpoint;
+            var now=current.SemanticCheckpoint as ITrafficClaimCheckpoint;
+            if(old==null && now==null)return ReferenceEquals(captured.SemanticCheckpoint,current.SemanticCheckpoint);
+            if(old==null || now==null)return false; // A typed marker never falls back, even when it is the same object.
+            try
+            {
+                bool Bound()=>captured.CanonicalOwner!=null && ReferenceEquals(captured.CanonicalOwner,current.CanonicalOwner) &&
+                    captured.Owner.Equals(current.Owner) && captured.ResourceId!=null && captured.ResourceId==current.ResourceId &&
+                    ReferenceEquals(old.CanonicalOwner,captured.CanonicalOwner) && ReferenceEquals(now.CanonicalOwner,current.CanonicalOwner) &&
+                    old.ResourceId==captured.ResourceId && now.ResourceId==current.ResourceId &&
+                    old.CapturedOwnerVersion==captured.OwnerVersion && now.CapturedOwnerVersion==current.OwnerVersion &&
+                    old.CapturedOwnerVersion<=now.CapturedOwnerVersion;
+                return Bound() && old.IsSameCurrentClaim(now) && Bound();
+            }
+            catch { return false; }
+        }
+    }
+
+    // Read-only canonical reference, never a second reservation allocator. / 原owner仍拥有业务预留。
+    public sealed class TrafficParkingFact
+    {
+        public TrafficIntentKey Owner { get; }
+        public object CanonicalOwner { get; }
+        public long OwnerVersion { get; }
+        public string ResourceId { get; }
+        public Vector3 Position { get; }
+        public float Radius { get; }
+        public float SafetyMargin { get; }
+        // Opaque references to the existing business and release owners, never copied business state.
+        // 仅保存原业务与释放义务的实例身份；不建立第二份订单或容量账本。
+        public object BusinessOwner { get; }
+        public object ReleaseObligation { get; }
+        public object SemanticCheckpoint { get; } // Optional inert value; unknown/null proves no release.
+        public TrafficParkingFact(TrafficIntentKey owner, object canonicalOwner, long ownerVersion,
+            string resourceId, Vector3 position, float radius, float safetyMargin = 0,
+            object businessOwner = null, object releaseObligation = null, object semanticCheckpoint = null)
+        {
+            Owner = owner; CanonicalOwner = canonicalOwner; OwnerVersion = ownerVersion;
+            ResourceId = resourceId; Position = position; Radius = radius;
+            SafetyMargin = safetyMargin;
+            BusinessOwner = businessOwner; ReleaseObligation = releaseObligation; SemanticCheckpoint = semanticCheckpoint;
+        }
+    }
+
+    public sealed class TrafficWorldSnapshot
+    {
+        public long Version { get; }
+        public long BodyVersion { get; }
+        public IReadOnlyList<TrafficBodyFact> Bodies { get; }
+        public IReadOnlyList<TrafficParkingFact> Parking { get; }
+        public TrafficWorldSnapshot(long version, long bodyVersion,
+            IEnumerable<TrafficBodyFact> bodies = null, IEnumerable<TrafficParkingFact> parking = null)
+        {
+            Version = version; BodyVersion = bodyVersion;
+            Bodies = Array.AsReadOnly((bodies ?? Enumerable.Empty<TrafficBodyFact>()).ToArray());
+            Parking = Array.AsReadOnly((parking ?? Enumerable.Empty<TrafficParkingFact>()).ToArray());
+        }
+    }
+
+    // Each requirement is a real route proof, e.g. delivery+return or existing customer goal.
+    // 能力检查不登记未选定的未来路线；所有query共用同一意图预算。
+    // A local geometric condition for this proof only; never a body, reservation, or right.
+    // 仅约束本次能力路径的几何条件，不创建身体、预留或空间权利。
+    public readonly struct TrafficRouteObstacle
+    {
+        public Vector3 Position { get; }
+        public float Clearance { get; }
+        public TrafficRouteObstacle(Vector3 position,float clearance)
+        { Position=position;Clearance=clearance; }
+    }
+
+    // Finite static geometry facts only. Core authenticates the original producer and exact member/role binding.
+    // 仅静态布局蓝图；不删除实际身体/停车权利，不授予WAIT、Native许可或新预算。
+    public sealed class TrafficInitialQueueMember
+    {
+        public Vector3 Target { get; }
+        public IReadOnlyList<TrafficRouteRequirement> GeometryRoles { get; }
+        public TrafficInitialQueueMember(Vector3 target,IEnumerable<TrafficRouteRequirement> geometryRoles)
+        {
+            if(geometryRoles==null)throw new ArgumentNullException(nameof(geometryRoles));
+            Target=target;
+            GeometryRoles=Array.AsReadOnly(geometryRoles.Select(role=>role==null?
+                throw new ArgumentException("Null geometry role.",nameof(geometryRoles)):
+                new TrafficRouteRequirement(role.ResourceId,role.Start,role.Goal,role.Clearance,role.Obstacles,
+                    role.SelectedJourney,role.AvoidProposedParking,role.LocalObstacles)).ToArray());
+        }
+    }
+    public sealed class TrafficInitialQueueGeometry
+    {
+        public object Owner { get; }
+        public IReadOnlyList<TrafficInitialQueueMember> Members { get; }
+        public TrafficInitialQueueGeometry(object owner,IEnumerable<TrafficInitialQueueMember> members)
+        {
+            Owner=owner??throw new ArgumentNullException(nameof(owner));
+            if(members==null)throw new ArgumentNullException(nameof(members));
+            Members=Array.AsReadOnly(members.Select(member=>member==null?
+                throw new ArgumentException("Null queue member.",nameof(members)):
+                new TrafficInitialQueueMember(member.Target,member.GeometryRoles)).ToArray());
+        }
+    }
+
+    public sealed class TrafficRouteRequirement
+    {
+        public string ResourceId { get; }
+        public Vector3 Start { get; }
+        public Vector3 Goal { get; }
+        public float Clearance { get; }
+        public IReadOnlyList<Vector3> Obstacles { get; }
+        public bool SelectedJourney { get; }
+        public bool AvoidProposedParking { get; }
+        public IReadOnlyList<TrafficRouteObstacle> LocalObstacles { get; }
+        public TrafficRouteRequirement(string resourceId, Vector3 start, Vector3 goal, float clearance,
+            IEnumerable<Vector3> obstacles = null,bool selectedJourney=false,bool avoidProposedParking=true,
+            IEnumerable<TrafficRouteObstacle> localObstacles=null)
+        {
+            ResourceId = resourceId; Start = start; Goal = goal; Clearance = clearance;
+            Obstacles = Array.AsReadOnly((obstacles ?? Enumerable.Empty<Vector3>()).ToArray());
+            SelectedJourney=selectedJourney;
+            AvoidProposedParking=avoidProposedParking;
+            LocalObstacles=Array.AsReadOnly((localObstacles??Enumerable.Empty<TrafficRouteObstacle>()).ToArray());
+        }
+    }
+
+    public sealed class TrafficRequest
+    {
+        public TrafficIntentKey Intent { get; }
+        public TrafficNativeStamp NativeStamp { get; }
+        public int RequestedFrame { get; }
+        public TrafficWorldSnapshot Snapshot { get; }
+        public Vector3 Start { get; }
+        public Vector3 Target { get; }
+        public float Radius { get; }
+        public float SafetyMargin { get; }
+        public string ResourceId { get; }
+        public IReadOnlyList<Vector3> SelectedJourney { get; }
+        public IReadOnlyList<TrafficRouteRequirement> Requirements { get; }
+        public bool IndependentlyProgressing { get; }
+        public float FiniteSeconds { get; }
+        public TrafficDecisionKind? ProvenFailure { get; }
+        public bool PlanPrimaryRoute { get; }
+        public TrafficRequest(TrafficIntentKey intent, int requestedFrame, TrafficWorldSnapshot snapshot,
+            Vector3 start, Vector3 target, float radius, string resourceId,
+            IEnumerable<Vector3> selectedJourney = null, IEnumerable<TrafficRouteRequirement> requirements = null,
+            TrafficNativeStamp nativeStamp = default, bool independentlyProgressing = true,
+            float finiteSeconds = 30, TrafficDecisionKind? provenFailure = null, float safetyMargin = 0,bool planPrimaryRoute=false)
+        {
+            Intent = intent; RequestedFrame = requestedFrame; Snapshot = snapshot; Start = start;
+            Target = target; Radius = radius; ResourceId = resourceId; NativeStamp = nativeStamp;
+            SelectedJourney = Array.AsReadOnly((selectedJourney ?? Enumerable.Empty<Vector3>()).ToArray());
+            Requirements = Array.AsReadOnly((requirements ?? Enumerable.Empty<TrafficRouteRequirement>()).ToArray());
+            IndependentlyProgressing = independentlyProgressing; FiniteSeconds = finiteSeconds;
+            ProvenFailure = provenFailure;
+            SafetyMargin = safetyMargin;
+            PlanPrimaryRoute=planPrimaryRoute;
+        }
+    }
+
+    public readonly struct TrafficBlocker
+    {
+        public TrafficIntentKey Owner { get; }
+        public string ResourceId { get; }
+        public string Proof { get; }
+        public TrafficBlocker(TrafficIntentKey owner, string resourceId, string proof)
+        { Owner = owner; ResourceId = resourceId; Proof = proof; }
+    }
+
+    // Retained Native proof, not permission to occupy an unselected future exit.
+    // waypoint用于发腿，ExpandedPath用于几何核验；消费时不得再次调用Native planner。
+    public sealed class TrafficRouteProof
+    {
+        public string ResourceId { get; }
+        public IReadOnlyList<Vector3> Waypoints { get; }
+        public IReadOnlyList<Vector3> ExpandedPath { get; }
+        public IReadOnlyList<int> LegEnds { get; }
+        public TrafficRouteProof(string resourceId,IEnumerable<Vector3> waypoints,IEnumerable<Vector3> expandedPath,IEnumerable<int> legEnds=null)
+        {
+            ResourceId=resourceId;
+            Waypoints=Array.AsReadOnly((waypoints??Enumerable.Empty<Vector3>()).ToArray());
+            ExpandedPath=Array.AsReadOnly((expandedPath??Enumerable.Empty<Vector3>()).ToArray());
+            LegEnds=Array.AsReadOnly((legEnds??Enumerable.Empty<int>()).ToArray());
+        }
+    }
+
+    public sealed class TrafficDecision
+    {
+        public TrafficIntentKey Intent { get; }
+        public TrafficDecisionKind Kind { get; }
+        public string Reason { get; }
+        public TrafficFailureDisposition FailureDisposition { get; }
+        public long Permit { get; }
+        public long RequestSequence { get; }
+        public long AcquiredSequence { get; internal set; }
+        public IReadOnlyList<TrafficBlocker> Blockers { get; }
+        public IReadOnlyList<Vector3> Route { get; }
+        public IReadOnlyList<TrafficRouteProof> ProofRoutes { get; }
+        public TrafficDecision(TrafficIntentKey intent, TrafficDecisionKind kind, string reason,
+            long permit = 0, long requestSequence = 0, long acquiredSequence = 0,
+            IEnumerable<TrafficBlocker> blockers = null, IEnumerable<Vector3> route = null,IEnumerable<TrafficRouteProof> proofRoutes=null,
+            TrafficFailureDisposition failureDisposition=TrafficFailureDisposition.None)
+        {
+            Intent = intent; Kind = kind; Reason = reason; Permit = permit;
+            FailureDisposition = failureDisposition;
+            RequestSequence = requestSequence; AcquiredSequence = acquiredSequence;
+            Blockers = Array.AsReadOnly((blockers ?? Enumerable.Empty<TrafficBlocker>()).ToArray());
+            Route = Array.AsReadOnly((route ?? Enumerable.Empty<Vector3>()).ToArray());
+            ProofRoutes=Array.AsReadOnly((proofRoutes??Enumerable.Empty<TrafficRouteProof>()).ToArray());
+        }
+    }
+
+    public enum TrafficPhaseMilestoneKind { Arrived, Collected }
+    public enum TrafficPhaseClaimState { Invalid, Held, Released }
+
+    // Producer reads the original canonical owner; source claims authenticate these opaque references.
+    // 生产者只读真实原 owner；两次传入相同任意 object 不能替代 source claim 的身份验证。
+    public interface ITrafficPhaseMilestone
+    {
+        TrafficDecision SourcePermit { get; }
+        TrafficParkingFact OriginalClaim { get; }
+        TrafficParkingFact CurrentClaim { get; }
+        object ActorLife { get; }
+        object BusinessOwner { get; }
+        object ReleaseObligation { get; }
+        TrafficPhaseMilestoneKind Kind { get; }
+        bool IsCurrent { get; }
+        // Read each exact fact from the saved strict snapshot against its original canonical Entry/lease.
+        // Invalid不是Released；只有真实释放可返回Released/null，仍owned必须返回经原owner验证的当前fact。
+        TrafficPhaseClaimState ReadClaim(TrafficParkingFact captured,out TrafficParkingFact current);
+        // Read the actual canonical continuation, including its exact retained source and phase birth.
+        // 必须读取原业务/释放义务当前准许的接续；不能用传入的候选自己盖章，也不能补洗提前创建的年龄。
+        bool AuthorizesSuccessor(TrafficIntentKey successor,TrafficDecision sourcePermit,int firstFrame);
+    }
+
+    // Only the coordinator may mint a pending handoff; callers cannot construct a permission DTO.
+    public sealed class TrafficPhaseHandoff
+    {
+        internal object Coordinator { get; }
+        internal TrafficIntentKey Predecessor { get; }
+        internal TrafficPhaseHandoff(object coordinator,TrafficIntentKey predecessor)
+        { Coordinator=coordinator;Predecessor=predecessor; }
+    }
+
+    // Apply/Rollback must be synchronous and must not publish events. / 共同提交后才通知外部。
+    public interface IPreparedTrafficMutation
+    {
+        bool IsCurrent { get; }
+        bool TryApply(out ITrafficMutationReceipt receipt);
+    }
+    public interface ITrafficMutationReceipt
+    {
+        bool IsCurrent { get; }
+        void RollbackOwnMutation();
+    }
+}

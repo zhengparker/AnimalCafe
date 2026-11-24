@@ -62,6 +62,65 @@ namespace AnimalCafe.Tests.PlayMode.Phase14
         [TearDown] public void Cleanup()
         { if (root != null) Object.DestroyImmediate(root); Time.captureDeltaTime = savedCapture; Time.timeScale = savedScale; }
 
+        [UnityTest] public IEnumerator LegacySegmentFailureWitnessDefaultsOffPreservesRejectedRoute()
+            => ObserveLegacySegmentFailureWitness(false);
+        [UnityTest] public IEnumerator LegacySegmentFailureWitnessCapturesOriginalRejectedRouteWithoutChangingBudgets()
+            => ObserveLegacySegmentFailureWitness(true);
+
+        private IEnumerator ObserveLegacySegmentFailureWitness(bool enabled)
+        {
+            const BindingFlags flags=BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic;
+            var hook=typeof(CustomerFlowController).GetField("SegmentFailureObserver",flags);
+            Assert.That(hook,Is.Not.Null);Assert.That(hook.GetValue(flow),Is.Null,"Dedicated cold hook defaults OFF");
+            Assert.That(Read<object>(flow,"traffic"),Is.Null,"This public-configured standalone controller was never Core-bound");
+            Assert.That(Read<bool>(flow,"integratedMode"),Is.True,"Exercise legacy pickup WAIT static-path classification, not non-integrated fallback");
+            var records=new List<string>();if(enabled)hook.SetValue(flow,(Action<string>)(record=>records.Add(record)));
+            try
+            {
+                yield return SpawnQueued();var id=flow.Snapshot.Single().VisitId;var visit=PrivateVisit(id);
+                void Write(string name,object value)=>visit.GetType().GetField(name,flags).SetValue(visit,value);
+                var actor=Read<NavigationActor>(visit,"Actor");var pose=actor.transform.position;var rotation=actor.transform.rotation;
+                var unreachable=pose+Vector3.right*1000;
+                // Deliberate legacy unissued malformed route; real adapter/WAIT/replan decide. No Native or proof is fabricated.
+                // Isolated public-configured controller only; Main keeps its Core gate intact.
+                Write("State",CustomerVisitState.MovingToPickupService);Write("ResumeState",CustomerVisitState.MovingToPickupService);
+                Write("FinalTarget",new NavigationTarget(unreachable));Write("Route",new Queue<Vector3>(new[]{unreachable}));Write("Segments",4);Write("Replans",0);
+                var route=Read<Queue<Vector3>>(visit,"Route");var generation=Read<int>(visit,"Generation");
+                Assert.That(Read<long>(visit,"RequestId"),Is.Zero);
+                var tokens=flow.Capacity.GetReservations().ToArray();
+                var native=Read<System.Collections.IDictionary>(world.Service,"byId");
+                var nativeRows=native.Keys.Cast<long>().Select(key=>(Key:key,Request:native[key],Generation:Read<int>(native[key],"Generation"))).ToArray();
+                var obstacles=(Vector3[])typeof(CustomerFlowController).GetMethod("RouteObstacles",flags).Invoke(flow,new object[]{id,null,false});
+                Assert.That(adapter.GetCompletePath(pose,unreachable),Is.Null,"Actual Native adapter must reject this original unreachable waypoint");
+                typeof(CustomerFlowController).GetMethod("SendRouteSegment",flags).Invoke(flow,new[]{visit,(object)CustomerVisitState.MovingToPickupService});
+                Assert.That(Read<CustomerVisitState>(visit,"State"),Is.EqualTo(CustomerVisitState.Blocked));
+                Assert.That(Read<string>(visit,"Failure"),Does.Contain("通道被占用"));
+                Assert.That(Read<int>(visit,"Segments"),Is.EqualTo(4));Assert.That(Read<int>(visit,"Replans"),Is.EqualTo(1));
+                Assert.That(Read<int>(visit,"Generation"),Is.EqualTo(generation));Assert.That(Read<long>(visit,"RequestId"),Is.Zero);
+                Assert.That(actor.transform.position,Is.EqualTo(pose));Assert.That(actor.transform.rotation,Is.EqualTo(rotation));
+                Assert.That(Read<Queue<Vector3>>(visit,"Route"),Is.SameAs(route));CollectionAssert.AreEqual(new[]{unreachable},route);
+                Assert.That(Read<object>(flow,"traffic"),Is.Null);Assert.That(Read<object>(visit,"TrafficMove"),Is.Null);
+                CollectionAssert.AreEquivalent(nativeRows.Select(row=>row.Key),native.Keys.Cast<long>());
+                foreach(var row in nativeRows){Assert.That(native[row.Key],Is.SameAs(row.Request));Assert.That(Read<int>(row.Request,"Generation"),Is.EqualTo(row.Generation));}
+                var retained=flow.Capacity.GetReservations().ToArray();Assert.That(retained.Length,Is.EqualTo(tokens.Length));
+                foreach(var token in tokens){var current=retained.Single(row=>ReferenceEquals(row.Token,token.Token));Assert.That(current.OwnerId,Is.EqualTo(token.OwnerId));
+                    Assert.That(current.Kind,Is.EqualTo(token.Kind));Assert.That(current.State,Is.EqualTo(token.State));}
+                Assert.That(records.Count,Is.EqualTo(enabled?1:0));
+                if(enabled)
+                {
+                    var record=records.Single();
+                    Assert.That(record,Does.Contain("actor="+id).And.Contain("nextPath=NULL").And.Contain("wait=static-path-NULL"));
+                    Assert.That(record,Does.Contain("replan=NULL").And.Contain("segments=4").And.Contain("replans=1"));
+                    Assert.That(record,Does.Contain("native.hasPath=NOT_EVALUATED").And.Contain("callback=NONE"));
+                    Assert.That(record,Does.Contain("from="+pose.ToString("F9")).And.Contain("next="+unreachable.ToString("F9")));
+                    foreach(var obstacle in obstacles)Assert.That(record,Does.Contain(obstacle.ToString("F9")));
+                    TestContext.WriteLine(record);
+                }
+            }
+            finally{hook.SetValue(flow,null);}
+            Assert.That(hook.GetValue(flow),Is.Null,"Always detach standalone cold observer");
+        }
+
         private IEnumerator SpawnQueued()
         {
             Assert.That(flow.TrySpawn(), Is.True, flow.Status);

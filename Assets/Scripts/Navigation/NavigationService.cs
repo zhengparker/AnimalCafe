@@ -94,6 +94,16 @@ namespace AnimalCafe.Navigation
             return new MoveStartResult(true, request.Id, NavigationFailure.None);
         }
 
+        internal bool TryReadOriginalActiveGeneration(string actorId,long requestId,int revision,INavigationDriver expected,Vector3 target,out int generation)
+        {
+            generation=0;
+            if(shutDown || unavailableActors.Contains(actorId) || !actors.TryGetValue(actorId,out var registered) || !ReferenceEquals(registered,expected) ||
+                !byActor.TryGetValue(actorId,out var request) || !byId.TryGetValue(requestId,out var same) || !ReferenceEquals(same,request) ||
+                request.Id!=requestId || !ReferenceEquals(request.Driver,expected) || request.LayoutRevision!=revision || layoutRevision!=revision ||
+                request.RetryCount!=0 || request.Recovering || request.Generation!=1 || request.OriginalFailure!=NavigationFailure.None ||
+                !request.Original.Position.Equals(target))return false;
+            generation=request.Generation;return true;
+        }
         public bool Cancel(long requestId)
         {
             if (!byId.TryGetValue(requestId, out var request)) return false;

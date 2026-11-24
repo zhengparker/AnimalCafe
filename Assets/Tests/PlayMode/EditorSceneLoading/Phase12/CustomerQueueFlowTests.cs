@@ -36,6 +36,33 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
         { var go=new GameObject(name); go.transform.SetParent(root.transform); go.transform.position=point; return go.transform; }
         [TearDown] public void Cleanup()
         { if(root!=null) Object.DestroyImmediate(root); Time.captureDeltaTime=savedCapture; Time.timeScale=savedScale; }
+        [Test] public void ZeroIntervalAutoSpawnRespectsPauseCapacityAndOneAdmissionPerStep()
+        {
+            var draws=0;var clock=new CustomerSpawnClock(()=>{draws++;return 0;});
+            typeof(CustomerFlowController).GetField("clock",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic)
+                .SetValue(flow,clock);
+            flow.AutoSpawn=true;
+            flow.Step(0);
+            Assert.That(flow.Snapshot,Is.Empty);
+            Assert.That(clock.RemainingSeconds,Is.Zero);
+            var time=root.GetComponent<GameTimeService>();
+            Assert.That(time.TrySetSpeed(GameSpeed.Paused),Is.True);
+            flow.Step(0);
+            Assert.That(flow.Snapshot,Is.Empty,"暂停时零秒也不能生客 / No arrival while paused");
+            Assert.That(time.TrySetSpeed(GameSpeed.Normal),Is.True);
+            flow.Step(1f/60);
+            Assert.That(flow.Snapshot.Count,Is.EqualTo(1),"一轮更新只接待一位 / One admission per update");
+            Assert.That(world.RegisteredActors.Count,Is.EqualTo(1));
+            Assert.That(draws,Is.EqualTo(2),"成功后才抽下一位 / Draw after admission only");
+            // 缩为一个总名额，检查后续零秒到店仍受原容量门禁约束 / Keep real capacity protection.
+            flow.Capacity.UpdateFloorCellCount(4);
+            flow.Step(1f/60);flow.Step(1f/60);
+            Assert.That(flow.Snapshot.Count,Is.EqualTo(1));
+            Assert.That(world.RegisteredActors.Count,Is.EqualTo(1));
+            Assert.That(draws,Is.EqualTo(2));
+            flow.AutoSpawn=false;
+        }
+
         [Test] public void InvalidSpawnDoesNotLeavePartialActorOrReservations()
         {
             Assert.That(flow.Capacity,Is.Not.Null); spawn.position=Vector3.one*1000;
@@ -230,7 +257,7 @@ namespace AnimalCafe.Tests.PlayMode.Phase12Integration
         private void UseOneSecondAutoSpawn()
         {
             var flags=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic;
-            typeof(CustomerFlowController).GetField("clock",flags).SetValue(flow,new CustomerSpawnClock(()=>0));
+            typeof(CustomerFlowController).GetField("clock",flags).SetValue(flow,new CustomerSpawnClock(()=>.1f));
             flow.AutoSpawn=true;
         }
         [UnityTest] public IEnumerator DueArrivalWaitsForEntranceThenSpawnsWithoutAnotherCountdown()
